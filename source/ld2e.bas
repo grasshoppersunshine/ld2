@@ -33,10 +33,8 @@ DECLARE SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS
 '==================================
 
   '$DYNAMIC
-  '$INCLUDE: 'LD2INC.BI'
+  '$INCLUDE: 'INC\LD2GFX.BI'
   '$INCLUDE: 'INC\DEXTERN.BI'
-
-  'CHDIR "c:\progra~2\qb45\ld2demo"  '- temporary
 
   DIM SHARED Buffer1(32000) AS INTEGER    '- Offscreen buffer
   DIM SHARED Buffer2(32000) AS INTEGER    '- Offscreen buffer

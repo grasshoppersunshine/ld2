@@ -9,9 +9,7 @@ DECLARE SUB LD2E.Init ()
 '====================================
 
   '$DYNAMIC
-  '$INCLUDE: 'LD2INC.BI'
-
-  'CHDIR "c:\progra~2\qb45\ld2demo"  '- temporary
+  '$INCLUDE: 'INC\LD2GFX.BI'
 
   DIM SHARED Buffer1(32000) AS INTEGER    '- Offscreen buffer
   DIM SHARED Buffer2(32000) AS INTEGER    '- Offscreen buffer
