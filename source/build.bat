@@ -5,6 +5,16 @@ set path=%path%;C:\DOWNLO~1\QB45
 mkdir log
 mkdir lib
 
+mkdir gfx
+mkdir rooms
+mkdir sfx
+mkdir soundsys
+
+copy ..\gfx gfx
+copy ..\rooms rooms
+copy ..\sfx sfx
+copy ..\soundsys soundsys
+
 del lib\ld2.qlb
 del lib\ld2gfx.lib
 del lib\ds4qbpp.lib
