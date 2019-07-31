@@ -1,6 +1,6 @@
 DECLARE SUB LD2.LoadPalette (FileName AS STRING)
-DECLARE SUB DS4QB.MusicFadeOut (FStep AS INTEGER, Slot AS INTEGER, ObjVol AS INTEGER, CPos AS INTEGER)
-DECLARE SUB DS4QB.PlayMusic (Slot AS INTEGER)
+'DECLARE SUB DS4QB.MusicFadeOut (FStep AS INTEGER, Slot AS INTEGER, ObjVol AS INTEGER, CPos AS INTEGER)
+'DECLARE SUB DS4QB.PlayMusic (Slot AS INTEGER)
 DECLARE SUB LD2.ShutDown ()
 DECLARE SUB LD2.PopText (Message AS STRING)
 DECLARE FUNCTION keyboard% (T%)
@@ -11,7 +11,7 @@ DECLARE SUB LD2.CopyBuffer (Buffer1 AS INTEGER, Buffer2 AS INTEGER)
 '- Intro Title and options screen
 '--------------------------------
 
-'$INCLUDE: 'c:\progra~2\qb45\ld2demo\DEXTERN.BI'
+'$INCLUDE: 'INC\DEXTERN.BI'
 
 SUB LD2.EndDemo
 

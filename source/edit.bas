@@ -8,9 +8,10 @@ DECLARE SUB LD2E.Init ()
 '- July, 2002 - Created by Joe King
 '====================================
 
-  '$INCLUDE: 'c:\progra~2\qb45\ld2\LD2INC.BI'
+  '$DYNAMIC
+  '$INCLUDE: 'LD2INC.BI'
 
-  CHDIR "c:\progra~2\qb45\ld2demo"  '- temporary
+  'CHDIR "c:\progra~2\qb45\ld2demo"  '- temporary
 
   DIM SHARED Buffer1(32000) AS INTEGER    '- Offscreen buffer
   DIM SHARED Buffer2(32000) AS INTEGER    '- Offscreen buffer

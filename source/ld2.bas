@@ -8,11 +8,6 @@ DECLARE SUB TrooperTalk (Text AS STRING)
 DECLARE SUB ScenePortal ()
 DECLARE SUB SceneFlashlight ()
 DECLARE SUB SceneFlashLight2 ()
-DECLARE SUB DS4QB.MusicFadeIn (FStep AS INTEGER, Slot AS INTEGER, ObjVol AS INTEGER, CPos AS INTEGER)
-DECLARE SUB DS4QB.MusicFadeOut (FStep AS INTEGER, Slot AS INTEGER, ObjVol AS INTEGER, CPos AS INTEGER)
-DECLARE SUB DS4QB.PlaySound (Slot AS INTEGER)
-DECLARE SUB DS4QB.StopMusic (Slot AS INTEGER)
-DECLARE SUB DS4QB.PlayMusic (Slot AS INTEGER)
 DECLARE SUB LD2.SetSceneNo (Num AS INTEGER)
 DECLARE SUB LD2.PopText (Message AS STRING)
 DECLARE SUB LD2.SetNumEntities (NE AS INTEGER)
@@ -72,7 +67,7 @@ DECLARE SUB LD2.Init ()
 '==================================
 
   '$DYNAMIC
-  '$INCLUDE: 'c:\progra~2\qb45\ld2demo\DEXTERN.BI'
+  '$INCLUDE: 'INC\DEXTERN.BI'
 
   CONST idTILE = 0
   CONST idENEMY = 1
@@ -707,6 +702,12 @@ SUB LarryTalk (Text AS STRING)
 
 END SUB
 
+SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
+
+  '- MISSING
+
+END SUB
+
 SUB LD2.SendMessage (msg AS INTEGER, par AS INTEGER)
 
   '- Send a message and it's parameter
@@ -981,12 +982,24 @@ SUB LD2.Start
 
 END SUB
 
+SUB LD2.StatusScreen
+
+  '- MISSING
+
+END SUB
+
 SUB PutLarryX (x AS INTEGER, XShift AS INTEGER)
 
   Larry.x = x
   ShiftX = XShift
 
   Larry.x = Larry.x + ShiftX
+
+END SUB
+
+SUB PutLarryX2 (x AS INTEGER, XShift AS INTEGER)
+
+  '- MISSING
 
 END SUB
 

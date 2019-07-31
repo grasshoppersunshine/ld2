@@ -33,8 +33,8 @@ DECLARE SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS
 '==================================
 
   '$DYNAMIC
-  '$INCLUDE: 'c:\progra~2\qb45\ld2demo\LD2INC.BI'
-  '$INCLUDE: 'c:\progra~2\qb45\ld2demo\DEXTERN.BI'
+  '$INCLUDE: 'LD2INC.BI'
+  '$INCLUDE: 'INC\DEXTERN.BI'
 
   'CHDIR "c:\progra~2\qb45\ld2demo"  '- temporary
 
@@ -240,6 +240,14 @@ SUB LD2.AddLives (Amount AS INTEGER)
   NumLives = NumLives + Amount
 
 END SUB
+
+FUNCTION LD2.AddToStatus% (item AS INTEGER, Amount AS INTEGER)
+
+  '- MISSING
+
+  LD2.AddToStatus% = 0 '- 0 is success, tell program to remove item from room
+
+END FUNCTION
 
 FUNCTION LD2.CheckFloorHit% (NumEntity AS INTEGER)
 
@@ -1702,6 +1710,13 @@ SUB LD2.put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, fl
 
 END SUB
 
+SUB LD2.PutRoofCode (Code AS STRING)
+
+  '- MISSING
+  '- I think this adds the code to the "note item" description
+
+END SUB
+
 SUB LD2.PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
 
   '- Put text onto the screen
@@ -1884,6 +1899,14 @@ SUB LD2.SetAccessLevel (CodeNum AS INTEGER)
   ELSE
     Player.code = CodeNum
   END IF
+
+END SUB
+
+SUB LD2.SetCodeLevel (Num AS INTEGER)
+
+  '- this function was missing (I'm guessing/hoping it's just this)
+  
+  CodeNum = Num
 
 END SUB
 
