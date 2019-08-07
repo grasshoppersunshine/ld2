@@ -12,253 +12,303 @@
   PUBLIC  LD2put
   PUBLIC  LD2putf
   PUBLIC  LD2putl
+  PUBLIC  LD2putwl
   PUBLIC  LD2copyFull
   PUBLIC  LD2cls
-  PUBLIC  LD2copyTrans
-  PUBLIC  LD2pset
-  PUBLIC  LD2scroll
   PUBLIC  LD2put65
-
-  ;- LD2put: Draws a sprite 16X16 in size onto the given layer excluding
+  
+  ;- LD2put: PUT ( skip pixels with zero value )
+  ;-       : Draws a sprite 16X16 in size onto the given layer excluding
   ;-       : pixels with a value of 0 (Layer is an integer array of 32000)
   ;-       : supports clipping on the edges of the screen
   LD2put PROC
-
-    PUSH  BP
-    MOV   BP, SP      ;- Set up the stack
-    PUSH  DS          ;- Save the Data Segment
-
-    MOV   BX, [BP+08]
-    MOV   ES, [BX]    ;- Move to the video segment
-    
-    MOV   BX, [BP+14] ;- BX = Y
-    MOV   BX, [BX]
-    PUSH  BX          ;- Save for Y clipping(keep track of the Y coordinate)
-    MOV   CX, BX      ;- CX = Y
-    SHL   BX, 8       ;- Same as BX * 256
-    SHL   CX, 6       ;- Same as CX * 64
-    ADD   BX, CX      ;- Add them so now BX = Y * 320
-    MOV   DI, BX      ;- DI = BX
-    
-    MOV   BX, [BP+16] ;- BX = X
-    MOV   BX, [BX]
-    PUSH  BX          ;- Save for X clipping(keep track of the X coordinate)
-    ADD   DI, BX      ;- We are now at the starting place to draw
-
-    MOV   BX, [BP+06]
-    MOV   BX, [BX]    ;- BX = Flip value
-    PUSH  BX          ;- Save it
-
-    MOV   BX, [BP+10]
-    MOV   SI, [BX]    ;- SI = Sprite Offset
-    ADD   SI, 4       ;- Ignore first 4 bytes
-    MOV   BX, [BP+12] ;- BX = Sprite Segment
-    MOV   DS, [BX]    ;- DS = BX
-
-    MOV   BX, 16      ;- For keeping track of drawing down 16 lines
-
-    POP   AX          ;- AX = Flip Value
-    CMP   AX, 1       ;- Is AX 1?
-    JE    DrawR       ;- If so, goto DrawR
-
-    Draw:
-    MOV   CX, 16      ;- Get ready to draw 16 pixels
-    POP   AX          ;- Pop X coordinate
-    POP   DX          ;- Pop Y coordinate
-    CMP   DX, 0       ;- Are we too high off the screen?
-    JB    SkipLine    ;- If so, goto SkipLine
-    CMP   DX, 199     ;- Are we too low off the screen?
-    JA    SkipLine    ;- If so, goto SkipLine
-    PUSH DX           ;- Push Y back in
-    PUSH AX           ;- Push X back in
-    Put16:
-      LODSB
-      POP DX          ;- Pop X coordinate for x clipping
-      CMP AL, 0       ;- Is the value of the pixel to be drawn 0?
-      JE  DontDraw    ;- If so, goto DontDraw
-      CMP DX, 319     ;- Are we drawing off the screen?
-      JA  DontDraw    ;- If so, goto DontDraw
-      CMP DX, 0       ;- Are we drawing off the screen?
-      JB  DontDraw    ;- If so, goto DontDraw
-      MOV ES:[DI], AL ;- Plot the pixel
-      DontDraw:
-      INC   DI        ;- Move to the right one
-      INC   DX        ;- Add X coordinate to keep track
-      PUSH  DX        ;- Push X coordinate back onto the stack
-    LOOP  Put16
-
-    POP   DX          ;- Get ready to move the X coordinate back 16 units
-    SUB   DX, 16      ;- Move the X counter back to it's starting spot
-    POP   AX          ;- Get Y coordinate of the stack
-    INC   AX          ;- Add Y coordinate by 1 since we are done with 1 row
-    PUSH  AX          ;- Push Y coordinate back on
-    PUSH  DX          ;- Push X coordinate back on also
-    
-  DoneSkipLine: 
-
-    SUB   BX, 1       ;- We are done with 1 row, subtract to keep track
-    ADD   DI, 304     ;- Move down a row
-    CMP   BX, 0       ;- Are we done drawing?
-    JNE   Draw        ;- If not, goto Draw
-
-    POP BX            ;- Get X coordinate of the stack
-    POP BX            ;- Get Y coordinate of the stack also
-    POP DS
-    POP BP
-    RET 12
-
-   SkipLine:
-    INC   DX          ;- Add Y coordinate by 1 since we are done with 1 row
-    ADD   SI, 16      ;- Move down a row on the data
-    ADD   DI, 16      ;- Move across 16 pixels to make up for the line skipped
-    PUSH  DX          ;- Push the Y coordinate back onto the stack
-    PUSH  AX          ;- Push X coordinate back on also
-    JMP DoneSkipLine
-
-    DrawR:
-    MOV   CX, 16      ;- Get ready to draw 16 pixels
-    ADD   DI, 16
-    POP   AX          ;- Pop X coordinate
-    POP   DX          ;- Pop Y coordinate
-    ADD   AX, 16
-    CMP   DX, 0       ;- Are we too high off the screen?
-    JB    SkipLineR   ;- If so, goto SkipLine
-    CMP   DX, 199     ;- Are we too low off the screen?
-    JA    SkipLineR   ;- If so, goto SkipLine
-    PUSH DX           ;- Push Y back in
-    PUSH AX           ;- Push X back in
-    Put16R:
-      LODSB
-      POP DX          ;- Pop X coordinate for x clipping
-      CMP AL, 0       ;- Is the value of the pixel to be drawn 0?
-      JE  DontDrawR   ;- If so, goto DontDraw
-      CMP DX, 319     ;- Are we drawing off the screen?
-      JA  DontDrawR   ;- If so, goto DontDraw
-      CMP DX, 0       ;- Are we drawing off the screen?
-      JB  DontDrawR   ;- If so, goto DontDraw
-      MOV ES:[DI], AL ;- Plot the pixel
-      DontDrawR:
-      DEC   DI        ;- Move to the right one
-      DEC   DX        ;- Add X coordinate to keep track
-      PUSH  DX        ;- Push X coordinate back onto the stack
-    LOOP  Put16R
-
-    POP   DX          ;- Get ready to move the X coordinate back 16 units
-    POP   AX          ;- Get Y coordinate of the stack
-    INC   AX          ;- Add Y coordinate by 1 since we are done with 1 row
-    PUSH  AX          ;- Push Y coordinate back on
-    PUSH  DX          ;- Push X coordinate back on also
-    
-  DoneSkipLineR: 
-
-    SUB   BX, 1       ;- We are done with 1 row, subtract to keep track
-    ADD   DI, 320     ;- Move down a row
-    CMP   BX, 0       ;- Are we done drawing?
-    JNE   DrawR        ;- If not, goto Draw
-
-    POP BX            ;- Get X coordinate of the stack
-    POP BX            ;- Get Y coordinate of the stack also
-    POP DS
-    POP BP
-    RET 12
-
-   SkipLineR:
-    INC   DX          ;- Add Y coordinate by 1 since we are done with 1 row
-    ADD   SI, 16      ;- Move down a row on the data
-    ADD   DI, 16      ;- Move across 16 pixels to make up for the line skipped
-    PUSH  DX          ;- Push the Y coordinate back onto the stack
-    PUSH  AX          ;- Push X coordinate back on also
-    JMP DoneSkipLineR
-
+  
+	push bp
+	mov bp, sp
+	push ds
+	
+	;# buffer address
+	mov bx, [bp+08]
+	mov es, [bx]
+	xor di, di
+	;# sprite address
+	mov bx, [bp+10] ;# sprite ptr
+	mov si, [bx]
+	
+	add si, 4       ;# ignore sprite header
+	
+	;# SI add/skip amount
+	xor ax, ax
+	
+	;# X
+	mov bx, [bp+16]
+	mov bx, [bx]
+	
+	mov cx, 16
+	
+	cmp bx, 0
+	jge skipXbelowZero
+	  cmp bx, -16
+	  jle endLD2put
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  add si, bx
+	  mov ax, bx
+	  xor bx, bx
+	skipXbelowZero:
+	
+	cmp bx, 304
+	jle skipXabove304
+	  cmp bx, 320
+	  jge endLD2put
+	  push bx
+	    sub bx, 320
+	    neg bx
+	    mov cx, bx
+	  pop bx
+	skipXabove304:
+	
+	add di, bx ;# x location
+	mov dx, cx ;# width
+	
+	;# Y
+	mov bx, [bp+14]
+	mov bx, [bx]
+	
+	mov cx, 16
+	
+	cmp bx, 0
+	jge skipYbelowZero
+	  cmp bx, -16
+	  jle endLD2put
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  shl bx, 4
+	  add si, bx
+	  xor bx, bx
+	skipYbelowZero:
+	
+	cmp bx, 184
+	jle skipYabove184
+	  cmp bx, 200
+	  jge endLD2put
+	  push bx
+		sub bx, 200
+		neg bx
+		mov cx, bx
+	  pop bx
+	skipYabove184:
+	
+	push bx
+	  shl bx, 8
+	  add di, bx
+	pop bx
+	shl bx, 6
+	add di, bx ;# y location
+	           ;# cx is height
+	
+	mov bx, [bp+06] ;# flip
+	mov bx, [bx]
+	test bx, bx
+	jnz copyFlipped
+	
+	mov bx, [bp+12] ;# sprite seg
+	mov ds, [bx]
+	
+	;# copy sprite block to buffer
+	;# dx = width
+	;# cx = height
+	;# ax = SI add/skip amount (16-width)
+	vertical:
+      push cx
+        mov cx, dx
+        push si
+        push di
+          horizontal:
+            lodsb
+            test al, al
+            jz skipPixelLD2P
+              stosb
+              jmp skipIncmntLD2P
+            skipPixelLD2P:
+              inc di
+            skipIncmntLD2P:
+          loop horizontal
+        pop di
+        pop si
+        add di, 320
+        add si, 16
+      pop cx
+	loop vertical
+	
+	jmp endLD2put
+	
+	copyFlipped:
+	;# copy sprite block to buffer
+	;# dx = width
+	;# cx = height
+	;# ax = SI add/skip amount (16-width)
+	mov bx, [bp+12] ;# sprite seg
+	mov ds, [bx]
+	add si, dx
+	dec si
+	verticalFP:
+      push cx
+        mov cx, dx
+        push si
+        push di
+          horizontalFP:
+            std
+            lodsb
+            cld
+            test al, al
+            jz skipPixelLD2PFP
+              stosb
+              jmp skipIncmntLD2PFP
+            skipPixelLD2PFP:
+              inc di
+            skipIncmntLD2PFP:
+          loop horizontalFP
+        pop di
+        pop si
+        add di, 320
+        add si, 16
+      pop cx
+	loop verticalFP
+	
+	;# clean up and return
+	endLD2put:
+	pop ds
+	pop bp
+	ret 12
+  
   LD2put ENDP
 
-  ;- LD2putf: Draws a sprite 16X16 in size onto the given layer
+  ;- LD2putf: PUT ( FAST -- no checks for zero-value pixels )
+  ;-        : Draws a sprite 16X16 in size onto the given layer
   ;-        : (Layer is an integer array of 32000)
   ;-        : supports clipping on the edges of the screen
   LD2putf PROC
-
-    PUSH  BP
-    MOV   BP, SP      ;- Set up the stack
-    PUSH  DS          ;- Save the Data Segment
-
-    MOV   BX, [BP+06]
-    MOV   ES, [BX]    ;- Move to the video segment
-    
-    MOV   BX, [BP+12] ;- BX = Y
-    MOV   BX, [BX]
-    PUSH  BX          ;- Save for Y clipping(keep track of the Y coordinate)
-    MOV   CX, BX      ;- CX = Y
-    SHL   BX, 8       ;- Same as BX * 256
-    SHL   CX, 6       ;- Same as CX * 64
-    ADD   BX, CX      ;- Add them so now BX = Y * 320
-    MOV   DI, BX      ;- DI = BX
-    
-    MOV   BX, [BP+14] ;- BX = X
-    MOV   BX, [BX]
-    PUSH  BX          ;- Save for X clipping(keep track of the X coordinate)
-    ADD   DI, BX      ;- We are now at the starting place to draw
-
-    MOV   BX, [BP+08]
-    MOV   SI, [BX]    ;- SI = Sprite Offset
-    ADD   SI, 4       ;- Ignore first 4 bytes
-    MOV   BX, [BP+10] ;- BX = Sprite Segment
-    MOV   DS, [BX]    ;- DS = BX
-
-    MOV   BX, 16      ;- For keeping track of drawing down 16 lines
-
-    Drawf:
-    MOV   CX, 16      ;- Get ready to draw 16 pixels
-    POP   AX          ;- Pop X coordinate
-    POP   DX          ;- Pop Y coordinate
-    CMP   DX, 0       ;- Are we too high off the screen?
-    JB    SkipLinef   ;- If so, goto SkipLine
-    CMP   DX, 199     ;- Are we too low off the screen?
-    JA    SkipLinef   ;- If so, goto SkipLine
-    PUSH DX           ;- Push Y back in
-    PUSH AX           ;- Push X back in
-    Put16f:
-      LODSB
-      POP DX          ;- Pop X coordinate for x clipping
-      CMP DX, 319     ;- Are we drawing off the screen?
-      JA  DontDrawf   ;- If so, goto DontDraw
-      CMP DX, 0       ;- Are we drawing off the screen?
-      JB  DontDrawf   ;- If so, goto DontDraw
-      MOV ES:[DI], AL ;- Plot the pixel
-      DontDrawf:
-      INC   DI        ;- Move to the right one
-      INC   DX        ;- Add X coordinate to keep track
-      PUSH  DX        ;- Push X coordinate back onto the stack
-    LOOP  Put16f
-
-    POP   DX          ;- Get ready to move the X coordinate back 16 units
-    SUB   DX, 16      ;- Move the X counter back to it's starting spot
-    POP   AX          ;- Get Y coordinate of the stack
-    INC   AX          ;- Add Y coordinate by 1 since we are done with 1 row
-    PUSH  AX          ;- Push Y coordinate back on
-    PUSH  DX          ;- Push X coordinate back on also
-    
-  DoneSkipLinef: 
-
-    SUB   BX, 1       ;- We are done with 1 row, subtract to keep track
-    ADD   DI, 304     ;- Move down a row
-    CMP   BX, 0       ;- Are we done drawing?
-    JNE   Drawf       ;- If not, goto Draw
-
-    POP BX            ;- Get X coordinate of the stack
-    POP BX            ;- Get Y coordinate of the stack also
-    POP DS
-    POP BP
-    RET 10
-
-   SkipLinef:
-    INC   DX          ;- Add Y coordinate by 1 since we are done with 1 row
-    ADD   SI, 16      ;- Move down a row on the data
-    ADD   DI, 16      ;- Move across 16 pixels to make up for the line skipped
-    PUSH  DX          ;- Push the Y coordinate back onto the stack
-    PUSH  AX          ;- Push X coordinate back on also
-    JMP DoneSkipLinef
-
+  
+	push bp
+	mov bp, sp
+	push ds
+	
+	;# buffer address
+	mov bx, [bp+06]
+	mov es, [bx]
+	xor di, di
+	;# sprite address
+	mov bx, [bp+08] ;# sprite ptr
+	mov si, [bx]
+	
+	add si, 4       ;# ignore sprite header
+	
+	;# SI add/skip amount
+	xor ax, ax
+	
+	;# X
+	mov bx, [bp+14]
+	mov bx, [bx]
+	
+	mov cx, 16
+	
+	cmp bx, 0
+	jge skipXbelowZeroLD2PF
+	  cmp bx, -16
+	  jle endLD2putf
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  add si, bx
+	  mov ax, bx
+	  xor bx, bx
+	skipXbelowZeroLD2PF:
+	
+	cmp bx, 304
+	jle skipXabove304LD2PF
+	  cmp bx, 320
+	  jge endLD2putf
+	  push bx
+	    sub bx, 320
+	    neg bx
+	    mov cx, bx
+	  pop bx
+	skipXabove304LD2PF:
+	
+	add di, bx ;# x location
+	mov dx, cx ;# width
+	
+	;# Y
+	mov bx, [bp+12]
+	mov bx, [bx]
+	
+	mov cx, 16
+	
+	cmp bx, 0
+	jge skipYbelowZeroLD2PF
+	  cmp bx, -16
+	  jle endLD2putf
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  shl bx, 4
+	  add si, bx
+	  xor bx, bx
+	skipYbelowZeroLD2PF:
+	
+	cmp bx, 184
+	jle skipYabove184LD2PF
+	  cmp bx, 200
+	  jge endLD2putf
+	  push bx
+		sub bx, 200
+		neg bx
+		mov cx, bx
+	  pop bx
+	skipYabove184LD2PF:
+	
+	push bx
+	  shl bx, 8
+	  add di, bx
+	pop bx
+	shl bx, 6
+	add di, bx ;# y location
+	           ;# cx is height
+	
+	mov bx, [bp+10] ;# sprite seg
+	mov ds, [bx]
+	
+	;# copy sprite block to buffer
+	;# dx = width
+	;# cx = height
+	;# ax = SI add/skip amount (16-width)
+	verticalLD2PF:
+      push cx
+        mov cx, dx
+        push si
+        push di
+          horizontalLD2PF:
+            lodsb
+            stosb
+          loop horizontalLD2PF
+        pop di
+        pop si
+        add di, 320
+        add si, 16
+      pop cx
+	loop verticalLD2PF
+	
+	;# clean up and return
+	endLD2putf:
+	pop ds
+	pop bp
+	ret 10
+  
   LD2putf ENDP
+
 
   ;- LD2putl: Draws a sprite 16X16 in size onto the given layer
   ;-        : (Layer is an integer array of 32000)
@@ -266,111 +316,361 @@
   ;-        : when it draws a value other than 0, it darkens/lightens the
   ;-        : color of the pixel by the given amount
   LD2putl PROC
-
-    PUSH  BP
-    MOV   BP, SP      ;- Set up the stack
-    PUSH  DS          ;- Save the Data Segment
-
-    MOV   BX, [BP+06]
-    MOV   ES, [BX]    ;- Move to the video segment
-    
-    MOV   BX, [BP+12] ;- BX = Y
-    MOV   BX, [BX]
-    PUSH  BX          ;- Save for Y clipping(keep track of the Y coordinate)
-    MOV   CX, BX      ;- CX = Y
-    SHL   BX, 8       ;- Same as BX * 256
-    SHL   CX, 6       ;- Same as CX * 64
-    ADD   BX, CX      ;- Add them so now BX = Y * 320
-    MOV   DI, BX      ;- DI = BX
-    
-    MOV   BX, [BP+14] ;- BX = X
-    MOV   BX, [BX]
-    PUSH  BX          ;- Save for X clipping(keep track of the X coordinate)
-    ADD   DI, BX      ;- We are now at the starting place to draw
-
-    MOV   BX, [BP+08]
-    MOV   SI, [BX]    ;- SI = Sprite Offset
-    ADD   SI, 4       ;- Ignore first 4 bytes
-    MOV   BX, [BP+10] ;- BX = Sprite Segment
-    MOV   DS, [BX]    ;- DS = BX
-
-    MOV   BX, 16      ;- For keeping track of drawing down 16 lines
-
-    Drawl:
-    MOV   CX, 16      ;- Get ready to draw 16 pixels
-    POP   AX          ;- Pop X coordinate
-    POP   DX          ;- Pop Y coordinate
-    CMP   DX, 0       ;- Are we too high off the screen?
-    JB    SkipLinel   ;- If so, goto SkipLine
-    CMP   DX, 199     ;- Are we too low off the screen?
-    JA    SkipLinel   ;- If so, goto SkipLine
-    PUSH DX           ;- Push Y back in
-    PUSH AX           ;- Push X back in
-    Put16l:
-      LODSB
-      POP DX          ;- Pop X coordinate for x clipping
-      CMP DX, 319     ;- Are we drawing off the screen?
-      JA  DontDrawl   ;- If so, goto DontDraw
-      CMP DX, 0       ;- Are we drawing off the screen?
-      JB  DontDrawl   ;- If so, goto DontDraw
-      PUSH  DX        ;- Save DX
-
-      MOV AH, ES:[DI] ;- AH = color of pixel on screen
-      MOV DL, AH      ;- DL = AH
-      AND DL, 15      ;- DL = DL MOD 16
-      MOV DH, AH      ;- DH = AH
-      SUB DH, DL      ;- DH = DH - DL
-      SUB AH, AL      ;- AH = AH - AL
-      CMP AH, DH      ;- Is AH < DH?
-      JB  BlackenPixel;- If so, goto blackenpixel
-      CMP DH, 200     ;- Is DH > 200?
-      JA  DoneBP      ;- If so, goto DontBP
-      ADD DH, 16      ;- Now check to see if it didn't overlap
-      CMP AH, DH      ;- Is AH > DH?
-      JA  BlackenPixel;- If so, goto blackenpixel
-    DoneBP:
-      MOV ES:[DI], AH ;- Plot the pixel
-
-      POP   DX        ;- Restore DX
-      DontDrawl:
-      INC   DI        ;- Move to the right one
-      INC   DX        ;- Add X coordinate to keep track
-      PUSH  DX        ;- Push X coordinate back onto the stack
-    LOOP  Put16l
-
-    POP   DX          ;- Get ready to move the X coordinate back 16 units
-    SUB   DX, 16      ;- Move the X counter back to it's starting spot
-    POP   AX          ;- Get Y coordinate of the stack
-    INC   AX          ;- Add Y coordinate by 1 since we are done with 1 row
-    PUSH  AX          ;- Push Y coordinate back on
-    PUSH  DX          ;- Push X coordinate back on also
-    
-  DoneSkipLinel: 
-
-    SUB   BX, 1       ;- We are done with 1 row, subtract to keep track
-    ADD   DI, 304     ;- Move down a row
-    CMP   BX, 0       ;- Are we done drawing?
-    JNE   Drawl       ;- If not, goto Draw
-
-    POP BX            ;- Get X coordinate of the stack
-    POP BX            ;- Get Y coordinate of the stack also
-    POP DS
-    POP BP
-    RET 10
-
-   SkipLinel:
-    INC   DX          ;- Add Y coordinate by 1 since we are done with 1 row
-    ADD   SI, 16      ;- Move down a row on the data
-    ADD   DI, 16      ;- Move across 16 pixels to make up for the line skipped
-    PUSH  DX          ;- Push the Y coordinate back onto the stack
-    PUSH  AX          ;- Push X coordinate back on also
-    JMP DoneSkipLinel
-
-   BlackenPixel:
-    MOV AH, DH        ;- AL = DH
-    JMP DoneBP        ;- goto DoneBP
-
+  
+	push bp
+	mov bp, sp
+	push ds
+	
+	;# buffer address
+	mov bx, [bp+06]
+	mov es, [bx]
+	xor di, di
+	;# sprite address
+	mov bx, [bp+08] ;# sprite ptr
+	mov si, [bx]
+	
+	add si, 4       ;# ignore sprite header
+	
+	;# SI add/skip amount
+	xor ax, ax
+	
+	;# X
+	mov bx, [bp+14]
+	mov bx, [bx]
+	
+	mov cx, 16
+	
+	cmp bx, 0
+	jge skipXbelowZeroLD2PL
+	  cmp bx, -16
+	  jle endLD2putl
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  add si, bx
+	  mov ax, bx
+	  xor bx, bx
+	skipXbelowZeroLD2PL:
+	
+	cmp bx, 304
+	jle skipXabove304LD2PL
+	  cmp bx, 320
+	  jge endLD2putl
+	  push bx
+	    sub bx, 320
+	    neg bx
+	    mov cx, bx
+	  pop bx
+	skipXabove304LD2PL:
+	
+	add di, bx ;# x location
+	mov dx, cx ;# width
+	
+	;# Y
+	mov bx, [bp+12]
+	mov bx, [bx]
+	
+	mov cx, 16
+	
+	cmp bx, 0
+	jge skipYbelowZeroLD2PL
+	  cmp bx, -16
+	  jle endLD2putl
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  shl bx, 4
+	  add si, bx
+	  xor bx, bx
+	skipYbelowZeroLD2PL:
+	
+	cmp bx, 184
+	jle skipYabove184LD2PL
+	  cmp bx, 200
+	  jge endLD2putl
+	  push bx
+		sub bx, 200
+		neg bx
+		mov cx, bx
+	  pop bx
+	skipYabove184LD2PL:
+	
+	push bx
+	  shl bx, 8
+	  add di, bx
+	pop bx
+	shl bx, 6
+	add di, bx ;# y location
+	           ;# cx is height
+	
+	mov bx, [bp+10] ;# sprite seg
+	mov ds, [bx]
+	
+	;# copy sprite block to buffer
+	;# dx = width
+	;# cx = height
+	;# ax = SI add/skip amount (16-width)
+	verticalLD2PL:
+      push cx
+        mov cx, dx
+        push si
+        push di
+          horizontalLD2PL:
+            lodsb
+            test al, al
+            jz skipPixelLD2PL
+              mov bl, es:[di]
+              push bx
+                mov bh, bl
+                and bl, 15
+                sub bh, bl
+                mov ah, bh
+              pop bx
+              sub bl, al
+              cmp bl, ah
+              ja storAL
+                mov bl, ah
+              storAL:
+                mov al, bl
+                stosb
+                jmp skipIncmntLD2PL
+            skipPixelLD2PL:
+              inc di
+            skipIncmntLD2PL:
+          loop horizontalLD2PL
+        pop di
+        pop si
+        add di, 320
+        add si, 16
+      pop cx
+	loop verticalLD2PL
+	
+	;# clean up and return
+	endLD2putl:
+	pop ds
+	pop bp
+	ret 10
+  
   LD2putl ENDP
+  
+  ;- LD2putwl: Draws a sprite 16X16 in size onto the given layer
+  ;-         : (Layer is an integer array of 32000)
+  ;-         : supports clipping on the edges of the screen
+  ;-         : when it draws a value other than 0, it darkens/lightens the
+  ;-         : color of the pixel by the given amount
+  ; 06 - BufferSeg
+  ; 08 - TempPtr
+  ; 10 - LightPtr
+  ; 12 - LightSeg
+  ; 14 - SpritePtr
+  ; 16 - SpriteSeg
+  ; 18 - y
+  ; 20 - x
+  LD2putwl PROC
+  
+	push bp
+	mov bp, sp
+	push ds
+	
+	;# sprite address
+	mov bx, [bp+08] ;# temp sprite ptr
+	mov si, [bx]
+	add si, 4       ;# ignore sprite header
+	
+	;# SI add/skip amount
+	xor ax, ax
+	
+	;# video pixel destination
+	xor di, di
+	
+	;# X
+	mov bx, [bp+20]
+	mov bx, [bx]
+	
+	mov cx, 16
+	
+	cmp bx, 0
+	jge skipXbelowZeroLD2PWL
+	  cmp bx, -16
+	  jle endLD2putwl
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  add si, bx
+	  mov ax, bx
+	  xor bx, bx
+	skipXbelowZeroLD2PWL:
+	
+	cmp bx, 304
+	jle skipXabove304LD2PWL
+	  cmp bx, 320
+	  jge endLD2putwl
+	  push bx
+	    sub bx, 320
+	    neg bx
+	    mov cx, bx
+	  pop bx
+	skipXabove304LD2PWL:
+	
+	add di, bx ;# x location
+	mov dx, cx ;# width
+	
+	;# Y
+	mov bx, [bp+18]
+	mov bx, [bx]
+	
+	mov cx, 16
+	
+	cmp bx, 0
+	jge skipYbelowZeroLD2PWL
+	  cmp bx, -16
+	  jle endLD2putwl
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  shl bx, 4
+	  add si, bx
+	  xor bx, bx
+	skipYbelowZeroLD2PWL:
+	
+	cmp bx, 184
+	jle skipYabove184LD2PWL
+	  cmp bx, 200
+	  jge endLD2putwl
+	  push bx
+		sub bx, 200
+		neg bx
+		mov cx, bx
+	  pop bx
+	skipYabove184LD2PWL:
+	
+	push bx
+	  shl bx, 8
+	  add di, bx
+	pop bx
+	shl bx, 6
+	add di, bx ;# y location
+	           ;# cx is height
+	
+	push cx
+	push di
+	push si
+	push ds
+	
+	call setTempAsDest
+	call setTileAsSrc
+	  
+	;# copy sprite block to temp buffer
+	mov cx, 256
+	copySpriteLoop:
+	  lodsb
+	  stosb
+	loop copySpriteLoop
+	
+	pop ds
+	push ds
+	
+	call setTempAsDest
+	call setLightAsSource
+	
+	;# apply light to temp sprite
+	mov cx, 256
+	mixLightLoop:
+      lodsb
+      test al, al
+      jz skipPixelLD2PWL2
+        mov bl, es:[di]
+        push bx
+          mov bh, bl
+          and bl, 15
+          sub bh, bl
+          mov ah, bh
+        pop bx
+        sub bl, al
+        cmp bl, ah
+        ja storALWL
+          mov bl, ah
+        storALWL:
+          mov al, bl
+          stosb
+          jmp skipIncmntLD2PWL2
+      skipPixelLD2PWL2:
+        inc di
+      skipIncmntLD2PWL2:
+    loop mixLightLoop
+	
+	pop ds
+	pop si
+	pop di
+	pop cx
+	
+	;# dst -- video buffer address
+	mov bx, [bp+06]
+	mov es, [bx]
+	;# src -- temp sprite source
+	mov bx, [bp+12] ;light seg (si should be at temp ptr)
+	mov ds, [bx]
+	
+	;# copy temp sprite to video buffer
+	;# dx = width
+	;# cx = height
+	verticalLD2PWL3:
+      push cx
+        mov cx, dx
+        push si
+        push di
+          horizontalLD2PWL3:
+            lodsb
+            test al, al
+            jz skipPixelLD2PWL3
+              stosb
+              jmp skipIncmntLD2PWL3
+            skipPixelLD2PWL3:
+              inc di
+            skipIncmntLD2PWL3:
+          loop horizontalLD2PWL3
+        pop di
+        pop si
+        add di, 320
+        add si, 16
+      pop cx
+	loop verticalLD2PWL3
+	
+	;# clean up and return
+	endLD2putwl:
+	pop ds
+	pop bp
+	ret 16
+	
+	setTileAsSrc:
+	  ;# src -- sprite
+	  mov bx, [bp+14] ;sprt ptr
+	  mov si, [bx]
+	  add si, 4
+	  mov bx, [bp+16] ;sprt seg
+	  mov ds, [bx]
+	retn
+	
+	setLightAsSource:
+	  ;# src -- light
+	  mov bx, [bp+10] ;ptr
+	  mov si, [bx]
+	  add si, 4
+	  mov bx, [bp+12] ;seg
+	  mov ds, [bx]
+	retn
+	
+	setTempAsDest:
+	  ;# dst -- temp sprite buffer address
+	  mov bx, [bp+12] ;lght seg
+	  mov es, [bx]
+	  mov bx, [bp+08] ;temp ptr
+	  mov di, [bx]
+	  add di, 4
+	retn
+  
+  LD2putwl ENDP
+
 
   ;- LD2copyFull: Copies a given layer onto another given layer excluding
   ;-            : (Layer is an integer array of 32000)
@@ -422,125 +722,6 @@
     RET   4
 
   LD2cls ENDP
-
-  ;- LD2copyTrans: Copies a given layer onto another given layer excluding
-  ;-             : excluding the zeros(Layer is an integer array of 32000)
-  LD2copyTrans PROC
-
-    PUSH  BP
-    MOV   BP, SP      ;- Set up the stack
-    PUSH  DS
-
-    MOV   BX, [BP+06]
-    MOV   ES, [BX]    
-    MOV   DI, 0       ;- Set the destination
-
-    MOV   BX, [BP+08]
-    MOV   DS, [BX]    
-    MOV   SI, 0       ;- Set the source
-
-    MOV   CX, 0FA00h  ;- CX = 64000
-    
-    CopyTrans:
-      LODSB
-      CMP AL, 0       ;- Is the pixel being copied have a value of 0?
-      JE SkipPixel    ;- If so, goto SkipPixel
-      MOV ES:[DI], AL ;- copy over
-      SkipPixel:
-      INC DI
-    LOOP  CopyTrans
-
-    POP DS
-    POP BP
-    RET 4
-    
-  LD2copyTrans ENDP
-
-  ;- LD2pset: Plots a pixel with a given color onto the given buffer
-  LD2pset PROC
-
-    PUSH  BP
-    MOV   BP, SP      ;- Set up the stack
-
-    MOV   BX, [BP+08]
-    MOV   ES, [BX]    ;- Set up the buffer to draw to
-
-    MOV   BX, [BP+10]
-    MOV   BX, [BX]    ;- Put the Y coordinate of the pixel into BX
-
-    CMP   BX, 0       ;- Is the Y coordinate smaller than 0?
-    JB    PsetDone    ;- If so, goto PsetDone
-    CMP   BX, 199     ;- Is the Y coordinate greater than 199?
-    JA    PsetDone    ;- If so, goto PsetDone
-
-    MOV   CX, BX      ;- CX = BX
-    SHL   BX, 8       ;- Same as BX = BX * 256
-    SHL   CX, 6       ;- Same as BX = BX * 64
-    ADD   BX, CX      ;- Add together so it's the same as multiplying by 320
-    MOV   DI, BX
-
-    MOV   BX, [BP+12]
-    MOV   BX, [BX]    ;- Put the X coordinate of the pixel into BX
-
-    CMP   BX, 0       ;- Is the X coordinate smaller than 0?
-    JB    PsetDone    ;- If so, goto PsetDone
-    CMP   BX, 319     ;- Is the X coordinate greater than 319?
-    JA    PsetDone    ;- If so, goto PsetDone
-
-    ADD   DI, BX      ;- Now we are ready to plot the pixel
-
-    MOV   BX, [BP+06]
-    MOV   AX, [BX]    ;- Put the color of the pixel into AX
-
-    MOV   ES:[DI], AL ;- Plot the pixel
-
-  PsetDone:
-
-    POP BP
-    RET 8
-
-  LD2pset ENDP
-
-  ;- LD2sroll: Scrolls the given buffer by -1
-  LD2scroll PROC
-
-    PUSH  BP
-    MOV   BP, SP      ;- Set up the stack
-
-    MOV   BX, [BP+06]
-    MOV   ES, [BX]    ;- Get the buffer
-    XOR   DI, DI      ;- DI = 0
-
-    MOV   CX, 200     ;- CX = 200
-
-    ScrollBuffer:
-
-      MOV   DL, ES:[DI] ;- DL = Color of pixel
-            
-      PUSH  CX          ;- Save CX
-
-      MOV   CX, 320     ;- Get Ready to scroll 320 pixels
-      
-      ScrollPixel:
-        INC DI          ;- DI = DI + 1
-        MOV AL, ES:[DI]
-        DEC DI
-        MOV ES:[DI], AL ;- Plot the pixel
-        INC DI          ;- DI = DI + 1
-      Loop ScrollPixel  ;- loop it
-
-      DEC   DI
-      MOV   ES:[DI], DL
-      INC   DI
-
-      POP   CX          ;- Restore CX
-
-    LOOP ScrollBuffer   ;- Loop 200 times
-    
-    POP   BP
-    RET   2
-
-  LD2scroll ENDP
 
   ;- LD2put65: Draws a sprite 6X5 in size onto the given layer
   ;-        : (Layer is an integer array of 32000)
