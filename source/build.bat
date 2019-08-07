@@ -105,8 +105,8 @@ echo "bc ld2.bas/o/t/s/c:512;" >> log\build.log
 bc ld2.bas/o/t/s/c:512; >> log\build.log
 echo "bc title.bas/o/t/c:512;" >> log\build.log
 bc title.bas/o/t/c:512; >> log\build.log
-echo "link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,ld2.exe,,lib\bcom45.lib+lib\qb.lib+lib\ld2gfx.lib+lib\ds4qbpp.lib" >> log\build.log
-link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,ld2.exe,,lib\bcom45.lib+lib\qb.lib+lib\ld2gfx.lib+lib\ds4qbpp.lib >> log\build.log
+echo "link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,nosound.exe,,lib\bcom45.lib+lib\qb.lib+lib\ld2gfx.lib" >> log\build.log
+link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,nosound.exe,,lib\bcom45.lib+lib\qb.lib+lib\ld2gfx.lib >> log\build.log
 
 copy lib\bcom45.lib .
 copy lib\qb.lib .
@@ -115,8 +115,8 @@ copy lib\nosound.lib .
 copy lib\ld2snd.lib .
 rem echo "link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,nosound.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+lib\mse_qb.lib" >> log\build.log
 rem link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,nosound.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+lib\mse_qb.lib >> log\build.log
-echo "link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,nosound.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+lib\mse_qb.lib"
-link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,nosound.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+lib\mse_qb.lib
+echo "link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,ld2.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+lib\mse_qb.lib"
+link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,ld2.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+lib\mse_qb.lib
 
 del edit.map
 del edit.obj
