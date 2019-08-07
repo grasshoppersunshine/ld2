@@ -1,41 +1,16 @@
-DECLARE SUB LD2.SetAccessLevel (CodeNum AS INTEGER)
-DECLARE SUB LD2.CopyBuffer (Buffer1 AS INTEGER, Buffer2 AS INTEGER)
-DECLARE SUB LD2.ShowCredits ()
-DECLARE SUB LD2.LoadMap (Filename AS STRING)
-DECLARE SUB LD2.ShutDown ()
-DECLARE SUB LD2.PopText (Message AS STRING)
-DECLARE SUB LD2.SetWeapon1 (WeaponNum AS INTEGER)
-DECLARE SUB LD2.SetCodeLevel (Num AS INTEGER)
-DECLARE FUNCTION keyboard% (T%)
-DECLARE SUB LD2.SendMessage (msg AS INTEGER, par AS INTEGER)
-DECLARE SUB PutLarryX2 (x AS INTEGER, XShift AS INTEGER)
-DECLARE FUNCTION LD2.AddToStatus% (item AS INTEGER, Amount AS INTEGER)
-DECLARE SUB LD2.DrawItems ()
-DECLARE SUB LD2.put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, flip AS INTEGER)
-DECLARE SUB SetElevate (OnOff AS INTEGER)
-DECLARE SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
-DECLARE SUB LD2.PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
-DECLARE SUB LD2.SetWeapon (NumWeapon AS INTEGER)
-DECLARE SUB LD2.PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
-DECLARE SUB LD2.Start ()
-DECLARE SUB PutLarryX (x AS INTEGER, XShift AS INTEGER)
-DECLARE FUNCTION LD2.CheckWallHit% (NumEntity AS INTEGER)
-DECLARE FUNCTION LD2.CheckFloorHit% (NumEntity AS INTEGER)
-DECLARE SUB LD2.DeleteEntity (NumEntity AS INTEGER)
-DECLARE SUB LD2.ProcessGuts ()
-DECLARE SUB LD2.MakeGuts (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTEGER)
-DECLARE SUB LD2.CreateEntity (x AS INTEGER, y AS INTEGER, id AS INTEGER)
-DECLARE SUB LD2.LoadPalette (Filename AS STRING)
-DECLARE SUB LD2.LoadSprite (Filename AS STRING, BufferNum AS INTEGER)
-DECLARE SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER)
 '- Larry The Dinosaur II Engine
 '- July, 2002 - Created by Joe King
 '==================================
 
-  '$DYNAMIC
-  '$INCLUDE: 'INC\LD2GFX.BI'
-  '$INCLUDE: 'INC\DEXTERN.BI'
+  REM $INCLUDE: 'INC\LD2SND.BI'
+  REM $INCLUDE: 'INC\LD2GFX.BI'
+  REM $INCLUDE: 'INC\LD2E.BI'
+  REM $INCLUDE: 'INC\LD2.BI'
 
+  REM $DYNAMIC
+  
+  A& = SETMEM(-200000)
+  
   DIM SHARED Buffer1(32000) AS INTEGER    '- Offscreen buffer
   DIM SHARED Buffer2(32000) AS INTEGER    '- Offscreen buffer
 
@@ -43,7 +18,7 @@ DECLARE SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS
   DIM SHARED sEnemy(5980) AS INTEGER      '- GFX Enemies
   DIM SHARED sLarry(4680) AS INTEGER      '- GFX Larry
   DIM SHARED sGuts(2080) AS INTEGER       '- GFX Guts
-  DIM SHARED sLight(5200) AS INTEGER      '- GFX Lighting
+  DIM SHARED sLight(5330) AS INTEGER      '- GFX Lighting
   DIM SHARED sFont(1003) AS INTEGER       '- GFX Font
   DIM SHARED sScene(14300) AS INTEGER     '- GFX Scenes
   DIM SHARED sObject(5200) AS INTEGER     '- GFX Objects
@@ -180,29 +155,6 @@ DECLARE SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS
   CONST CODEWHITE = 55
   CONST MEMORYCARD = 27
 
-  CONST sndSHOTGUN = 1
-  CONST sndMACHINEGUN = 2
-  CONST sndPISTOL = 3
-  CONST sndDESERTEAGLE = 4
-  CONST sndMACHINEGUN2 = 5
-  CONST sndPISTOL2 = 6
-  CONST sndBLOOD1 = 11
-  CONST sndBLOOD2 = 12
-  CONST sndDOORDOWN = 13
-  CONST sndDOORUP = 14
-  CONST sndINTRO = 15
-  CONST sndUHOH = 16
-  CONST sndPUNCH = 17
-  CONST sndEQUIP = 18
-  CONST sndPICKUP = 19
-  CONST sndLAUGH = 20
-
-  CONST mscWANDERING = 31
-  CONST mscINTRO = 32
-  CONST mscBOSS = 33
-  CONST mscTHEME = 34
-  CONST mscENDING = 35
-
   CONST msgENTITYDELETED = 1
   CONST msgGOTYELLOWCARD = 2
 
@@ -212,10 +164,57 @@ DECLARE SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS
   NumLives = 1
   DIM SHARED Lighting AS INTEGER
   Lighting = 1
-
+  
   LD2.Start
 
 REM $STATIC
+DEFINT A-Z
+FUNCTION keyboard (T%)
+STATIC kbcontrol%(), kbmatrix%(), Firsttime, StatusFlag
+IF Firsttime = 0 THEN
+ DIM kbcontrol%(128)
+ DIM kbmatrix%(128)
+ code$ = ""
+ code$ = code$ + "E91D00E93C00000000000000000000000000000000000000000000000000"
+ code$ = code$ + "00001E31C08ED8BE24000E07BF1400FCA5A58CC38EC0BF2400B85600FAAB"
+ code$ = code$ + "89D8ABFB1FCB1E31C08EC0BF2400BE14000E1FFCFAA5A5FB1FCBFB9C5053"
+ code$ = code$ + "51521E560657E460B401A8807404B400247FD0E088C3B700B0002E031E12"
+ code$ = code$ + "002E8E1E100086E08907E4610C82E661247FE661B020E6205F075E1F5A59"
+ code$ = code$ + "5B589DCF"
+ DEF SEG = VARSEG(kbcontrol%(0))
+ FOR i% = 0 TO 155
+ d% = VAL("&h" + MID$(code$, i% * 2 + 1, 2))
+ POKE VARPTR(kbcontrol%(0)) + i%, d%
+ NEXT i%
+ i& = 16
+ n& = VARSEG(kbmatrix%(0)): l& = n& AND 255: h& = ((n& AND &HFF00) \ 256): POKE i&, l&: POKE i& + 1, h&: i& = i& + 2
+ n& = VARPTR(kbmatrix%(0)): l& = n& AND 255: h& = ((n& AND &HFF00) \ 256): POKE i&, l&: POKE i& + 1, h&: i& = i& + 2
+ DEF SEG
+ Firsttime = 1
+END IF
+SELECT CASE T
+ CASE 1 TO 128
+ keyboard = kbmatrix%(T)
+ CASE -1
+ IF StatusFlag = 0 THEN
+ DEF SEG = VARSEG(kbcontrol%(0))
+ CALL ABSOLUTE(0)
+ DEF SEG
+ StatusFlag = 1
+ END IF
+ CASE -2
+ IF StatusFlag = 1 THEN
+ DEF SEG = VARSEG(kbcontrol%(0))
+ CALL ABSOLUTE(3)
+ DEF SEG
+ StatusFlag = 0
+ END IF
+ CASE ELSE
+ keyboard = 0
+END SELECT
+END FUNCTION
+
+DEFSNG A-Z
 SUB LD2.AddAmmo (Kind AS INTEGER, Amount AS INTEGER)
 
 
@@ -229,7 +228,7 @@ SUB LD2.AddAmmo (Kind AS INTEGER, Amount AS INTEGER)
   IF Player.bullets > 200 THEN Player.bullets = 200
   IF Player.deagles > 48 THEN Player.deagles = 48
 
-  DS4QB.PlaySound sndEQUIP
+  LD2.PlaySound sndEQUIP
 
 END SUB
 
@@ -313,7 +312,7 @@ FUNCTION LD2.CheckWallHit% (NumEntity AS INTEGER)
 
 END FUNCTION
 
-SUB LD2.Cls (BufferNum AS INTEGER, Col AS INTEGER)
+SUB LD2.cls (BufferNum AS INTEGER, Col AS INTEGER)
 
   '- clear a buffer with the given color
   '-------------------------------------
@@ -330,7 +329,7 @@ SUB LD2.CopyBuffer (Buffer1 AS INTEGER, Buffer2 AS INTEGER)
   '----------------------------
 
   IF Buffer1 = 1 AND Buffer2 = 0 THEN
-    LD2copyfull VARSEG(Buffer1(0)), &HA000
+    LD2copyFull VARSEG(Buffer1(0)), &HA000
   END IF
 
 END SUB
@@ -382,10 +381,9 @@ SUB LD2.DeleteEntity (NumEntity AS INTEGER)
 
   SELECT CASE Entity(NumEntity).id
     CASE BOSS1
-      DS4QB.StopMusic 33
+      LD2.StopMusic
     CASE idBOSS2
-      DS4QB.StopMusic 33
-      DS4QB.PlayMusic 31
+      LD2.PlayMusic mscWANDERING
       LD2.SetAccessLevel CODERED
   END SELECT
  
@@ -461,53 +459,60 @@ SUB LD2.Init
   '- Initialize Larry The Dinosaur II
   '----------------------------------
  
+  'nil% = DS4QB.Init(CURRENT, DEFAULT)
+  LD2.InitSound
+  
   SCREEN 13
  
   LD2.LoadPalette "gfx\gradient.pal"
   LD2.LoadSprite "gfx\font1.put", idFONT
-
-  nil% = DS4QB.Init(CURRENT, DEFAULT)
  
   DIM Message AS STRING
-
-  IF nil% THEN
-    Message = "Please run SETUP"
-    CLS
-    LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
-    DO: LOOP UNTIL keyboard(&H39)
-    DO: LOOP WHILE keyboard(&H39)
-    END
-  ELSE
+'
+'  IF nil% THEN
+'    Message = "Please run SETUP"
+'    CLS
+'    LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
+'    DO: LOOP UNTIL keyboard(&H39)
+'    DO: LOOP WHILE keyboard(&H39)
+'    END
+'  ELSE
     Message = "Loading...Please Wait..."
     CLS
     LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
-  END IF
- 
-  DS4QB.LoadMusic mscWANDERING, "sfx/creepy.mp3", DEFAULT
-  DS4QB.LoadMusic mscINTRO, "sfx/intro.mp3", DEFAULT
-  DS4QB.LoadMusic mscENDING, "sfx/ending.mod", DEFAULT
-  DS4QB.LoadMusic mscBOSS, "sfx/boss.mp3", DEFAULT
-  DS4QB.LoadMusic mscTHEME, "sfx/intro.mod", DEFAULT
-  DS4QB.LoadSound sndUHOH, "sfx/uhoh.mp3", DEFAULT
-  DS4QB.LoadSound sndSHOTGUN, "sfx/shotgun.mp3", DEFAULT
-  DS4QB.LoadSound sndMACHINEGUN, "sfx/mgun.mp3", DEFAULT
-  DS4QB.LoadSound sndPISTOL, "sfx/pistol.mp3", DEFAULT
-  DS4QB.LoadSound sndDESERTEAGLE, "sfx/deagle.mp3", DEFAULT
-  DS4QB.LoadSound sndMACHINEGUN2, "sfx/mgun.mp3", DEFAULT
-  DS4QB.LoadSound sndPISTOL2, "sfx/pistol.mp3", DEFAULT
-  DS4QB.LoadSound sndBLOOD1, "sfx/blood1.mp3", DEFAULT
-  DS4QB.LoadSound sndBLOOD2, "sfx/blood2.mp3", DEFAULT
-  DS4QB.LoadSound sndDOORDOWN, "sfx/doordown.mp3", DEFAULT
-  DS4QB.LoadSound sndDOORUP, "sfx/doorup.mp3", DEFAULT
-  DS4QB.LoadSound sndPUNCH, "sfx/punch.mp3", DEFAULT
-  DS4QB.LoadSound sndEQUIP, "sfx/equip.mp3", DEFAULT
-  DS4QB.LoadSound sndPICKUP, "sfx/pickup.mp3", DEFAULT
-  DS4QB.LoadSound sndLAUGH, "sfx/laugh.mp3", DEFAULT
+'  END IF
+
+    LD2.AddMusic mscTHEME, "sfx\theme.gdm", 0
+    LD2.AddMusic mscWANDERING, "sfx\wander.gdm", 1
+    LD2.AddMusic mscINTRO, "sfx\intro.gdm", 1
+    LD2.AddMusic mscUHOH, "sfx\uhoh.gdm", 0
+    LD2.AddMusic mscMARCHoftheUHOH, "sfx\scent.gdm", 0
+'  DS4QB.LoadMusic mscWANDERING, "sfx/creepy.mp3", DEFAULT
+'  DS4QB.LoadMusic mscINTRO, "sfx/intro.mp3", DEFAULT
+'  DS4QB.LoadMusic mscENDING, "sfx/ending.mod", DEFAULT
+'  DS4QB.LoadMusic mscBOSS, "sfx/boss.mp3", DEFAULT
+'  DS4QB.LoadMusic mscTHEME, "sfx/intro.mod", DEFAULT
+'  DS4QB.LoadSound sndUHOH, "sfx/uhoh.mp3", DEFAULT
+'  DS4QB.LoadSound sndSHOTGUN, "sfx/shotgun.mp3", DEFAULT
+'  DS4QB.LoadSound sndMACHINEGUN, "sfx/mgun.mp3", DEFAULT
+'  DS4QB.LoadSound sndPISTOL, "sfx/pistol.mp3", DEFAULT
+'  DS4QB.LoadSound sndDESERTEAGLE, "sfx/deagle.mp3", DEFAULT
+'  DS4QB.LoadSound sndMACHINEGUN2, "sfx/mgun.mp3", DEFAULT
+'  DS4QB.LoadSound sndPISTOL2, "sfx/pistol.mp3", DEFAULT
+'  DS4QB.LoadSound sndBLOOD1, "sfx/blood1.mp3", DEFAULT
+'  DS4QB.LoadSound sndBLOOD2, "sfx/blood2.mp3", DEFAULT
+'  DS4QB.LoadSound sndDOORDOWN, "sfx/doordown.mp3", DEFAULT
+'  DS4QB.LoadSound sndDOORUP, "sfx/doorup.mp3", DEFAULT
+'  DS4QB.LoadSound sndPUNCH, "sfx/punch.mp3", DEFAULT
+'  DS4QB.LoadSound sndEQUIP, "sfx/equip.mp3", DEFAULT
+'  DS4QB.LoadSound sndPICKUP, "sfx/pickup.mp3", DEFAULT
+'  DS4QB.LoadSound sndLAUGH, "sfx/laugh.mp3", DEFAULT
  
   CLS
  
   XShift = 0
   LD2.LoadBitmap "gfx\warning.bmp", 1, 0
+  
   WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   LD2.CopyBuffer 1, 0
  
@@ -527,10 +532,14 @@ SUB LD2.Init
   WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   LD2.CopyBuffer 1, 0
  
-  DS4QB.PlayMusic mscTHEME
+  LD2.PlayMusic mscTHEME
   DO
-    IF keyboard(&H2) OR keyboard(&H4F) THEN EXIT DO
+    IF keyboard(&H2) OR keyboard(&H4F) THEN
+	  EXIT DO
+    END IF
     IF keyboard(&H3) OR keyboard(&H50) THEN
+	  LD2.PlaySound sndSELECT
+	  FOR i% = 1 TO 35: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
       LD2.ShowCredits
       CLS
       LD2.LoadBitmap "gfx\title.bmp", 1, 0
@@ -538,21 +547,26 @@ SUB LD2.Init
       LD2.CopyBuffer 1, 0
     END IF
     IF keyboard(&H4) OR keyboard(&H51) THEN
+      LD2.PlaySound sndSELECT
+      FOR i% = 1 TO 70: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
       CLS
       LD2.LoadPalette "gfx\gradient.pal"
       LD2.ShutDown
     END IF
   LOOP
-  DS4QB.StopMusic mscTHEME
-
+  LD2.PlaySound sndSELECT
+  FOR i% = 1 TO 35: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
+  
+  LD2.StopMusic
+  
+  LD2.LoadPalette "gfx\gradient.pal"
+  CLS
   DEF SEG = VARSEG(Buffer1(0))
     FOR n& = 0 TO 63999
       POKE (n&), 0
     NEXT
   DEF SEG
-
-  CLS
-  LD2.LoadPalette "gfx\gradient.pal"
+  
   LD2.LoadSprite "gfx\ld2light.put", idLIGHT
   LD2.LoadSprite "gfx\ld2tiles.put", idTILE
   LD2.LoadSprite "gfx\enemies.put", idENEMY
@@ -1045,6 +1059,23 @@ SUB LD2.MakeGuts (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTEGER)
 
 END SUB
 
+SUB LD2.ShatterGlass (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTEGER)
+
+  '- Make glass shatter pieces
+  '---------------------------
+
+  FOR i% = 1 TO Amount
+    IF NumGuts + 1 > 100 THEN EXIT FOR
+    NumGuts = NumGuts + 1
+    Guts(NumGuts).x = x + (-15 + INT(10 * RND(1)) + 1)
+    Guts(NumGuts).y = y + (-15 + INT(10 * RND(1)) + 1)
+    Guts(NumGuts).velocity = -1 * RND(1)
+    Guts(NumGuts).speed = Dir * RND(1) + .1 * Dir
+    Guts(NumGuts).id = 12+INT(4 * RND(1))
+  NEXT i%
+
+END SUB
+
 SUB LD2.MovePlayer (XAmount AS SINGLE)
 
   '- Move the player
@@ -1080,7 +1111,7 @@ SUB LD2.PickUpItem
   FOR i% = 1 TO NumItems(CurrentRoom)
     IF Player.x + 8 + XShift >= item(i%, CurrentRoom).x AND Player.x + 8 + XShift <= item(i%, CurrentRoom).x + 16 THEN
      
-      DS4QB.PlaySound sndPICKUP
+      LD2.PlaySound sndPICKUP
      
       '- Send message if player picked up something important
       SELECT CASE item(i%, CurrentRoom).item + 1
@@ -1105,6 +1136,19 @@ SUB LD2.PickUpItem
   NEXT i%
 
  
+END SUB
+
+SUB LD2.PopText (Message AS STRING)
+
+    CLS
+   
+    DO: LOOP WHILE keyboard(&H39)
+
+    LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
+   
+    DO: LOOP UNTIL keyboard(&H39)
+    DO: LOOP WHILE keyboard(&H39)
+
 END SUB
 
 SUB LD2.ProcessEntities
@@ -1215,8 +1259,7 @@ SUB LD2.ProcessEntities
         IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
           IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 10 <= Player.y + 15 THEN
             IF INT(10 * RND(1)) + 1 = 1 THEN
-              'DS4QB.StopSound sndBLOOD2
-              DS4QB.PlaySound sndBLOOD2
+              LD2.PlaySound sndBLOOD2
             END IF
             Player.life = Player.life - 1
             LD2.MakeGuts Entity(n%).x + 7, Entity(n%).y + 8, -1, 1
@@ -1261,12 +1304,11 @@ SUB LD2.ProcessEntities
          
           IF Entity(n%).shooting > 0 THEN
             IF INT(30 * RND(1)) + 1 = 1 THEN
-              DS4QB.PlaySound sndLAUGH
+              LD2.PlaySound sndLAUGH
             END IF
             '- Make entity shoot
             IF (Entity(n%).shooting AND 7) = 0 THEN
-              'DS4QB.StopSound sndMACHINEGUN2
-              DS4QB.PlaySound sndMACHINEGUN2
+              LD2.PlaySound sndMACHINEGUN2
               IF Entity(n%).flip = 0 THEN
                 DEF SEG = VARSEG(TileMap(0))
                 FOR i% = Entity(n%).x + 15 TO Entity(n%).x + 320 STEP 8
@@ -1343,8 +1385,7 @@ SUB LD2.ProcessEntities
           IF Entity(n%).shooting > 0 THEN
             '- Make entity shoot
             IF (Entity(n%).shooting AND 15) = 0 THEN
-              'DS4QB.StopSound sndPISTOL2
-              DS4QB.PlaySound sndPISTOL2
+              LD2.PlaySound sndPISTOL2
               IF Entity(n%).flip = 0 THEN
                 DEF SEG = VARSEG(TileMap(0))
                 FOR i% = Entity(n%).x + 15 TO Entity(n%).x + 320 STEP 8
@@ -1405,8 +1446,7 @@ SUB LD2.ProcessEntities
         IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
           IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 10 <= Player.y + 15 THEN
             IF INT(10 * RND(1)) + 1 = 1 THEN
-              'DS4QB.StopSound sndBLOOD1
-              DS4QB.PlaySound sndBLOOD1
+              LD2.PlaySound sndBLOOD1
             END IF
             Player.life = Player.life - 1
             LD2.MakeGuts Entity(n%).x + 7, Entity(n%).y + 8, -1, 1
@@ -1442,8 +1482,7 @@ SUB LD2.ProcessEntities
         IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
           IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 10 <= Player.y + 15 THEN
             IF INT(10 * RND(1)) + 1 = 1 THEN
-              'DS4QB.StopSound sndBLOOD2
-              DS4QB.PlaySound sndBLOOD2
+              LD2.PlaySound sndBLOOD2
             END IF
             Player.life = Player.life - 1
             LD2.MakeGuts Entity(n%).x + 7, Entity(n%).y + 8, -1, 1
@@ -1547,43 +1586,43 @@ SUB LD2.ProcessEntities
     closed = 0
     IF Player.code >= Door(i).code OR Player.tempcode >= Door(i).code OR (Player.WHITECARD = 1 AND Door(i).code = CODEWHITE) THEN
       IF Door(i).ani = 0 THEN
-        IF Player.x + s7% + XShift >= Door(i).x1 AND Player.x + s7% + XShift <= Door(i).x2 THEN
-          IF Player.y + 7 >= Door(i).y1 AND Player.y + 7 <= Door(i).y2 THEN
-            DS4QB.PlaySound sndDOORUP
-            Door(i).anicount = .2
-            Player.tempcode = 0
-          END IF
-        END IF
+	IF Player.x + s7% + XShift >= Door(i).x1 AND Player.x + s7% + XShift <= Door(i).x2 THEN
+	  IF Player.y + 7 >= Door(i).y1 AND Player.y + 7 <= Door(i).y2 THEN
+	    LD2.PlaySound sndDOORUP
+	    Door(i).anicount = .2
+	    Player.tempcode = 0
+	  END IF
+	END IF
       ELSE
-        IF Player.x + s7% + XShift >= Door(i).x1 AND Player.x + s7% + XShift <= Door(i).x2 THEN
-          IF Player.y + 7 >= Door(i).y1 AND Player.y + 7 <= Door(i).y2 THEN
-            Door(i).anicount = .2
-          ELSE
-            closed = 1
-          END IF
-        ELSE
-          closed = 1
-        END IF
-        IF closed THEN
-          IF NumEntities = 0 THEN
-            IF Door(i).ani = 4 THEN DS4QB.PlaySound sndDOORDOWN
-            Door(i).anicount = -.2
-          END IF
-          FOR n = 1 TO NumEntities
-            IF Entity(n).x + s7% >= Door(i).x1 AND Entity(n).x + s7% <= Door(i).x2 THEN
-              IF Entity(n).y + 7 >= Door(i).y1 AND Entity(n).y + 7 <= Door(i).y2 THEN
-                Door(i).anicount = .2
-                EXIT FOR
-              ELSE
-                IF Door(i).ani = 4 THEN DS4QB.PlaySound sndDOORDOWN
-                Door(i).anicount = -.2
-              END IF
-            ELSE
-              IF Door(i).ani = 4 THEN DS4QB.PlaySound sndDOORDOWN
-              Door(i).anicount = -.2
-            END IF
-          NEXT n
-        END IF
+	IF Player.x + s7% + XShift >= Door(i).x1 AND Player.x + s7% + XShift <= Door(i).x2 THEN
+	  IF Player.y + 7 >= Door(i).y1 AND Player.y + 7 <= Door(i).y2 THEN
+	    Door(i).anicount = .2
+	  ELSE
+	    closed = 1
+	  END IF
+	ELSE
+	  closed = 1
+	END IF
+	IF closed THEN
+	  IF NumEntities = 0 THEN
+	    IF Door(i).ani = 4 THEN LD2.PlaySound sndDOORDOWN
+	    Door(i).anicount = -.2
+	  END IF
+	  FOR n = 1 TO NumEntities
+	    IF Entity(n).x + s7% >= Door(i).x1 AND Entity(n).x + s7% <= Door(i).x2 THEN
+	      IF Entity(n).y + 7 >= Door(i).y1 AND Entity(n).y + 7 <= Door(i).y2 THEN
+		Door(i).anicount = .2
+		EXIT FOR
+	      ELSE
+		IF Door(i).ani = 4 THEN LD2.PlaySound sndDOORDOWN
+		Door(i).anicount = -.2
+	      END IF
+	    ELSE
+	      IF Door(i).ani = 4 THEN LD2.PlaySound sndDOORDOWN
+	      Door(i).anicount = -.2
+	    END IF
+	  NEXT n
+	END IF
       END IF
       Door(i).ani = Door(i).ani + Door(i).anicount
       IF Door(i).ani >= 4 THEN
@@ -1616,52 +1655,39 @@ SUB LD2.ProcessGuts
 
   FOR i% = 1 TO NumGuts
    
-    IF Guts(i%).id < 8 THEN
+    IF Guts(i%).id < 8 or Guts(i%).id > 11 THEN
    
       Guts(i%).x = Guts(i%).x + Guts(i%).speed
       Guts(i%).y = Guts(i%).y + Guts(i%).velocity
       Guts(i%).velocity = Guts(i%).velocity + Gravity
    
       IF Guts(i%).y > 200 THEN
-        '- Delete gut
-        FOR n% = i% TO NumGuts - 1
-          Guts(n%) = Guts(n% + 1)
-        NEXT n%
-        NumGuts = NumGuts - 1
+	'- Delete gut
+	FOR n% = i% TO NumGuts - 1
+	  Guts(n%) = Guts(n% + 1)
+	NEXT n%
+	NumGuts = NumGuts - 1
       END IF
 
     ELSE
      
       Guts(i%).count = Guts(i%).count + 1
       IF Guts(i%).count >= 4 THEN
-        Guts(i%).count = 0
-        Guts(i%).id = Guts(i%).id + 1
+	Guts(i%).count = 0
+	Guts(i%).id = Guts(i%).id + 1
       END IF
   
-      IF Guts(i%).y > 200 OR Guts(i%).id > 11 THEN
-        '- Delete gut
-        FOR n% = i% TO NumGuts - 1
-          Guts(n%) = Guts(n% + 1)
-        NEXT n%
-        NumGuts = NumGuts - 1
+      IF Guts(i%).y > 200 OR Guts(i%).id > 15 THEN
+	'- Delete gut
+	FOR n% = i% TO NumGuts - 1
+	  Guts(n%) = Guts(n% + 1)
+	NEXT n%
+	NumGuts = NumGuts - 1
       END IF
    
     END IF
 
   NEXT i%
-
-END SUB
-
-SUB LD2.pset (x AS INTEGER, y AS INTEGER, BufferNum AS INTEGER, Col AS INTEGER)
-
-  '- plot a pixel on the given buffer with the given color
-  '-------------------------------------------------------
-
-  IF BufferNum = 0 THEN b% = &HA000
-  IF BufferNum = 1 THEN b% = VARSEG(Buffer1(0))
-  IF BufferNum = 2 THEN b% = VARSEG(Buffer2(0))
- 
-  LD2pset x, y, b%, Col
 
 END SUB
 
@@ -1708,7 +1734,7 @@ SUB LD2.put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, fl
 
 END SUB
 
-SUB LD2.PutRoofCode (Code AS STRING)
+SUB LD2.PutRoofCode (code AS STRING)
 
   '- MISSING
   '- I think this adds the code to the "note item" description
@@ -1752,27 +1778,60 @@ SUB LD2.RenderFrame
 
   '- Render a frame
   '----------------
-
+  DIM spriteIdx AS INTEGER
+  DIM lightIdx AS INTEGER
+  DIM tempIdx AS INTEGER
+  DIM segAniMap AS INTEGER
+  DIM segTileMap AS INTEGER
+  DIM segLightMap1 AS INTEGER
+  DIM segLightMap2 AS INTEGER
+  DIM segTile AS INTEGER
+  DIM segLight AS INTEGER
+  DIM segBuffer1 AS INTEGER
+  DIM segBuffer2 AS INTEGER
+  
+  DIM ptrTile AS INTEGER
+  DIM ptrLight AS INTEGER
+  DIM ptrTemp AS INTEGER
+  
+  segAniMap    = VARSEG(AniMap(0))
+  segTileMap   = VARSEG(TileMap(0))
+  segLightMap1 = VARSEG(LightMap1(0))
+  segLightMap2 = VARSEG(LightMap2(0))
+  segTile      = VARSEG(sTile(0))
+  segLight     = VARSEG(sLight(0))
+  segBuffer1   = VARSEG(Buffer1(0))
+  segBuffer2   = VARSEG(Buffer2(0))
+  
   Animation = Animation + .2
   IF Animation > 9 THEN Animation = 1
 
   'LD2Scroll VARSEG(Buffer2(0))
-  LD2copyfull VARSEG(Buffer2(0)), VARSEG(Buffer1(0))
+  LD2copyFull VARSEG(Buffer2(0)), VARSEG(Buffer1(0))
  
   IF Lighting THEN
+    DEF SEG = segLightMap1: ptrTemp = VARPTR(LightMap1(EPS * 41))
     yp% = 0
     FOR y% = 1 TO 13
       xp% = 0 - (XShift AND 15)
       FOR x% = 1 TO 40
         m% = ((x% - 1 + XShift \ 16) + (y% - 1) * 200)
         l% = m%
-        DEF SEG = VARSEG(AniMap(0)): a% = (Animation MOD (PEEK(m%) + 1)): DEF SEG
-        DEF SEG = VARSEG(TileMap(0)): LD2put xp%, yp%, VARSEG(sTile(0)), VARPTR(sTile(EPS * (PEEK(m%) + a%))), VARSEG(Buffer1(0)), 0: DEF SEG
-        DEF SEG = VARSEG(LightMap2(0)): LD2putl xp%, yp%, VARSEG(sLight(0)), VARPTR(sLight(EPS * PEEK(l%))), VARSEG(Buffer1(0)): DEF SEG
+        DEF SEG = segAniMap   : a% = (Animation MOD (PEEK(m%) + 1))
+        DEF SEG = segTileMap  : LD2put xp%, yp%, segTile, VARPTR(sTile(EPS * (PEEK(m%) + a%))), segBuffer1, 0
+        'DEF SEG = segTileMap  : ptrTile = VARPTR(sTile(EPS * (PEEK(m%) + a%)))
+        'DEF SEG = segLightMap1: ptrLight = VARPTR(LightMap1(EPS * l%))
+        'LD2putwl xp%, yp%, segTile, ptrTile, segLight, ptrLight, ptrTemp, segBuffer1
+        DEF SEG = segLightMap2
+        l% = PEEK(l%)
+        IF l% THEN
+          LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
+        END IF
         xp% = xp% + 16
       NEXT
       yp% = yp% + 16
     NEXT
+    DEF SEG
   ELSE
     yp% = 0
     FOR y% = 1 TO 13
@@ -1839,7 +1898,10 @@ SUB LD2.RenderFrame
     DEF SEG = VARSEG(LightMap1(0))
     FOR y% = 1 TO 13
       FOR x% = 1 TO 40
-        LD2putl x% * 16 - 16 - (XShift AND 15), y% * 16 - 16, VARSEG(sLight(0)), VARPTR(sLight(EPS * PEEK((x% - 1 + XShift \ 16) + (y% - 1) * 200))), VARSEG(Buffer1(0))
+        m% = PEEK((x% - 1 + XShift \ 16) + (y% - 1) * 200)
+        IF m% THEN
+          LD2putl x% * 16 - 16 - (XShift AND 15), y% * 16 - 16, VARSEG(sLight(0)), VARPTR(sLight(EPS * m%)), VARSEG(Buffer1(0))
+        END IF
       NEXT x%
     NEXT y%
     DEF SEG
@@ -2014,7 +2076,7 @@ SUB LD2.SetWeapon1 (WeaponNum AS INTEGER)
   '- Set the primary weapon for the player
   '---------------------------------------
 
-  DS4QB.PlaySound sndEQUIP
+  LD2.PlaySound sndEQUIP
 
   IF Player.weapon = Player.weapon1 THEN s% = 1
   Player.weapon1 = WeaponNum
@@ -2066,17 +2128,13 @@ SUB LD2.Shoot
 
     SELECT CASE Player.weapon
       CASE SHOTGUN
-        'DS4QB.StopSound sndSHOTGUN
-        DS4QB.PlaySound sndSHOTGUN
+	LD2.PlaySound sndSHOTGUN
       CASE MACHINEGUN
-        'DS4QB.StopSound sndMACHINEGUN
-        DS4QB.PlaySound sndMACHINEGUN
+	LD2.PlaySound sndMACHINEGUN
       CASE PISTOL
-        'DS4QB.StopSound sndPISTOL
-        DS4QB.PlaySound sndPISTOL
+	LD2.PlaySound sndPISTOL
       CASE DESERTEAGLE
-        'DS4QB.StopSound sndDESERTEAGLE
-        DS4QB.PlaySound sndDESERTEAGLE
+	LD2.PlaySound sndDESERTEAGLE
     END SELECT
 
     IF Player.flip = 0 THEN
@@ -2160,27 +2218,26 @@ SUB LD2.Shoot
   END IF
   ELSEIF Player.uAni = Player.stillani THEN
 
-    'DS4QB.StopSound sndPUNCH
-    DS4QB.PlaySound sndPUNCH
+    LD2.PlaySound sndPUNCH
    
     FOR n% = 1 TO NumEntities
       IF Player.x + 14 + XShift > Entity(n%).x AND Player.x + 14 + XShift < Entity(n%).x + 15 AND Player.y + 10 > Entity(n%).y AND Player.y + 10 < Entity(n%).y + 15 AND Player.flip = 0 THEN
      
-        Entity(n%).hit = 1
-        Entity(n%).life = Entity(n%).life - 1
-        IF Entity(n%).life <= 0 THEN LD2.DeleteEntity n%
-        DS4QB.PlaySound sndBLOOD2
-        LD2.MakeGuts Player.x + 14 + XShift, INT(Player.y + 8), -1, 1
-        EXIT FOR
+	Entity(n%).hit = 1
+	Entity(n%).life = Entity(n%).life - 1
+	IF Entity(n%).life <= 0 THEN LD2.DeleteEntity n%
+	LD2.PlaySound sndBLOOD2
+	LD2.MakeGuts Player.x + 14 + XShift, INT(Player.y + 8), -1, 1
+	EXIT FOR
 
       ELSEIF Player.x + 1 + XShift > Entity(n%).x AND Player.x + 1 + XShift < Entity(n%).x + 15 AND Player.y + 10 > Entity(n%).y AND Player.y + 10 < Entity(n%).y + 15 AND Player.flip = 1 THEN
 
-        Entity(n%).hit = 1
-        Entity(n%).life = Entity(n%).life - 1
-        IF Entity(n%).life <= 0 THEN LD2.DeleteEntity n%
-        DS4QB.PlaySound sndBLOOD2
-        LD2.MakeGuts Player.x + 1 + XShift, INT(Player.y + 8), -1, -1
-        EXIT FOR
+	Entity(n%).hit = 1
+	Entity(n%).life = Entity(n%).life - 1
+	IF Entity(n%).life <= 0 THEN LD2.DeleteEntity n%
+	LD2.PlaySound sndBLOOD2
+	LD2.MakeGuts Player.x + 1 + XShift, INT(Player.y + 8), -1, -1
+	EXIT FOR
 
       END IF
    
@@ -2199,34 +2256,9 @@ SUB LD2.ShutDown
     Message = "Quitting..."
     LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
 
-    DS4QB.StopMusic mscWANDERING
-    DS4QB.StopMusic mscINTRO
-    DS4QB.StopMusic mscENDING
-    DS4QB.StopMusic mscBOSS
-    DS4QB.StopMusic mscTHEME
-   
-    DS4QB.DeleteSound sndSHOTGUN
-    DS4QB.DeleteSound sndMACHINEGUN
-    DS4QB.DeleteSound sndPISTOL
-    DS4QB.DeleteSound sndDESERTEAGLE
-    DS4QB.DeleteSound sndMACHINEGUN2
-    DS4QB.DeleteSound sndPISTOL2
-    DS4QB.DeleteSound sndBLOOD1
-    DS4QB.DeleteSound sndBLOOD2
-    DS4QB.DeleteSound sndDOORDOWN
-    DS4QB.DeleteSound sndDOORUP
-    DS4QB.DeleteSound sndUHOH
-    DS4QB.DeleteSound sndPUNCH
-    DS4QB.DeleteSound sndEQUIP
-    DS4QB.DeleteSound sndPICKUP
-    DS4QB.DeleteSound sndLAUGH
-    DS4QB.DeleteMusic mscWANDERING
-    DS4QB.DeleteMusic mscINTRO
-    DS4QB.DeleteMusic mscENDING
-    DS4QB.DeleteMusic mscBOSS
-    DS4QB.DeleteMusic mscTHEME
-   
-    DS4QB.Close
+    LD2.StopMusic
+    LD2.ReleaseSound
+    
     END
 
 END SUB

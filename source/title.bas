@@ -1,17 +1,11 @@
-DECLARE SUB LD2.LoadPalette (FileName AS STRING)
-'DECLARE SUB DS4QB.MusicFadeOut (FStep AS INTEGER, Slot AS INTEGER, ObjVol AS INTEGER, CPos AS INTEGER)
-'DECLARE SUB DS4QB.PlayMusic (Slot AS INTEGER)
-DECLARE SUB LD2.ShutDown ()
-DECLARE SUB LD2.PopText (Message AS STRING)
-DECLARE FUNCTION keyboard% (T%)
-DECLARE SUB LD2.Cls (BufferNum AS INTEGER, col AS INTEGER)
-DECLARE SUB LD2.PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
-DECLARE SUB LD2.put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, Flip AS INTEGER)
-DECLARE SUB LD2.CopyBuffer (Buffer1 AS INTEGER, Buffer2 AS INTEGER)
 '- Intro Title and options screen
 '--------------------------------
 
-'$INCLUDE: 'INC\DEXTERN.BI'
+REM $INCLUDE: 'INC\LD2GFX.BI'
+REM $INCLUDE: 'INC\LD2SND.BI'
+REM $INCLUDE: 'INC\LD2E.BI'
+REM $INCLUDE: 'INC\LD2.BI'
+REM $INCLUDE: 'INC\TITLE.BI'
 
 SUB LD2.EndDemo
 
@@ -50,10 +44,8 @@ SUB LD2.Intro
   Message(8) = "..."
   Message(9) = "One Year Later"
  
-  DO: LOOP WHILE keyboard(&H39)
-
-  'DS4QB.PlayMusic 32
-  DO: DS4QB.MusicFadeIn DEFAULT, 32, DEFAULT, ft%: LOOP WHILE ft%
+  LD2.PlayMusic mscINTRO
+  FOR i% = 0 TO 60: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
 
   FOR i% = 1 TO 9
 
@@ -63,34 +55,34 @@ SUB LD2.Intro
       LD2.PutText ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), 1
 
       FOR n% = 1 TO 9 - y%
-        FOR x% = 1 TO 20
-          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
-          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
-        NEXT x%
+	FOR x% = 1 TO 20
+	  LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
+	  LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
+	NEXT x%
       NEXT n%
 
       LD2.CopyBuffer 1, 0
 
       FOR n% = 1 TO 20
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-        IF keyboard(&H39) THEN
-          DO: DS4QB.MusicFadeOut DEFAULT, 32, DEFAULT, ft%: LOOP WHILE ft%
-          EXIT SUB
-        END IF
+	WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+	IF keyboard(&H39) THEN
+	  LD2.FadeOutMusic
+	  EXIT SUB
+	END IF
       NEXT n%
 
     NEXT y%
  
     IF i% <> 7 THEN
       FOR n% = 1 TO 200
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-        IF keyboard(&H39) THEN
-          DO: DS4QB.MusicFadeOut DEFAULT, 32, DEFAULT, ft%: LOOP WHILE ft%
-          EXIT SUB
-        END IF
+	WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+	IF keyboard(&H39) THEN
+	  LD2.FadeOutMusic
+	  EXIT SUB
+	END IF
       NEXT n%
     ELSE
-      DO: DS4QB.MusicFadeOut DEFAULT, 32, DEFAULT, ft%: LOOP WHILE ft%
+      LD2.FadeOutMusic
     END IF
 
     FOR y% = 1 TO 8
@@ -107,30 +99,17 @@ SUB LD2.Intro
       LD2.CopyBuffer 1, 0
 
       FOR n% = 1 TO 20
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-        IF keyboard(&H39) THEN
-          DO: DS4QB.MusicFadeOut DEFAULT, 32, DEFAULT, ft%: LOOP WHILE ft%
-          EXIT SUB
-        END IF
+	WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+	IF keyboard(&H39) THEN
+	  LD2.FadeOutMusic
+	  EXIT SUB
+	END IF
       NEXT n%
      
     NEXT y%
 
   NEXT i%
 
-
-END SUB
-
-SUB LD2.PopText (Message AS STRING)
-
-    CLS
-   
-    DO: LOOP WHILE keyboard(&H39)
-
-    LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
-   
-    DO: LOOP UNTIL keyboard(&H39)
-    DO: LOOP WHILE keyboard(&H39)
 
 END SUB
 
@@ -157,6 +136,9 @@ SUB LD2.ShowCredits
  
   DO: LOOP UNTIL keyboard(&H39)
   DO: LOOP WHILE keyboard(&H39)
+  
+  LD2.PlaySound sndSELECT
+  FOR i% = 1 TO 35: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
 
 END SUB
 

@@ -1,73 +1,13 @@
-DECLARE SUB LD2.Drop (item%)
-DECLARE SUB LD2.AddLives (Amount AS INTEGER)
-DECLARE SUB LD2.ShowCredits ()
-DECLARE SUB LD2.SetLoadBackup (NumRoom AS INTEGER)
-DECLARE SUB LD2.SwapLighting ()
-DECLARE SUB SceneLobby ()
-DECLARE SUB TrooperTalk (Text AS STRING)
-DECLARE SUB ScenePortal ()
-DECLARE SUB SceneFlashlight ()
-DECLARE SUB SceneFlashLight2 ()
-DECLARE SUB LD2.SetSceneNo (Num AS INTEGER)
-DECLARE SUB LD2.PopText (Message AS STRING)
-DECLARE SUB LD2.SetNumEntities (NE AS INTEGER)
-DECLARE SUB LD2.EndDemo ()
-DECLARE SUB LD2.SetAccessLevel (CodeNum AS INTEGER)
-DECLARE SUB SceneWeaponRoom2 ()
-DECLARE SUB PutRestOfSceners ()
-DECLARE SUB SceneWeaponRoom ()
-DECLARE SUB SceneSteveGone ()
-DECLARE SUB LD2.CreateItem (x AS INTEGER, y AS INTEGER, item AS INTEGER, EntityNum AS INTEGER)
-DECLARE SUB LD2.SetShowLife (i AS INTEGER)
-DECLARE SUB LD2.SetTempCode (CodeNum AS INTEGER)
-DECLARE SUB LD2.PutRoofCode (Code AS STRING)
-DECLARE SUB LD2.Intro ()
-DECLARE SUB BonesTalk (Text AS STRING)
-DECLARE SUB SceneRoofTop ()
-DECLARE SUB LD2.PickUpItem ()
-DECLARE SUB SceneVent1 ()
-DECLARE SUB Scene16thFloor ()
-DECLARE SUB LD2.SetRoom (room AS INTEGER)
-DECLARE SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
-DECLARE SUB Scene7 ()
-DECLARE SUB LD2.DeleteEntity (NumEntity AS INTEGER)
-DECLARE SUB LD2.ProcessGuts ()
-DECLARE SUB LD2.MakeGuts (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTEGER)
-DECLARE SUB BarneyTalk (Text AS STRING)
-DECLARE SUB Scene5 ()
-DECLARE FUNCTION LD2.AddToStatus% (item AS INTEGER, Amount AS INTEGER)
-DECLARE SUB LD2.StatusScreen ()
-DECLARE SUB LD2.SetPlayerFlip (Flip AS INTEGER)
-DECLARE SUB LD2.SetPlayerXY (x AS INTEGER, y AS INTEGER)
-DECLARE SUB LD2.CreateEntity (x AS INTEGER, y AS INTEGER, id AS INTEGER)
-DECLARE SUB LD2.PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
-DECLARE SUB LD2.SetXShift (ShiftX AS INTEGER)
-DECLARE SUB JanitorTalk (Text AS STRING)
-DECLARE SUB Scene3 ()
-DECLARE SUB LD2.SetWeapon (NumWeapon AS INTEGER)
-DECLARE SUB LD2.SetScene (OnOff AS INTEGER)
-DECLARE SUB SteveTalk (Text AS STRING)
-DECLARE SUB LarryTalk (Text AS STRING)
-DECLARE SUB LD2.WriteText (Text AS STRING)
-DECLARE SUB Scene1 ()
-DECLARE SUB LD2.put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, Flip AS INTEGER)
-DECLARE SUB LD2.CopyBuffer (Buffer1 AS INTEGER, Buffer2 AS INTEGER)
-DECLARE FUNCTION keyboard% (T%)
-DECLARE SUB LD2.Shoot ()
-DECLARE SUB LD2.SetPlayerlAni (Num AS INTEGER)
-DECLARE SUB LD2.JumpPlayer (Amount AS SINGLE)
-DECLARE SUB LD2.MovePlayer (XAmount AS SINGLE)
-DECLARE SUB LD2.ShutDown ()
-DECLARE SUB LD2.ProcessEntities ()
-DECLARE SUB LD2.LoadMap (FileName AS STRING)
-DECLARE SUB LD2.RenderFrame ()
-DECLARE SUB LD2.Init ()
 '- Larry The Dinosaur II
 '- July, 2002 - Created by Joe King
 '==================================
 
-  '$DYNAMIC
-  '$INCLUDE: 'INC\DEXTERN.BI'
+  REM $INCLUDE: 'INC\LD2SND.BI'
+  REM $INCLUDE: 'INC\LD2E.BI'
+  REM $INCLUDE: 'INC\TITLE.BI'
+  REM $INCLUDE: 'INC\LD2.BI'
+  
+  REM $DYNAMIC
 
   CONST idTILE = 0
   CONST idENEMY = 1
@@ -119,13 +59,6 @@ DECLARE SUB LD2.Init ()
   DIM SHARED SteveIsThere%: DIM SHARED StevePoint%: DIM SHARED SteveTalking%: DIM SHARED StevePos%
   DIM SHARED JanitorIsThere%: DIM SHARED JanitorPoint%: DIM SHARED JanitorTalking%: DIM SHARED JanitorPos%
   DIM SHARED TrooperIsThere%: DIM SHARED TrooperPoint%: DIM SHARED TrooperTalking%: DIM SHARED TrooperPos%
-
-  CONST sndSHOTGUN = 1
-  CONST sndMACHINEGUN = 2
-  CONST sndPISTOL = 3
-  CONST sndDESERTEAGLE = 4
-
-  CONST mscENDING = 31
 
   CONST msgENTITYDELETED = 1
   CONST msgGOTYELLOWCARD = 2
@@ -345,7 +278,7 @@ SUB BonesTalk (Text AS STRING)
 
 END SUB
 
-SUB JanitorTalk (Text AS STRING)
+FUNCTION JanitorTalk% (Text AS STRING)
 
 
   '- Make the janitor talk
@@ -353,6 +286,8 @@ SUB JanitorTalk (Text AS STRING)
 
   DIM x AS INTEGER, y AS INTEGER
   DIM Flip AS INTEGER
+  
+  ExitScene% = 0
 
   x = Janitor.x: y = Janitor.y
   JanitorTalking% = 1
@@ -413,6 +348,8 @@ SUB JanitorTalk (Text AS STRING)
     NEXT i%
 
     LD2.CopyBuffer 1, 0
+    IF keyboard(&H39) THEN EXIT FOR
+    IF keyboard(1) THEN ExitScene% = 1: EXIT FOR
 
   NEXT n%
 
@@ -438,58 +375,17 @@ SUB JanitorTalk (Text AS STRING)
   LD2.CopyBuffer 1, 0
   JanitorTalking% = 0
 
-  DO: LOOP UNTIL keyboard(&H39)
+  DO
+    IF keyboard(1) THEN ExitScene% = 1: EXIT DO
+  LOOP UNTIL keyboard(&H39)
+  
+  DO: LOOP WHILE keyboard(1)
+  
+  JanitorTalk = ExitScene%
 
-END SUB
-
-DEFINT A-Z
-FUNCTION keyboard (T%)
-STATIC kbcontrol%(), kbmatrix%(), Firsttime, StatusFlag
-IF Firsttime = 0 THEN
- DIM kbcontrol%(128)
- DIM kbmatrix%(128)
- Code$ = ""
- Code$ = Code$ + "E91D00E93C00000000000000000000000000000000000000000000000000"
- Code$ = Code$ + "00001E31C08ED8BE24000E07BF1400FCA5A58CC38EC0BF2400B85600FAAB"
- Code$ = Code$ + "89D8ABFB1FCB1E31C08EC0BF2400BE14000E1FFCFAA5A5FB1FCBFB9C5053"
- Code$ = Code$ + "51521E560657E460B401A8807404B400247FD0E088C3B700B0002E031E12"
- Code$ = Code$ + "002E8E1E100086E08907E4610C82E661247FE661B020E6205F075E1F5A59"
- Code$ = Code$ + "5B589DCF"
- DEF SEG = VARSEG(kbcontrol%(0))
- FOR i% = 0 TO 155
- d% = VAL("&h" + MID$(Code$, i% * 2 + 1, 2))
- POKE VARPTR(kbcontrol%(0)) + i%, d%
- NEXT i%
- i& = 16
- n& = VARSEG(kbmatrix%(0)): l& = n& AND 255: h& = ((n& AND &HFF00) \ 256): POKE i&, l&: POKE i& + 1, h&: i& = i& + 2
- n& = VARPTR(kbmatrix%(0)): l& = n& AND 255: h& = ((n& AND &HFF00) \ 256): POKE i&, l&: POKE i& + 1, h&: i& = i& + 2
- DEF SEG
- Firsttime = 1
-END IF
-SELECT CASE T
- CASE 1 TO 128
- keyboard = kbmatrix%(T)
- CASE -1
- IF StatusFlag = 0 THEN
- DEF SEG = VARSEG(kbcontrol%(0))
- CALL ABSOLUTE(0)
- DEF SEG
- StatusFlag = 1
- END IF
- CASE -2
- IF StatusFlag = 1 THEN
- DEF SEG = VARSEG(kbcontrol%(0))
- CALL ABSOLUTE(3)
- DEF SEG
- StatusFlag = 0
- END IF
- CASE ELSE
- keyboard = 0
-END SELECT
 END FUNCTION
 
-DEFSNG A-Z
-SUB LarryTalk (Text AS STRING)
+FUNCTION LarryTalk% (Text AS STRING)
 
   '- Make Larry talk
   '-----------------
@@ -499,6 +395,8 @@ SUB LarryTalk (Text AS STRING)
   DIM box AS INTEGER
   DIM top AS INTEGER
   DIM btm AS INTEGER
+  
+  ExitScene% = 0
 
   x = Larry.x: y = Larry.y
   LarryTalking% = 1
@@ -637,6 +535,9 @@ SUB LarryTalk (Text AS STRING)
     NEXT i%
 
     LD2.CopyBuffer 1, 0
+    
+    IF keyboard(&H39) THEN EXIT FOR
+    IF keyboard(1) THEN ExitScene% = 1: EXIT FOR
 
   NEXT n%
 
@@ -698,9 +599,15 @@ SUB LarryTalk (Text AS STRING)
   LD2.CopyBuffer 1, 0
   LarryTalking% = 0
 
-  DO: LOOP UNTIL keyboard(&H39)
+  DO
+    IF keyboard(1) THEN ExitScene% = 1: EXIT DO
+  LOOP UNTIL keyboard(&H39)
+  
+  DO: LOOP WHILE keyboard(1)
+  
+  LarryTalk = ExitScene%
 
-END SUB
+END FUNCTION
 
 SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
 
@@ -809,8 +716,8 @@ SUB LD2.Start
 
       Scene% = 0
 
-      LarryTalk "Hmmm..."
-      LarryTalk "I better find steve before I leave..."
+      Escaped% = LarryTalk("Hmmm...")
+      Escaped% = Escaped% = LarryTalk("I better find steve before I leave...")
       LD2.WriteText ""
 
       LD2.PopText "Larry Heads Back To The Weapons Locker"
@@ -889,9 +796,8 @@ SUB LD2.Start
         LD2.SetShowLife 1
         FirstBoss = 1
       ELSEIF Larry.x <= 1300 AND fm% = 0 THEN
-        fm% = 1
-        DS4QB.StopMusic 31
-        DS4QB.PlayMusic 33
+	fm% = 1
+	LD2.PlayMusic mscBOSS
       ELSE
         'SceneRoofTop
       END IF
@@ -1051,6 +957,8 @@ SUB Scene1
   StevePoint% = 1
   LarryPos% = 0
   StevePos% = 0
+  
+  ExitScene% = 0
  
   Larry.x = 92: Larry.y = 144
   Steve.x = 124: Steve.y = 144
@@ -1064,23 +972,26 @@ SUB Scene1
  
   LD2.CopyBuffer 1, 0
  
-  DO: DS4QB.MusicFadeIn DEFAULT, 31, DEFAULT, ft%: LOOP WHILE ft%
+  LD2.PlayMusic mscWANDERING
+  
+  
+  DO
 
-  LarryTalk "Well Steve, that was a good game of chess."
-  SteveTalk "Only because you won."
-  SteveTalk "Woudln't think so if I won."
-  LarryTalk "Are you jealous Steve?"
-  SteveTalk "Uh..."
-  SteveTalk "No...infact I think your the one who's jealous."
-  LarryTalk "But I'm the guy who won."
-  SteveTalk "Your jealous because you didn't lose like me."
-  LarryTalk "Alright..."
-  LarryTalk "That's enough from you."
-  SteveTalk "Yeah, I guess so."
-  SteveTalk "Well, I gotta get going."
-  SteveTalk "Smell ya later."
-  LarryTalk "Yep..."
-  LarryTalk "Smell ya later."
+  Escaped% = LarryTalk("Well Steve, that was a good game of chess.")     : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("Only because you won.")                          : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("Wouldn't think so if I won.")                    : IF Escaped% THEN EXIT DO
+  Escaped% = LarryTalk("Are you jealous Steve?")                         : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("Uh...")                                          : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("No...infact I think your the one who's jealous."): IF Escaped% THEN EXIT DO
+  Escaped% = LarryTalk("But I'm the guy who won.")                       : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("You're jealous because you didn't lose like me."): IF Escaped% THEN EXIT DO
+  Escaped% = LarryTalk("Alright...")                                     : IF Escaped% THEN EXIT DO
+  Escaped% = LarryTalk("That's enough from you.")                        : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("Yeah, I guess so.")                              : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("Well, I gotta get going.")                       : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("Smell ya later.")                                : IF Escaped% THEN EXIT DO
+  Escaped% = LarryTalk("Yep...")                                         : IF Escaped% THEN EXIT DO
+  Escaped% = LarryTalk("Smell ya later.")                                : IF Escaped% THEN EXIT DO
   LD2.WriteText " "
 
   '- Steve walks to soda machine
@@ -1097,8 +1008,12 @@ SUB Scene1
     NEXT i%
   
     LD2.CopyBuffer 1, 0
+    
+    IF keyboard(1) THEN ExitScene% = 1: EXIT FOR
   
   NEXT x%
+  
+  IF ExitScene% THEN DO: LOOP WHILE keyboard(1): EXIT DO
   
   Steve.x = 152
   
@@ -1106,10 +1021,10 @@ SUB Scene1
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
  
-  SteveTalk "Hey, you got a quarter?"
-  LarryTalk "No, but..."
-  LarryTalk "If you kick it, you get one for free."
-  SteveTalk "Well, I couldn't agree more."
+  Escaped% = SteveTalk("Hey, you got a quarter?")                        : IF Escaped% THEN EXIT DO
+  Escaped% = LarryTalk("No, but...")                                     : IF Escaped% THEN EXIT DO
+  Escaped% = LarryTalk("If you kick it, you get one for free.")          : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("Well, I couldn't agree more.")                   : IF Escaped% THEN EXIT DO
   LD2.WriteText ""
 
   '- Steve kicks the soda machine
@@ -1126,7 +1041,12 @@ SUB Scene1
     NEXT i%
   
     LD2.CopyBuffer 1, 0
+    
+    IF keyboard(1) THEN ExitScene% = 1: EXIT FOR
+    
   NEXT x%
+  
+  IF ExitScene% THEN DO: LOOP WHILE keyboard(1): EXIT DO
   
   '- Steve bends down and gets a soda
   FOR x% = 23 TO 24
@@ -1137,12 +1057,16 @@ SUB Scene1
     LD2.put Larry.x, Larry.y, 0, idSCENE, 0
     LD2.put Larry.x, Larry.y, 3, idSCENE, 0
   
-    FOR i% = 1 TO 20
+    FOR i% = 1 TO 220
       WAIT &H3DA, 8: WAIT &H3DA, 8, 8
     NEXT i%
   
     LD2.CopyBuffer 1, 0
+    
+    IF keyboard(1) THEN ExitScene% = 1: EXIT FOR
   NEXT x%
+  
+  IF ExitScene% THEN DO: LOOP WHILE keyboard(1): EXIT DO
   
   LD2.RenderFrame
   LD2.put Steve.x, Steve.y, 12, idSCENE, 1
@@ -1183,12 +1107,10 @@ SUB Scene1
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
 
-  Scene% = 2
-
-  SteveTalk "Larry..."
-  SteveTalk "I don't feel so good."
-  SteveTalk "There's something in the cola..."
-  SteveTalk "ow..."
+  Escaped% = SteveTalk("Larry...")                                       : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("I don't feel so good.")                          : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("There's something in the cola...")               : IF Escaped% THEN EXIT DO
+  Escaped% = SteveTalk("ow...")                                          : IF Escaped% THEN EXIT DO
   LD2.WriteText ""
 
   LD2.RenderFrame
@@ -1203,9 +1125,8 @@ SUB Scene1
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
 
-  SteveIsThere% = 0
-  LarryTalk "Steve!"
-  LarryTalk "I gotta get help!"
+  Escaped% = LarryTalk("Steve!")           : IF Escaped% THEN EXIT DO
+  Escaped% = LarryTalk("I gotta get help!"): IF Escaped% THEN EXIT DO
   DO: LOOP WHILE keyboard(&H39)
 
   LD2.PopText "The Journey Begins..."
@@ -1218,9 +1139,15 @@ SUB Scene1
   'PRINT "AGAIN!!"
   'DO: LOOP UNTIL keyboard(&H39)
   'DO: LOOP WHILE keyboard(&H39)
+  EXIT DO
+  
+  LOOP WHILE 0
 
   LD2.WriteText " "
 
+  Steve.x = 174
+  Scene% = 2
+  SteveIsThere% = 0
   LD2.SetScene 0
   LarryIsThere% = 0
   SteveIsThere% = 0
@@ -1237,8 +1164,8 @@ SUB Scene16thFloor
 '  Scene% = 0
 '  Larry.y = 160
 '
-'  LarryTalk "Darn!"
-'  LarryTalk "This door requires code-yellow acess."
+'  Escaped% = LarryTalk("Darn!")
+'  Escaped% = LarryTalk("This door requires code-yellow acess.")
 '  LD2.WriteText ""
 '
 '  Scene16th = 1
@@ -1277,12 +1204,12 @@ SUB Scene3
   Janitor.x = 1196: Janitor.y = 144
   Larry.y = 144
 
-  DO: DS4QB.MusicFadeOut DEFAULT, 31, DEFAULT, ft%: LOOP WHILE ft%
+  LD2.FadeOutMusic
 
-  LarryTalk "Hey!"
-  JanitorTalk "What?"
-  LarryTalk "You a doctor?"
-  JanitorTalk "Why yes..."
+  Escaped% = LarryTalk("Hey!")
+  Escaped% = JanitorTalk("What?")
+  Escaped% = LarryTalk("You a doctor?")
+  Escaped% = JanitorTalk("Why yes...")
  
   '- Larry smiles
   '--------------
@@ -1298,19 +1225,19 @@ SUB Scene3
   '  WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   'NEXT i%
  
-  JanitorTalk "I use this mop to suck diseases out of people."
-  LarryTalk "This is NO time to be sarcastic!"
-  LarryTalk "My buddy got sick from something in the cola."
-  LarryTalk "He needs help."
-  JanitorTalk "Well, I was only being sarcastic about the mop."
-  JanitorTalk "I am a doctor."
-  LarryTalk "Seriously?"
-  JanitorTalk "Well..."
-  LarryTalk "..."
-  JanitorTalk "I used to be one."
-  LarryTalk "Good enough."
-  LarryTalk "He needs help fast."
-  LarryTalk "Come on!"
+  Escaped% = JanitorTalk("I use this mop to suck diseases out of people.")
+  Escaped% = LarryTalk("This is NO time to be sarcastic!")
+  Escaped% = LarryTalk("My buddy got sick from something in the cola.")
+  Escaped% = LarryTalk("He needs help.")
+  Escaped% = JanitorTalk("Well, I was only being sarcastic about the mop.")
+  Escaped% = JanitorTalk("I am a doctor.")
+  Escaped% = LarryTalk("Seriously?")
+  Escaped% = JanitorTalk("Well...")
+  Escaped% = LarryTalk("...")
+  Escaped% = JanitorTalk("I used to be one.")
+  Escaped% = LarryTalk("Good enough.")
+  Escaped% = LarryTalk("He needs help fast.")
+  Escaped% = LarryTalk("Come on!")
   DO: LOOP WHILE keyboard(&H39)
 
   LD2.PopText "They Rush To Steve!"
@@ -1330,19 +1257,23 @@ SUB Scene3
 
   Scene% = 4
 
-  JanitorTalk "So..."
-  JanitorTalk "Something in the cola eh?"
-  LarryTalk "Apparently."
-  JanitorTalk "Ok, let's see what I can do with him."
+  Escaped% = JanitorTalk("So...")
+  Escaped% = JanitorTalk("Something in the cola eh?")
+  Escaped% = LarryTalk("Apparently.")
+  Escaped% = JanitorTalk("Ok, let's see what I can do with him.")
   LD2.WriteText ""
 
-  DS4QB.PlaySound 16
+  LD2.PlayMusic mscUHOH
+  LD2.PlaySound sndGLASS
+  LD2.ShatterGlass 208, 136, 2, -1
+  LD2.ShatterGlass 224, 136, 2,  1
  
   '- Rockmonster bust through window and eats the janitor/doctor
   '-------------------------------------------------------------
   LD2.PutTile 13, 8, 19, 3
 
-  FOR y% = 128 TO 144
+  FOR y! = 128 TO 144 step 0.25
+    LD2.ProcessGuts
     LD2.RenderFrame
     LD2.put Larry.x, Larry.y, 1, idSCENE, 1
     LD2.put Larry.x, Larry.y, 3, idSCENE, 1
@@ -1350,30 +1281,47 @@ SUB Scene3
     LD2.put Janitor.x, Janitor.y, 29, idSCENE, 1
     LD2.put 170, 144, 27, idSCENE, 1
 
-    LD2.put 208, y%, 30, idSCENE, 0
+    LD2.put 208, int(y!), 30, idSCENE, 0
 
     LD2.CopyBuffer 1, 0
 
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+	FOR i% = 1 TO 2
+		WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+	NEXT i%
  
-  NEXT y%
-
-  LD2.RenderFrame
-  LD2.put Larry.x, Larry.y, 1, idSCENE, 1
-  LD2.put Larry.x, Larry.y, 3, idSCENE, 1
-
-  LD2.put Janitor.x, Janitor.y, 29, idSCENE, 1
-  LD2.put 170, 144, 27, idSCENE, 1
-
-  LD2.put 208, 144, 31, idSCENE, 0
-
-  LD2.CopyBuffer 1, 0
-
-  FOR i% = 1 TO 40
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+  NEXT y!
+  
+  FOR i% = 1 TO 20
+	LD2.ProcessGuts
+	LD2.RenderFrame
+	LD2.put Larry.x, Larry.y, 1, idSCENE, 1
+    LD2.put Larry.x, Larry.y, 3, idSCENE, 1
+    LD2.put Janitor.x, Janitor.y, 29, idSCENE, 1
+    LD2.put 170, 144, 27, idSCENE, 1
+    LD2.put 208, 144, 30, idSCENE, 0
+	LD2.CopyBuffer 1, 0
+    FOR n% = 1 TO 2
+		WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+	NEXT n%
   NEXT i%
- 
+  FOR i% = 1 TO 40
+	LD2.ProcessGuts
+	LD2.RenderFrame
+	LD2.put Larry.x, Larry.y, 1, idSCENE, 1
+    LD2.put Larry.x, Larry.y, 3, idSCENE, 1
+    LD2.put Janitor.x, Janitor.y, 29, idSCENE, 1
+    LD2.put 170, 144, 27, idSCENE, 1
+    LD2.put 208, 144, 31, idSCENE, 0
+	LD2.CopyBuffer 1, 0
+    FOR n% = 1 TO 2
+		WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+	NEXT n%
+  NEXT i%
+  
+  LD2.PlaySound sndSLURP
+  
   FOR x% = Janitor.x TO 210 STEP -1
+    LD2.ProcessGuts
     LD2.RenderFrame
     LD2.put Larry.x, Larry.y, 1, idSCENE, 1
     LD2.put Larry.x, Larry.y, 3, idSCENE, 1
@@ -1385,18 +1333,23 @@ SUB Scene3
 
     LD2.CopyBuffer 1, 0
 
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    FOR i% = 1 TO 2
+		WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+	NEXT i%
     IF x% = Janitor.x THEN
       FOR i% = 1 TO 80
         WAIT &H3DA, 8: WAIT &H3DA, 8, 8
       NEXT i%
     END IF
   NEXT x%
+  
+  LD2.PlaySound sndAHHHH
 
 
   '- rockmonster chews the janitor/doctor to death
   '-----------------------------------------------
   FOR x% = 1 TO 20
+    LD2.ProcessGuts
     LD2.RenderFrame
     LD2.put Larry.x, Larry.y, 1, idSCENE, 1
     LD2.put Larry.x, Larry.y, 3, idSCENE, 1
@@ -1425,6 +1378,8 @@ SUB Scene3
   LD2.SetScene 0
   LarryIsThere% = 0
   JanitorIsThere% = 0
+  
+  LD2.PlayMusic mscMARCHoftheUHOH
 
 END SUB
 
@@ -1452,8 +1407,8 @@ SUB Scene5
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
  
-  LarryTalk "come on!"
-  LarryTalk "hurry up and open elevator!"
+  Escaped% = LarryTalk("come on!")
+  Escaped% = LarryTalk("hurry up and open elevator!")
   LD2.WriteText ""
 
   '- rockmonster jumps up at larry
@@ -1558,6 +1513,8 @@ SUB Scene5
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
  
   NEXT n%
+  
+  LD2.StopMusic
 
   LD2.MakeGuts rx! + 8, 120, 8, 1
   LD2.MakeGuts rx! + 8, 120, 8, -1
@@ -1588,24 +1545,24 @@ SUB Scene5
   BarneyPoint% = 0
   LarryPoint% = 1
 
-  LarryTalk "barney!"
+  Escaped% = LarryTalk("barney!")
   BarneyTalk "Why hello there."
-  LarryTalk "thanks man..."
-  LarryTalk "I owe you"
+  Escaped% = LarryTalk("thanks man...")
+  Escaped% = LarryTalk("I owe you")
   BarneyTalk "Actually, you do..."
   BarneyTalk "twenty bucks from losing that game of pool..."
   BarneyTalk "...last night."
-  LarryTalk "Oh yeah..."
-  LarryTalk "I was gonna get that to you..."
-  LarryTalk "...but..."
+  Escaped% = LarryTalk("Oh yeah...")
+  Escaped% = LarryTalk("I was gonna get that to you...")
+  Escaped% = LarryTalk("...but...")
   BarneyTalk "Just forget about it."
   BarneyTalk "if we get out of here alive..."
   BarneyTalk "then you owe me twenty."
-  LarryTalk "What?"
-  LarryTalk "Are there more?"
+  Escaped% = LarryTalk("What?")
+  Escaped% = LarryTalk("Are there more?")
   BarneyTalk "Oh yeah."
   BarneyTalk "The building's full of them."
-  LarryTalk "Why?"
+  Escaped% = LarryTalk("Why?")
  
   BarneyTalk "I'll explain later."
   BarneyTalk "We gotta get to the weapons locker."
@@ -1720,10 +1677,10 @@ SUB Scene7
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
 
-  DO: DS4QB.MusicFadeIn DEFAULT, 31, DEFAULT, ft%: LOOP WHILE ft%
+  LD2.PlayMusic mscWANDERING
 
-  LarryTalk "wow!"
-  LarryTalk "I feel like I'm in The Matrix."
+  Escaped% = LarryTalk("wow!")
+  Escaped% = LarryTalk("I feel like I'm in The Matrix.")
   BarneyTalk "Ok Larry, listen up..."
   BarneyTalk "This floor is where all the weapons are stored."
   BarneyTalk "Grab whatever weapons you feel like."
@@ -1731,37 +1688,37 @@ SUB Scene7
   BarneyTalk "Be careful though..."
   BarneyTalk "You can only pack so much ammo..."
   BarneyTalk "so don't go trigger happy and lose all of it."
-  LarryTalk "Ok, I gotcha."
+  Escaped% = LarryTalk("Ok, I gotcha.")
   BarneyTalk "Ok..."
   BarneyTalk "Now here's the problem..."
   BarneyTalk "All the phones are dead."
   BarneyTalk "Something's disconnected the main phone line."
   BarneyTalk "So we can't call for help."
-  LarryTalk "darn!"
+  Escaped% = LarryTalk("darn!")
   BarneyTalk "We can't access the Lobby to get out of here..."
   BarneyTalk "Because the access level for that floor has..."
   BarneyTalk "been set to code-red."
   BarneyTalk "And the maximum access I have is code-blue."
-  LarryTalk "darn!"
+  Escaped% = LarryTalk("darn!")
   BarneyTalk "I just gave you an extra code-blue card."
   BarneyTalk "That'll give you access to doors and rooms..."
   BarneyTalk "that require blue acess and anything lower..."
   BarneyTalk "which the only thing lower is green..."
   BarneyTalk "and everybody has access to green."
-  LarryTalk "Cool!"
+  Escaped% = LarryTalk("Cool!")
   BarneyTalk "meanwhile, this weapons locker dosen't have much."
   BarneyTalk "The room behind me has alot more..."
   BarneyTalk "but..."
   BarneyTalk "it requires code-yellow access..."
-  LarryTalk "darn!"
+  Escaped% = LarryTalk("darn!")
   BarneyTalk "We need to split up and see if we can find..."
   BarneyTalk "a code-yellow access card."
-  LarryTalk "Cool!"
+  Escaped% = LarryTalk("Cool!")
   BarneyTalk "Oh, and here's something else."
-  LarryTalk "A walky-talky..."
-  LarryTalk "Cool!"
+  Escaped% = LarryTalk("A walky-talky...")
+  Escaped% = LarryTalk("Cool!")
   BarneyTalk "That's for us to keep in touch."
-  LarryTalk "Well, duh."
+  Escaped% = LarryTalk("Well, duh.")
   BarneyTalk "Ok Larry..."
   BarneyTalk "Let's move out."
   LD2.WriteText ""
@@ -1800,36 +1757,36 @@ SUB SceneFlashlight
   LarryPos% = 0
   StevePos% = 0
 
-  LarryTalk "Woah..."
-  LarryTalk "Where I am?"
-  LarryTalk "Steve!"
-  LarryTalk "Your alive!"
-  SteveTalk "Yep."
-  SteveTalk "What do you remember?"
-  LarryTalk "uh..."
-  LarryTalk "I was in a dark room..."
-  SteveTalk "and?"
-  LarryTalk "I was going to do something..."
-  LarryTalk "then something hit my head..."
-  LarryTalk "and I woke up here."
-  SteveTalk "Strange..."
-  SteveTalk "I woke up here too after I drank the cola."
-  LarryTalk "Do you know about the aliens?"
-  SteveTalk "What?!"
-  LarryTalk "The buildings been invaded by them."
-  SteveTalk "Not more aliens!"
-  LarryTalk "I'm afraid so."
-  SteveTalk "..."
-  LarryTalk "..."
-  SteveTalk "but where are we?"
-  LarryTalk "I don't know."
-  LarryTalk "I don't recognize this part of the building..."
-  LarryTalk "if we are in the building."
-  LarryTalk "hmm..."
-  LarryTalk "I still have my walky-talky."
+  Escaped% = LarryTalk("Woah...")
+  Escaped% = LarryTalk("Where I am?")
+  Escaped% = LarryTalk("Steve!")
+  Escaped% = LarryTalk("Your alive!")
+  Escaped% = SteveTalk("Yep.")
+  Escaped% = SteveTalk("What do you remember?")
+  Escaped% = LarryTalk("uh...")
+  Escaped% = LarryTalk("I was in a dark room...")
+  Escaped% = SteveTalk("and?")
+  Escaped% = LarryTalk("I was going to do something...")
+  Escaped% = LarryTalk("then something hit my head...")
+  Escaped% = LarryTalk("and I woke up here.")
+  Escaped% = SteveTalk("Strange...")
+  Escaped% = SteveTalk("I woke up here too after I drank the cola.")
+  Escaped% = LarryTalk("Do you know about the aliens?")
+  Escaped% = SteveTalk("What?!")
+  Escaped% = LarryTalk("The buildings been invaded by them.")
+  Escaped% = SteveTalk("Not more aliens!")
+  Escaped% = LarryTalk("I'm afraid so.")
+  Escaped% = SteveTalk("...")
+  Escaped% = LarryTalk("...")
+  Escaped% = SteveTalk("but where are we?")
+  Escaped% = LarryTalk("I don't know.")
+  Escaped% = LarryTalk("I don't recognize this part of the building...")
+  Escaped% = LarryTalk("if we are in the building.")
+  Escaped% = LarryTalk("hmm...")
+  Escaped% = LarryTalk("I still have my walky-talky.")
   LarryPos% = 11
-  LarryTalk "Barney...come in..."
-  LarryTalk "are you there? over..."
+  Escaped% = LarryTalk("Barney...come in...")
+  Escaped% = LarryTalk("are you there? over...")
 
   BarneyIsThere% = 1
   Barney.x = 0
@@ -1837,48 +1794,48 @@ SUB SceneFlashlight
   BarneyPos% = 11
 
   BarneyTalk "hehehe..."
-  LarryTalk "huh?"
+  Escaped% = LarryTalk("huh?")
   BarneyTalk "this building's mine now."
-  LarryTalk "what?!"
+  Escaped% = LarryTalk("what?!")
   BarneyTalk "it's too bad for you, larry."
   BarneyTalk "I was thinking of letting you in on the deal..."
   BarneyTalk "but I knew you would be too stubborn."
-  LarryTalk "what deal?"
+  Escaped% = LarryTalk("what deal?")
   BarneyTalk "The aliens have technology far superior to us..."
   BarneyTalk "it's only a matter of time before the earth..."
   BarneyTalk "is taken over and ruled by then."
   BarneyTalk "so they contacted us for helping them make..."
   BarneyTalk "that happen faster."
-  LarryTalk "Barney! You trader!"
+  Escaped% = LarryTalk("Barney! You trader!")
   BarneyTalk "hehehe..."
   BarneyTalk "I told you I would tell you what was going on."
-  LarryTalk "What did you do to help the aliens, barney!"
+  Escaped% = LarryTalk("What did you do to help the aliens, barney!")
   BarneyTalk "Me and some friends built a portal for them..."
   BarneyTalk "A portal that directly leads from our world..."
   BarneyTalk "to theirs, and their world to ours."
-  LarryTalk "Your mad!"
+  Escaped% = LarryTalk("Your mad!")
   BarneyTalk "Mad!"
   BarneyTalk "I'll tell you what's mad..."
   BarneyTalk "Mad is believing that we can stop these..."
   BarneyTalk "high-tech aliens from invaded our planet."
-  LarryTalk "Our planet?!"
-  LarryTalk "You've betrayed this planet."
+  Escaped% = LarryTalk("Our planet?!")
+  Escaped% = LarryTalk("You've betrayed this planet.")
   BarneyTalk "I saved it is what."
   BarneyTalk "Now, since I've got you trapped in there..."
   BarneyTalk "there's no one that can stop me now."
   BarneyTalk "hehehe..."
-  LarryTalk "..."
+  Escaped% = LarryTalk("...")
 
   BarneyIsThere% = 0
   LarryPos% = 0
 
-  SteveTalk "..."
-  SteveTalk "What do we do?"
-  LarryTalk "First, we should find a way out of here."
-  SteveTalk "You can't."
-  LarryTalk "what?"
-  SteveTalk "I've searched everywhere..."
-  SteveTalk "There's no way out..."
+  Escaped% = SteveTalk("...")
+  Escaped% = SteveTalk("What do we do?")
+  Escaped% = LarryTalk("First, we should find a way out of here.")
+  Escaped% = SteveTalk("You can't.")
+  Escaped% = LarryTalk("what?")
+  Escaped% = SteveTalk("I've searched everywhere...")
+  Escaped% = SteveTalk("There's no way out...")
   
   LD2.WriteText ""
   LarryIsThere% = 0
@@ -1890,15 +1847,15 @@ SUB SceneFlashlight
 
 END SUB
 
-SUB SceneFlashLight2
+SUB SceneFlashlight2
 
   LD2.SetScene 1
 
   LarryPoint% = 0
  
-  LarryTalk "Hmm..."
-  LarryTalk "The vent's open."
-  LarryTalk "Steve!"
+  Escaped% = LarryTalk("Hmm...")
+  Escaped% = LarryTalk("The vent's open.")
+  Escaped% = LarryTalk("Steve!")
  
   LD2.PopText "Larry and Steve Crawl through the vent"
  
@@ -1915,28 +1872,28 @@ SUB SceneFlashLight2
   LarryPos% = 0
   StevePos% = 0
 
-  LarryTalk "Steve."
-  SteveTalk "What?"
-  LarryTalk "I thought you said you looked everywhere..."
-  SteveTalk "Uh..."
-  SteveTalk "I thought I did..."
-  LarryTalk "Whatever..."
-  LarryTalk "Room 7 is the weapon's locker."
-  LarryTalk "Here's a copy of a code-yellow access card."
-  SteveTalk "and?"
-  LarryTalk "And that'll give you access to doors..."
-  LarryTalk "with yellow, green, and blue trims."
-  SteveTalk "Oh..."
-  SteveTalk "Okay..."
-  SteveTalk "Cool!"
-  SteveTalk "Here's something I found..."
-  SteveTalk "Look's like it's half of a card."
-  LarryTalk "Thanks..."
-  LarryTalk "We've got to find the code-red access card..."
-  LarryTalk "before barney does."
-  LarryTalk "He needs it for something..."
-  LarryTalk "And I'm guessing he wants it for the room above."
-  LarryTalk "Let's go."
+  Escaped% = LarryTalk("Steve.")
+  Escaped% = SteveTalk("What?")
+  Escaped% = LarryTalk("I thought you said you looked everywhere...")
+  Escaped% = SteveTalk("Uh...")
+  Escaped% = SteveTalk("I thought I did...")
+  Escaped% = LarryTalk("Whatever...")
+  Escaped% = LarryTalk("Room 7 is the weapon's locker.")
+  Escaped% = LarryTalk("Here's a copy of a code-yellow access card.")
+  Escaped% = SteveTalk("and?")
+  Escaped% = LarryTalk("And that'll give you access to doors...")
+  Escaped% = LarryTalk("with yellow, green, and blue trims.")
+  Escaped% = SteveTalk("Oh...")
+  Escaped% = SteveTalk("Okay...")
+  Escaped% = SteveTalk("Cool!")
+  Escaped% = SteveTalk("Here's something I found...")
+  Escaped% = SteveTalk("Look's like it's half of a card.")
+  Escaped% = LarryTalk("Thanks...")
+  Escaped% = LarryTalk("We've got to find the code-red access card...")
+  Escaped% = LarryTalk("before barney does.")
+  Escaped% = LarryTalk("He needs it for something...")
+  Escaped% = LarryTalk("And I'm guessing he wants it for the room above.")
+  Escaped% = LarryTalk("Let's go.")
  
   LD2.SetPlayerXY 20, 144
   LD2.Drop 9
@@ -1960,18 +1917,18 @@ SUB SceneLobby
   LarryPoint% = 0
   LarryPos% = 0
  
-  LarryTalk "hmm..."
-  DO: DS4QB.MusicFadeOut DEFAULT, 31, DEFAULT, ft%: LOOP WHILE ft%
-  LarryTalk "It sure is nice to have some fresh air again."
+  Escaped% = LarryTalk("hmm...")
+  LD2.FadeOutMusic
+  Escaped% = LarryTalk("It sure is nice to have some fresh air again.")
   LarryPoint% = 1
-  LarryTalk "..."
-  LarryTalk "Poor Steve..."
-  LarryTalk "...sigh..."
-  LarryTalk "...he's in a better place now..."
-  LarryTalk "...probably with his friend, matt..."
+  Escaped% = LarryTalk("...")
+  Escaped% = LarryTalk("Poor Steve...")
+  Escaped% = LarryTalk("...sigh...")
+  Escaped% = LarryTalk("...he's in a better place now...")
+  Escaped% = LarryTalk("...probably with his friend, matt...")
   LarryPoint% = 0
-  LarryTalk "many stories ended tonight..."
-  LarryTalk "...but mine lives on..."
+  Escaped% = LarryTalk("many stories ended tonight...")
+  Escaped% = LarryTalk("...but mine lives on...")
 
   LD2.WriteText ""
 
@@ -1990,7 +1947,7 @@ SUB SceneLobby
  
   NEXT x%
 
-  DS4QB.PlayMusic mscENDING
+  LD2.PlayMusic mscENDING
  
   LD2.PopText "THE END"
   LD2.ShowCredits
@@ -2028,29 +1985,29 @@ SUB ScenePortal
   Barney.y = 144
   BarneyPos% = 0
 
-  LarryTalk "Huh!"
-  DO: DS4QB.MusicFadeOut DEFAULT, 31, DEFAULT, ft%: LOOP WHILE ft%
+  Escaped% = LarryTalk("Huh!")
+  LD2.FadeOutMusic
   BarneyTalk "Hello, Larry..."
-  SteveTalk "Larry!"
-  SteveTalk "It's a trap!"
-  LarryTalk "Well..."
-  LarryTalk "Thanks, steve..."
-  LarryTalk "but it's kinda late for that."
+  Escaped% = SteveTalk("Larry!")
+  Escaped% = SteveTalk("It's a trap!")
+  Escaped% = LarryTalk("Well...")
+  Escaped% = LarryTalk("Thanks, steve...")
+  Escaped% = LarryTalk("but it's kinda late for that.")
   BarneyTalk "I see you managed to escape and find a red card."
-  LarryTalk "Glad to see that you found one too."
+  Escaped% = LarryTalk("Glad to see that you found one too.")
   BarneyTalk "Yep..."
   BarneyTalk "Steve also found one."
-  SteveTalk "Plus 1 for me."
-  LarryTalk "Talk about the timing."
+  Escaped% = SteveTalk("Plus 1 for me.")
+  Escaped% = LarryTalk("Talk about the timing.")
   BarneyTalk "It's a shame I was here first."
   BarneyTalk "Now I can finally reopen this portal."
-  LarryTalk "Reopen?"
+  Escaped% = LarryTalk("Reopen?")
   BarneyTalk "Well, larry..."
   BarneyTalk "That's how they got here in the first place."
   BarneyTalk "Now..."
   BarneyTalk "It's time to die!"
 
-  DS4QB.PlaySound 16
+  LD2.PlaySound 16
   rx! = Steve.x
 
   LD2.WriteText ""
@@ -2096,16 +2053,16 @@ SUB ScenePortal
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT n%
  
-  LarryTalk "Steve!"
-  LarryTalk "Barney! That was uncalled for!"
+  Escaped% = LarryTalk("Steve!")
+  Escaped% = LarryTalk("Barney! That was uncalled for!")
   BarneyTalk "It dosen't matter if it was uncalled for..."
   BarneyTalk "You two looked too much alike..."
   BarneyTalk "I couldn't take it anymore!"
-  LarryTalk "That's it barney!"
+  Escaped% = LarryTalk("That's it barney!")
   BarneyTalk "I'm gonna save you, Larry..."
   BarneyTalk "Your going to live to see this alien world..."
   BarneyTalk "that you've been fighting for so long."
-  LarryTalk "Why didn't you kill me before?"
+  Escaped% = LarryTalk("Why didn't you kill me before?")
   BarneyTalk "Uh..."
   BarneyTalk "I kinda locked myself out..."
   BarneyTalk "So I needed help finding access cards."
@@ -2118,7 +2075,7 @@ SUB ScenePortal
   BarneyTalk "Oh shutup!"
 
   LD2.WriteText ""
-  DS4QB.PlaySound 16
+  LD2.PlaySound 16
   rx! = Trooper.x
 
   FOR n% = 1 TO 40
@@ -2158,17 +2115,17 @@ SUB ScenePortal
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT n%
 
-  LarryTalk "Geez man!"
+  Escaped% = LarryTalk("Geez man!")
   BarneyPoint% = 0
-  LarryTalk "Stop killing!"
-  LarryTalk "You are mad!"
+  Escaped% = LarryTalk("Stop killing!")
+  Escaped% = LarryTalk("You are mad!")
   BarneyTalk "You shutup!"
   BarneyTalk "Or I'll kill you too!"
   BarneyTalk "Now..."
   BarneyTalk "Let's open this portal..."
   LD2.PopText "The Portal Opens..."
 
-  DS4QB.PlaySound 16
+  LD2.PlaySound 16
   LD2.WriteText ""
   '- Giant monster makes sushi out of barney
     LD2.RenderFrame
@@ -2262,8 +2219,7 @@ SUB ScenePortal
   LD2.SetShowLife 1
   FirstBoss = 1
   LD2.SetAccessLevel 0
-  DS4QB.StopMusic 31
-  DS4QB.PlayMusic 33
+  LD2.PlayMusic mscBOSS
  
   BarneyIsThere% = 0
   LarryPos% = 0
@@ -2285,22 +2241,22 @@ SUB SceneRoofTop
   Larry.y = 144
  
  
-  'LarryTalk "Bones?"
+  'Escaped% = LarryTalk("Bones?")
   'BonesTalk "Hey, Larry"
-  'LarryTalk "Bones?"
+  'Escaped% = LarryTalk("Bones?")
   'BonesTalk "That's my name don't where it out!"
-  'LarryTalk "So..."
-  'LarryTalk "What you doing up here?"
+  'Escaped% = LarryTalk("So...")
+  'Escaped% = LarryTalk("What you doing up here?")
   'BonesTalk "This is where the main phone line comes."
   'BonesTalk "All incoming and outgoing calls go through this..."
   'BonesTalk "line."
   'BonesTalk "Which are trasmitted via the satelitte dishes."
-  'LarryTalk "So what's wrong?"
+  'Escaped% = LarryTalk("So what's wrong?")
   'BonesTalk "It's been cut."
-  'LarryTalk "By what?"
+  'Escaped% = LarryTalk("By what?")
   'BonesTalk "It appears to have been cut by some tool."
-  'LarryTalk "Woah!"
-  'LarryTalk "So it's just not monsters wandering around here?"
+  'Escaped% = LarryTalk("Woah!")
+  'Escaped% = LarryTalk("So it's just not monsters wandering around here?")
   'BonesTalk "Apparently not."
   'BonesTalk "I've got a feeling this is not some random..."
   'BonesTalk "attack by a bunch of monsters."
@@ -2314,12 +2270,12 @@ SUB SceneRoofTop
   Barney.x = 0
   Barney.y = 144
 
-  LarryTalk "Barney, come in."
+  Escaped% = LarryTalk("Barney, come in.")
   BarneyTalk "Yea, Larry, I'm here, over."
-  LarryTalk "I've found a code-yellow access card."
+  Escaped% = LarryTalk("I've found a code-yellow access card.")
   BarneyTalk "Great!"
   BarneyTalk "Okay, meet me in the weapon's locker, over."
-  LarryTalk "I copy that."
+  Escaped% = LarryTalk("I copy that.")
   LD2.SetAccessLevel 3
 
   RoofScene% = 2
@@ -2341,8 +2297,8 @@ SUB SceneSteveGone
   Scene% = 0
   Larry.y = 144
 
-  LarryTalk "Huh?"
-  LarryTalk "Where's steve?"
+  Escaped% = LarryTalk("Huh?")
+  Escaped% = LarryTalk("Where's steve?")
   LD2.WriteText ""
 
   SteveGoneScene% = 1
@@ -2360,11 +2316,11 @@ SUB SceneVent1
   Scene% = 0
   Larry.y = 144
 
-  LarryTalk "Woah!"
-  LarryTalk "Some type of crystalized alien goo is in the way."
-  'LarryTalk "the way."
-  LarryTalk "I'll need to find some type of chemical to..."
-  LarryTalk "break down this goo."
+  Escaped% = LarryTalk("Woah!")
+  Escaped% = LarryTalk("Some type of crystalized alien goo is in the way.")
+  'Escaped% = LarryTalk("the way.")
+  Escaped% = LarryTalk("I'll need to find some type of chemical to...")
+  Escaped% = LarryTalk("break down this goo.")
   LD2.WriteText ""
 
   SceneVent = 1
@@ -2392,26 +2348,26 @@ SUB SceneWeaponRoom
   DIM x AS INTEGER
 
   BarneyTalk "Larry!"
-  LarryTalk "Hey barney."
+  Escaped% = LarryTalk("Hey barney.")
   BarneyTalk "Glad to see your still alive."
-  LarryTalk "Why ofcourse..."
-  LarryTalk "I'm always alive."
+  Escaped% = LarryTalk("Why ofcourse...")
+  Escaped% = LarryTalk("I'm always alive.")
   BarneyTalk "Atleast this time it's for a good thing."
   BarneyTalk "Like the code-yellow access card."
   BarneyTalk "Let me have it so I can make a copy."
-  LarryTalk "Wait a minute."
-  LarryTalk "How do I know if you'll use this for good?"
-  LarryTalk "or evil?"
+  Escaped% = LarryTalk("Wait a minute.")
+  Escaped% = LarryTalk("How do I know if you'll use this for good?")
+  Escaped% = LarryTalk("or evil?")
   BarneyTalk "..."
-  LarryTalk "..."
+  Escaped% = LarryTalk("...")
   BarneyTalk "Give me the card, Larry."
-  LarryTalk "Mmmm..."
-  LarryTalk "Okay."
+  Escaped% = LarryTalk("Mmmm...")
+  Escaped% = LarryTalk("Okay.")
   BarneyTalk "Now copying..."
-  LarryTalk "Hey..."
-  LarryTalk "Isn't that illegal?"
+  Escaped% = LarryTalk("Hey...")
+  Escaped% = LarryTalk("Isn't that illegal?")
   BarneyTalk "..."
-  LarryTalk "..."
+  Escaped% = LarryTalk("...")
   BarneyTalk "Here's your card back."
   BarneyTalk "Now let's head into the back room..."
   BarneyTalk "and grab some stuff."
@@ -2464,21 +2420,21 @@ SUB SceneWeaponRoom2
   DIM x AS INTEGER
 
   BarneyTalk "Look what I got!"
-  LarryTalk "Hey!"
-  LarryTalk "That's not fair."
-  LarryTalk "I found the yellow card..."
-  LarryTalk "so I should be entitled to first pick."
+  Escaped% = LarryTalk("Hey!")
+  Escaped% = LarryTalk("That's not fair.")
+  Escaped% = LarryTalk("I found the yellow card...")
+  Escaped% = LarryTalk("so I should be entitled to first pick.")
   BarneyTalk "Well, tuff luck kid."
-  LarryTalk "Kid?"
+  Escaped% = LarryTalk("Kid?")
   BarneyTalk "Meanwhile, our next job is to find..."
   BarneyTalk "a code-red access card."
-  LarryTalk "What?!"
-  LarryTalk "Are you crazy?"
-  LarryTalk "It was hard enough trying to find a yellow one."
-  LarryTalk "And you copied it before we went in so you..."
-  LarryTalk "could go rush in and have the first pick."
-  LarryTalk "I knew you'd use the card for evil."
-  LarryTalk "You evil man!"
+  Escaped% = LarryTalk("What?!")
+  Escaped% = LarryTalk("Are you crazy?")
+  Escaped% = LarryTalk("It was hard enough trying to find a yellow one.")
+  Escaped% = LarryTalk("And you copied it before we went in so you...")
+  Escaped% = LarryTalk("could go rush in and have the first pick.")
+  Escaped% = LarryTalk("I knew you'd use the card for evil.")
+  Escaped% = LarryTalk("You evil man!")
   BarneyTalk "Oh stop wining, Larry."
   BarneyTalk "Now, let's find that red card."
 
@@ -2506,10 +2462,10 @@ SUB SceneWeaponRoom2
   Barney.x = 2000
 
   LarryPoint% = 0
-  LarryTalk "Tst!"
-  LarryTalk "I knew he would use the card for evil."
-  LarryTalk "Oh well..."
-  LarryTalk "There should be lots of cool weapons in here."
+  Escaped% = LarryTalk("Tst!")
+  Escaped% = LarryTalk("I knew he would use the card for evil.")
+  Escaped% = LarryTalk("Oh well...")
+  Escaped% = LarryTalk("There should be lots of cool weapons in here.")
   LD2.WriteText ""
 
   LD2.SetPlayerFlip 0
@@ -2540,13 +2496,15 @@ SUB SetElevate (OnOff AS INTEGER)
 
 END SUB
 
-SUB SteveTalk (Text AS STRING)
+FUNCTION SteveTalk% (Text AS STRING)
 
   '- Make Steve talk
   '-----------------
  
   DIM x AS INTEGER, y AS INTEGER
   DIM Flip AS INTEGER
+  
+  ExitScene% = 0
 
   x = Steve.x: y = Steve.y
   SteveTalking% = 1
@@ -2622,6 +2580,9 @@ SUB SteveTalk (Text AS STRING)
     NEXT i%
 
     LD2.CopyBuffer 1, 0
+    
+    IF keyboard(&H39) THEN EXIT FOR
+    IF keyboard(1) THEN ExitScene% = 1: EXIT FOR
 
   NEXT n%
 
@@ -2654,9 +2615,15 @@ SUB SteveTalk (Text AS STRING)
   LD2.CopyBuffer 1, 0
   SteveTalking% = 0
 
-  DO: LOOP UNTIL keyboard(&H39)
+  DO
+    IF keyboard(1) THEN ExitScene% = 1: EXIT DO
+  LOOP UNTIL keyboard(&H39)
+  
+  DO: LOOP WHILE keyboard(1)
+  
+  SteveTalk = ExitScene%
 
-END SUB
+END FUNCTION
 
 SUB TrooperTalk (Text AS STRING)
 
