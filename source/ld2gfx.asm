@@ -13,9 +13,12 @@
   PUBLIC  LD2putf
   PUBLIC  LD2putl
   PUBLIC  LD2putwl
+  PUBLIC  LD2mixwl
+  PUBLIC  LD2copySprite
   PUBLIC  LD2copyFull
   PUBLIC  LD2cls
   PUBLIC  LD2put65
+  PUBLIC  LD2pset
   
   ;- LD2put: PUT ( skip pixels with zero value )
   ;-       : Draws a sprite 16X16 in size onto the given layer excluding
@@ -413,35 +416,31 @@
 	verticalLD2PL:
       push cx
         mov cx, dx
-        push si
-        push di
-          horizontalLD2PL:
-            lodsb
-            test al, al
-            jz skipPixelLD2PL
-              mov bl, es:[di]
-              push bx
-                mov bh, bl
-                and bl, 15
-                sub bh, bl
-                mov ah, bh
-              pop bx
+        horizontalLD2PL:
+          lodsb
+          test al, al
+          jz skipPixelLD2PL
+            mov bl, es:[di]
+            mov bh, bl
+            and bh, 15
+            cmp al, bh
+            jle skipBlacken
+              sub bl, bh
+              jmp skipDarken
+            skipBlacken:
               sub bl, al
-              cmp bl, ah
-              ja storAL
-                mov bl, ah
-              storAL:
-                mov al, bl
-                stosb
-                jmp skipIncmntLD2PL
-            skipPixelLD2PL:
-              inc di
-            skipIncmntLD2PL:
-          loop horizontalLD2PL
-        pop di
-        pop si
+            skipDarken:
+              mov al, bl
+              stosb
+              jmp skipIncmntLD2PL
+          skipPixelLD2PL:
+            inc di
+          skipIncmntLD2PL:
+        loop horizontalLD2PL
         add di, 320
+        sub di, dx
         add si, 16
+        sub si, dx
       pop cx
 	loop verticalLD2PL
 	
@@ -580,17 +579,15 @@
       test al, al
       jz skipPixelLD2PWL2
         mov bl, es:[di]
-        push bx
-          mov bh, bl
-          and bl, 15
-          sub bh, bl
-          mov ah, bh
-        pop bx
-        sub bl, al
-        cmp bl, ah
-        ja storALWL
-          mov bl, ah
-        storALWL:
+        mov bh, bl
+        and bh, 15
+        cmp al, bh
+        jle skipBlackenLD2PWL2
+          sub bl, bh
+          jmp skipDarkenLD2PWL2
+        skipBlackenLD2PWL2:
+          sub bl, al
+        skipDarkenLD2PWL2:
           mov al, bl
           stosb
           jmp skipIncmntLD2PWL2
@@ -670,6 +667,126 @@
 	retn
   
   LD2putwl ENDP
+  
+  ; 06 - tempPtr
+  ; 08 - lightPtr
+  ; 10 - lightSeg
+  ; 12 - spritePtr
+  ; 14 - spriteSeg
+  LD2mixwl PROC
+  
+	push bp
+	mov bp, sp
+	push ds
+	
+	call setTempAsDestLD2MWL
+	call setTileAsSrcLD2MWL
+	  
+	;# copy sprite block to temp buffer
+	mov cx, 130
+	copySpriteLoopLD2MWL:
+	  lodsw
+	  stosw
+	loop copySpriteLoopLD2MWL
+	
+	pop ds
+	push ds
+	
+	call setTempAsDestLD2MWL
+	call setLightAsSourceLD2MWL
+	
+	;# apply light to temp sprite
+	lodsw
+	stosw
+	lodsw
+	stosw
+	mov cx, 256
+	mixLightLoopLD2MWL:
+      lodsb
+      test al, al
+      jz skipPixelLD2MWL
+        mov bl, es:[di]
+        push bx
+          mov bh, bl
+          and bl, 15
+          sub bh, bl
+          mov ah, bh
+        pop bx
+        sub bl, al
+        cmp bl, ah
+        ja storALWLLD2MWL
+          mov bl, ah
+        storALWLLD2MWL:
+          mov al, bl
+          stosb
+          jmp skipIncmntLD2MWL
+      skipPixelLD2MWL:
+        inc di
+      skipIncmntLD2MWL:
+    loop mixLightLoopLD2MWL
+	
+	pop ds
+	pop bp
+	ret 10
+	
+	setTileAsSrcLD2MWL:
+	  ;# src -- sprite
+	  mov bx, [bp+12] ;sprt ptr
+	  mov si, [bx]
+	  mov bx, [bp+14] ;sprt seg
+	  mov ds, [bx]
+	retn
+	
+	setLightAsSourceLD2MWL:
+	  ;# src -- light
+	  mov bx, [bp+08] ;ptr
+	  mov si, [bx]
+	  mov bx, [bp+10] ;seg
+	  mov ds, [bx]
+	retn
+	
+	setTempAsDestLD2MWL:
+	  ;# dst -- temp sprite buffer address
+	  mov bx, [bp+10] ;lght seg
+	  mov es, [bx]
+	  mov bx, [bp+06] ;temp ptr
+	  mov di, [bx]
+	retn
+  
+  LD2mixwl ENDP
+  
+  ; 06 - destPtr
+  ; 08 - destSeg
+  ; 10 - srcPtr
+  ; 12 - srcSeg
+  LD2copySprite PROC
+  
+	push bp
+	mov bp, sp
+	push ds
+	
+	;# dest address
+	mov bx, [bp+06] ;# dest ptr
+	mov di, [bx]
+	mov bx, [bp+08] ;# dest seg
+	mov es, [bx]
+	;# src address
+	mov bx, [bp+10] ;# src ptr
+	mov si, [bx]
+	mov bx, [bp+12] ;# src seg
+	mov ds, [bx]
+	
+	mov cx, 130
+	copySpriteLoopLD2CS:
+      lodsw
+      stosw
+	loop copySpriteLoopLD2CS
+	
+	pop ds
+	pop bp
+	ret 08
+  
+  LD2copySprite ENDP
 
 
   ;- LD2copyFull: Copies a given layer onto another given layer excluding
@@ -780,6 +897,51 @@
     RET 10
 
   LD2put65 ENDP
+  
+  ;- LD2pset: Plots a pixel with a given color onto the given buffer
+  LD2pset PROC
 
+    PUSH  BP
+    MOV   BP, SP      ;- Set up the stack
+
+    MOV   BX, [BP+08]
+    MOV   ES, [BX]    ;- Set up the buffer to draw to
+
+    MOV   BX, [BP+10]
+    MOV   BX, [BX]    ;- Put the Y coordinate of the pixel into BX
+
+    CMP   BX, 0       ;- Is the Y coordinate smaller than 0?
+    JB    PsetDone    ;- If so, goto PsetDone
+    CMP   BX, 199     ;- Is the Y coordinate greater than 199?
+    JA    PsetDone    ;- If so, goto PsetDone
+
+    MOV   CX, BX      ;- CX = BX
+    SHL   BX, 8       ;- Same as BX = BX * 256
+    SHL   CX, 6       ;- Same as BX = BX * 64
+    ADD   BX, CX      ;- Add together so it's the same as multiplying by 320
+    MOV   DI, BX
+
+    MOV   BX, [BP+12]
+    MOV   BX, [BX]    ;- Put the X coordinate of the pixel into BX
+
+    CMP   BX, 0       ;- Is the X coordinate smaller than 0?
+    JB    PsetDone    ;- If so, goto PsetDone
+    CMP   BX, 319     ;- Is the X coordinate greater than 319?
+    JA    PsetDone    ;- If so, goto PsetDone
+
+    ADD   DI, BX      ;- Now we are ready to plot the pixel
+
+    MOV   BX, [BP+06]
+    MOV   AX, [BX]    ;- Put the color of the pixel into AX
+
+    MOV   ES:[DI], AL ;- Plot the pixel
+
+  PsetDone:
+
+    POP BP
+    RET 8
+
+  LD2pset ENDP
+  
   END
   

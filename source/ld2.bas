@@ -8,26 +8,7 @@
   REM $INCLUDE: 'INC\LD2.BI'
   
   REM $DYNAMIC
-
-  CONST idTILE = 0
-  CONST idENEMY = 1
-  CONST idLARRY = 2
-  CONST idGUTS = 3
-  CONST idLIGHT = 4
-  CONST idFONT = 5
-  CONST idSCENE = 6
-  CONST idBOSS2 = 9
-  CONST FIST = 0
-  CONST SHOTGUN = 1
-  CONST MACHINEGUN = 2
-  CONST PISTOL = 3
-  CONST DESERTEAGLE = 4
-  CONST BOSS1 = 11
-  CONST GREENCARD = 17
-  CONST BLUECARD = 18
-  CONST YELLOWCARD = 19
-  CONST REDCARD = 20
-  CONST CODEWHITE = 55
+  
   DIM SHARED Scene%
   DIM SHARED ShiftX AS INTEGER
   DIM SHARED CurrentRoom AS INTEGER
@@ -633,33 +614,48 @@ SUB LD2.Start
   CurrentRoom = 14
   LD2.SetRoom CurrentRoom
  
-  LD2.LoadMap "14th.ld2"
- 
   nil% = keyboard(-1)
 
+  LD2.SetGameMode TESTMODE
   LD2.Init
- 
-  LD2.Intro
- 
-  Scene1
-  'Scene% = 2
-  'Scene% = 4
-  'Scene% = 7
-  'Scene% = 8
-  'Scene% = 0
+  
+  IF NOT (LD2.isTestMode% OR LD2.isDebugMode%) THEN
+    LD2.Intro
+  END IF
+  
+  LD2.LoadMap "14th.ld2"
+  
+  DIM p AS tPlayer
+  
+  p.life = 100
+  p.uAni = 26
+  p.lAni = 21
+  p.x = 92
+  p.y = 144
+  p.weapon1 = 0
+  p.weapon2 = 0
+  p.weapon = Player.weapon1
+  p.shells = 0
+  p.bullets = 0
+  p.deagles = 0
+  
+  LD2.InitPlayer p
+  
+  LD2.SetXShift 0
+  
+  n% = LD2.AddToStatus(GREENCARD, 1)
 
-  CONST NOTHING = 0
-  CONST MEDIKIT50 = 1
-  CONST MEDIKIT100 = 2
-  CONST GRENADE = 3
-  CONST SHELLS = 4
-  CONST MYSTERYMEAT = 11
-  CONST CHEMICAL409 = 12
-  CONST CODEGREEN = 1
-  CONST CODEBLUE = 2
-  CONST CODEYELLOW = 3
-  CONST CODERED = 4
- 
+  IF LD2.isTestMode% OR LD2.isDebugMode% THEN
+    LD2.SetWeapon1 SHOTGUN
+    LD2.SetWeapon2 MACHINEGUN
+    LD2.AddAmmo 1, 99
+    LD2.AddAmmo 2, 99
+    LD2.AddAmmo 3, 99
+    Scene1 1
+  ELSE
+    Scene1 0
+  END IF
+
   DIM EnteringCode AS INTEGER
   DIM KeyCount AS INTEGER
   DIM RoofCode AS STRING
@@ -821,6 +817,7 @@ SUB LD2.Start
 
     IF Retrace THEN WAIT &H3DA, 8: WAIT &H3DA, 8, 8
     LD2.CopyBuffer 1, 0
+    LD2.CountFrame
    
     DontStop% = 0
     IF keyboard(1) THEN EXIT DO
@@ -943,7 +940,7 @@ SUB PutRestOfSceners
 
 END SUB
 
-SUB Scene1
+SUB Scene1 (skip AS INTEGER)
 
   '- Process Scene 1
   '-----------------
@@ -976,6 +973,8 @@ SUB Scene1
   
   
   DO
+  
+  IF skip THEN EXIT DO
 
   Escaped% = LarryTalk("Well Steve, that was a good game of chess.")     : IF Escaped% THEN EXIT DO
   Escaped% = SteveTalk("Only because you won.")                          : IF Escaped% THEN EXIT DO
@@ -1264,7 +1263,7 @@ SUB Scene3
   LD2.WriteText ""
 
   LD2.PlayMusic mscUHOH
-  LD2.PlaySound sndGLASS
+  LD2.PlaySound sfxGLASS
   LD2.ShatterGlass 208, 136, 2, -1
   LD2.ShatterGlass 224, 136, 2,  1
  
@@ -1272,7 +1271,7 @@ SUB Scene3
   '-------------------------------------------------------------
   LD2.PutTile 13, 8, 19, 3
 
-  FOR y! = 128 TO 144 step 0.25
+  FOR y! = 128 TO 144 step 0.37
     LD2.ProcessGuts
     LD2.RenderFrame
     LD2.put Larry.x, Larry.y, 1, idSCENE, 1
@@ -1318,7 +1317,7 @@ SUB Scene3
 	NEXT n%
   NEXT i%
   
-  LD2.PlaySound sndSLURP
+  LD2.PlaySound sfxSLURP
   
   FOR x% = Janitor.x TO 210 STEP -1
     LD2.ProcessGuts
@@ -1343,7 +1342,7 @@ SUB Scene3
     END IF
   NEXT x%
   
-  LD2.PlaySound sndAHHHH
+  LD2.PlaySound sfxAHHHH
 
 
   '- rockmonster chews the janitor/doctor to death

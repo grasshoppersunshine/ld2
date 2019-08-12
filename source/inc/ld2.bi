@@ -9,7 +9,7 @@ DECLARE FUNCTION LarryTalk% (Text AS STRING)
 DECLARE SUB PutLarryX (x AS INTEGER, XShift AS INTEGER)
 DECLARE SUB PutLarryX2 (x AS INTEGER, XShift AS INTEGER)
 DECLARE SUB PutRestOfSceners ()
-DECLARE SUB Scene1 ()
+DECLARE SUB Scene1 (skip AS INTEGER)
 DECLARE SUB Scene16thFloor ()
 DECLARE SUB Scene3 ()
 DECLARE SUB Scene5 ()
@@ -28,41 +28,97 @@ DECLARE SUB SetElevate (OnOff AS INTEGER)
 DECLARE FUNCTION SteveTalk% (Text AS STRING)
 DECLARE SUB TrooperTalk (Text AS STRING)
 
-CONST mscWANDERING = 31
-CONST mscINTRO = 32
-CONST mscBOSS = 33
-CONST mscTHEME = 34
-CONST mscENDING = 35
-CONST mscUHOH = 36
-CONST mscMARCHoftheUHOH = 37
+'======================
+'= ITEMS
+'======================
+CONST NOTHING     = 0
+CONST MEDIKIT50   = 1
+CONST MEDIKIT100  = 2
+CONST EXTRALIFE   = 3
+CONST SHOTGUN     = 4
+CONST MACHINEGUN  = 5
+CONST PISTOL      = 6
+CONST DESERTEAGLE = 7
+CONST GRENADE     = 8
+CONST SHELLS      = 9
+CONST BULLETS     = 10
+CONST DEAGLEAMMO  = 11
+CONST GREENCARD   = 12
+CONST BLUECARD    = 13
+CONST YELLOWCARD  = 14
+CONST REDCARD     = 15
+CONST WHITECARD   = 16
+CONST WHITECARD1  = 17
+CONST WHITECARD2  = 18
+CONST JANITORNOTE = 19
+CONST MYSTERYMEAT = 20
+CONST CHEMICAL409 = 21
+CONST CHEMICAL410 = 22
 
-'CONST sndSHOTGUN = 1
-'CONST sndMACHINEGUN = 2
-'CONST sndPISTOL = 3
-'CONST sndDESERTEAGLE = 4
-'CONST sndMACHINEGUN2 = 5
-'CONST sndPISTOL2 = 6
-CONST sndBLOOD1 = 11
-CONST sndBLOOD2 = 12
-CONST sndDOORDOWN = 13
-CONST sndDOORUP = 14
-CONST sndINTRO = 15
-CONST sndUHOH = 16
-'CONST sndPUNCH = 17
-CONST sndEQUIP = 18
-CONST sndPICKUP = 19
-CONST sndLAUGH = 20
-  
-CONST sndPUNCH       = 10
-CONST sndSHOTGUN     = 11
-CONST sndMACHINEGUN  = 12
-CONST sndMACHINEGUN2 = 13
-CONST sndPISTOL      = 13
-CONST sndPISTOL2     = 13
-CONST sndDESERTEAGLE = 14
-CONST sndGLASS       = 15
-CONST sndSLURP       = 16
-CONST sndAHHHH       = 17
-CONST sndSELECT      = 18
+'======================
+'= DOOR ACCESS LEVELS
+'======================
+CONST CODEGREEN   = 100
+CONST CODEBLUE    = 101
+CONST CODEYELLOW  = 102
+CONST CODERED     = 103
+CONST CODEWHITE   = 104
 
+'======================
+'= ENTITIES
+'======================
+CONST ROCKMONSTER = 300
+CONST TROOP1      = 301
+CONST TROOP2      = 302
+CONST BLOBMINE    = 303
+CONST JELLYBLOB   = 304
+CONST BOSS1       = 305
 
+'======================
+'= SPRITE SETS
+'======================
+CONST idTILE      = 400
+CONST idENEMY     = 401
+CONST idLARRY     = 402
+CONST idGUTS      = 403
+CONST idLIGHT     = 404
+CONST idFONT      = 405
+CONST idSCENE     = 406
+CONST idOBJECT    = 407
+CONST idBOSS      = 408
+CONST idBOSS2     = 409
+
+'======================
+'= MUSIC
+'======================
+CONST mscWANDERING      = 900
+CONST mscINTRO          = 901
+CONST mscBOSS           = 902
+CONST mscTHEME          = 903
+CONST mscENDING         = 904
+CONST mscUHOH           = 905
+CONST mscMARCHoftheUHOH = 906
+
+'==============================================
+'= SFX
+'= These IDs map directly to the SFX channels
+'==============================================
+CONST sfxPUNCH        = 10
+CONST sfxSHOTGUN      = 11
+CONST sfxMACHINEGUN   = 12
+CONST sfxMACHINEGUN2  = 13
+CONST sfxPISTOL       = 13
+CONST sfxPISTOL2      = 13
+CONST sfxDESERTEAGLE  = 14
+CONST sfxGLASS        = 15
+CONST sfxSLURP        = 16
+CONST sfxAHHHH        = 17
+CONST sfxSELECT       = 18
+
+CONST sfxBLOOD1       = 11
+CONST sfxBLOOD2       = 12
+CONST sfxDOORDOWN     = 13
+CONST sfxDOORUP       = 14
+CONST sfxEQUIP        = 18
+CONST sfxPICKUP       = 19
+CONST sfxLAUGH        = 20

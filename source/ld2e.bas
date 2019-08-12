@@ -6,27 +6,32 @@
   REM $INCLUDE: 'INC\LD2GFX.BI'
   REM $INCLUDE: 'INC\LD2E.BI'
   REM $INCLUDE: 'INC\LD2.BI'
+  REM $INCLUDE: 'LD2DATA.BAS'
+
+' jump and shoot to shatter glass windows???
 
   REM $DYNAMIC
   
-  A& = SETMEM(-200000)
+  A& = SETMEM(-180000)
   
   DIM SHARED Buffer1(32000) AS INTEGER    '- Offscreen buffer
   DIM SHARED Buffer2(32000) AS INTEGER    '- Offscreen buffer
 
-  DIM SHARED sTile(20800) AS INTEGER      '- GFX Tiles
+  DIM SHARED sTile(26000) AS INTEGER      '- GFX Tiles (120 standard + 80 mixed)
   DIM SHARED sEnemy(5980) AS INTEGER      '- GFX Enemies
   DIM SHARED sLarry(4680) AS INTEGER      '- GFX Larry
   DIM SHARED sGuts(2080) AS INTEGER       '- GFX Guts
-  DIM SHARED sLight(5330) AS INTEGER      '- GFX Lighting
+  DIM SHARED sLight(5720) AS INTEGER      '- GFX Lighting
   DIM SHARED sFont(1003) AS INTEGER       '- GFX Font
-  DIM SHARED sScene(14300) AS INTEGER     '- GFX Scenes
-  DIM SHARED sObject(5200) AS INTEGER     '- GFX Objects
+  DIM SHARED sScene(14170) AS INTEGER     '- GFX Scenes
+  DIM SHARED sObject(3640) AS INTEGER     '- GFX Objects
  
-  DIM SHARED TileMap(2400) AS INTEGER     '- 2400 = 200*12
-  DIM SHARED LightMap1(2400) AS INTEGER   '- 2400 = 200*12
-  DIM SHARED LightMap2(2400) AS INTEGER   '- 2400 = 200*12
-  DIM SHARED AniMap(2400) AS INTEGER      '- 2400 = 200*12
+  DIM SHARED TileMap(1307) AS INTEGER     '- 2400 = 200*12 // 1206 = 201*12 (divide by 2)
+  DIM SHARED MixMap(1307) AS INTEGER      '- 2400 = 200*12 // 1206 = 201*12 (divide by 2)
+  DIM SHARED LightMap1(1307) AS INTEGER   '- 2400 = 200*12
+  DIM SHARED LightMap2(1307) AS INTEGER   '- 2400 = 200*12
+  DIM SHARED AniMap(1307) AS INTEGER      '- 2400 = 200*12
+  DIM SHARED FloorMap(169) AS INTEGER     '- 169  = 200/16(bits) = 12.5 (13) * (13 rows)
   DIM SHARED CurrentWeapon AS INTEGER
   DIM SHARED Gravity AS SINGLE
   DIM SHARED NumEntities AS INTEGER
@@ -36,7 +41,12 @@
   DIM SHARED SceneMode AS INTEGER
   DIM SHARED HasShotgun AS INTEGER
   DIM SHARED Scene%
-
+  
+  DIM SHARED AVGFPS   AS SINGLE
+  DIM SHARED FPS      AS INTEGER
+  DIM SHARED FPSCOUNT AS INTEGER
+  DIM SHARED DELAYMOD AS DOUBLE
+  
   CONST PI = 3.141592
 
   TYPE tEntity
@@ -52,28 +62,8 @@
     life AS INTEGER
     shooting AS INTEGER
   END TYPE: DIM SHARED Entity(100) AS tEntity
-
-  TYPE tPlayer
-    x AS SINGLE
-    y AS SINGLE
-    oy AS SINGLE
-    flip AS INTEGER
-    uAni AS SINGLE
-    lAni AS SINGLE
-    velocity AS SINGLE
-    weapon AS INTEGER
-    weapon1 AS INTEGER
-    Weapon2 AS INTEGER
-    shells AS INTEGER
-    bullets AS INTEGER
-    deagles AS INTEGER
-    stillani AS INTEGER
-    shooting AS INTEGER
-    life AS INTEGER
-    code AS INTEGER
-    tempcode AS INTEGER
-    WHITECARD AS INTEGER
-  END TYPE: DIM SHARED Player AS tPlayer
+  
+  DIM SHARED Player AS tPlayer
 
   TYPE tGuts
     x AS SINGLE
@@ -110,7 +100,7 @@
     my AS INTEGER
   END TYPE: DIM SHARED Door(50) AS tDoor
  
-  DIM SHARED XShift AS INTEGER
+  DIM SHARED XShift AS DOUBLE
   DIM SHARED CurrentRoom AS INTEGER
   DIM SHARED NumItems(23) AS INTEGER
   DIM SHARED WentToRoom(23) AS INTEGER
@@ -122,39 +112,7 @@
   Animation = 1
  
   CONST EPS = 130
-  CONST idTILE = 0
-  CONST idENEMY = 1
-  CONST idLARRY = 2
-  CONST idGUTS = 3
-  CONST idLIGHT = 4
-  CONST idFONT = 5
-  CONST idSCENE = 6
-  CONST idOBJECT = 7
-  CONST idBOSS = 8
-  CONST idBOSS2 = 9
-  CONST FIST = 0
-  CONST SHOTGUN = 1
-  CONST MACHINEGUN = 2
-  CONST PISTOL = 3
-  CONST DESERTEAGLE = 4
-  CONST ROCKMONSTER = 0
-  CONST TROOP1 = 1
-  CONST TROOP2 = 2
-  CONST BLOBMINE = 3
-  CONST JELLYBLOB = 4
-  CONST BOSS1 = 11
-  CONST CODEGREEN = 1
-  CONST CODEBLUE = 2
-  CONST CODEYELLOW = 3
-  CONST CODERED = 4
-  CONST GREENCARD = 17
-  CONST BLUECARD = 18
-  CONST YELLOWCARD = 19
-  CONST REDCARD = 20
-  CONST WHITECARD = 7
-  CONST CODEWHITE = 55
-  CONST MEMORYCARD = 27
-
+  
   CONST msgENTITYDELETED = 1
   CONST msgGOTYELLOWCARD = 2
 
@@ -162,8 +120,23 @@
 
   DIM SHARED NumLives AS INTEGER
   NumLives = 1
-  DIM SHARED Lighting AS INTEGER
-  Lighting = 1
+  DIM SHARED Lighting1 AS INTEGER
+  DIM SHARED Lighting2 AS INTEGER
+  Lighting1 = 1
+  Lighting2 = 1
+  
+  DIM SHARED BitmapSeg   AS INTEGER
+  DIM SHARED BitmapOff   AS INTEGER
+  DIM SHARED BitmapPitch AS INTEGER
+  
+  CONST MAXTILES = 120
+  
+  DIM SHARED GameArgs AS STRING
+  GameArgs = "TEST" '//COMMAND$
+  
+  DIM SHARED GameMode AS INTEGER
+  
+  TIMER ON
   
   LD2.Start
 
@@ -228,7 +201,7 @@ SUB LD2.AddAmmo (Kind AS INTEGER, Amount AS INTEGER)
   IF Player.bullets > 200 THEN Player.bullets = 200
   IF Player.deagles > 48 THEN Player.deagles = 48
 
-  LD2.PlaySound sndEQUIP
+  LD2.PlaySound sfxEQUIP
 
 END SUB
 
@@ -248,6 +221,25 @@ END FUNCTION
 
 FUNCTION LD2.CheckFloorHit% (NumEntity AS INTEGER)
 
+  DIM bitTable(15) AS INTEGER
+  
+  bitTable(15) = 1
+  bitTable(14) = 2
+  bitTable(13) = 4
+  bitTable(12) = 8
+  bitTable(11) = &h10
+  bitTable(10) = &h20
+  bitTable(9)  = &h40
+  bitTable(8)  = &h80
+  bitTable(7)  = &h100
+  bitTable(6)  = &h200
+  bitTable(5)  = &h400
+  bitTable(4)  = &h800
+  bitTable(3)  = &h1000
+  bitTable(2)  = &h2000
+  bitTable(1)  = &h4000
+  bitTable(0)  = &h8000
+
   '- Check if the player is on something
   '-------------------------------------
  
@@ -256,9 +248,8 @@ FUNCTION LD2.CheckFloorHit% (NumEntity AS INTEGER)
     DEF SEG = VARSEG(TileMap(0))
     FOR x% = 0 TO 15 STEP 15
       px% = INT(Player.x + XShift + x%) \ 16: py% = INT(Player.y) \ 16
-      'IF TileMap(px%, py% + 1) >= 80 and TileMap(px%, py% + 1) <= 109 THEN LD2.CheckFloorHit% = 1: EXIT FUNCTION
-      p% = PEEK(px% + (py% + 1) * 200)
-      IF p% >= 80 AND p% <= 109 THEN LD2.CheckFloorHit% = 1: EXIT FUNCTION
+      p% = FloorMap((px%\16) + (py% + 1) * 13)
+      IF (bitTable(px% AND 15) AND p%) <> 0 THEN LD2.CheckFloorHit% = 1: EXIT FUNCTION
     NEXT x%
     DEF SEG
 
@@ -267,9 +258,8 @@ FUNCTION LD2.CheckFloorHit% (NumEntity AS INTEGER)
     DEF SEG = VARSEG(TileMap(0))
     FOR x% = 0 TO 15 STEP 15
       px% = INT(Entity(NumEntity).x + x%) \ 16: py% = INT(Entity(NumEntity).y) \ 16
-      'IF TileMap(px%, py% + 1) >= 80 THEN LD2.CheckFloorHit% = 1: EXIT FUNCTION
-      p% = PEEK(px% + (py% + 1) * 200)
-      IF p% >= 80 AND p% <= 109 THEN LD2.CheckFloorHit% = 1: EXIT FUNCTION
+      p% = FloorMap((px%\16) + (py% + 1) * 13)
+      IF (bitTable(px% AND 15) AND p%) <> 0 THEN LD2.CheckFloorHit% = 1: EXIT FUNCTION
     NEXT x%
     DEF SEG
 
@@ -281,6 +271,24 @@ FUNCTION LD2.CheckWallHit% (NumEntity AS INTEGER)
 
   '- Check if the player has hit a wall
   '------------------------------------
+  DIM bitTable(15) AS INTEGER
+  
+  bitTable(15) = 1
+  bitTable(14) = 2
+  bitTable(13) = 4
+  bitTable(12) = 8
+  bitTable(11) = &h10
+  bitTable(10) = &h20
+  bitTable(9)  = &h40
+  bitTable(8)  = &h80
+  bitTable(7)  = &h100
+  bitTable(6)  = &h200
+  bitTable(5)  = &h400
+  bitTable(4)  = &h800
+  bitTable(3)  = &h1000
+  bitTable(2)  = &h2000
+  bitTable(1)  = &h4000
+  bitTable(0)  = &h8000
 
   IF NumEntity = 0 THEN
 
@@ -288,9 +296,8 @@ FUNCTION LD2.CheckWallHit% (NumEntity AS INTEGER)
     FOR y% = 0 TO 15 STEP 15
       FOR x% = 0 TO 15 STEP 15
         px% = INT(Player.x + XShift + x%) \ 16: py% = INT(Player.y + y%) \ 16
-        'IF TileMap(px%, py%) >= 80 THEN LD2.CheckWallHit% = 1: EXIT FUNCTION
-        p% = PEEK(px% + py% * 200)
-        IF p% >= 80 AND p% <= 109 THEN LD2.CheckWallHit% = 1: EXIT FUNCTION
+        p% = FloorMap((px%\16) + py% * 13)
+        IF (bitTable(px% AND 15) AND p%) <> 0 THEN LD2.CheckWallHit% = 1: EXIT FUNCTION
       NEXT x%
     NEXT y%
     DEF SEG
@@ -301,9 +308,8 @@ FUNCTION LD2.CheckWallHit% (NumEntity AS INTEGER)
     FOR y% = 0 TO 15 STEP 15
       FOR x% = 0 TO 15 STEP 15
         px% = INT(Entity(NumEntity).x + x%) \ 16: py% = INT(Entity(NumEntity).y + y%) \ 16
-        'IF TileMap(px%, py%) >= 80 THEN LD2.CheckWallHit% = 1: EXIT FUNCTION
-        p% = PEEK(px% + py% * 200)
-        IF p% >= 80 AND p% <= 109 THEN LD2.CheckWallHit% = 1: EXIT FUNCTION
+        p% = FloorMap((px%\16) + py% * 13)
+        IF (bitTable(px% AND 15) AND p%) <> 0 THEN LD2.CheckWallHit% = 1: EXIT FUNCTION
       NEXT x%
     NEXT y%
     DEF SEG
@@ -458,8 +464,7 @@ SUB LD2.Init
 
   '- Initialize Larry The Dinosaur II
   '----------------------------------
- 
-  'nil% = DS4QB.Init(CURRENT, DEFAULT)
+  
   LD2.InitSound
   
   SCREEN 13
@@ -477,9 +482,9 @@ SUB LD2.Init
 '    DO: LOOP WHILE keyboard(&H39)
 '    END
 '  ELSE
-    Message = "Loading...Please Wait..."
-    CLS
-    LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
+'    Message = "Loading...Please Wait..."
+'    CLS
+'    LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
 '  END IF
 
     LD2.AddMusic mscTHEME, "sfx\theme.gdm", 0
@@ -510,7 +515,7 @@ SUB LD2.Init
  
   CLS
  
-  XShift = 0
+  IF (NOT LD2.isTestMode%) AND (NOT LD2.isDebugMode%) THEN
   LD2.LoadBitmap "gfx\warning.bmp", 1, 0
   
   WAIT &H3DA, 8: WAIT &H3DA, 8, 8
@@ -521,7 +526,7 @@ SUB LD2.Init
   CLS
 
   LD2.LoadBitmap "gfx\logo.bmp", 1, 0
-  WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+  'WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   LD2.CopyBuffer 1, 0
  
   DO: LOOP UNTIL keyboard(&H39)
@@ -538,7 +543,7 @@ SUB LD2.Init
 	  EXIT DO
     END IF
     IF keyboard(&H3) OR keyboard(&H50) THEN
-	  LD2.PlaySound sndSELECT
+	  LD2.PlaySound sfxSELECT
 	  FOR i% = 1 TO 35: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
       LD2.ShowCredits
       CLS
@@ -547,19 +552,21 @@ SUB LD2.Init
       LD2.CopyBuffer 1, 0
     END IF
     IF keyboard(&H4) OR keyboard(&H51) THEN
-      LD2.PlaySound sndSELECT
+      LD2.PlaySound sfxSELECT
       FOR i% = 1 TO 70: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
       CLS
       LD2.LoadPalette "gfx\gradient.pal"
       LD2.ShutDown
     END IF
   LOOP
-  LD2.PlaySound sndSELECT
+  LD2.PlaySound sfxSELECT
   FOR i% = 1 TO 35: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
   
   LD2.StopMusic
   
-  LD2.LoadPalette "gfx\gradient.pal"
+  END IF
+  
+  LD2.LoadPalette "gfx\pp256\palettes\gradient.pal"
   CLS
   DEF SEG = VARSEG(Buffer1(0))
     FOR n& = 0 TO 63999
@@ -568,9 +575,9 @@ SUB LD2.Init
   DEF SEG
   
   LD2.LoadSprite "gfx\ld2light.put", idLIGHT
-  LD2.LoadSprite "gfx\ld2tiles.put", idTILE
+  LD2.LoadSprite "gfx\pp256\images\ld2tiles.put", idTILE
   LD2.LoadSprite "gfx\enemies.put", idENEMY
-  LD2.LoadSprite "gfx\larry2.put", idLARRY
+  LD2.LoadSprite "gfx\pp256\images\larry2.put", idLARRY
   LD2.LoadSprite "gfx\ld2guts.put", idGUTS
   LD2.LoadSprite "gfx\ld2scene.put", idSCENE
   LD2.LoadSprite "gfx\objects.put", idOBJECT
@@ -579,23 +586,26 @@ SUB LD2.Init
   DEF SEG = VARSEG(Buffer2(0))
     BLOAD "gfx\back1.bsv", 0
   DEF SEG
-
-  n% = LD2.AddToStatus(GREENCARD, 1)
-
-  XShift = 0
-  Player.life = 100
-  Player.uAni = 26
-  Player.lAni = 21
-  Player.x = 92  '- temporary
-  Player.y = 144  '- temporary
-  Player.weapon1 = 0'MACHINEGUN
-  Player.Weapon2 = 0'DESERTEAGLE
-  Player.weapon = Player.weapon1
-  Player.shells = 0
-  Player.bullets = 0
-  Player.deagles = 0
+ ' LD2copyFull VARSEG(Buffer2(0)), &HA000
+  'LD2.LoadBitmap "gfx\back.bmp", 2, 1
+  'LD2copyFull VARSEG(Buffer2(0)), &HA000
+  'DO: LOOP UNTIL keyboard(&h39)
+  'DO: LOOP WHILE keyboard(&h39)
+  'DEF SEG = VARSEG(Buffer2(0))
+  '  BLOAD "gfx\back1.bsv", 0
+  'DEF SEG
+  'DO: LOOP UNTIL keyboard(&h39)
+  'end
+  
   Gravity = .04
- 
+  XShift  = 0
+  
+END SUB
+
+SUB LD2.InitPlayer(p AS tPlayer)
+    
+    Player = p
+    
 END SUB
 
 SUB LD2.JumpPlayer (Amount AS SINGLE)
@@ -605,7 +615,7 @@ SUB LD2.JumpPlayer (Amount AS SINGLE)
 
   IF LD2.CheckFloorHit%(0) AND Player.velocity >= 0 THEN
     Player.velocity = -Amount
-    'Player.y = Player.y + Player.velocity
+    Player.y = Player.y + Player.velocity
   END IF
 
 END SUB
@@ -654,8 +664,6 @@ SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER
     ELSE
       FOR n% = 0 TO 255
    
-        OUT &H3C8, n%
-
         GET #1, c&, byteB
         c& = c& + 1
         GET #1, c&, byteG
@@ -667,10 +675,9 @@ SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER
         grn% = ASC(byteG) \ 4
         blu% = ASC(byteB) \ 4
 
-        rd% = 500: bd% = 500: gd% = 500
-        ord% = rd%: obd% = bd%: ogd% = gd%
         oav% = 500
-        FOR i% = 0 TO 255
+        c%   = n%
+        FOR i% = 16 TO 255
            
           OUT &H3C7, i%
 
@@ -683,7 +690,7 @@ SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER
           bd% = ABS(blu% - blu2%)
 
           av% = (rd% + gd% + bd%) / 3
-          IF av% < oav% AND i% > 15 THEN
+          IF av% < oav% THEN
             oav% = av%
             c% = i%
           END IF
@@ -697,10 +704,12 @@ SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER
     '- put up the image
     c& = LOF(1) - bmwidth
    
-    IF BufferNum = 0 THEN DEF SEG = &HA000
-    IF BufferNum = 1 THEN DEF SEG = VARSEG(Buffer1(0))
-    IF BufferNum = 2 THEN DEF SEG = VARSEG(Buffer2(0))
+    'IF BufferNum = 0 THEN DEF SEG = &HA000
+    'IF BufferNum = 1 THEN DEF SEG = VARSEG(Buffer1(0))
+    'IF BufferNum = 2 THEN DEF SEG = VARSEG(Buffer2(0))
     IF Convert = 0 THEN
+      IF BufferNum = 0 THEN DEF SEG = &HA000
+      IF BufferNum = 1 THEN DEF SEG = VARSEG(Buffer1(0))
       FOR y% = 0 TO bmheight
         FOR x% = 0 TO bmwidth
           GET #1, c&, byte
@@ -713,7 +722,10 @@ SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER
       FOR y% = 0 TO bmheight
         FOR x% = 0 TO bmwidth
           GET #1, c&, byte
-          POKE (x% + y% * 320&), ConvertTable(ASC(byte))
+          c% = ConvertTable(ASC(byte))
+          DEF SEG = VARSEG(Buffer2(0))
+          POKE (x% + y% * 320&), c%
+          DEF SEG
           c& = c& + 1
         NEXT x%
         c& = c& - ((bmwidth + 1) * 2)
@@ -729,6 +741,40 @@ SUB LD2.LoadMap (Filename AS STRING)
 
   '- Load the map
   '--------------
+  DIM Message AS STRING
+  DIM bufferSeg AS INTEGER
+  bufferSeg = VARSEG(Buffer1(0))
+  Message = "..Loading..."
+  LD2.cls 1, 0
+  LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 1
+  FOR y% = 80 TO 85
+    FOR x% = 0 TO 15
+      FOR n% = 0 TO 7
+        LD2pset 126+x%*4+n%, y%, bufferSeg, 112+x%
+      NEXT n%
+    NEXT x%
+  NEXT y%
+  WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+  LD2.CopyBuffer 1, 0
+  
+  DIM bitTable(15) AS INTEGER
+  
+  bitTable(15) = 1
+  bitTable(14) = 2
+  bitTable(13) = 4
+  bitTable(12) = 8
+  bitTable(11) = &h10
+  bitTable(10) = &h20
+  bitTable(9)  = &h40
+  bitTable(8)  = &h80
+  bitTable(7)  = &h100
+  bitTable(6)  = &h200
+  bitTable(5)  = &h400
+  bitTable(4)  = &h800
+  bitTable(3)  = &h1000
+  bitTable(2)  = &h2000
+  bitTable(1)  = &h4000
+  bitTable(0)  = &h8000
 
   NumDoors = 0
   Player.tempcode = 0
@@ -819,6 +865,7 @@ SUB LD2.LoadMap (Filename AS STRING)
       FOR y% = 0 TO 12
         GET #1, c&, byte: c& = c& + 1
         GET #1, c&, byte: c& = c& + 1
+        bits% = 0
         FOR x% = 0 TO 200
           GET #1, c&, byte: c& = c& + 1
           POKE (x% + y% * 200), ASC(byte)
@@ -847,6 +894,13 @@ SUB LD2.LoadMap (Filename AS STRING)
             Door(NumDoors).code = CODEWHITE
             Door(NumDoors).mx = x%
             Door(NumDoors).my = y%
+          END IF
+          IF ASC(byte) >= 80 AND ASC(byte) <= 109 THEN
+            bits = (bitTable(x% AND 15) OR bits)
+          END IF
+          IF (x% AND 15) = 15 THEN
+            FloorMap((x%\16)+(y%*13)) = bits
+            bits = 0
           END IF
         NEXT x%
       NEXT y%
@@ -931,6 +985,8 @@ SUB LD2.LoadMap (Filename AS STRING)
 
   IF CurrentRoom = 23 OR CurrentRoom = 7 OR CurrentRoom = 0 OR CurrentRoom = 12 OR CurrentRoom = 20 OR CurrentRoom = 21 OR CurrentRoom = 1 THEN NumEntities = 0
   'NumEntities = 0
+  
+  MixTiles varseg(sTile(0)), varseg(sLight(0)), varseg(TileMap(0)), varseg(MixMap(0)), varseg(LightMap1(0))
 
 END SUB
 
@@ -969,6 +1025,47 @@ SUB LD2.LoadPalette (Filename AS STRING)
     OUT &H3C9, RGBVal(n%, 1)
     OUT &H3C9, RGBVal(n%, 2)
   NEXT n%
+
+END SUB
+
+SUB LD2.RotatePalette
+    
+    STATIC seconds AS DOUBLE
+    STATIC first   AS INTEGER
+    
+    IF first = 0 THEN
+        first = 1
+        seconds = TIMER
+    END IF
+    
+    IF TIMER > (seconds + 0.10) THEN
+        
+        seconds = TIMER
+        
+        OUT &H3C7, 127
+        
+        r31% = INP(&H3C9)
+        g31% = INP(&H3C9)
+        b31% = INP(&H3C9)
+        
+        FOR n% = 127 TO 112 STEP -1
+            IF n% > 112 THEN
+                OUT &H3C7, n%-1
+                r% = INP(&H3C9)
+                g% = INP(&H3C9)
+                b% = INP(&H3C9)
+            ELSE
+                r% = r31%
+                g% = g31%
+                b% = b31%
+            END IF
+            
+            OUT &H3C8, n%
+            OUT &H3C9, r%
+            OUT &H3C9, g%
+            OUT &H3C9, b%
+        NEXT n%
+    END IF
 
 END SUB
 
@@ -1076,31 +1173,32 @@ SUB LD2.ShatterGlass (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTE
 
 END SUB
 
-SUB LD2.MovePlayer (XAmount AS SINGLE)
+SUB LD2.MovePlayer (XAmount AS DOUBLE)
 
   '- Move the player
   '-----------------
+  f# = DELAYMOD
 
   ox% = INT(Player.x)
-  Player.x = Player.x + XAmount
+  Player.x = Player.x + XAmount '*f#
  
   IF LD2.CheckWallHit%(0) THEN Player.x = ox%
 
   IF XAmount < 0 THEN Player.flip = 1 ELSE Player.flip = 0
-  Player.lAni = Player.lAni + ABS(XAmount / 8)
-  IF Player.lAni >= 26 THEN Player.lAni = 22
+  Player.lAni = Player.lAni + ABS(XAmount / 7.5) '*f#
+  IF Player.lAni >= 44 THEN Player.lAni = 36
 
   'IF Player.lAni = 22 THEN SOUND 40, .2
   'IF Player.lAni = 24 THEN SOUND 50, .2
 
   IF Player.x > 200 THEN
-    XShift = XShift + 1
-    Player.x = Player.x - 1
+    XShift = XShift + 1 '*f#
+    Player.x = Player.x - 1 '*f#
   END IF
 
   IF Player.x < 120 AND XShift > 0 THEN
-    XShift = XShift - 1
-    Player.x = Player.x + 1
+    XShift = XShift - 1 '*f#
+    Player.x = Player.x + 1 '*f#
   END IF
 
 END SUB
@@ -1111,7 +1209,7 @@ SUB LD2.PickUpItem
   FOR i% = 1 TO NumItems(CurrentRoom)
     IF Player.x + 8 + XShift >= item(i%, CurrentRoom).x AND Player.x + 8 + XShift <= item(i%, CurrentRoom).x + 16 THEN
      
-      LD2.PlaySound sndPICKUP
+      LD2.PlaySound sfxPICKUP
      
       '- Send message if player picked up something important
       SELECT CASE item(i%, CurrentRoom).item + 1
@@ -1157,6 +1255,8 @@ SUB LD2.ProcessEntities
   DIM i AS INTEGER
   DIM n AS INTEGER
   DIM closed AS INTEGER
+  
+  f# = DELAYMOD
 
   IF Player.life <= 0 THEN
     NumLives = NumLives - 1
@@ -1188,10 +1288,10 @@ SUB LD2.ProcessEntities
   END IF
 
   Player.oy = Player.y
-  Player.y = Player.y + Player.velocity
+  Player.y = Player.y + Player.velocity*f#
   IF LD2.CheckFloorHit%(0) = 0 THEN
-    Player.lAni = 23
-    Player.velocity = Player.velocity + Gravity
+    Player.lAni = 39
+    Player.velocity = Player.velocity + Gravity*f#
     IF Player.velocity > 1 THEN Player.velocity = 1
   ELSE
     Player.y = (Player.y \ 16) * 16
@@ -1252,14 +1352,14 @@ SUB LD2.ProcessEntities
         IF Entity(n%).hit > 0 THEN
           Entity(n%).ani = 6
         ELSE
-          IF Entity(n%).x < Player.x + XShift THEN Entity(n%).x = Entity(n%).x + .5: Entity(n%).flip = 0
-          IF Entity(n%).x > Player.x + XShift THEN Entity(n%).x = Entity(n%).x - .5: Entity(n%).flip = 1
+          IF Entity(n%).x < Player.x + XShift THEN Entity(n%).x = Entity(n%).x + .5*f#: Entity(n%).flip = 0
+          IF Entity(n%).x > Player.x + XShift THEN Entity(n%).x = Entity(n%).x - .5*f#: Entity(n%).flip = 1
         END IF
 
         IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
           IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 10 <= Player.y + 15 THEN
             IF INT(10 * RND(1)) + 1 = 1 THEN
-              LD2.PlaySound sndBLOOD2
+              LD2.PlaySound sfxBLOOD2
             END IF
             Player.life = Player.life - 1
             LD2.MakeGuts Entity(n%).x + 7, Entity(n%).y + 8, -1, 1
@@ -1290,8 +1390,8 @@ SUB LD2.ProcessEntities
               Entity(n%).ani = Entity(n%).ani + .1
               IF Entity(n%).ani > 27 THEN Entity(n%).ani = 21
          
-              IF Entity(n%).flag = 1 THEN Entity(n%).x = Entity(n%).x + .5: Entity(n%).flip = 0
-              IF Entity(n%).flag = 2 THEN Entity(n%).x = Entity(n%).x - .5: Entity(n%).flip = 1
+              IF Entity(n%).flag = 1 THEN Entity(n%).x = Entity(n%).x + .5*f#: Entity(n%).flip = 0
+              IF Entity(n%).flag = 2 THEN Entity(n%).x = Entity(n%).x - .5*f#: Entity(n%).flip = 1
 
               Entity(n%).counter = Entity(n%).counter - 1
 
@@ -1304,11 +1404,11 @@ SUB LD2.ProcessEntities
          
           IF Entity(n%).shooting > 0 THEN
             IF INT(30 * RND(1)) + 1 = 1 THEN
-              LD2.PlaySound sndLAUGH
+              LD2.PlaySound sfxLAUGH
             END IF
             '- Make entity shoot
             IF (Entity(n%).shooting AND 7) = 0 THEN
-              LD2.PlaySound sndMACHINEGUN2
+              LD2.PlaySound sfxMACHINEGUN2
               IF Entity(n%).flip = 0 THEN
                 DEF SEG = VARSEG(TileMap(0))
                 FOR i% = Entity(n%).x + 15 TO Entity(n%).x + 320 STEP 8
@@ -1370,8 +1470,8 @@ SUB LD2.ProcessEntities
               Entity(n%).ani = Entity(n%).ani + .1
               IF Entity(n%).ani > 37 THEN Entity(n%).ani = 31
         
-              IF Entity(n%).flag = 1 THEN Entity(n%).x = Entity(n%).x + .5: Entity(n%).flip = 0
-              IF Entity(n%).flag = 2 THEN Entity(n%).x = Entity(n%).x - .5: Entity(n%).flip = 1
+              IF Entity(n%).flag = 1 THEN Entity(n%).x = Entity(n%).x + .5*f#: Entity(n%).flip = 0
+              IF Entity(n%).flag = 2 THEN Entity(n%).x = Entity(n%).x - .5*f#: Entity(n%).flip = 1
 
               Entity(n%).counter = Entity(n%).counter - 1
 
@@ -1385,7 +1485,7 @@ SUB LD2.ProcessEntities
           IF Entity(n%).shooting > 0 THEN
             '- Make entity shoot
             IF (Entity(n%).shooting AND 15) = 0 THEN
-              LD2.PlaySound sndPISTOL2
+              LD2.PlaySound sfxPISTOL2
               IF Entity(n%).flip = 0 THEN
                 DEF SEG = VARSEG(TileMap(0))
                 FOR i% = Entity(n%).x + 15 TO Entity(n%).x + 320 STEP 8
@@ -1436,9 +1536,9 @@ SUB LD2.ProcessEntities
 
           IF ABS(Entity(n%).x - Player.x - XShift) < 100 THEN
             IF Entity(n%).x < Player.x + XShift THEN
-              Entity(n%).x = Entity(n%).x + .8: Entity(n%).flip = 0
+              Entity(n%).x = Entity(n%).x + .8*f#: Entity(n%).flip = 0
             ELSE
-              Entity(n%).x = Entity(n%).x - .8: Entity(n%).flip = 1
+              Entity(n%).x = Entity(n%).x - .8*f#: Entity(n%).flip = 1
             END IF
           END IF
         END IF
@@ -1446,7 +1546,7 @@ SUB LD2.ProcessEntities
         IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
           IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 10 <= Player.y + 15 THEN
             IF INT(10 * RND(1)) + 1 = 1 THEN
-              LD2.PlaySound sndBLOOD1
+              LD2.PlaySound sfxBLOOD1
             END IF
             Player.life = Player.life - 1
             LD2.MakeGuts Entity(n%).x + 7, Entity(n%).y + 8, -1, 1
@@ -1466,14 +1566,14 @@ SUB LD2.ProcessEntities
         IF Entity(n%).hit > 0 THEN
           Entity(n%).ani = 45
         ELSE
-          IF Entity(n%).x < Player.x + XShift THEN Entity(n%).x = Entity(n%).x + .6: Entity(n%).flip = 1
-          IF Entity(n%).x > Player.x + XShift THEN Entity(n%).x = Entity(n%).x - .6: Entity(n%).flip = 0
+          IF Entity(n%).x < Player.x + XShift THEN Entity(n%).x = Entity(n%).x + .6*f#: Entity(n%).flip = 1
+          IF Entity(n%).x > Player.x + XShift THEN Entity(n%).x = Entity(n%).x - .6*f#: Entity(n%).flip = 0
         END IF
 
         IF ABS(Entity(n%).x - (Player.x + XShift)) < 50 AND Entity(n%).counter < 10 THEN
           Entity(n%).ani = 44
-          IF Entity(n%).x < Player.x + XShift THEN Entity(n%).x = Entity(n%).x + .5: Entity(n%).flip = 1
-          IF Entity(n%).x > Player.x + XShift THEN Entity(n%).x = Entity(n%).x - .5: Entity(n%).flip = 0
+          IF Entity(n%).x < Player.x + XShift THEN Entity(n%).x = Entity(n%).x + .5*f#: Entity(n%).flip = 1
+          IF Entity(n%).x > Player.x + XShift THEN Entity(n%).x = Entity(n%).x - .5*f#: Entity(n%).flip = 0
         END IF
 
         Entity(n%).counter = Entity(n%).counter - .1
@@ -1482,7 +1582,7 @@ SUB LD2.ProcessEntities
         IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
           IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 10 <= Player.y + 15 THEN
             IF INT(10 * RND(1)) + 1 = 1 THEN
-              LD2.PlaySound sndBLOOD2
+              LD2.PlaySound sfxBLOOD2
             END IF
             Player.life = Player.life - 1
             LD2.MakeGuts Entity(n%).x + 7, Entity(n%).y + 8, -1, 1
@@ -1522,8 +1622,8 @@ SUB LD2.ProcessEntities
               Entity(n%).counter = 50
             END IF
           
-            IF Entity(n%).flip = 0 THEN Entity(n%).x = Entity(n%).x + 1.7
-            IF Entity(n%).flip = 1 THEN Entity(n%).x = Entity(n%).x - 1.7
+            IF Entity(n%).flip = 0 THEN Entity(n%).x = Entity(n%).x + 1.7*f#
+            IF Entity(n%).flip = 1 THEN Entity(n%).x = Entity(n%).x - 1.7*f#
           END IF
         END IF
         Entity(n%).counter = Entity(n%).counter - 1
@@ -1565,8 +1665,8 @@ SUB LD2.ProcessEntities
   NEXT n%
 
   LD2.ProcessGuts
-  PutLarryX INT(Player.x), XShift
-  PutLarryX2 INT(Player.x), XShift
+  PutLarryX INT(Player.x), INT(XShift)
+  PutLarryX2 INT(Player.x), INT(XShift)
  
   SetElevate 0
   '- check if Player is at elevator
@@ -1588,7 +1688,7 @@ SUB LD2.ProcessEntities
       IF Door(i).ani = 0 THEN
 	IF Player.x + s7% + XShift >= Door(i).x1 AND Player.x + s7% + XShift <= Door(i).x2 THEN
 	  IF Player.y + 7 >= Door(i).y1 AND Player.y + 7 <= Door(i).y2 THEN
-	    LD2.PlaySound sndDOORUP
+	    LD2.PlaySound sfxDOORUP
 	    Door(i).anicount = .2
 	    Player.tempcode = 0
 	  END IF
@@ -1605,7 +1705,7 @@ SUB LD2.ProcessEntities
 	END IF
 	IF closed THEN
 	  IF NumEntities = 0 THEN
-	    IF Door(i).ani = 4 THEN LD2.PlaySound sndDOORDOWN
+	    IF Door(i).ani = 4 THEN LD2.PlaySound sfxDOORDOWN
 	    Door(i).anicount = -.2
 	  END IF
 	  FOR n = 1 TO NumEntities
@@ -1614,17 +1714,17 @@ SUB LD2.ProcessEntities
 		Door(i).anicount = .2
 		EXIT FOR
 	      ELSE
-		IF Door(i).ani = 4 THEN LD2.PlaySound sndDOORDOWN
+		IF Door(i).ani = 4 THEN LD2.PlaySound sfxDOORDOWN
 		Door(i).anicount = -.2
 	      END IF
 	    ELSE
-	      IF Door(i).ani = 4 THEN LD2.PlaySound sndDOORDOWN
+	      IF Door(i).ani = 4 THEN LD2.PlaySound sfxDOORDOWN
 	      Door(i).anicount = -.2
 	    END IF
 	  NEXT n
 	END IF
       END IF
-      Door(i).ani = Door(i).ani + Door(i).anicount
+      Door(i).ani = Door(i).ani + Door(i).anicount*f#
       IF Door(i).ani >= 4 THEN
         Door(i).ani = 4
       END IF
@@ -1635,13 +1735,15 @@ SUB LD2.ProcessEntities
       IF Door(i).ani > 0 AND Door(i).ani < 4 THEN
         LD2.PutTile Door(i).mx, Door(i).my, 101 + Door(i).ani, 1
       ELSEIF Door(i).ani = 4 THEN
-        LD2.PutTile Door(i).mx, Door(i).my, 52, 1
+        LD2.PutTile Door(i).mx, Door(i).my, 52, 1 '// caution stripes
+        LD2.SetFloor Door(i).mx, Door(i).my, 0
       ELSE
         IF Door(i).code = CODEWHITE THEN
           LD2.PutTile Door(i).mx, Door(i).my, 106, 1
         ELSE
           LD2.PutTile Door(i).mx, Door(i).my, 89 + Door(i).code, 1
         END IF
+        LD2.SetFloor Door(i).mx, Door(i).my, 1
       END IF
     END IF
   NEXT i
@@ -1653,13 +1755,15 @@ SUB LD2.ProcessGuts
   '- Process the guts
   '------------------
 
+  f# = DELAYMOD
+
   FOR i% = 1 TO NumGuts
    
     IF Guts(i%).id < 8 or Guts(i%).id > 11 THEN
    
-      Guts(i%).x = Guts(i%).x + Guts(i%).speed
-      Guts(i%).y = Guts(i%).y + Guts(i%).velocity
-      Guts(i%).velocity = Guts(i%).velocity + Gravity
+      Guts(i%).x = Guts(i%).x + Guts(i%).speed*f#
+      Guts(i%).y = Guts(i%).y + Guts(i%).velocity*f#
+      Guts(i%).velocity = Guts(i%).velocity + Gravity*f#
    
       IF Guts(i%).y > 200 THEN
 	'- Delete gut
@@ -1765,12 +1869,54 @@ SUB LD2.PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
   '- Put a tile on the given layer
   '-------------------------------
 
-  IF Layer = 1 THEN DEF SEG = VARSEG(TileMap(0))
-  IF Layer = 2 THEN DEF SEG = VARSEG(LightMap1(0))
-  IF Layer = 3 THEN DEF SEG = VARSEG(LightMap2(0))
-
-  POKE (x + y * 200), Tile
+  IF Layer = 1 THEN
+    DEF SEG = VARSEG(TileMap(0))
+    POKE (x + y * 200), Tile
+    DEF SEG = VARSEG(MixMap(0))
+    POKE (x + y * 200), Tile
+  END IF
+  IF Layer = 2 THEN
+    DEF SEG = VARSEG(LightMap1(0))
+    POKE (x + y * 200), Tile
+  END IF
+  IF Layer = 3 THEN
+    DEF SEG = VARSEG(LightMap2(0))
+    POKE (x + y * 200), Tile
+  END IF
   DEF SEG
+
+END SUB
+
+SUB LD2.SetFloor(x AS INTEGER, y AS INTEGER, blocked AS INTEGER)
+
+  DIM bitTable(15) AS INTEGER
+  
+  bitTable(15) = 1
+  bitTable(14) = 2
+  bitTable(13) = 4
+  bitTable(12) = 8
+  bitTable(11) = &h10
+  bitTable(10) = &h20
+  bitTable(9)  = &h40
+  bitTable(8)  = &h80
+  bitTable(7)  = &h100
+  bitTable(6)  = &h200
+  bitTable(5)  = &h400
+  bitTable(4)  = &h800
+  bitTable(3)  = &h1000
+  bitTable(2)  = &h2000
+  bitTable(1)  = &h4000
+  bitTable(0)  = &h8000
+  
+  DIM p AS INTEGER
+  
+  p = (x\16)+y*13
+  
+  IF blocked = 1 THEN
+      FloorMap(p) = (FloorMap(p) AND bitTable(x AND 15))
+  ELSE
+      FloorMap(p) = (FloorMap(p)  OR bitTable(x AND 15)) XOR bitTable(x AND 15)
+  END IF
 
 END SUB
 
@@ -1778,24 +1924,27 @@ SUB LD2.RenderFrame
 
   '- Render a frame
   '----------------
-  DIM spriteIdx AS INTEGER
-  DIM lightIdx AS INTEGER
-  DIM tempIdx AS INTEGER
-  DIM segAniMap AS INTEGER
-  DIM segTileMap AS INTEGER
+  DIM spriteIdx    AS INTEGER
+  DIM lightIdx     AS INTEGER
+  DIM tempIdx      AS INTEGER
+  DIM segAniMap    AS INTEGER
+  DIM segTileMap   AS INTEGER
+  DIM segMixMap    AS INTEGER
   DIM segLightMap1 AS INTEGER
   DIM segLightMap2 AS INTEGER
-  DIM segTile AS INTEGER
-  DIM segLight AS INTEGER
-  DIM segBuffer1 AS INTEGER
-  DIM segBuffer2 AS INTEGER
+  DIM segTile      AS INTEGER
+  DIM segLight     AS INTEGER
+  DIM segBuffer1   AS INTEGER
+  DIM segBuffer2   AS INTEGER
   
-  DIM ptrTile AS INTEGER
+  DIM ptrTile  AS INTEGER
+  DIM ptrMix   AS INTEGER
   DIM ptrLight AS INTEGER
-  DIM ptrTemp AS INTEGER
+  DIM ptrTemp  AS INTEGER
   
   segAniMap    = VARSEG(AniMap(0))
   segTileMap   = VARSEG(TileMap(0))
+  segMixMap    = VARSEG(MixMap(0))
   segLightMap1 = VARSEG(LightMap1(0))
   segLightMap2 = VARSEG(LightMap2(0))
   segTile      = VARSEG(sTile(0))
@@ -1803,45 +1952,121 @@ SUB LD2.RenderFrame
   segBuffer1   = VARSEG(Buffer1(0))
   segBuffer2   = VARSEG(Buffer2(0))
   
+  DIM ptrTileMap   AS INTEGER
+  DIM ptrMixMap    AS INTEGER
+  DIM ptrAniMap    AS INTEGER
+  DIM ptrLightMap1 AS INTEGER
+  DIM ptrLightMap2 AS INTEGER
+  DEF SEG = segTileMap  : ptrTileMap   = VARPTR(TileMap(0))  : DEF SEG
+  DEF SEG = segMixMap   : ptrMixMap    = VARPTR(MixMap(0))   : DEF SEG
+  DEF SEG = segAniMap   : ptrAniMap    = VARPTR(AniMap(0))   : DEF SEG
+  DEF SEG = segLightMap1: ptrLightMap1 = VARPTR(LightMap1(0)): DEF SEG
+  DEF SEG = segLightMap2: ptrLightMap2 = VARPTR(LightMap2(0)): DEF SEG
+  
+  DIM bitTable(15) AS INTEGER
+  
+  bitTable(15) = 1
+  bitTable(14) = 2
+  bitTable(13) = 4
+  bitTable(12) = 8
+  bitTable(11) = &h10
+  bitTable(10) = &h20
+  bitTable(9)  = &h40
+  bitTable(8)  = &h80
+  bitTable(7)  = &h100
+  bitTable(6)  = &h200
+  bitTable(5)  = &h400
+  bitTable(4)  = &h800
+  bitTable(3)  = &h1000
+  bitTable(2)  = &h2000
+  bitTable(1)  = &h4000
+  bitTable(0)  = &h8000
+  
   Animation = Animation + .2
   IF Animation > 9 THEN Animation = 1
 
   'LD2Scroll VARSEG(Buffer2(0))
   LD2copyFull VARSEG(Buffer2(0)), VARSEG(Buffer1(0))
+  
+  DIM skipLight(20) AS INTEGER '// 26 = (24*13)/16(bits) (24bits to hold 20w -- leaving 4bits unused)
+  
+  SetBitmap VARSEG(skipLight(0)), VARPTR(skipLight(0)), 20
+  
+  lft% = 0
+  rgt% = 19
+  FOR n% = 0 TO NumEntities
+    IF n% = 0 THEN
+      ex% = INT(Player.x + (INT(XShift) AND 15)) \ 16
+      ey% = INT(Player.y)\16
+    ELSE
+      ex% = INT(Entity(n%).x - XShift + (INT(XShift) AND 15)) \ 16
+      ey% = INT(Entity(n%).y)\16
+    END IF
+    IF (ex% >= lft%) AND (ex% <= rgt%) THEN
+      PokeBitmap (ex%+0), (ey%+0), 1
+      PokeBitmap (ex%+1), (ey%+0), 1
+      PokeBitmap (ex%+0), (ey%+1), 1
+      PokeBitmap (ex%+1), (ey%+1), 1
+    END IF
+  NEXT n%
  
-  IF Lighting THEN
-    DEF SEG = segLightMap1: ptrTemp = VARPTR(LightMap1(EPS * 41))
+  IF Lighting2 THEN '// background/window lighting
     yp% = 0
-    FOR y% = 1 TO 13
-      xp% = 0 - (XShift AND 15)
-      FOR x% = 1 TO 40
-        m% = ((x% - 1 + XShift \ 16) + (y% - 1) * 200)
-        l% = m%
-        DEF SEG = segAniMap   : a% = (Animation MOD (PEEK(m%) + 1))
-        DEF SEG = segTileMap  : LD2put xp%, yp%, segTile, VARPTR(sTile(EPS * (PEEK(m%) + a%))), segBuffer1, 0
-        'DEF SEG = segTileMap  : ptrTile = VARPTR(sTile(EPS * (PEEK(m%) + a%)))
-        'DEF SEG = segLightMap1: ptrLight = VARPTR(LightMap1(EPS * l%))
-        'LD2putwl xp%, yp%, segTile, ptrTile, segLight, ptrLight, ptrTemp, segBuffer1
-        DEF SEG = segLightMap2
-        l% = PEEK(l%)
+    FOR y% = 0 TO 12
+      xp% = 0 - (INT(XShift) AND 15)
+      m%  = ((INT(XShift) \ 16) + y% * 200)
+      mt% = ptrTileMap  + m%
+      mx% = ptrMixMap   + m%
+      ma% = ptrAniMap   + m%
+      ml% = ptrLightMap + m%
+      FOR x% = 0 TO 20 '// yes, 21 (+1 for hangover when scrolling)
+        '// draw mixed/shaded tile or standard tile (that will be shaded later -- because and entity is in its space -- dynamically shade the entity with it later)
+        skipStaticLighting% = PeekBitmap%(x%, y%)
+        IF skipStaticLighting% THEN
+          DEF SEG = segTileMap: m% = PEEK(mt%): DEF SEG
+        ELSE
+          DEF SEG = segMixMap : m% = PEEK(mx%): DEF SEG
+        END IF
+        IF m% THEN
+          DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
+          LD2putf xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1
+        END IF
+        '// background lighting (mostly for windows)
+        DEF SEG = segLightMap2: l% = PEEK(ml%): DEF SEG
         IF l% THEN
           LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
         END IF
         xp% = xp% + 16
+        mt% = mt% + 1
+        mx% = mx% + 1
+        ma% = ma% + 1
+        ml% = ml% + 1
       NEXT
       yp% = yp% + 16
     NEXT
     DEF SEG
   ELSE
     yp% = 0
-    FOR y% = 1 TO 13
-      xp% = 0 - (XShift AND 15)
-      FOR x% = 1 TO 40
-        m% = ((x% - 1 + XShift \ 16) + (y% - 1) * 200)
-        l% = m%
-        DEF SEG = VARSEG(AniMap(0)): a% = (Animation MOD (PEEK(m%) + 1)): DEF SEG
-        DEF SEG = VARSEG(TileMap(0)): LD2put xp%, yp%, VARSEG(sTile(0)), VARPTR(sTile(EPS * (PEEK(m%) + a%))), VARSEG(Buffer1(0)), 0: DEF SEG
+    FOR y% = 0 TO 12
+      xp% = 0 - (INT(XShift) AND 15)
+      m%  = ((INT(XShift) \ 16) + y% * 200)
+      mt% = ptrTileMap + m%
+      ma% = ptrAniMap  + m%
+      FOR x% = 0 TO 20
+        '// draw mixed/shaded tile or standard tile (that will be shaded later -- because and entity is in its space -- dynamically shade the entity with it later)
+        skipStaticLighting% = PeekBitmap%(x%, y%)
+        IF skipStaticLighting% THEN
+          DEF SEG = segTileMap: m% = PEEK(mt%): DEF SEG
+        ELSE
+          DEF SEG = segMixMap : m% = PEEK(mt%): DEF SEG
+        END IF
+        IF m% THEN
+          DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
+          LD2putf xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1
+        END IF
         xp% = xp% + 16
+        mt% = mt% + 1
+        ma% = ma% + 1
       NEXT
       yp% = yp% + 16
     NEXT
@@ -1882,8 +2107,13 @@ SUB LD2.RenderFrame
   IF SceneMode = 0 THEN
     px% = INT(Player.x): py% = INT(Player.y)
     lan% = INT(Player.lAni): uan% = INT(Player.uAni)
-    LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), VARSEG(Buffer1(0)), Player.flip
-    LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * uan%)), VARSEG(Buffer1(0)), Player.flip
+    'IF noweapon then
+        LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), VARSEG(Buffer1(0)), Player.flip
+    'ELSE
+    '    LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), VARSEG(Buffer1(0)), Player.flip
+    '    LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * uan%)), VARSEG(Buffer1(0)), Player.flip
+    'END IF
+    
   END IF
 
   '- Draw the guts
@@ -1894,22 +2124,49 @@ SUB LD2.RenderFrame
 
   '- Draw the lighting
   '-------------------
-  IF Lighting THEN
-    DEF SEG = VARSEG(LightMap1(0))
-    FOR y% = 1 TO 13
-      FOR x% = 1 TO 40
-        m% = PEEK((x% - 1 + XShift \ 16) + (y% - 1) * 200)
-        IF m% THEN
-          LD2putl x% * 16 - 16 - (XShift AND 15), y% * 16 - 16, VARSEG(sLight(0)), VARPTR(sLight(EPS * m%)), VARSEG(Buffer1(0))
+  'IF Lighting1 THEN
+  '  DEF SEG = VARSEG(LightMap1(0))
+  '  yp% = 0
+  '  FOR y% = 1 TO 13
+  '    xp% = 0 - (XShift AND 15)
+  '    m% = (XShift \ 16) + (y% - 1) * 200
+  '    FOR x% = 1 TO 21
+  '      l% = PEEK(m%)
+  '      IF l% THEN
+  '        LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
+  '      END IF
+  '      m% = m% + 1
+  '      xp% = xp% + 16
+  '    NEXT x%
+  '    yp% = yp% + 16
+  '  NEXT y%
+  '  DEF SEG
+  'END IF
+  IF Lighting1 THEN '// dynamic lighting
+    yp% = 0
+    FOR y% = 0 TO 12
+      xp% = 0 - (INT(XShift) AND 15)
+      m%  = ((INT(XShift) \ 16) + y% * 200)
+      ml% = ptrLightMap + m%
+      FOR x% = 0 TO 20 '// yes, 21 (+1 for hangover when scrolling)
+        doDynamicLighting% = PeekBitmap%(x%, y%)
+        IF doDynamicLighting% THEN
+          DEF SEG = segLightMap1: l% = PEEK(ml%): DEF SEG
+          IF l% THEN
+            LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
+          END IF
         END IF
-      NEXT x%
-    NEXT y%
+        xp% = xp% + 16
+        ml% = ml% + 1
+      NEXT
+      yp% = yp% + 16
+    NEXT
     DEF SEG
   END IF
 
   FOR x% = 1 TO 5
-    LD2putl x% * 16 - 16, 0, VARSEG(sLight(0)), VARPTR(sLight(EPS * 2)), VARSEG(Buffer1(0))
-    LD2putl 320 - x% * 16, 0, VARSEG(sLight(0)), VARPTR(sLight(EPS * 2)), VARSEG(Buffer1(0))
+    LD2putl x% * 16 - 16, 0, segLight, VARPTR(sLight(EPS * 2)), segBuffer1
+    LD2putl 320 - x% * 16, 0, segLight, VARPTR(sLight(EPS * 2)), segBuffer1
   NEXT x%
 
   LD2.PutText 0, 0, "HEALTH:" + STR$(Player.life), 1
@@ -1927,6 +2184,13 @@ SUB LD2.RenderFrame
     IF Entity(ShowLife).id = idBOSS2 THEN LD2.put 270 + XShift - 3, 180, 76, idSCENE, 0
     IF Entity(ShowLife).id = idBOSS2 THEN LD2.put 270 + XShift + 13, 180, 77, idSCENE, 0
     LD2.PutText 288, 184, STR$(Entity(ShowLife).life) + "%", 1
+  END IF
+  
+  IF LD2.isDebugMode% THEN
+    LD2.putText 0, 24, "FPS: " + STR$(FPS), 1
+    LD2.putText 0, 32, "PLX: " + STR$(INT(Player.x)), 1
+    LD2.putText 0, 40, "XSH: " + STR$(INT(XShift)), 1
+    LD2.putText 0, 48, "P-X: " + STR$(INT(Player.x-XShift)), 1
   END IF
 
   '- Switch to letter box mode if in scene mode
@@ -2063,10 +2327,10 @@ SUB LD2.SetWeapon (NumWeapon AS INTEGER)
   IF NumWeapon = 2 THEN Player.weapon = Player.Weapon2
   IF NumWeapon = 3 THEN Player.weapon = FIST
  
-  IF Player.weapon = FIST THEN Player.uAni = 26: Player.stillani = Player.uAni
-  IF Player.weapon = SHOTGUN THEN Player.uAni = 1: Player.stillani = Player.uAni
-  IF Player.weapon = MACHINEGUN THEN Player.uAni = 8: Player.stillani = Player.uAni
-  IF Player.weapon = PISTOL THEN Player.uAni = 11: Player.stillani = Player.uAni
+  IF Player.weapon = FIST        THEN Player.uAni = 26: Player.stillani = Player.uAni
+  IF Player.weapon = SHOTGUN     THEN Player.uAni = 01: Player.stillani = Player.uAni
+  IF Player.weapon = MACHINEGUN  THEN Player.uAni = 08: Player.stillani = Player.uAni
+  IF Player.weapon = PISTOL      THEN Player.uAni = 11: Player.stillani = Player.uAni
   IF Player.weapon = DESERTEAGLE THEN Player.uAni = 14: Player.stillani = Player.uAni
 
 END SUB
@@ -2076,12 +2340,12 @@ SUB LD2.SetWeapon1 (WeaponNum AS INTEGER)
   '- Set the primary weapon for the player
   '---------------------------------------
 
-  LD2.PlaySound sndEQUIP
+  LD2.PlaySound sfxEQUIP
 
   IF Player.weapon = Player.weapon1 THEN s% = 1
   Player.weapon1 = WeaponNum
 
-  IF s% = 1 THEN LD2.SetWeapon 1
+  IF s% = 1 THEN LD2.SetWeapon SHOTGUN
  
 END SUB
 
@@ -2093,7 +2357,7 @@ SUB LD2.SetWeapon2 (WeaponNum AS INTEGER)
   IF Player.weapon = Player.Weapon2 THEN s% = 1
   Player.Weapon2 = WeaponNum
 
-  IF s% = 1 THEN LD2.SetWeapon 2
+  IF s% = 1 THEN LD2.SetWeapon MACHINEGUN
 
 END SUB
 
@@ -2128,13 +2392,13 @@ SUB LD2.Shoot
 
     SELECT CASE Player.weapon
       CASE SHOTGUN
-	LD2.PlaySound sndSHOTGUN
+	LD2.PlaySound sfxSHOTGUN
       CASE MACHINEGUN
-	LD2.PlaySound sndMACHINEGUN
+	LD2.PlaySound sfxMACHINEGUN
       CASE PISTOL
-	LD2.PlaySound sndPISTOL
+	LD2.PlaySound sfxPISTOL
       CASE DESERTEAGLE
-	LD2.PlaySound sndDESERTEAGLE
+	LD2.PlaySound sfxDESERTEAGLE
     END SELECT
 
     IF Player.flip = 0 THEN
@@ -2218,7 +2482,7 @@ SUB LD2.Shoot
   END IF
   ELSEIF Player.uAni = Player.stillani THEN
 
-    LD2.PlaySound sndPUNCH
+    LD2.PlaySound sfxPUNCH
    
     FOR n% = 1 TO NumEntities
       IF Player.x + 14 + XShift > Entity(n%).x AND Player.x + 14 + XShift < Entity(n%).x + 15 AND Player.y + 10 > Entity(n%).y AND Player.y + 10 < Entity(n%).y + 15 AND Player.flip = 0 THEN
@@ -2226,7 +2490,7 @@ SUB LD2.Shoot
 	Entity(n%).hit = 1
 	Entity(n%).life = Entity(n%).life - 1
 	IF Entity(n%).life <= 0 THEN LD2.DeleteEntity n%
-	LD2.PlaySound sndBLOOD2
+	LD2.PlaySound sfxBLOOD2
 	LD2.MakeGuts Player.x + 14 + XShift, INT(Player.y + 8), -1, 1
 	EXIT FOR
 
@@ -2235,7 +2499,7 @@ SUB LD2.Shoot
 	Entity(n%).hit = 1
 	Entity(n%).life = Entity(n%).life - 1
 	IF Entity(n%).life <= 0 THEN LD2.DeleteEntity n%
-	LD2.PlaySound sndBLOOD2
+	LD2.PlaySound sfxBLOOD2
 	LD2.MakeGuts Player.x + 1 + XShift, INT(Player.y + 8), -1, -1
 	EXIT FOR
 
@@ -2265,10 +2529,16 @@ END SUB
 
 SUB LD2.SwapLighting
 
-  IF Lighting = 1 THEN
-    Lighting = 0
+  IF Lighting1 = 1 AND Lighting2 = 1 THEN
+    Lighting1 = 1
+    Lighting2 = 0
+  ELSEIF Lighting1 = 0 AND Lighting2 = 1 THEN
+    Lighting1 = 1
+  ELSEIF Lighting1 = 1 AND Lighting2 = 0 THEN
+    Lighting1 = 0
+    Lighting2 = 0
   ELSE
-    Lighting = 1
+    Lighting2 = 1
   END IF
 
 END SUB
@@ -2282,3 +2552,207 @@ SUB LD2.WriteText (Text AS STRING)
 
 END SUB
 
+SUB LD2.CountFrame
+
+  STATIC seconds AS DOUBLE
+  STATIC first AS INTEGER
+  
+  IF first = 0 THEN
+    seconds  = TIMER
+    AVGFPS   = 0
+    FPS      = 0
+    FPSCOUNT = 0
+    first    = 1
+  END IF
+  
+  FPSCOUNT = FPSCOUNT + 1
+  
+  IF TIMER >= (seconds + 1.0) THEN
+    seconds = TIMER
+    AVGFPS   = (AVGFPS + FPSCOUNT) / 2
+    FPS      = FPSCOUNT
+    FPSCOUNT = 0
+    F#       = FPS
+    DELAYMOD = 60/F#
+    IF DELAYMOD < 1 THEN DELAYMOD = 1
+  END IF
+  
+  DELAYMOD = 1
+
+END SUB
+
+FUNCTION LD2.GetGameArgs$
+    
+    LD2.GetGameArgs$ = GameArgs
+    
+END FUNCTION
+
+FUNCTION LD2.isTestMode%
+    
+    LD2.isTestMode% = (GameMode = TESTMODE)
+    
+END FUNCTION
+
+FUNCTION LD2.isDebugMode%
+    
+    LD2.isDebugMode% = (GameMode = DEBUGMODE)
+    
+END FUNCTION
+
+SUB LD2.SetGameMode(mode AS INTEGER)
+    
+    GameMode = mode
+    
+END SUB
+
+SUB MixTiles(spriteSeg AS INTEGER, lightSeg AS INTEGER, tileMapSeg AS INTEGER, mixMapSeg AS INTEGER, lightMapSeg AS INTEGER)
+
+  DIM spritePtr AS INTEGER
+  DIM lightPtr AS INTEGER
+  DIM tempPtr AS INTEGER
+  DIM hash AS INTEGER 'STRING
+  DIM x AS INTEGER
+  DIM y AS INTEGER
+  DIM m AS INTEGER
+  
+  DIM hashes(80) AS INTEGER 'STRING
+  DIM hashCount AS INTEGER
+  DIM found AS INTEGER
+  
+  'PRINT "Generating static lighting..."
+  '
+  'DEF SEG = VARSEG(sTile(0))
+  '  BSAVE "gfx\pp256\images\test0.put", VARPTR(sTile(0)), (EPS*120*2)
+  'DEF SEG
+
+  DEF SEG = lightSeg: ptrTemp = VARPTR(sLight(EPS * 40)): DEF SEG
+  m = 0
+  FOR y = 0 TO 13
+    FOR x = 0 TO 199
+      
+      DEF SEG = tileMapSeg : spritePtr = VARPTR(sTile(EPS * PEEK(m))): DEF SEG
+      DEF SEG = lightMapSeg: lightPtr  = VARPTR(sLight(EPS * PEEK(m))): DEF SEG
+      
+      DEF SEG = lightMapSeg: l% = PEEK(m): DEF SEG
+      
+      IF l% <> 0 THEN
+		  LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr, tempPtr
+		  hash  = VAL(GetSpriteHash$(lightSeg, tempPtr))
+		  found = -1
+		  FOR i = 0 TO hashCount-1
+			IF hash = hashes(i) THEN
+			  found = i
+			  EXIT FOR
+			END IF
+		  NEXT i
+		  IF found = -1 THEN
+			hashes(hashCount) = hash
+			LD2copySprite lightSeg, tempPtr, spriteSeg, VARPTR(sTile(EPS * (120+hashCount)))
+			DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (120+hashCount): DEF SEG
+			hashCount = hashCount + 1
+			IF hashCount > 80 THEN PRINT "TOO MANY HASHES": END
+		  ELSE
+			DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (120+found): DEF SEG
+		  END IF
+      ELSE
+        DEF SEG = tileMapSeg: t% = PEEK(m): DEF SEG
+        DEF SEG = mixMapSeg : POKE VARPTR(MixMap(0))+m, t%: DEF SEG
+      END IF
+      m = m + 1
+      LD2.RotatePalette
+    NEXT x
+  NEXT y
+  
+  'DEF SEG = VARSEG(sTile(0))
+  '  BSAVE "gfx\pp256\images\test1.put", VARPTR(sTile(EPS*120)), (EPS*hashCount*2)
+  'DEF SEG
+
+END SUB
+
+FUNCTION IntToBase64$(i as integer)
+
+	DIM table AS STRING
+	
+	table = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+="
+	
+	i = (i AND 63) + 1
+	
+	IntToBase64$ = MID$(table, i, 1)
+
+END FUNCTION
+
+FUNCTION GetSpriteHash$(spriteSeg AS INTEGER, spritePtr AS INTEGER)
+
+	DIM x AS INTEGER
+	DIM y AS INTEGER
+	DIM hash AS STRING
+    DIM hint AS INTEGER
+	
+	DEF SEG = spriteSeg
+	
+	hash = ""
+	FOR y = 0 TO 15
+	  FOR x = 0 TO 15
+	    hash = hash + IntToBase64$(PEEK(spritePtr+x+y*16))
+        'hint = hint + PEEK(spritePtr+x+y*16)
+	  NEXT x
+	NEXT y
+	
+	'GetSpriteHash$ = hash
+    FOR x = 0 TO LEN(hash)-1
+        hint = (hint + ASC(MID$(hash, x+1, 1))) XOR x
+    NEXT x
+    GetSpriteHash$ = STR$(hint)
+
+END FUNCTION
+
+SUB SetBitmap(segment AS INTEGER, offset AS INTEGER, pitch AS INTEGER)
+    
+    BitmapSeg   = segment
+    BitmapOff   = offsset
+    IF ((pitch/8) - INT(pitch/8)) > 0 THEN
+        BitmapPitch = (pitch\8)+1
+    ELSE
+        BitmapPitch = (pitch\8)
+    END IF
+    
+END SUB
+
+SUB PokeBitmap(x AS INTEGER, y AS INTEGER, value AS INTEGER)
+    
+    DIM bits AS INTEGER
+    DIM bit  AS INTEGER
+    DIM bx   AS INTEGER
+    
+    bit = 2^(x AND 7)
+    bx  = x \ 8
+    
+    DEF SEG = BitmapSeg
+    bits = PEEK (BitmapOff + (bx+y*BitmapPitch))
+    IF value THEN
+        POKE BitmapOff + (bx+y*BitmapPitch), (bits OR bit)
+    ELSE
+        POKE BitmapOff + (bx+y*BitmapPitch), (bits OR bit) XOR bit
+    END IF
+    DEF SEG
+    
+END SUB
+
+FUNCTION PeekBitmap%(x AS INTEGER, y AS INTEGER)
+    
+    DIM bits AS INTEGER
+    DIM bit  AS INTEGER
+    DIM bx   AS INTEGER
+    
+    bx = x \ 8
+    
+    DEF SEG = BitmapSeg
+    bits = PEEK (BitmapOff + (bx+y*BitmapPitch))
+    DEF SEG
+    
+    bit = (bits AND (2^(x AND 7)))
+    IF bit > 0 THEN bit = 1
+    
+    PeekBitmap% = bit
+    
+END FUNCTION
