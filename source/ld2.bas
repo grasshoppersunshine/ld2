@@ -7,9 +7,11 @@
   REM $INCLUDE: 'INC\TITLE.BI'
   REM $INCLUDE: 'INC\LD2.BI'
   
+  '- have walk-talky in inventory that you can look/use/(drop?)
+  
   REM $DYNAMIC
   
-  DIM SHARED Scene%
+  DIM SHARED SceneNo%
   DIM SHARED ShiftX AS INTEGER
   DIM SHARED CurrentRoom AS INTEGER
   DIM SHARED RoofScene%
@@ -17,7 +19,6 @@
   DIM SHARED FlashLightScene%
   DIM SHARED PortalScene%
  
-  DIM SHARED Scene16th AS INTEGER
   DIM SHARED SceneVent AS INTEGER
 
   TYPE tScener
@@ -40,6 +41,19 @@
   DIM SHARED SteveIsThere%: DIM SHARED StevePoint%: DIM SHARED SteveTalking%: DIM SHARED StevePos%
   DIM SHARED JanitorIsThere%: DIM SHARED JanitorPoint%: DIM SHARED JanitorTalking%: DIM SHARED JanitorPos%
   DIM SHARED TrooperIsThere%: DIM SHARED TrooperPoint%: DIM SHARED TrooperTalking%: DIM SHARED TrooperPos%
+  
+  TYPE tSceneData
+    speakerId AS STRING*16
+    speakerDialogue AS STRING*50
+    fileId AS INTEGER
+  END TYPE
+  DIM SHARED SCENEDATA AS tSceneData
+  
+  TYPE tFloor
+    floorNo AS INTEGER
+    filename AS STRING*8
+    label AS STRING*20
+  END TYPE
 
   CONST msgENTITYDELETED = 1
   CONST msgGOTYELLOWCARD = 2
@@ -79,21 +93,6 @@ SUB BarneyTalk (Text AS STRING)
     LD2.put x, y, 45, idSCENE, Flip
       
     PutRestOfSceners
-   
-    'IF Scene% = 6 THEN
-    '  LD2.Put x, y, 50, idSCENE, Flip
-    '  LD2.Put x, y, 45, idSCENE, Flip
-    '
-    '  LD2.Put Larry.x, Larry.y, 0, idSCENE, 1
-    '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 1
-    'ELSEIF Scene% = 7 THEN
-    '
-    'ELSEIF RoofScene% = 1 THEN
-    '  LD2.Put ShiftX, 180, 73, idSCENE, 0
-    '  LD2.Put Larry.x, Larry.y, 0, idSCENE, 0
-    '  LD2.Put Larry.x, Larry.y, 6, idSCENE, 0
-    'END IF
-    
     FOR i% = 1 TO 4
       WAIT &H3DA, 8: WAIT &H3DA, 8, 8
     NEXT i%
@@ -108,22 +107,6 @@ SUB BarneyTalk (Text AS STRING)
     LD2.put x, y, 46, idSCENE, Flip
      
     PutRestOfSceners
-   
-    'IF Scene% = 6 THEN
-    '  LD2.Put x, y, 50, idSCENE, Flip
-    '  LD2.Put x, y, 46, idSCENE, Flip
-    '
-    '  LD2.Put Larry.x, Larry.y, 0, idSCENE, 1
-    '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 1
-    'ELSEIF Scene% = 7 THEN
-    '
-    'ELSEIF RoofScene% = 1 THEN
-    '  LD2.Put ShiftX, 180, 74, idSCENE, 0
-    '  LD2.Put Larry.x, Larry.y, 0, idSCENE, 0
-    '  LD2.Put Larry.x, Larry.y, 6, idSCENE, 0
-    'END IF
-
-
     FOR i% = 1 TO 4
       WAIT &H3DA, 8: WAIT &H3DA, 8, 8
     NEXT i%
@@ -139,21 +122,6 @@ SUB BarneyTalk (Text AS STRING)
   LD2.put x, y, 45, idSCENE, Flip
      
   PutRestOfSceners
- 
-  'IF Scene% = 6 THEN
-  '    LD2.Put x, y, 50, idSCENE, Flip
-  '    LD2.Put x, y, 45, idSCENE, Flip
-  '
-  '    LD2.Put Larry.x, Larry.y, 0, idSCENE, 1
-  '    LD2.Put Larry.x, Larry.y, 3, idSCENE, 1
-  'ELSEIF Scene% = 7 THEN
-  '
-  'ELSEIF RoofScene% = 1 THEN
-  '    LD2.Put ShiftX, 180, 73, idSCENE, 0
-  '    LD2.Put Larry.x, Larry.y, 0, idSCENE, 0
-  '    LD2.Put Larry.x, Larry.y, 6, idSCENE, 0
-  'END IF
-
   FOR i% = 1 TO 4
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
@@ -193,16 +161,6 @@ SUB BonesTalk (Text AS STRING)
     LD2.put ShiftX, 180, 55, idSCENE, 0
    
     PutRestOfSceners
-   
-    'IF RoofScene% = 1 THEN
-    '  LD2.Put x - 1, y, 57, idSCENE, Flip
-    '  LD2.Put x, y, 63, idSCENE, Flip
-    '
-    '  LD2.Put Larry.x, Larry.y, 0, idSCENE, 1
-    '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 1
-    'ELSEIF Scene% = 2 THEN
-    'END IF
-
     FOR i% = 1 TO 4
       WAIT &H3DA, 8: WAIT &H3DA, 8, 8
     NEXT i%
@@ -214,17 +172,6 @@ SUB BonesTalk (Text AS STRING)
     LD2.put ShiftX, 180, 56, idSCENE, 0
    
     PutRestOfSceners
-
-    'IF RoofScene% = 1 THEN
-    '  LD2.Put x - 1, y, 57, idSCENE, Flip
-    '  LD2.Put x, y, 64, idSCENE, Flip
-    '
-    '  LD2.Put Larry.x, Larry.y, 0, idSCENE, 1
-    '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 1
-    'ELSEIF Scene% = 2 THEN
-    'END IF
-
-
     FOR i% = 1 TO 4
       WAIT &H3DA, 8: WAIT &H3DA, 8, 8
     NEXT i%
@@ -238,16 +185,6 @@ SUB BonesTalk (Text AS STRING)
   LD2.put ShiftX, 180, 55, idSCENE, 0
  
   PutRestOfSceners
-
-  'IF RoofScene% = 1 THEN
-  '  LD2.Put x - 1, y, 57, idSCENE, Flip
-  '  LD2.Put x, y, 63, idSCENE, Flip
-  '
-  '  LD2.Put Larry.x, Larry.y, 0, idSCENE, 1
-  '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 1
-  'ELSEIF Scene% = 2 THEN
-  'END IF
-
   FOR i% = 1 TO 4
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
@@ -290,12 +227,12 @@ FUNCTION JanitorTalk% (Text AS STRING)
     LD2.put ShiftX, 180, 41, idSCENE, 0
    
    
-    IF Scene% = 3 THEN
+    IF SceneNo% = 3 THEN
       LD2.put x, y, 28, idSCENE, Flip
     
       LD2.put Larry.x, Larry.y, 0, idSCENE, 0
       LD2.put Larry.x, Larry.y, 3, idSCENE, 0
-    ELSEIF Scene% = 4 THEN
+    ELSEIF SceneNo% = 4 THEN
       LD2.put Larry.x, Larry.y, 0, idSCENE, 1
       LD2.put Larry.x, Larry.y, 3, idSCENE, 1
       LD2.put Janitor.x, Janitor.y, 28, idSCENE, Flip
@@ -311,12 +248,12 @@ FUNCTION JanitorTalk% (Text AS STRING)
     LD2.RenderFrame
 
     LD2.put ShiftX, 180, 42, idSCENE, 0
-    IF Scene% = 3 THEN
+    IF SceneNo% = 3 THEN
       LD2.put x, y, 29, idSCENE, Flip
      
       LD2.put Larry.x, Larry.y, 0, idSCENE, 0
       LD2.put Larry.x, Larry.y, 3, idSCENE, 0
-    ELSEIF Scene% = 4 THEN
+    ELSEIF SceneNo% = 4 THEN
       LD2.put Larry.x, Larry.y, 0, idSCENE, 1
       LD2.put Larry.x, Larry.y, 3, idSCENE, 1
       LD2.put Janitor.x, Janitor.y, 29, idSCENE, Flip
@@ -337,12 +274,12 @@ FUNCTION JanitorTalk% (Text AS STRING)
   LD2.RenderFrame
 
   LD2.put ShiftX, 180, 41, idSCENE, 0
-  IF Scene% = 3 THEN
+  IF SceneNo% = 3 THEN
     LD2.put x, y, 28, idSCENE, Flip
    
     LD2.put Larry.x, Larry.y, 0, idSCENE, 0
     LD2.put Larry.x, Larry.y, 3, idSCENE, 0
-  ELSEIF Scene% = 4 THEN
+  ELSEIF SceneNo% = 4 THEN
     LD2.put Larry.x, Larry.y, 0, idSCENE, 1
     LD2.put Larry.x, Larry.y, 3, idSCENE, 1
     LD2.put Janitor.x, Janitor.y, 28, idSCENE, Flip
@@ -409,50 +346,8 @@ FUNCTION LarryTalk% (Text AS STRING)
     LD2.put x, y, top, idSCENE, Flip
    
     PutRestOfSceners
-    IF Scene% = 2 AND SteveIsThere% = 0 THEN LD2.put 170, 144, 27, idSCENE, 1
-    IF Scene% = 4 THEN LD2.put 170, 144, 27, idSCENE, 1
-
-    'IF Scene% = 1 THEN
-    '  LD2.Put x, y, 0, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    '
-    '  LD2.Put Steve.x, Steve.y, 12, idSCENE, 0
-    '  LD2.Put Steve.x, Steve.y, 14, idSCENE, 0
-    'ELSEIF Scene% = 2 THEN
-    '  LD2.Put x, y, 0, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    '
-    '  LD2.Put Steve.x, Steve.y, 27, idSCENE, 0
-    'ELSEIF Scene% = 3 THEN
-    '  LD2.Put x, y, 0, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    '
-    '  LD2.Put Janitor.x, Janitor.y, 28, idSCENE, 0
-    'ELSEIF Scene% = 4 THEN
-    '  LD2.Put x, y, 0, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    '  LD2.Put Janitor.x, Janitor.y, 28, idSCENE, 0
-    '  LD2.Put 170, 144, 27, idSCENE, 0
-    'ELSEIF Scene% = 5 THEN
-    '  LD2.Put x, y, 0, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    'ELSEIF Scene% = 6 THEN
-    '  LD2.Put ShiftX, 180, 71, idSCENE, 0
-    '  LD2.Put x, y, 0, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    '
-    '  LD2.Put Barney.x, Barney.y, 50, idSCENE, 0
-    '  LD2.Put Barney.x, Barney.y, 45, idSCENE, 0
-    'ELSEIF RoofScene% = 1 THEN
-    '  LD2.Put x, y, 0, idSCENE, Flip
-    '  LD2.Put x, y, 6, idSCENE, Flip
-    '
-    '  'LD2.Put Bones.x - 1, Bones.y, 57, idSCENE, 0
-    '  'LD2.Put Bones.x, Bones.y, 63, idSCENE, 0
-    'ELSEIF Scene% = 0 THEN
-    '  LD2.Put x, y, 0, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    'END IF
+    IF SceneNo% = 2 AND SteveIsThere% = 0 THEN LD2.put 170, 144, 27, idSCENE, 1
+    IF SceneNo% = 4 THEN LD2.put 170, 144, 27, idSCENE, 1
 
     FOR i% = 1 TO 4
       WAIT &H3DA, 8: WAIT &H3DA, 8, 8
@@ -467,49 +362,8 @@ FUNCTION LarryTalk% (Text AS STRING)
     LD2.put x, y, top + 1, idSCENE, Flip
   
     PutRestOfSceners
-    IF Scene% = 4 THEN LD2.put 170, 144, 27, idSCENE, 1
-    IF Scene% = 2 AND SteveIsThere% = 0 THEN LD2.put 170, 144, 27, idSCENE, 1
-
-    'IF Scene% = 1 THEN
-    '  LD2.Put x, y, 1, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    '
-    '  LD2.Put Steve.x, Steve.y, 12, idSCENE, 0
-    '  LD2.Put Steve.x, Steve.y, 14, idSCENE, 0
-    'ELSEIF Scene% = 2 THEN
-    '  LD2.Put x, y, 1, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    '
-    '  LD2.Put Steve.x, Steve.y, 27, idSCENE, 0
-    'ELSEIF Scene% = 3 THEN
-    '  LD2.Put x, y, 1, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    '  LD2.Put Janitor.x, Janitor.y, 28, idSCENE, 0
-    'ELSEIF Scene% = 4 THEN
-    '  LD2.Put x, y, 1, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    '  LD2.Put Janitor.x, Janitor.y, 28, idSCENE, 0
-    '  LD2.Put 170, 144, 27, idSCENE, 0
-    'ELSEIF Scene% = 5 THEN
-    '  LD2.Put x, y, 1, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    'ELSEIF Scene% = 6 THEN
-    '  LD2.Put x, y, 1, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    '
-    '  LD2.Put Barney.x, Barney.y, 50, idSCENE, 0
-    '  LD2.Put Barney.x, Barney.y, 45, idSCENE, 0
-    'ELSEIF RoofScene% = 1 THEN
-    '  LD2.Put x, y, 1, idSCENE, Flip
-    '  LD2.Put x, y, 6, idSCENE, Flip
-    '
-    '  'LD2.Put Bones.x - 1, Bones.y, 57, idSCENE, 0
-    '  'LD2.Put Bones.x, Bones.y, 63, idSCENE, 0
-    'ELSEIF Scene% = 0 THEN
-    '  LD2.Put x, y, 1, idSCENE, Flip
-    '  LD2.Put x, y, 3, idSCENE, Flip
-    'END IF
-
+    IF SceneNo% = 4 THEN LD2.put 170, 144, 27, idSCENE, 1
+    IF SceneNo% = 2 AND SteveIsThere% = 0 THEN LD2.put 170, 144, 27, idSCENE, 1
 
     FOR i% = 1 TO 4
       WAIT &H3DA, 8: WAIT &H3DA, 8, 8
@@ -529,50 +383,8 @@ FUNCTION LarryTalk% (Text AS STRING)
   LD2.put x, y, top, idSCENE, Flip
  
   PutRestOfSceners
-  IF Scene% = 4 THEN LD2.put 170, 144, 27, idSCENE, 1
-  IF Scene% = 2 AND SteveIsThere% = 0 THEN LD2.put 170, 144, 27, idSCENE, 1
-
-  'IF Scene% = 1 THEN
-  '  LD2.Put x, y, 0, idSCENE, Flip
-  '  LD2.Put x, y, 3, idSCENE, Flip
-  '
-  '  LD2.Put Steve.x, Steve.y, 12, idSCENE, 0
-  '  LD2.Put Steve.x, Steve.y, 14, idSCENE, 0
-  'ELSEIF Scene% = 2 THEN
-  '    LD2.Put x, y, 0, idSCENE, Flip
-  '    LD2.Put x, y, 3, idSCENE, Flip
-  '
-  '    LD2.Put Steve.x, Steve.y, 27, idSCENE, 0
-  'ELSEIF Scene% = 3 THEN
-  '    LD2.Put x, y, 0, idSCENE, Flip
-  '    LD2.Put x, y, 3, idSCENE, Flip
-  '
-  '    LD2.Put Janitor.x, Janitor.y, 28, idSCENE, 0
-  'ELSEIF Scene% = 4 THEN
-  '    LD2.Put x, y, 0, idSCENE, Flip
-  '    LD2.Put x, y, 3, idSCENE, Flip
-  '    LD2.Put Janitor.x, Janitor.y, 28, idSCENE, 0
-  '    LD2.Put 170, 144, 27, idSCENE, 0
-  'ELSEIF Scene% = 5 THEN
-  '    LD2.Put x, y, 0, idSCENE, Flip
-  '    LD2.Put x, y, 3, idSCENE, Flip
-  'ELSEIF Scene% = 6 THEN
-  '    LD2.Put x, y, 0, idSCENE, Flip
-  '    LD2.Put x, y, 3, idSCENE, Flip
-  '
-  '    LD2.Put Barney.x, Barney.y, 50, idSCENE, 0
-  '    LD2.Put Barney.x, Barney.y, 45, idSCENE, 0
-  'ELSEIF RoofScene% = 1 THEN
-  '    LD2.Put x, y, 0, idSCENE, Flip
-  '    LD2.Put x, y, 6, idSCENE, Flip
-  '
-  '    'LD2.Put Bones.x - 1, Bones.y, 57, idSCENE, 0
-  '    'LD2.Put Bones.x, Bones.y, 63, idSCENE, 0
-  'ELSEIF Scene% = 0 THEN
-  '    LD2.Put x, y, 0, idSCENE, Flip
-  '    LD2.Put x, y, 3, idSCENE, Flip
-  'END IF
-
+  IF SceneNo% = 4 THEN LD2.put 170, 144, 27, idSCENE, 1
+  IF SceneNo% = 2 AND SteveIsThere% = 0 THEN LD2.put 170, 144, 27, idSCENE, 1
   FOR i% = 1 TO 4
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
@@ -591,9 +403,139 @@ FUNCTION LarryTalk% (Text AS STRING)
 END FUNCTION
 
 SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
-
-  '- MISSING
-
+    
+    DIM top AS INTEGER
+    DIM w AS INTEGER
+    DIM h AS INTEGER
+    DIM i AS INTEGER
+    
+    DIM floorNo AS INTEGER
+    DIM floorStr AS STRING
+    DIM filename AS STRING
+    DIM label AS STRING
+    DIM canExit AS INTEGER
+    DIM selectedRoom AS INTEGER
+    DIM selectedFilename AS STRING
+    DIM topFloor AS INTEGER
+    DIM btmFloor AS INTEGER
+    DIM keyOn AS INTEGER
+    DIM keyOff AS INTEGER
+    DIM ElevatorFile AS INTEGER
+    
+    DIM floors(30) AS tFloor
+    DIM numFloors AS INTEGER
+    
+    w = 6: h = 6
+    
+    selectedRoom = CurrentRoom
+    topFloor = 0
+    btmFloor = 0
+    
+    ElevatorFile = FREEFILE
+    OPEN "data/rooms.txt" FOR INPUT AS ElevatorFile
+        DO WHILE NOT EOF(ElevatorFile)
+            INPUT #ElevatorFile, floorNo    : IF EOF(ElevatorFile) THEN EXIT DO
+            INPUT #ElevatorFile, filename   : IF EOF(ElevatorFile) THEN EXIT DO
+            INPUT #ElevatorFile, label
+            floors(numFloors).floorNo  = floorNo
+            floors(numFloors).filename = filename
+            floors(numFloors).label    = label
+            numFloors = numFloors + 1
+        LOOP
+    CLOSE ElevatorFile
+    
+    DO
+        LD2.fill 0, 0, 156, 200, 68, 1
+        
+        LD2.PutText w, h*1, "Please Select a Floor" , 1
+        LD2.PutText w, h*2, "=====================" , 1
+        
+        FOR i = 0 TO 32
+            LD2.PutText w*25, h*i+1, "*", 1
+        NEXT i
+        
+        top = h*4
+        FOR i = 0 TO numFloors-1
+        
+            floorNo  = floors(i).floorNo
+            filename = floors(i).filename
+            label    = floors(i).label
+            
+            floorStr = LTRIM$(STR$(floorNo))
+            IF LEN(floorStr) = 1 THEN floorStr = " "+floorStr
+            IF floorNo = selectedRoom THEN
+                LD2.fill w, top-1, w*23, h+1, 70, 1
+                'LD2.PutTextCol w, top, floorStr+" "+label, 112, 1
+                LD2.PutTextCol w, top, floorStr+" "+label, 15, 1
+                selectedFilename = filename
+            ELSE
+                LD2.PutText w, top, floorStr+" "+label, 1
+            END IF
+            top = top + h + 1
+            IF floorNo > topFloor THEN topFloor = floorNo
+            IF floorNo < btmFloor THEN btmFloor = floorNo
+            'LD2.RotatePalette
+        NEXT i
+        
+        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+        LD2.CopyBuffer 1, 0
+        
+        IF canExit = 0 THEN
+            IF keyboard(&HF) = 0 THEN
+                canExit = 1
+            END IF
+        ELSE
+            IF keyboard(&HF) THEN EXIT DO
+            
+            '- TODO: hold down for one second, then scroll down with delay
+            keyOn = 0
+            IF keyboard(&H48) THEN
+                keyOn = 1
+                IF keyOff THEN
+                    selectedRoom = selectedRoom + 1
+                    IF selectedRoom > topFloor THEN
+                        selectedRoom = topFloor
+                        'LD2.playSound sfxDenied
+                    ELSE
+                        LD2.playSound sfxSelect
+                    END IF
+                END IF
+            END IF
+            IF keyboard(&H50) THEN
+                keyOn = 1
+                IF keyOff THEN
+                    selectedRoom = selectedRoom - 1
+                    IF selectedRoom < btmFloor THEN
+                        selectedRoom = btmFloor
+                        'LD2.playSound sfxDenied
+                    ELSE
+                        LD2.playSound sfxSelect
+                    END IF
+                END IF
+            END IF
+            IF keyboard(&H1C) THEN
+                keyOn = 1
+                IF keyOff THEN
+                    LD2.playSound sfxSelect
+                    LD2.SetRoom selectedRoom
+                    SetCurrentRoom selectedRoom
+                    LD2.LoadMap selectedFilename
+                    EXIT DO
+                END IF
+            END IF
+            
+            IF keyOn THEN
+                keyOff = 0
+            ELSE
+                keyOff = 1
+            END IF
+            
+        END IF
+        
+    LOOP
+    
+    DO: LOOP WHILE keyboard(&HF)
+    
 END SUB
 
 SUB LD2.SendMessage (msg AS INTEGER, par AS INTEGER)
@@ -652,6 +594,8 @@ SUB LD2.Start
     LD2.AddAmmo 2, 99
     LD2.AddAmmo 3, 99
     Scene1 1
+    SceneNo% = 0
+    LD2.EStatusScreen 14
   ELSE
     Scene1 0
   END IF
@@ -682,7 +626,7 @@ SUB LD2.Start
   
     LD2.RenderFrame
   
-    SELECT CASE Scene%
+    SELECT CASE SceneNo%
       CASE 2
         LD2.put 1196, 144, 28, idSCENE, 0
         LD2.put 170, 144, 27, idSCENE, 1
@@ -698,7 +642,7 @@ SUB LD2.Start
       CASE 7
         LD2.put 368, 144, 50, idSCENE, 0
         LD2.put 368, 144, 45, idSCENE, 0
-        IF CurrentRoom <> 7 THEN Scene% = 0
+        IF CurrentRoom <> 7 THEN SceneNo% = 0
         LD2.SetSceneNo 0
     END SELECT
                                                      
@@ -710,7 +654,7 @@ SUB LD2.Start
       LarryPos% = 0
       Larry.y = 4 * 16 - 16
 
-      Scene% = 0
+      SceneNo% = 0
 
       Escaped% = LarryTalk("Hmmm...")
       Escaped% = Escaped% = LarryTalk("I better find steve before I leave...")
@@ -729,7 +673,6 @@ SUB LD2.Start
       LD2.ShutDown
     END IF
 
-    IF Scene16th = 0 AND CurrentRoom = 16 AND Larry.x <= 834 THEN Scene16thFloor
     IF SceneVent = 0 AND CurrentRoom = 12 AND Larry.x <= 754 THEN SceneVent1
     EnteringCode = 0
     IF CurrentRoom = 23 AND Larry.x >= 1377 AND Larry.x <= 1407 THEN
@@ -809,7 +752,7 @@ SUB LD2.Start
       IF Larry.x <= 80 THEN SceneWeaponRoom2
     END IF
 
-    IF SteveGoneScene% = 0 AND Scene% <> 2 AND Scene% <> 4 THEN
+    IF SteveGoneScene% = 0 AND SceneNo% <> 2 AND SceneNo% <> 4 THEN
       IF CurrentRoom = 14 AND Larry.x <= 300 THEN
         SceneSteveGone
       END IF
@@ -823,7 +766,7 @@ SUB LD2.Start
     IF keyboard(1) THEN EXIT DO
     IF keyboard(&H4D) THEN LD2.MovePlayer 1: DontStop% = 1
     IF keyboard(&H4B) THEN LD2.MovePlayer -1: DontStop% = 1
-    IF keyboard(&H38) OR keyboard(&H48) THEN LD2.JumpPlayer 1.1
+    IF keyboard(&H38) OR keyboard(&H48) THEN LD2.JumpPlayer 1.3333
     IF keyboard(&H1D) OR keyboard(&H10) THEN LD2.Shoot
     IF keyboard(&H2) THEN LD2.SetWeapon 1
     IF keyboard(&H3) THEN LD2.SetWeapon 3
@@ -886,9 +829,78 @@ SUB LD2.Start
 END SUB
 
 SUB LD2.StatusScreen
-
-  '- MISSING
-
+    
+    DIM ItemsFile AS INTEGER
+    DIM top AS INTEGER
+    DIM w AS INTEGER
+    DIM h AS INTEGER
+    DIM i AS INTEGER
+    DIM item AS INTEGER
+    DIM id AS INTEGER
+    DIM shortLabel AS STRING
+    DIM longLabel AS STRING
+    DIM desc AS STRING
+    DIM found AS INTEGER
+    DIM inv(7) AS tInventory
+    
+    w = 6: h = 6
+    
+    LD2.fill 0, 0, 320, 96, 68, 1
+    
+    LD2.PutText w, h*1, "STATUS SCREEN" , 1
+    LD2.PutText w, h*2, "=============" , 1
+    LD2.PutText 1, h*15, STRING$(53, "*"), 1
+    
+    LD2.PutText w*38, h*1, "INVENTORY" , 1
+    LD2.PutText w*33, h*2, "==================" , 1
+    
+    ItemsFile = FREEFILE
+    OPEN "data/items.txt" FOR INPUT AS ItemsFile
+        
+        top = h*4
+        FOR i = 0 TO 7
+            
+            item = LD2.GetStatusItem%(i)
+            
+            found = 0
+            
+            SEEK ItemsFile, 1
+            DO WHILE NOT EOF(ItemsFile)
+                INPUT #ItemsFile, id        : IF EOF(ItemsFile) THEN EXIT DO
+                INPUT #ItemsFile, shortLabel: IF EOF(ItemsFile) THEN EXIT DO
+                INPUT #ItemsFile, longLabel : IF EOF(ItemsFile) THEN EXIT DO
+                INPUT #ItemsFile, desc
+                IF item = id THEN
+                    found = 1
+                    LD2.PutText 200, top, "( "+shortLabel+SPACE$(14-LEN(shortLabel))+" )", 1
+                    EXIT DO
+                END IF
+            LOOP
+            
+            IF found = 0 THEN
+                LD2.PutText 200, top, "("+STR$(item)+SPACE$(15-LEN(STR$(item)))+" )", 1
+            END IF
+            
+            top = top + h
+            
+        NEXT i
+        
+    CLOSE ItemsFile
+    
+    LD2.PutText w*23, h*13, "  USE     LOOK    MIX     DROP", 1
+    
+    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    LD2.CopyBuffer 1, 0
+    
+    DO: LOOP WHILE keyboard(&HF)
+    
+    
+    DO
+        IF keyboard(&HF) THEN EXIT DO
+    LOOP
+    
+    DO: LOOP WHILE keyboard(&HF)
+    
 END SUB
 
 SUB PutLarryX (x AS INTEGER, XShift AS INTEGER)
@@ -947,7 +959,7 @@ SUB Scene1 (skip AS INTEGER)
  
   LD2.SetScene 1
   LD2.SetNumEntities 0
-  Scene% = 1
+  SceneNo% = 1
   LarryIsThere% = 1
   SteveIsThere% = 1
   LarryPoint% = 0
@@ -976,22 +988,12 @@ SUB Scene1 (skip AS INTEGER)
   
   IF skip THEN EXIT DO
 
-  Escaped% = LarryTalk("Well Steve, that was a good game of chess.")     : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("Only because you won.")                          : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("Wouldn't think so if I won.")                    : IF Escaped% THEN EXIT DO
-  Escaped% = LarryTalk("Are you jealous Steve?")                         : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("Uh...")                                          : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("No...infact I think your the one who's jealous."): IF Escaped% THEN EXIT DO
-  Escaped% = LarryTalk("But I'm the guy who won.")                       : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("You're jealous because you didn't lose like me."): IF Escaped% THEN EXIT DO
-  Escaped% = LarryTalk("Alright...")                                     : IF Escaped% THEN EXIT DO
-  Escaped% = LarryTalk("That's enough from you.")                        : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("Yeah, I guess so.")                              : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("Well, I gotta get going.")                       : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("Smell ya later.")                                : IF Escaped% THEN EXIT DO
-  Escaped% = LarryTalk("Yep...")                                         : IF Escaped% THEN EXIT DO
-  Escaped% = LarryTalk("Smell ya later.")                                : IF Escaped% THEN EXIT DO
-  LD2.WriteText " "
+  IF SCENE.Init("SCENE-1A") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  LD2.WriteText ""
 
   '- Steve walks to soda machine
   FOR x% = 124 TO 152
@@ -1020,10 +1022,11 @@ SUB Scene1 (skip AS INTEGER)
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
  
-  Escaped% = SteveTalk("Hey, you got a quarter?")                        : IF Escaped% THEN EXIT DO
-  Escaped% = LarryTalk("No, but...")                                     : IF Escaped% THEN EXIT DO
-  Escaped% = LarryTalk("If you kick it, you get one for free.")          : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("Well, I couldn't agree more.")                   : IF Escaped% THEN EXIT DO
+  IF SCENE.Init("SCENE-1B") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
   LD2.WriteText ""
 
   '- Steve kicks the soda machine
@@ -1056,7 +1059,7 @@ SUB Scene1 (skip AS INTEGER)
     LD2.put Larry.x, Larry.y, 0, idSCENE, 0
     LD2.put Larry.x, Larry.y, 3, idSCENE, 0
   
-    FOR i% = 1 TO 220
+    FOR i% = 1 TO 20
       WAIT &H3DA, 8: WAIT &H3DA, 8, 8
     NEXT i%
   
@@ -1080,16 +1083,11 @@ SUB Scene1 (skip AS INTEGER)
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
   
-  LD2.PopText "Steve Drinks The Cola!"
-  LD2.PopText "1 Minute Later"
-  'CLS
-  'PRINT "STEVE DRINKS THE COLA!"
-  'DO: LOOP UNTIL keyboard(&H39)
-  'DO: LOOP WHILE keyboard(&H39)
-  'CLS
-  'PRINT "1 MINUTE LATER"
-  'DO: LOOP UNTIL keyboard(&H39)
-  'DO: LOOP WHILE keyboard(&H39)
+  IF SCENE.Init("SCENE-1C") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
  
   Steve.x = 174
 
@@ -1106,10 +1104,11 @@ SUB Scene1 (skip AS INTEGER)
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
 
-  Escaped% = SteveTalk("Larry...")                                       : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("I don't feel so good.")                          : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("There's something in the cola...")               : IF Escaped% THEN EXIT DO
-  Escaped% = SteveTalk("ow...")                                          : IF Escaped% THEN EXIT DO
+  IF SCENE.Init("SCENE-1D") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
   LD2.WriteText ""
 
   LD2.RenderFrame
@@ -1124,20 +1123,20 @@ SUB Scene1 (skip AS INTEGER)
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
 
-  Escaped% = LarryTalk("Steve!")           : IF Escaped% THEN EXIT DO
-  Escaped% = LarryTalk("I gotta get help!"): IF Escaped% THEN EXIT DO
+  IF SCENE.Init("SCENE-1E") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  LD2.WriteText ""
   DO: LOOP WHILE keyboard(&H39)
 
-  LD2.PopText "The Journey Begins..."
-  LD2.PopText "Again!!"
-  'CLS
-  'PRINT "THE JOURNEY BEGINS..."
-  'DO: LOOP UNTIL keyboard(&H39)
-  'DO: LOOP WHILE keyboard(&H39)
-  'CLS
-  'PRINT "AGAIN!!"
-  'DO: LOOP UNTIL keyboard(&H39)
-  'DO: LOOP WHILE keyboard(&H39)
+  IF SCENE.Init("SCENE-1F") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  
   EXIT DO
   
   LOOP WHILE 0
@@ -1145,31 +1144,11 @@ SUB Scene1 (skip AS INTEGER)
   LD2.WriteText " "
 
   Steve.x = 174
-  Scene% = 2
+  SceneNo% = 2
   SteveIsThere% = 0
   LD2.SetScene 0
   LarryIsThere% = 0
   SteveIsThere% = 0
- 
-END SUB
-
-SUB Scene16thFloor
-
-'  LD2.SetScene 1
-'  LarryIsThere% = 1
-'  LarryPoint% = 1
-'  LarryPos% = 0
-'
-'  Scene% = 0
-'  Larry.y = 160
-'
-'  Escaped% = LarryTalk("Darn!")
-'  Escaped% = LarryTalk("This door requires code-yellow acess.")
-'  LD2.WriteText ""
-'
-'  Scene16th = 1
-'  LD2.SetScene 0
-'  LarryIsThere% = 0
  
 END SUB
 
@@ -1178,7 +1157,7 @@ SUB Scene3
   '- Process scene 3(actually, the second scene)
   '---------------------------------------------
 
-  Scene% = 3
+  SceneNo% = 3
   LD2.SetScene 1
   LarryIsThere% = 1
   JanitorIsThere% = 1
@@ -1205,10 +1184,12 @@ SUB Scene3
 
   LD2.FadeOutMusic
 
-  Escaped% = LarryTalk("Hey!")
-  Escaped% = JanitorTalk("What?")
-  Escaped% = LarryTalk("You a doctor?")
-  Escaped% = JanitorTalk("Why yes...")
+  IF SCENE.Init("SCENE-3A") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  
  
   '- Larry smiles
   '--------------
@@ -1223,27 +1204,20 @@ SUB Scene3
   'FOR i% = 1 TO 200
   '  WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   'NEXT i%
+  
+  IF SCENE.Init("SCENE-3B") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
  
-  Escaped% = JanitorTalk("I use this mop to suck diseases out of people.")
-  Escaped% = LarryTalk("This is NO time to be sarcastic!")
-  Escaped% = LarryTalk("My buddy got sick from something in the cola.")
-  Escaped% = LarryTalk("He needs help.")
-  Escaped% = JanitorTalk("Well, I was only being sarcastic about the mop.")
-  Escaped% = JanitorTalk("I am a doctor.")
-  Escaped% = LarryTalk("Seriously?")
-  Escaped% = JanitorTalk("Well...")
-  Escaped% = LarryTalk("...")
-  Escaped% = JanitorTalk("I used to be one.")
-  Escaped% = LarryTalk("Good enough.")
-  Escaped% = LarryTalk("He needs help fast.")
-  Escaped% = LarryTalk("Come on!")
   DO: LOOP WHILE keyboard(&H39)
-
-  LD2.PopText "They Rush To Steve!"
-  'CLS
-  'PRINT "They rush to Steve!"
-  'DO: LOOP UNTIL keyboard(&H39)
-  'DO: LOOP WHILE keyboard(&H39)
+  
+  IF SCENE.Init("SCENE-3C") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
  
   LD2.SetXShift 0
   ShiftX = 0
@@ -1254,13 +1228,14 @@ SUB Scene3
   LarryPoint% = 1
   JanitorPoint% = 1
 
-  Scene% = 4
+  SceneNo% = 4
 
-  Escaped% = JanitorTalk("So...")
-  Escaped% = JanitorTalk("Something in the cola eh?")
-  Escaped% = LarryTalk("Apparently.")
-  Escaped% = JanitorTalk("Ok, let's see what I can do with him.")
-  LD2.WriteText ""
+  IF SCENE.Init("SCENE-3D") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  'LD2.WriteText ""
 
   LD2.PlayMusic mscUHOH
   LD2.PlaySound sfxGLASS
@@ -1368,7 +1343,8 @@ SUB Scene3
  
   NEXT x%
 
-  LD2.CreateEntity 208, 144, 0    '- 0 is rockmonster
+  '- END conditions
+  LD2.CreateEntity 208, 144, ROCKMONSTER
   LD2.SetPlayerXY Larry.x, Larry.y
   LD2.SetPlayerFlip 1
   LD2.SetLoadBackup 14
@@ -1377,6 +1353,7 @@ SUB Scene3
   LD2.SetScene 0
   LarryIsThere% = 0
   JanitorIsThere% = 0
+  SceneNo% = 4
   
   LD2.PlayMusic mscMARCHoftheUHOH
 
@@ -1387,7 +1364,7 @@ SUB Scene5
   '- Process Scene 5
   '-----------------
 
-  Scene% = 5
+  SceneNo% = 5
   LD2.SetScene 1
   LarryIsThere% = 1
   LarryPoint% = 0
@@ -1406,8 +1383,11 @@ SUB Scene5
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
  
-  Escaped% = LarryTalk("come on!")
-  Escaped% = LarryTalk("hurry up and open elevator!")
+  IF SCENE.Init("SCENE-5A") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
   LD2.WriteText ""
 
   '- rockmonster jumps up at larry
@@ -1539,33 +1519,16 @@ SUB Scene5
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
 
-  Scene% = 6
+  SceneNo% = 6
   BarneyIsThere% = 1
   BarneyPoint% = 0
   LarryPoint% = 1
 
-  Escaped% = LarryTalk("barney!")
-  BarneyTalk "Why hello there."
-  Escaped% = LarryTalk("thanks man...")
-  Escaped% = LarryTalk("I owe you")
-  BarneyTalk "Actually, you do..."
-  BarneyTalk "twenty bucks from losing that game of pool..."
-  BarneyTalk "...last night."
-  Escaped% = LarryTalk("Oh yeah...")
-  Escaped% = LarryTalk("I was gonna get that to you...")
-  Escaped% = LarryTalk("...but...")
-  BarneyTalk "Just forget about it."
-  BarneyTalk "if we get out of here alive..."
-  BarneyTalk "then you owe me twenty."
-  Escaped% = LarryTalk("What?")
-  Escaped% = LarryTalk("Are there more?")
-  BarneyTalk "Oh yeah."
-  BarneyTalk "The building's full of them."
-  Escaped% = LarryTalk("Why?")
- 
-  BarneyTalk "I'll explain later."
-  BarneyTalk "We gotta get to the weapons locker."
-  BarneyTalk "come on."
+  IF SCENE.Init("SCENE-5B") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
  
   '- 45,10
   LD2.WriteText ""
@@ -1610,12 +1573,11 @@ SUB Scene5
 
   ShiftX = 600
   LD2.SetXShift ShiftX
-  BarneyTalk "Here we are..."
-  BarneyTalk "the weapons locker..."
-  BarneyTalk "Oh, and here, take this."
-  BarneyTalk "That's a blue access card."
-  BarneyTalk "come on Larry..."
-  BarneyTalk "we gotta get you a weapon."
+  IF SCENE.Init("SCENE-5C") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
   LD2.WriteText ""
 
   '- Barney runs to the left off the screen
@@ -1677,49 +1639,13 @@ SUB Scene7
   NEXT i%
 
   LD2.PlayMusic mscWANDERING
+  
+  IF SCENE.Init("SCENE-7A") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
 
-  Escaped% = LarryTalk("wow!")
-  Escaped% = LarryTalk("I feel like I'm in The Matrix.")
-  BarneyTalk "Ok Larry, listen up..."
-  BarneyTalk "This floor is where all the weapons are stored."
-  BarneyTalk "Grab whatever weapons you feel like."
-  BarneyTalk "Make sure you pack ammo too."
-  BarneyTalk "Be careful though..."
-  BarneyTalk "You can only pack so much ammo..."
-  BarneyTalk "so don't go trigger happy and lose all of it."
-  Escaped% = LarryTalk("Ok, I gotcha.")
-  BarneyTalk "Ok..."
-  BarneyTalk "Now here's the problem..."
-  BarneyTalk "All the phones are dead."
-  BarneyTalk "Something's disconnected the main phone line."
-  BarneyTalk "So we can't call for help."
-  Escaped% = LarryTalk("darn!")
-  BarneyTalk "We can't access the Lobby to get out of here..."
-  BarneyTalk "Because the access level for that floor has..."
-  BarneyTalk "been set to code-red."
-  BarneyTalk "And the maximum access I have is code-blue."
-  Escaped% = LarryTalk("darn!")
-  BarneyTalk "I just gave you an extra code-blue card."
-  BarneyTalk "That'll give you access to doors and rooms..."
-  BarneyTalk "that require blue acess and anything lower..."
-  BarneyTalk "which the only thing lower is green..."
-  BarneyTalk "and everybody has access to green."
-  Escaped% = LarryTalk("Cool!")
-  BarneyTalk "meanwhile, this weapons locker dosen't have much."
-  BarneyTalk "The room behind me has alot more..."
-  BarneyTalk "but..."
-  BarneyTalk "it requires code-yellow access..."
-  Escaped% = LarryTalk("darn!")
-  BarneyTalk "We need to split up and see if we can find..."
-  BarneyTalk "a code-yellow access card."
-  Escaped% = LarryTalk("Cool!")
-  BarneyTalk "Oh, and here's something else."
-  Escaped% = LarryTalk("A walky-talky...")
-  Escaped% = LarryTalk("Cool!")
-  BarneyTalk "That's for us to keep in touch."
-  Escaped% = LarryTalk("Well, duh.")
-  BarneyTalk "Ok Larry..."
-  BarneyTalk "Let's move out."
   LD2.WriteText ""
 
   LD2.SetScene 0
@@ -1728,7 +1654,7 @@ SUB Scene7
   LD2.AddLives 4
 
   CurrentRoom = 7
-  Scene% = 7
+  SceneNo% = 7
 
 END SUB
 
@@ -1756,85 +1682,36 @@ SUB SceneFlashlight
   LarryPos% = 0
   StevePos% = 0
 
-  Escaped% = LarryTalk("Woah...")
-  Escaped% = LarryTalk("Where I am?")
-  Escaped% = LarryTalk("Steve!")
-  Escaped% = LarryTalk("Your alive!")
-  Escaped% = SteveTalk("Yep.")
-  Escaped% = SteveTalk("What do you remember?")
-  Escaped% = LarryTalk("uh...")
-  Escaped% = LarryTalk("I was in a dark room...")
-  Escaped% = SteveTalk("and?")
-  Escaped% = LarryTalk("I was going to do something...")
-  Escaped% = LarryTalk("then something hit my head...")
-  Escaped% = LarryTalk("and I woke up here.")
-  Escaped% = SteveTalk("Strange...")
-  Escaped% = SteveTalk("I woke up here too after I drank the cola.")
-  Escaped% = LarryTalk("Do you know about the aliens?")
-  Escaped% = SteveTalk("What?!")
-  Escaped% = LarryTalk("The buildings been invaded by them.")
-  Escaped% = SteveTalk("Not more aliens!")
-  Escaped% = LarryTalk("I'm afraid so.")
-  Escaped% = SteveTalk("...")
-  Escaped% = LarryTalk("...")
-  Escaped% = SteveTalk("but where are we?")
-  Escaped% = LarryTalk("I don't know.")
-  Escaped% = LarryTalk("I don't recognize this part of the building...")
-  Escaped% = LarryTalk("if we are in the building.")
-  Escaped% = LarryTalk("hmm...")
-  Escaped% = LarryTalk("I still have my walky-talky.")
+  IF SCENE.Init%("SCENE-FLASHLIGHT-1A") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  
   LarryPos% = 11
-  Escaped% = LarryTalk("Barney...come in...")
-  Escaped% = LarryTalk("are you there? over...")
+  IF SCENE.Init%("SCENE-FLASHLIGHT-1B") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
 
   BarneyIsThere% = 1
   Barney.x = 0
   Barney.y = 144
   BarneyPos% = 11
-
-  BarneyTalk "hehehe..."
-  Escaped% = LarryTalk("huh?")
-  BarneyTalk "this building's mine now."
-  Escaped% = LarryTalk("what?!")
-  BarneyTalk "it's too bad for you, larry."
-  BarneyTalk "I was thinking of letting you in on the deal..."
-  BarneyTalk "but I knew you would be too stubborn."
-  Escaped% = LarryTalk("what deal?")
-  BarneyTalk "The aliens have technology far superior to us..."
-  BarneyTalk "it's only a matter of time before the earth..."
-  BarneyTalk "is taken over and ruled by then."
-  BarneyTalk "so they contacted us for helping them make..."
-  BarneyTalk "that happen faster."
-  Escaped% = LarryTalk("Barney! You trader!")
-  BarneyTalk "hehehe..."
-  BarneyTalk "I told you I would tell you what was going on."
-  Escaped% = LarryTalk("What did you do to help the aliens, barney!")
-  BarneyTalk "Me and some friends built a portal for them..."
-  BarneyTalk "A portal that directly leads from our world..."
-  BarneyTalk "to theirs, and their world to ours."
-  Escaped% = LarryTalk("Your mad!")
-  BarneyTalk "Mad!"
-  BarneyTalk "I'll tell you what's mad..."
-  BarneyTalk "Mad is believing that we can stop these..."
-  BarneyTalk "high-tech aliens from invaded our planet."
-  Escaped% = LarryTalk("Our planet?!")
-  Escaped% = LarryTalk("You've betrayed this planet.")
-  BarneyTalk "I saved it is what."
-  BarneyTalk "Now, since I've got you trapped in there..."
-  BarneyTalk "there's no one that can stop me now."
-  BarneyTalk "hehehe..."
-  Escaped% = LarryTalk("...")
+  IF SCENE.Init%("SCENE-FLASHLIGHT-1C") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
 
   BarneyIsThere% = 0
   LarryPos% = 0
-
-  Escaped% = SteveTalk("...")
-  Escaped% = SteveTalk("What do we do?")
-  Escaped% = LarryTalk("First, we should find a way out of here.")
-  Escaped% = SteveTalk("You can't.")
-  Escaped% = LarryTalk("what?")
-  Escaped% = SteveTalk("I've searched everywhere...")
-  Escaped% = SteveTalk("There's no way out...")
+  IF SCENE.Init%("SCENE-FLASHLIGHT-1D") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
   
   LD2.WriteText ""
   LarryIsThere% = 0
@@ -1852,11 +1729,12 @@ SUB SceneFlashlight2
 
   LarryPoint% = 0
  
-  Escaped% = LarryTalk("Hmm...")
-  Escaped% = LarryTalk("The vent's open.")
-  Escaped% = LarryTalk("Steve!")
- 
-  LD2.PopText "Larry and Steve Crawl through the vent"
+  IF SCENE.Init%("SCENE-FLASHLIGHT-2A") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  
  
   LD2.SetXShift 1400
   ShiftX = 1400
@@ -1870,29 +1748,11 @@ SUB SceneFlashlight2
   StevePoint% = 1
   LarryPos% = 0
   StevePos% = 0
-
-  Escaped% = LarryTalk("Steve.")
-  Escaped% = SteveTalk("What?")
-  Escaped% = LarryTalk("I thought you said you looked everywhere...")
-  Escaped% = SteveTalk("Uh...")
-  Escaped% = SteveTalk("I thought I did...")
-  Escaped% = LarryTalk("Whatever...")
-  Escaped% = LarryTalk("Room 7 is the weapon's locker.")
-  Escaped% = LarryTalk("Here's a copy of a code-yellow access card.")
-  Escaped% = SteveTalk("and?")
-  Escaped% = LarryTalk("And that'll give you access to doors...")
-  Escaped% = LarryTalk("with yellow, green, and blue trims.")
-  Escaped% = SteveTalk("Oh...")
-  Escaped% = SteveTalk("Okay...")
-  Escaped% = SteveTalk("Cool!")
-  Escaped% = SteveTalk("Here's something I found...")
-  Escaped% = SteveTalk("Look's like it's half of a card.")
-  Escaped% = LarryTalk("Thanks...")
-  Escaped% = LarryTalk("We've got to find the code-red access card...")
-  Escaped% = LarryTalk("before barney does.")
-  Escaped% = LarryTalk("He needs it for something...")
-  Escaped% = LarryTalk("And I'm guessing he wants it for the room above.")
-  Escaped% = LarryTalk("Let's go.")
+  IF SCENE.Init%("SCENE-FLASHLIGHT-2B") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
  
   LD2.SetPlayerXY 20, 144
   LD2.Drop 9
@@ -1984,27 +1844,18 @@ SUB ScenePortal
   Barney.y = 144
   BarneyPos% = 0
 
-  Escaped% = LarryTalk("Huh!")
+  IF SCENE.Init%("SCENE-PORTAL-1A") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  
   LD2.FadeOutMusic
-  BarneyTalk "Hello, Larry..."
-  Escaped% = SteveTalk("Larry!")
-  Escaped% = SteveTalk("It's a trap!")
-  Escaped% = LarryTalk("Well...")
-  Escaped% = LarryTalk("Thanks, steve...")
-  Escaped% = LarryTalk("but it's kinda late for that.")
-  BarneyTalk "I see you managed to escape and find a red card."
-  Escaped% = LarryTalk("Glad to see that you found one too.")
-  BarneyTalk "Yep..."
-  BarneyTalk "Steve also found one."
-  Escaped% = SteveTalk("Plus 1 for me.")
-  Escaped% = LarryTalk("Talk about the timing.")
-  BarneyTalk "It's a shame I was here first."
-  BarneyTalk "Now I can finally reopen this portal."
-  Escaped% = LarryTalk("Reopen?")
-  BarneyTalk "Well, larry..."
-  BarneyTalk "That's how they got here in the first place."
-  BarneyTalk "Now..."
-  BarneyTalk "It's time to die!"
+  IF SCENE.Init%("SCENE-PORTAL-1B") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
 
   LD2.PlaySound 16
   rx! = Steve.x
@@ -2051,28 +1902,20 @@ SUB ScenePortal
     LD2.CopyBuffer 1, 0
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT n%
- 
-  Escaped% = LarryTalk("Steve!")
-  Escaped% = LarryTalk("Barney! That was uncalled for!")
-  BarneyTalk "It dosen't matter if it was uncalled for..."
-  BarneyTalk "You two looked too much alike..."
-  BarneyTalk "I couldn't take it anymore!"
-  Escaped% = LarryTalk("That's it barney!")
-  BarneyTalk "I'm gonna save you, Larry..."
-  BarneyTalk "Your going to live to see this alien world..."
-  BarneyTalk "that you've been fighting for so long."
-  Escaped% = LarryTalk("Why didn't you kill me before?")
-  BarneyTalk "Uh..."
-  BarneyTalk "I kinda locked myself out..."
-  BarneyTalk "So I needed help finding access cards."
-  BarneyTalk "Anyway..."
+  
+  IF SCENE.Init%("SCENE-PORTAL-1C") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  
   BarneyPoint% = 1
-  BarneyTalk "Open the portal to the jungle area."
-  TrooperTalk "Are you mad?!"
-  TrooperTalk "You just can't open up a portal to the middle..."
-  TrooperTalk "of the jungle!"
-  BarneyTalk "Oh shutup!"
-
+  IF SCENE.Init%("SCENE-PORTAL-1D") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  
   LD2.WriteText ""
   LD2.PlaySound 16
   rx! = Trooper.x
@@ -2113,16 +1956,19 @@ SUB ScenePortal
     LD2.CopyBuffer 1, 0
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT n%
-
-  Escaped% = LarryTalk("Geez man!")
+  
+  IF SCENE.Init%("SCENE-PORTAL-1E") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
+  
   BarneyPoint% = 0
-  Escaped% = LarryTalk("Stop killing!")
-  Escaped% = LarryTalk("You are mad!")
-  BarneyTalk "You shutup!"
-  BarneyTalk "Or I'll kill you too!"
-  BarneyTalk "Now..."
-  BarneyTalk "Let's open this portal..."
-  LD2.PopText "The Portal Opens..."
+  IF SCENE.Init%("SCENE-PORTAL-1F") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
 
   LD2.PlaySound 16
   LD2.WriteText ""
@@ -2293,11 +2139,14 @@ SUB SceneSteveGone
   LarryPoint% = 1
   LarryPos% = 0
  
-  Scene% = 0
+  SceneNo% = 0
   Larry.y = 144
 
-  Escaped% = LarryTalk("Huh?")
-  Escaped% = LarryTalk("Where's steve?")
+  IF SCENE.Init%("SCENE-STEVE-GONE") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
   LD2.WriteText ""
 
   SteveGoneScene% = 1
@@ -2312,12 +2161,11 @@ SUB SceneVent1
   LarryIsThere% = 1
   LarryPoint% = 1
 
-  Scene% = 0
+  SceneNo% = 0
   Larry.y = 144
 
   Escaped% = LarryTalk("Woah!")
   Escaped% = LarryTalk("Some type of crystalized alien goo is in the way.")
-  'Escaped% = LarryTalk("the way.")
   Escaped% = LarryTalk("I'll need to find some type of chemical to...")
   Escaped% = LarryTalk("break down this goo.")
   LD2.WriteText ""
@@ -2332,7 +2180,7 @@ SUB SceneWeaponRoom
 
   LD2.SetScene 1
 
-  Scene% = 0
+  SceneNo% = 0
   Larry.y = 144
   LarryIsThere% = 1
   BarneyIsThere% = 1
@@ -2403,7 +2251,7 @@ SUB SceneWeaponRoom2
 
   LD2.SetScene 1
 
-  Scene% = 0
+  SceneNo% = 0
   Larry.y = 144
   LarryIsThere% = 1
   BarneyIsThere% = 1
@@ -2527,25 +2375,6 @@ FUNCTION SteveTalk% (Text AS STRING)
     LD2.put x, y, 14, idSCENE, Flip
    
     PutRestOfSceners
-
-    'IF Scene% = 1 THEN
-    '
-    '  LD2.Put x, y, 12, idSCENE, Flip
-    '  LD2.Put x, y, 14, idSCENE, Flip
-    '
-    '  LD2.Put Larry.x, Larry.y, 0, idSCENE, 0
-    '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 0
-    '
-    'ELSEIF Scene% = 2 THEN
-    '
-    '  LD2.Put Steve.x - 2, Steve.y + 2, 12, idSCENE, 0
-    '  LD2.Put x, y, 26, idSCENE, Flip
-    '
-    '  LD2.Put Larry.x, Larry.y, 1, idSCENE, 0
-    '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 0
-    '
-    'END IF
-    
     FOR i% = 1 TO 4
       WAIT &H3DA, 8: WAIT &H3DA, 8, 8
     NEXT i%
@@ -2559,21 +2388,6 @@ FUNCTION SteveTalk% (Text AS STRING)
     LD2.put x, y, 14, idSCENE, Flip
   
     PutRestOfSceners
-
-    'IF Scene% = 1 THEN
-    '  LD2.Put x, y, 13, idSCENE, Flip
-    '  LD2.Put x, y, 14, idSCENE, Flip
-    '
-    '  LD2.Put Larry.x, Larry.y, 0, idSCENE, 0
-    '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 0
-    'ELSEIF Scene% = 2 THEN
-    '  LD2.Put Steve.x - 2, Steve.y + 2, 13, idSCENE, 0
-    '  LD2.Put x, y, 26, idSCENE, Flip
-    '
-    '  LD2.Put Larry.x, Larry.y, 1, idSCENE, 0
-    '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 0
-    'END IF
-
     FOR i% = 1 TO 4
       WAIT &H3DA, 8: WAIT &H3DA, 8, 8
     NEXT i%
@@ -2592,21 +2406,6 @@ FUNCTION SteveTalk% (Text AS STRING)
   LD2.put x, y, 14, idSCENE, Flip
   
   PutRestOfSceners
-
-  'IF Scene% = 1 THEN
-  '  LD2.Put x, y, 12, idSCENE, Flip
-  '  LD2.Put x, y, 14, idSCENE, Flip
-  '
-  '  LD2.Put Larry.x, Larry.y, 0, idSCENE, 0
-  '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 0
-  'ELSEIF Scene% = 2 THEN
-  '  LD2.Put Steve.x - 2, Steve.y + 2, 12, idSCENE, 0
-  '  LD2.Put x, y, 26, idSCENE, Flip
-  '
-  '  LD2.Put Larry.x, Larry.y, 1, idSCENE, 0
-  '  LD2.Put Larry.x, Larry.y, 3, idSCENE, 0
-  'END IF
-
   FOR i% = 1 TO 4
     WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT i%
@@ -2692,3 +2491,104 @@ SUB TrooperTalk (Text AS STRING)
 
 END SUB
 
+SUB SCENE.SetSpeakerId(id AS STRING)
+    
+    SCENEDATA.SpeakerId = id
+    
+END SUB
+
+SUB SCENE.SetSpeakerDialogue(dialogue AS STRING)
+    
+    SCENEDATA.SpeakerDialogue = dialogue
+    
+END SUB
+
+FUNCTION SCENE.DoDialogue%
+    
+    DIM escaped AS INTEGER
+    DIM sid AS STRING
+    
+    sid = UCASE$(LTRIM$(RTRIM$(SCENEDATA.speakerId)))
+    
+    SELECT CASE sid
+    CASE "NARRATOR"
+        LD2.PopText SCENEDATA.speakerDialogue
+    CASE "LARRY"
+        escaped =   LarryTalk%( SCENEDATA.speakerDialogue )
+    CASE "STEVE"
+        escaped =   SteveTalk%( SCENEDATA.speakerDialogue )
+    CASE "BARNEY"
+        'escaped =  BarneyTalk( SCENE.speakerDialogue )
+        BarneyTalk( SCENEDATA.speakerDialogue )
+    CASE "JANITOR"
+        escaped = JanitorTalk%( SCENEDATA.speakerDialogue )
+    CASE "TROOPER"
+        'escaped = TrooperTalk( SCENE.speakerDialogue )
+        TrooperTalk( SCENEDATA.speakerDialogue )
+    END SELECT
+    
+    SCENE.DoDialogue = escaped
+    
+END FUNCTION
+
+FUNCTION SCENE.Init%(label AS STRING)
+    
+    DIM found AS INTEGER
+    DIM row AS STRING
+    
+    SCENEDATA.FileId = FREEFILE
+    OPEN "data/scenes.txt" FOR INPUT AS SCENEDATA.FileId
+    
+    DO WHILE NOT EOF(SCENEDATA.FileId)
+            
+        LINE INPUT #SCENEDATA.FileId, row
+        
+        row = UCASE$(LTRIM$(RTRIM$(row)))
+        IF row = label THEN
+            found  = 1
+            EXIT DO
+        END IF
+        
+    LOOP
+    
+    IF found = 0 THEN
+        CLOSE SCENEDATA.FileId
+    END IF
+    
+    SCENE.Init% = found
+    
+END FUNCTION
+
+FUNCTION SCENE.ReadScene%
+    
+    DIM SceneFile AS INTEGER
+    DIM row AS STRING
+    DIM found AS INTEGER
+    
+    DO WHILE NOT EOF(SCENEDATA.FileId)
+    
+        LINE INPUT #SCENEDATA.FileId, row
+        row = UCASE$(LTRIM$(RTRIM$(row)))
+        
+        SELECT CASE row
+        CASE "NARRATOR", "LARRY", "STEVE", "BARNEY", "JANITOR", "TROOPER"
+            SCENE.SetSpeakerId(row)
+        CASE "END"
+            EXIT DO
+        CASE ""
+            '- do nothing; read next line
+        CASE ELSE
+            SCENE.SetSpeakerDialogue(row)
+            found = 1
+            EXIT DO
+        END SELECT
+    
+    LOOP
+    
+    IF (row = "END") OR EOF(SCENEDATA.FileId) THEN
+        CLOSE SCENEDATA.FileId
+    END IF
+    
+    SCENE.ReadScene% = found
+    
+END FUNCTION

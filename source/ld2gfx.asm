@@ -18,7 +18,9 @@
   PUBLIC  LD2copyFull
   PUBLIC  LD2cls
   PUBLIC  LD2put65
+  PUBLIC  LD2putCol65
   PUBLIC  LD2pset
+  PUBLIC  LD2fill
   
   ;- LD2put: PUT ( skip pixels with zero value )
   ;-       : Draws a sprite 16X16 in size onto the given layer excluding
@@ -833,7 +835,7 @@
 
     MOV   CX, 7D00h   ;- CX = 32000
 
-    REP   STOSB       ;- Clear the buffer
+    REP   STOSW       ;- Clear the buffer
     
     POP   BP
     RET   4
@@ -898,6 +900,64 @@
 
   LD2put65 ENDP
   
+  LD2putCol65 PROC
+
+    PUSH  BP
+    MOV   BP, SP      ;- Set up the stack
+    PUSH  DS          ;- Save the Data Segment
+
+    MOV   BX, [BP+06]
+    MOV   ES, [BX]    ;- Move to the video segment
+    
+    MOV   BX, [BP+14] ;- BX = Y
+    MOV   BX, [BX]
+    MOV   CX, BX      ;- CX = Y
+    SHL   BX, 8       ;- Same as BX * 256
+    SHL   CX, 6       ;- Same as CX * 64
+    ADD   BX, CX      ;- Add them so now BX = Y * 320
+    MOV   DI, BX      ;- DI = BX
+    
+    MOV   BX, [BP+16] ;- BX = X
+    MOV   BX, [BX]
+    ADD   DI, BX      ;- We are now at the starting place to draw
+    
+    MOV   BX, [BP+08]
+    MOV   DX, [BX]
+    
+    MOV   BX, [BP+10]
+    MOV   SI, [BX]    ;- SI = Sprite Offset
+    ADD   SI, 4       ;- Ignore first 4 bytes
+    MOV   BX, [BP+12] ;- BX = Sprite Segment
+    MOV   DS, [BX]    ;- DS = BX
+
+    MOV   BX, 5       ;- For keeping track of drawing down 5 lines
+
+    DrawCol65:
+    MOV   CX, 6       ;- Get ready to draw 6 pixels
+    PutCol1665:
+      LODSB
+      CMP AL, 0       ;- Is the pixel 0?
+      JE  DontDrawCol65  ;- If so, goto DontDraw
+      MOV ES:[DI], DL ;- Plot the pixel
+      DontDrawCol65:
+      INC   DI        ;- Move to the right one
+    LOOP  PutCol1665
+
+    DEC   BX
+    CMP   BX, 0
+    JE    DoneCol65
+
+    ADD   DI, 314
+    JMP   DrawCol65
+
+    DoneCol65:
+
+    POP DS
+    POP BP
+    RET 12
+
+  LD2putCol65 ENDP
+  
   ;- LD2pset: Plots a pixel with a given color onto the given buffer
   LD2pset PROC
 
@@ -942,6 +1002,12 @@
     RET 8
 
   LD2pset ENDP
+  
+  LD2fill PROC
+    
+    ; TODO
+    
+  LD2fill ENDP
   
   END
   
