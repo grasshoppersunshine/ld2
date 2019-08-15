@@ -1003,9 +1003,114 @@
 
   LD2pset ENDP
   
+  ;- LD2fill: fill rectangle (with clipping)
+  ;-----------------------------------------
+  ;- 06 Buffer Seg
+  ;- 10 Color
+  ;- 12 h
+  ;- 14 w
+  ;- 16 y
+  ;- 18 x
   LD2fill PROC
     
-    ; TODO
+    PUSH  BP
+    MOV   BP, SP
+    PUSH  DS
+    
+    ;# width
+    mov bx, [bp+14]
+    mov cx, [bx]
+    ;# X
+    mov bx, [bp+18]
+    mov bx, [bx]
+
+    cmp bx, 0
+    jge skipXbelowZeroLD2F
+        mov ax, cx
+        neg ax
+        cmp bx, ax
+        jle endLD2F
+        neg bx
+        sub cx, bx
+    skipXbelowZeroLD2F:
+
+    mov ax, 320
+    sub ax, cx
+    cmp bx, ax
+    jle skipXabove304LD2F
+        cmp bx, 320
+        jge endLD2F
+        push bx
+            sub bx, 320
+            neg bx
+            mov cx, bx
+        pop bx
+    skipXabove304LD2F:
+
+    add di, bx ;# x location
+    mov dx, cx ;# width
+
+    ;# height
+    mov bx, [bp+12]
+    mov cx, [bx]
+    ;# Y
+    mov bx, [bp+16]
+    mov bx, [bx]
+
+    cmp bx, 0
+    jge skipYbelowZeroLD2F
+        mov ax, cx
+        neg ax
+        cmp bx, ax
+        jle endLD2F
+        neg bx
+        sub cx, bx
+    skipYbelowZeroLD2F:
+
+    mov ax, 200
+    sub ax, cx
+    cmp bx, ax
+    jle skipYabove184LD2F
+        cmp bx, 200
+        jge endLD2F
+        push bx
+            sub bx, 200
+            neg bx
+            mov cx, bx
+        pop bx
+    skipYabove184LD2F:
+
+    push bx
+        shl bx, 8
+        add di, bx
+    pop bx
+    shl bx, 6
+    add di, bx ;# y location
+               ;# cx is height
+    
+    
+    MOV   BX, [BP+06] ;- Buffer Seg
+    MOV   ES, [BX]
+    MOV   DI, 0
+    
+    mov bx, 320
+    sub bx, dx
+    FillBoxVLD2F:
+        push cx
+        mov cx, dx
+        FillBoxHLD2F:
+            lodsb
+            stosb
+        LOOP FillBoxHLD2F
+        pop cx
+        add di, bx
+    LOOP FillBoxVLD2F
+    
+    ENDLD2F:
+
+    POP DS
+    POP BP
+    RET 12
     
   LD2fill ENDP
   
