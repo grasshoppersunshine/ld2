@@ -18,7 +18,9 @@
   PUBLIC  LD2copyFull
   PUBLIC  LD2cls
   PUBLIC  LD2put65
+  PUBLIC  LD2put65c
   PUBLIC  LD2putCol65
+  PUBLIC  LD2putCol65c
   PUBLIC  LD2pset
   PUBLIC  LD2fill
   
@@ -900,6 +902,130 @@
 
   LD2put65 ENDP
   
+  LD2put65c PROC
+  
+	push bp
+	mov bp, sp
+	push ds
+	
+	;# buffer address
+	mov bx, [bp+06]
+	mov es, [bx]
+	xor di, di
+	;# sprite address
+	mov bx, [bp+08] ;# sprite ptr
+	mov si, [bx]
+	
+	add si, 4       ;# ignore sprite header
+	
+	;# SI add/skip amount
+	xor ax, ax
+	
+	;# X
+	mov bx, [bp+14]
+	mov bx, [bx]
+	
+	mov cx, 6
+	
+	cmp bx, 0
+	jge skipXbelowZeroLD2P65C
+	  cmp bx, -6
+	  jle endLD2put65c
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  add si, bx
+	  mov ax, bx
+	  xor bx, bx
+	skipXbelowZeroLD2P65C:
+	
+	cmp bx, 314
+	jle skipXabove304LD2P65C
+	  cmp bx, 320
+	  jge endLD2put65c
+	  push bx
+        mov cx, 320
+	    sub cx, bx
+	  pop bx
+	skipXabove304LD2P65C:
+	
+	add di, bx ;# x location
+	mov dx, cx ;# width
+	
+	;# Y
+	mov bx, [bp+12]
+	mov bx, [bx]
+	
+	mov cx, 5
+	
+	cmp bx, 0
+	jge skipYbelowZeroLD2P65C
+	  cmp bx, -5
+	  jle endLD2put65c
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  shl bx, 4
+	  add si, bx
+	  xor bx, bx
+	skipYbelowZeroLD2P65C:
+	
+	cmp bx, 195
+	jle skipYabove184LD2P65C
+	  cmp bx, 200
+	  jge endLD2put65c
+	  push bx
+        mov cx, 200
+        sub cx, bx
+	  pop bx
+	skipYabove184LD2P65C:
+	
+	push bx
+	  shl bx, 8
+	  add di, bx
+	pop bx
+	shl bx, 6
+	add di, bx ;# y location
+	           ;# cx is height
+	
+	mov bx, [bp+10] ;# sprite seg
+	mov ds, [bx]
+	
+	;# copy sprite block to buffer
+	;# dx = width
+	;# cx = height
+	;# ax = SI add/skip amount (16-width)
+	verticalLD2P65C:
+      push cx
+        mov cx, dx
+        push si
+        push di
+          horizontalLD2P65C:
+            lodsb
+            test al, al
+            jz skipPixelLD2P65C
+              stosb
+              jmp skipIncmntLD2P65C
+            skipPixelLD2P65C:
+              inc di
+            skipIncmntLD2P65C:
+          loop horizontalLD2P65C
+        pop di
+        pop si
+        add di, 320
+        add si, 6
+      pop cx
+	loop verticalLD2P65C
+	
+	;# clean up and return
+	endLD2put65c:
+	pop ds
+	pop bp
+	ret 10
+  
+  LD2put65c ENDP
+
+  
   LD2putCol65 PROC
 
     PUSH  BP
@@ -958,6 +1084,134 @@
 
   LD2putCol65 ENDP
   
+  LD2putCol65c PROC
+  
+	push bp
+	mov bp, sp
+	push ds
+	
+	;# buffer address
+	mov bx, [bp+06]
+	mov es, [bx]
+	xor di, di
+	;# sprite address
+	mov bx, [bp+10] ;# sprite ptr
+	mov si, [bx]
+	
+	add si, 4       ;# ignore sprite header
+	
+	;# SI add/skip amount
+	xor ax, ax
+	
+	;# X
+	mov bx, [bp+16]
+	mov bx, [bx]
+	
+	mov cx, 6
+	
+	cmp bx, 0
+	jge skipXbelowZeroLD2PC65C
+	  cmp bx, -6
+	  jle endLD2putC65c
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  add si, bx
+	  mov ax, bx
+	  xor bx, bx
+	skipXbelowZeroLD2PC65C:
+	
+	cmp bx, 314
+	jle skipXabove304LD2PC65C
+	  cmp bx, 320
+	  jge endLD2putC65c
+	  push bx
+        mov cx, 320
+	    sub cx, bx
+	  pop bx
+	skipXabove304LD2PC65C:
+	
+	add di, bx ;# x location
+	mov dx, cx ;# width
+	
+	;# Y
+	mov bx, [bp+14]
+	mov bx, [bx]
+	
+	mov cx, 5
+	
+	cmp bx, 0
+	jge skipYbelowZeroLD2PC65C
+	  cmp bx, -5
+	  jle endLD2putC65c
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  shl bx, 4
+	  add si, bx
+	  xor bx, bx
+	skipYbelowZeroLD2PC65C:
+	
+	cmp bx, 195
+	jle skipYabove184LD2PC65C
+	  cmp bx, 200
+	  jge endLD2put65c
+	  push bx
+        mov cx, 200
+        sub cx, bx
+	  pop bx
+	skipYabove184LD2PC65C:
+	
+	push bx
+	  shl bx, 8
+	  add di, bx
+	pop bx
+	shl bx, 6
+	add di, bx ;# y location
+	           ;# cx is height
+    
+    mov bx, [bp+08]
+	mov bx, [bx]
+    mov ah, bl
+	
+	mov bx, [bp+12] ;# sprite seg
+	mov ds, [bx]
+	
+	;# copy sprite block to buffer
+	;# dx = width
+	;# cx = height
+	;# ax = SI add/skip amount (16-width)
+	verticalLD2PC65C:
+      push cx
+        mov cx, dx
+        push si
+        push di
+          horizontalLD2PC65C:
+            lodsb
+            test al, al
+            jz skipPixelLD2PC65C
+              mov es:[di], ah
+              inc di
+              jmp skipIncmntLD2PC65C
+            skipPixelLD2PC65C:
+              inc di
+            skipIncmntLD2PC65C:
+          loop horizontalLD2PC65C
+        pop di
+        pop si
+        add di, 320
+        add si, 6
+      pop cx
+	loop verticalLD2PC65C
+	
+	;# clean up and return
+	endLD2putC65c:
+	pop ds
+	pop bp
+	ret 12
+  
+  LD2putCol65c ENDP
+  
   ;- LD2pset: Plots a pixel with a given color onto the given buffer
   LD2pset PROC
 
@@ -1006,32 +1260,35 @@
   ;- LD2fill: fill rectangle (with clipping)
   ;-----------------------------------------
   ;- 06 Buffer Seg
-  ;- 10 Color
-  ;- 12 h
-  ;- 14 w
-  ;- 16 y
-  ;- 18 x
+  ;- 08 Color
+  ;- 10 h
+  ;- 12 w
+  ;- 14 y
+  ;- 16 x
   LD2fill PROC
     
     PUSH  BP
     MOV   BP, SP
     PUSH  DS
     
+    MOV   BX, [BP+06] ;- Buffer Seg
+    MOV   ES, [BX]
+    XOR   DI, DI
+    
     ;# width
-    mov bx, [bp+14]
+    mov bx, [bp+12]
     mov cx, [bx]
+    cmp cx, 0
+    jz endLD2F
     ;# X
-    mov bx, [bp+18]
+    mov bx, [bp+16]
     mov bx, [bx]
 
     cmp bx, 0
     jge skipXbelowZeroLD2F
-        mov ax, cx
-        neg ax
-        cmp bx, ax
+        add cx, bx
         jle endLD2F
-        neg bx
-        sub cx, bx
+        xor bx, bx
     skipXbelowZeroLD2F:
 
     mov ax, 320
@@ -1051,20 +1308,19 @@
     mov dx, cx ;# width
 
     ;# height
-    mov bx, [bp+12]
+    mov bx, [bp+10]
     mov cx, [bx]
+    cmp cx, 0
+    jz endLD2F
     ;# Y
-    mov bx, [bp+16]
+    mov bx, [bp+14]
     mov bx, [bx]
 
     cmp bx, 0
     jge skipYbelowZeroLD2F
-        mov ax, cx
-        neg ax
-        cmp bx, ax
+        add cx, bx
         jle endLD2F
-        neg bx
-        sub cx, bx
+        xor bx, bx
     skipYbelowZeroLD2F:
 
     mov ax, 200
@@ -1088,10 +1344,8 @@
     add di, bx ;# y location
                ;# cx is height
     
-    
-    MOV   BX, [BP+06] ;- Buffer Seg
-    MOV   ES, [BX]
-    MOV   DI, 0
+    mov bx, [bp+08] ;- color
+    mov ax, [bx]
     
     mov bx, 320
     sub bx, dx
@@ -1099,7 +1353,6 @@
         push cx
         mov cx, dx
         FillBoxHLD2F:
-            lodsb
             stosb
         LOOP FillBoxHLD2F
         pop cx

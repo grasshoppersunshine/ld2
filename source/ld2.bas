@@ -7,6 +7,9 @@
   REM $INCLUDE: 'INC\TITLE.BI'
   REM $INCLUDE: 'INC\LD2.BI'
   
+  DECLARE SUB RetraceDelay (qty AS INTEGER)
+  DECLARE SUB Delay (seconds AS DOUBLE)
+  
   '- have walk-talky in inventory that you can look/use/(drop?)
   
   REM $DYNAMIC
@@ -14,6 +17,7 @@
   DIM SHARED SceneNo%
   DIM SHARED ShiftX AS INTEGER
   DIM SHARED CurrentRoom AS INTEGER
+  DIM SHARED CurrentRoomName AS STRING
   DIM SHARED RoofScene%
   DIM SHARED SteveGoneScene%
   DIM SHARED FlashLightScene%
@@ -24,6 +28,10 @@
   TYPE tScener
     x AS INTEGER
     y AS INTEGER
+    'facing AS INTEGER
+    'isThere AS INTEGER
+    'isSpeaking AS INTEGER
+    'hasWalkyTalky AS INTEGER
   END TYPE
   DIM SHARED Larry AS tScener
   DIM SHARED Steve AS tScener
@@ -34,6 +42,8 @@
   DIM SHARED Bones AS tScener
   DIM SHARED Message AS INTEGER
   DIM SHARED Parameter AS INTEGER
+  
+  CONST HASWALKYTALKY = 11
  
   DIM SHARED LarryIsThere%: DIM SHARED LarryPoint%: DIM SHARED LarryTalking%: DIM SHARED LarryPos%
   DIM SHARED BarneyIsThere%: DIM SHARED BarneyPoint%: DIM SHARED BarneyTalking%: DIM SHARED BarneyPos%
@@ -53,6 +63,7 @@
     floorNo AS INTEGER
     filename AS STRING*8
     label AS STRING*20
+    allowed AS STRING*50
   END TYPE
 
   CONST msgENTITYDELETED = 1
@@ -73,7 +84,7 @@ SUB BarneyTalk (Text AS STRING)
   Flip = BarneyPoint%
   box = 43
 
-  IF BarneyPos% = 11 THEN box = 70
+  IF BarneyPos% = HASWALKYTALKY THEN box = 70
 
   LD2.WriteText Text
 
@@ -93,9 +104,7 @@ SUB BarneyTalk (Text AS STRING)
     LD2.put x, y, 45, idSCENE, Flip
       
     PutRestOfSceners
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
     
     LD2.CopyBuffer 1, 0
     
@@ -107,9 +116,7 @@ SUB BarneyTalk (Text AS STRING)
     LD2.put x, y, 46, idSCENE, Flip
      
     PutRestOfSceners
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
 
     LD2.CopyBuffer 1, 0
 
@@ -122,9 +129,7 @@ SUB BarneyTalk (Text AS STRING)
   LD2.put x, y, 45, idSCENE, Flip
      
   PutRestOfSceners
-  FOR i% = 1 TO 4
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 4
 
   LD2.CopyBuffer 1, 0
   BarneyTalking% = 0
@@ -161,9 +166,7 @@ SUB BonesTalk (Text AS STRING)
     LD2.put ShiftX, 180, 55, idSCENE, 0
    
     PutRestOfSceners
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
   
     LD2.CopyBuffer 1, 0
   
@@ -172,9 +175,7 @@ SUB BonesTalk (Text AS STRING)
     LD2.put ShiftX, 180, 56, idSCENE, 0
    
     PutRestOfSceners
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
 
     LD2.CopyBuffer 1, 0
 
@@ -185,9 +186,7 @@ SUB BonesTalk (Text AS STRING)
   LD2.put ShiftX, 180, 55, idSCENE, 0
  
   PutRestOfSceners
-  FOR i% = 1 TO 4
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 4
 
   LD2.CopyBuffer 1, 0
   BonesTalking% = 0
@@ -239,9 +238,7 @@ FUNCTION JanitorTalk% (Text AS STRING)
       LD2.put 170, 144, 27, idSCENE, 1
     END IF
 
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
   
     LD2.CopyBuffer 1, 0
   
@@ -261,9 +258,7 @@ FUNCTION JanitorTalk% (Text AS STRING)
     END IF
 
 
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
 
     LD2.CopyBuffer 1, 0
     IF keyboard(&H39) THEN EXIT FOR
@@ -286,9 +281,7 @@ FUNCTION JanitorTalk% (Text AS STRING)
     LD2.put 170, 144, 27, idSCENE, 1
   END IF
 
-  FOR i% = 1 TO 4
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 4
 
   LD2.CopyBuffer 1, 0
   JanitorTalking% = 0
@@ -323,7 +316,7 @@ FUNCTION LarryTalk% (Text AS STRING)
   top = 0
   btm = 3
 
-  IF LarryPos% = 11 THEN
+  IF LarryPos% = HASWALKYTALKY THEN
     btm = 6
     box = 68
   END IF
@@ -349,9 +342,7 @@ FUNCTION LarryTalk% (Text AS STRING)
     IF SceneNo% = 2 AND SteveIsThere% = 0 THEN LD2.put 170, 144, 27, idSCENE, 1
     IF SceneNo% = 4 THEN LD2.put 170, 144, 27, idSCENE, 1
 
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
    
     LD2.CopyBuffer 1, 0
    
@@ -365,9 +356,7 @@ FUNCTION LarryTalk% (Text AS STRING)
     IF SceneNo% = 4 THEN LD2.put 170, 144, 27, idSCENE, 1
     IF SceneNo% = 2 AND SteveIsThere% = 0 THEN LD2.put 170, 144, 27, idSCENE, 1
 
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
 
     LD2.CopyBuffer 1, 0
     
@@ -385,9 +374,7 @@ FUNCTION LarryTalk% (Text AS STRING)
   PutRestOfSceners
   IF SceneNo% = 4 THEN LD2.put 170, 144, 27, idSCENE, 1
   IF SceneNo% = 2 AND SteveIsThere% = 0 THEN LD2.put 170, 144, 27, idSCENE, 1
-  FOR i% = 1 TO 4
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 4
  
   LD2.CopyBuffer 1, 0
   LarryTalking% = 0
@@ -404,6 +391,8 @@ END FUNCTION
 
 SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
     
+    IF LD2.isDebugMode% THEN LD2.Debug "LD2.EStatusScreen ("+STR$(CurrentRoom)+" )"
+    
     DIM top AS INTEGER
     DIM w AS INTEGER
     DIM h AS INTEGER
@@ -413,6 +402,7 @@ SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
     DIM floorStr AS STRING
     DIM filename AS STRING
     DIM label AS STRING
+    DIM allowed AS STRING
     DIM canExit AS INTEGER
     DIM selectedRoom AS INTEGER
     DIM selectedFilename AS STRING
@@ -422,8 +412,9 @@ SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
     DIM keyOff AS INTEGER
     DIM ElevatorFile AS INTEGER
     
-    DIM floors(30) AS tFloor
+    DIM floors(50) AS tFloor
     DIM numFloors AS INTEGER
+    DIM scroll AS INTEGER
     
     w = 6: h = 6
     
@@ -437,9 +428,11 @@ SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
             INPUT #ElevatorFile, floorNo    : IF EOF(ElevatorFile) THEN EXIT DO
             INPUT #ElevatorFile, filename   : IF EOF(ElevatorFile) THEN EXIT DO
             INPUT #ElevatorFile, label
+            INPUT #ElevatorFile, allowed
             floors(numFloors).floorNo  = floorNo
             floors(numFloors).filename = filename
             floors(numFloors).label    = label
+            floors(numFloors).allowed  = allowed
             numFloors = numFloors + 1
         LOOP
     CLOSE ElevatorFile
@@ -448,14 +441,19 @@ SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
         LD2.fill 0, 0, 156, 200, 68, 1
         
         LD2.PutText w, h*1, "Please Select a Floor" , 1
-        LD2.PutText w, h*2, "=====================" , 1
+        LD2.PutText w, h*2, "======================" , 1
         
         FOR i = 0 TO 32
             LD2.PutText w*25, h*i+1, "*", 1
         NEXT i
         
+        'scroll = 28-selectedRoom
+        'IF scroll < 0 THEN scroll = 0
+        'IF scroll > 16 THEN scroll = 16
+        scroll = 0
+        
         top = h*4
-        FOR i = 0 TO numFloors-1
+        FOR i = scroll TO numFloors-1
         
             floorNo  = floors(i).floorNo
             filename = floors(i).filename
@@ -463,13 +461,17 @@ SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
             
             floorStr = LTRIM$(STR$(floorNo))
             IF LEN(floorStr) = 1 THEN floorStr = " "+floorStr
-            IF floorNo = selectedRoom THEN
+            IF (numFloors-i-1) = selectedRoom THEN 'floorNo = selectedRoom THEN
                 LD2.fill w, top-1, w*23, h+1, 70, 1
                 'LD2.PutTextCol w, top, floorStr+" "+label, 112, 1
                 LD2.PutTextCol w, top, floorStr+" "+label, 15, 1
                 selectedFilename = filename
             ELSE
-                LD2.PutText w, top, floorStr+" "+label, 1
+                IF LTRIM$(filename) <> "" THEN
+                    LD2.PutText w, top, floorStr+" "+label, 1
+                ELSE
+                    LD2.PutText w, top, "   "+label, 1
+                END IF
             END IF
             top = top + h + 1
             IF floorNo > topFloor THEN topFloor = floorNo
@@ -477,7 +479,7 @@ SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
             'LD2.RotatePalette
         NEXT i
         
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+        RetraceDelay 1
         LD2.CopyBuffer 1, 0
         
         IF canExit = 0 THEN
@@ -493,8 +495,11 @@ SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
                 keyOn = 1
                 IF keyOff THEN
                     selectedRoom = selectedRoom + 1
-                    IF selectedRoom > topFloor THEN
-                        selectedRoom = topFloor
+                    IF LTRIM$(floors(numFloors-selectedRoom-1).filename) = "" THEN
+                        selectedRoom = selectedRoom + 1
+                    END IF
+                    IF selectedRoom > numFloors-1 THEN
+                        selectedRoom = numFloors-1
                         'LD2.playSound sfxDenied
                     ELSE
                         LD2.playSound sfxSelect
@@ -505,8 +510,11 @@ SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
                 keyOn = 1
                 IF keyOff THEN
                     selectedRoom = selectedRoom - 1
-                    IF selectedRoom < btmFloor THEN
-                        selectedRoom = btmFloor
+                    IF LTRIM$(floors(numFloors-selectedRoom-1).filename) = "" THEN
+                        selectedRoom = selectedRoom - 1
+                    END IF
+                    IF selectedRoom < 0 THEN
+                        selectedRoom = 0
                         'LD2.playSound sfxDenied
                     ELSE
                         LD2.playSound sfxSelect
@@ -519,6 +527,7 @@ SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
                     LD2.playSound sfxSelect
                     LD2.SetRoom selectedRoom
                     SetCurrentRoom selectedRoom
+                    'LD2.SetAllowedEntities floors(selectedRoom).allowed
                     LD2.LoadMap selectedFilename
                     EXIT DO
                 END IF
@@ -535,6 +544,47 @@ SUB LD2.EStatusScreen (CurrentRoom AS INTEGER)
     LOOP
     
     DO: LOOP WHILE keyboard(&HF)
+    
+END SUB
+
+SUB LD2.SetAllowedEntities (codeString AS STRING)
+    
+    DIM n AS INTEGER
+    DIM cursor AS INTEGER
+    DIM comma AS INTEGER
+    DIM code AS STRING
+    
+    codeString = UCASE$(codeString)
+    
+    Mobs.DisableAllTypes
+    LD2.Debug codeString
+    cursor = 1
+    DO
+        comma = INSTR(cursor, codeString, ",")
+        IF (comma > 0) THEN
+            code = MID$(codeString, cursor, comma-cursor-1)
+            cursor = comma+1
+        ELSE
+            code = MID$(codeString, cursor, LEN(codeString)-cursor)
+        END IF
+        code = UCASE$(LTRIM$(RTRIM$(code)))
+        LD2.Debug "Mob enable code: "+code
+        SELECT CASE code
+        CASE "ALL"
+            Mobs.EnableAllTypes
+            EXIT DO
+        CASE "ROCK"
+            Mobs.EnableType ROCKMONSTER
+        CASE "TRO1"
+            Mobs.EnableType TROOP1
+        CASE "TRO2"
+            Mobs.EnableType TROOP2
+        CASE "MINE"
+            Mobs.EnableType BLOBMINE
+        CASE "JELY"
+            Mobs.EnableType JELLYBLOB
+        END SELECT
+    LOOP WHILE (comma > 0)
     
 END SUB
 
@@ -558,8 +608,14 @@ SUB LD2.Start
  
   nil% = keyboard(-1)
 
-  LD2.SetGameMode TESTMODE
+  'LD2.SetGameMode TESTMODE
   LD2.Init
+  
+  Mobs.AddType ROCKMONSTER
+  Mobs.AddType TROOP1
+  Mobs.AddType TROOP2
+  Mobs.AddType BLOBMINE
+  Mobs.AddType JELLYBLOB
   
   IF NOT (LD2.isTestMode% OR LD2.isDebugMode%) THEN
     LD2.Intro
@@ -580,26 +636,9 @@ SUB LD2.Start
   p.shells = 0
   p.bullets = 0
   p.deagles = 0
-  
   LD2.InitPlayer p
-  
   LD2.SetXShift 0
   
-  n% = LD2.AddToStatus(GREENCARD, 1)
-
-  IF LD2.isTestMode% OR LD2.isDebugMode% THEN
-    LD2.SetWeapon1 SHOTGUN
-    LD2.SetWeapon2 MACHINEGUN
-    LD2.AddAmmo 1, 99
-    LD2.AddAmmo 2, 99
-    LD2.AddAmmo 3, 99
-    Scene1 1
-    SceneNo% = 0
-    LD2.EStatusScreen 14
-  ELSE
-    Scene1 0
-  END IF
-
   DIM EnteringCode AS INTEGER
   DIM KeyCount AS INTEGER
   DIM RoofCode AS STRING
@@ -617,13 +656,26 @@ SUB LD2.Start
   LD2.PutRoofCode RoofCode
   LD2.SetAccessLevel CODEGREEN
 
-  'SceneFlashlight
-  'LD2.CreateEntity 50, 100, idBOSS2
+  IF LD2.isTestMode% OR LD2.isDebugMode% THEN
+    LD2.SetWeapon1 SHOTGUN
+    LD2.SetWeapon2 MACHINEGUN
+    LD2.AddAmmo 1, 99
+    LD2.AddAmmo 2, 99
+    LD2.AddAmmo 3, 99
+    LD2.AddLives 98
+    LD2.Debug "11"
+    n% = LD2.AddToStatus(REDCARD, 1)
+    n% = LD2.AddToStatus(WHITECARD, 1)
+    Scene1 1
+    SceneNo% = 0
+    LD2.EStatusScreen 14
+  ELSE
+    n% = LD2.AddToStatus(GREENCARD, 1)
+    Scene1 0
+  END IF
 
   DO
-
     LD2.ProcessEntities
-  
     LD2.RenderFrame
   
     SELECT CASE SceneNo%
@@ -673,7 +725,7 @@ SUB LD2.Start
       LD2.ShutDown
     END IF
 
-    IF SceneVent = 0 AND CurrentRoom = 12 AND Larry.x <= 754 THEN SceneVent1
+    IF SceneVent = 0 AND CurrentRoom = VENTCONTROL AND Larry.x <= 754 THEN SceneVent1
     EnteringCode = 0
     IF CurrentRoom = 23 AND Larry.x >= 1377 AND Larry.x <= 1407 THEN
       EnteringCode = 1
@@ -731,8 +783,8 @@ SUB LD2.Start
 
     IF RoofScene% = 0 AND CurrentRoom = 23 THEN
       IF Larry.x <= 700 AND FirstBoss = 0 THEN
-        LD2.CreateEntity 500, 144, BOSS1
-        LD2.SetShowLife 1
+        LD2.CreateMob 500, 144, BOSS1
+        LD2.SetBossBar BOSS1
         FirstBoss = 1
       ELSEIF Larry.x <= 1300 AND fm% = 0 THEN
 	fm% = 1
@@ -758,7 +810,7 @@ SUB LD2.Start
       END IF
     END IF
 
-    IF Retrace THEN WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    IF Retrace THEN RetraceDelay 1
     LD2.CopyBuffer 1, 0
     LD2.CountFrame
    
@@ -766,12 +818,12 @@ SUB LD2.Start
     IF keyboard(1) THEN EXIT DO
     IF keyboard(&H4D) THEN LD2.MovePlayer 1: DontStop% = 1
     IF keyboard(&H4B) THEN LD2.MovePlayer -1: DontStop% = 1
-    IF keyboard(&H38) OR keyboard(&H48) THEN LD2.JumpPlayer 1.3333
+    IF keyboard(&H38) OR keyboard(&H48) THEN LD2.JumpPlayer 1.5
     IF keyboard(&H1D) OR keyboard(&H10) THEN LD2.Shoot
     IF keyboard(&H2) THEN LD2.SetWeapon 1
     IF keyboard(&H3) THEN LD2.SetWeapon 3
     'IF keyboard(&H3D) THEN LD2.SetWeapon 3
-    IF keyboard(&H19) THEN LD2.PickUpItem
+    IF keyboard(&H19) OR keyboard(&H50) THEN LD2.PickUpItem
     IF keyboard(&H26) THEN
       LD2.SwapLighting
       DO: LOOP WHILE keyboard(&H26)
@@ -811,9 +863,9 @@ SUB LD2.Start
       SELECT CASE Message
         CASE msgENTITYDELETED
           IF CurrentRoom = 23 AND RoofScene% = 0 THEN
-            LD2.CreateItem 0, 0, 18, 1
+            LD2.CreateItem 0, 0, 18, BOSS1
           END IF
-          LD2.SetShowLife 0
+          LD2.SetBossBar 0
         CASE msgGOTYELLOWCARD
           IF RoofScene% = 0 THEN SceneRoofTop
           'RoofScene% = 0
@@ -829,6 +881,8 @@ SUB LD2.Start
 END SUB
 
 SUB LD2.StatusScreen
+    
+    IF LD2.isDebugMode% THEN LD2.Debug "LD2.StatusScreen"
     
     DIM ItemsFile AS INTEGER
     DIM top AS INTEGER
@@ -889,7 +943,7 @@ SUB LD2.StatusScreen
     
     LD2.PutText w*23, h*13, "  USE     LOOK    MIX     DROP", 1
     
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
     LD2.CopyBuffer 1, 0
     
     DO: LOOP WHILE keyboard(&HF)
@@ -923,7 +977,7 @@ SUB PutRestOfSceners
   '- Put the rest of the people in the scene that are there
    
     IF LarryIsThere% = 1 AND LarryTalking% = 0 THEN
-      IF LarryPos% = 11 THEN
+      IF LarryPos% = HASWALKYTALKY THEN
         LD2.put Larry.x, Larry.y, 6, idSCENE, LarryPoint%
       ELSE
         LD2.put Larry.x, Larry.y, 3, idSCENE, LarryPoint%
@@ -953,7 +1007,11 @@ SUB PutRestOfSceners
 END SUB
 
 SUB Scene1 (skip AS INTEGER)
-
+  
+  IF LD2.isDebugMode% THEN
+    LD2.Debug "Scene1()"
+  END IF
+  
   '- Process Scene 1
   '-----------------
  
@@ -981,6 +1039,7 @@ SUB Scene1 (skip AS INTEGER)
  
   LD2.CopyBuffer 1, 0
  
+  IF LD2.isDebugMode% THEN LD2.Debug "LD2.PlayMusic"
   LD2.PlayMusic mscWANDERING
   
   
@@ -1004,9 +1063,7 @@ SUB Scene1 (skip AS INTEGER)
     LD2.put Larry.x, Larry.y, 0, idSCENE, 0
     LD2.put Larry.x, Larry.y, 3, idSCENE, 0
   
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
   
     LD2.CopyBuffer 1, 0
     
@@ -1018,9 +1075,7 @@ SUB Scene1 (skip AS INTEGER)
   
   Steve.x = 152
   
-  FOR i% = 1 TO 40
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 40
  
   IF SCENE.Init("SCENE-1B") THEN
     DO WHILE SCENE.ReadScene%
@@ -1038,9 +1093,7 @@ SUB Scene1 (skip AS INTEGER)
     LD2.put Larry.x, Larry.y, 0, idSCENE, 0
     LD2.put Larry.x, Larry.y, 3, idSCENE, 0
   
-    FOR i% = 1 TO 20
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 20
   
     LD2.CopyBuffer 1, 0
     
@@ -1059,9 +1112,7 @@ SUB Scene1 (skip AS INTEGER)
     LD2.put Larry.x, Larry.y, 0, idSCENE, 0
     LD2.put Larry.x, Larry.y, 3, idSCENE, 0
   
-    FOR i% = 1 TO 20
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 20
   
     LD2.CopyBuffer 1, 0
     
@@ -1079,9 +1130,7 @@ SUB Scene1 (skip AS INTEGER)
   
   LD2.CopyBuffer 1, 0
   
-  FOR i% = 1 TO 20
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 20
   
   IF SCENE.Init("SCENE-1C") THEN
     DO WHILE SCENE.ReadScene%
@@ -1100,9 +1149,7 @@ SUB Scene1 (skip AS INTEGER)
 
   LD2.CopyBuffer 1, 0
 
-  FOR i% = 1 TO 80
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 80
 
   IF SCENE.Init("SCENE-1D") THEN
     DO WHILE SCENE.ReadScene%
@@ -1119,9 +1166,7 @@ SUB Scene1 (skip AS INTEGER)
 
   LD2.CopyBuffer 1, 0
 
-  FOR i% = 1 TO 80
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 80
 
   IF SCENE.Init("SCENE-1E") THEN
     DO WHILE SCENE.ReadScene%
@@ -1174,9 +1219,7 @@ SUB Scene3
  
   LD2.CopyBuffer 1, 0
 
-  FOR i% = 1 TO 40
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 40
 
 
   Janitor.x = 1196: Janitor.y = 144
@@ -1259,9 +1302,7 @@ SUB Scene3
 
     LD2.CopyBuffer 1, 0
 
-	FOR i% = 1 TO 2
-		WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-	NEXT i%
+	RetraceDelay 2
  
   NEXT y!
   
@@ -1274,9 +1315,7 @@ SUB Scene3
     LD2.put 170, 144, 27, idSCENE, 1
     LD2.put 208, 144, 30, idSCENE, 0
 	LD2.CopyBuffer 1, 0
-    FOR n% = 1 TO 2
-		WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-	NEXT n%
+    RetraceDelay 2
   NEXT i%
   FOR i% = 1 TO 40
 	LD2.ProcessGuts
@@ -1287,9 +1326,7 @@ SUB Scene3
     LD2.put 170, 144, 27, idSCENE, 1
     LD2.put 208, 144, 31, idSCENE, 0
 	LD2.CopyBuffer 1, 0
-    FOR n% = 1 TO 2
-		WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-	NEXT n%
+    RetraceDelay 2
   NEXT i%
   
   LD2.PlaySound sfxSLURP
@@ -1307,13 +1344,9 @@ SUB Scene3
 
     LD2.CopyBuffer 1, 0
 
-    FOR i% = 1 TO 2
-		WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-	NEXT i%
+    RetraceDelay 2
     IF x% = Janitor.x THEN
-      FOR i% = 1 TO 80
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-      NEXT i%
+      RetraceDelay 80
     END IF
   NEXT x%
   
@@ -1334,9 +1367,7 @@ SUB Scene3
 
     LD2.CopyBuffer 1, 0
      
-    FOR i% = 1 TO 10
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 10
 
     'sd% = INT(RND * (900)) + 40
     'SOUND sd%, 3
@@ -1344,7 +1375,7 @@ SUB Scene3
   NEXT x%
 
   '- END conditions
-  LD2.CreateEntity 208, 144, ROCKMONSTER
+  LD2.CreateMob 208, 144, ROCKMONSTER
   LD2.SetPlayerXY Larry.x, Larry.y
   LD2.SetPlayerFlip 1
   LD2.SetLoadBackup 14
@@ -1379,9 +1410,7 @@ SUB Scene5
 
   LD2.CopyBuffer 1, 0
 
-  FOR i% = 1 TO 40
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 40
  
   IF SCENE.Init("SCENE-5A") THEN
     DO WHILE SCENE.ReadScene%
@@ -1403,7 +1432,7 @@ SUB Scene5
 
     LD2.put x%, INT(y!), 1 + ((x% MOD 20) \ 4), idENEMY, 0
   
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
     LD2.CopyBuffer 1, 0
    
   NEXT x%
@@ -1418,7 +1447,7 @@ SUB Scene5
     y! = y! + addy!
     addy! = addy! + .04
    
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
     LD2.CopyBuffer 1, 0
 
     IF addy! > 0 AND y! >= 112 THEN EXIT FOR
@@ -1431,9 +1460,7 @@ SUB Scene5
   LD2.put x%, 112, 31, idSCENE, 0
   LD2.CopyBuffer 1, 0
 
-  FOR i% = 1 TO 80
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 80
  
   '- Barney comes out and shoots at rockmonster
   '--------------------------------------------
@@ -1452,7 +1479,7 @@ SUB Scene5
    
     LD2.CopyBuffer 1, 0
 
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
  
   NEXT i%
  
@@ -1469,9 +1496,7 @@ SUB Scene5
 
   LD2.CopyBuffer 1, 0
 
-  FOR i% = 1 TO 80
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 80
 
   rx! = x%
 
@@ -1489,7 +1514,7 @@ SUB Scene5
    
     LD2.CopyBuffer 1, 0
 
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
  
   NEXT n%
   
@@ -1510,14 +1535,12 @@ SUB Scene5
 
     LD2.CopyBuffer 1, 0
 
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
 
   NEXT n%
 
 
-  FOR i% = 1 TO 40
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 40
 
   SceneNo% = 6
   BarneyIsThere% = 1
@@ -1538,9 +1561,7 @@ SUB Scene5
   LD2.SetXShift 600
   LD2.RenderFrame
   LD2.CopyBuffer 1, 0
-  FOR i% = 1 TO 80
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 80
  
   Larry.x = 46 * 16 - 16: Larry.y = 144
   Barney.x = 45 * 16 - 16: Barney.y = 144
@@ -1560,15 +1581,13 @@ SUB Scene5
 
     LD2.CopyBuffer 1, 0
 
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
 
   NEXT i%
 
   LD2.PutTile 43, 9, 14, 1: LD2.PutTile 46, 9, 15, 1
 
-  FOR i% = 1 TO 80
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 80
 
 
   ShiftX = 600
@@ -1592,9 +1611,9 @@ SUB Scene5
     x! = x! + .1
     IF x! >= 4 THEN x! = 0
   
+    RetraceDelay 1
     LD2.CopyBuffer 1, 0
-
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    
   NEXT x%
 
   LD2.SetPlayerXY Larry.x - ShiftX, Larry.y
@@ -1634,9 +1653,7 @@ SUB Scene7
  
   LD2.CopyBuffer 1, 0
 
-  FOR i% = 1 TO 40
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 40
 
   LD2.PlayMusic mscWANDERING
   
@@ -1688,7 +1705,7 @@ SUB SceneFlashlight
     LOOP
   END IF
   
-  LarryPos% = 11
+  LarryPos% = HASWALKYTALKY
   IF SCENE.Init%("SCENE-FLASHLIGHT-1B") THEN
     DO WHILE SCENE.ReadScene%
       Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
@@ -1698,7 +1715,7 @@ SUB SceneFlashlight
   BarneyIsThere% = 1
   Barney.x = 0
   Barney.y = 144
-  BarneyPos% = 11
+  BarneyPos% = HASWALKYTALKY
   IF SCENE.Init%("SCENE-FLASHLIGHT-1C") THEN
     DO WHILE SCENE.ReadScene%
       Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
@@ -1798,9 +1815,9 @@ SUB SceneLobby
     LD2.put x%, 144, INT(lan!), idLARRY, 0
     LD2.put x%, 144, 26, idLARRY, 0
    
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-   
+    RetraceDelay 1
     LD2.CopyBuffer 1, 0
+    
     lan! = lan! + .2
     IF lan! >= 26 THEN lan! = 22
  
@@ -1877,9 +1894,8 @@ SUB ScenePortal
    
     rx! = rx! + .4
   
+    RetraceDelay 1
     LD2.CopyBuffer 1, 0
-
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
 
   NEXT n%
 
@@ -1900,7 +1916,7 @@ SUB ScenePortal
     LD2.put Barney.x, Barney.y, 45, idSCENE, 0
    
     LD2.CopyBuffer 1, 0
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
   NEXT n%
   
   IF SCENE.Init%("SCENE-PORTAL-1C") THEN
@@ -1935,7 +1951,7 @@ SUB ScenePortal
  
     LD2.CopyBuffer 1, 0
 
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
 
   NEXT n%
 
@@ -1953,8 +1969,8 @@ SUB ScenePortal
     LD2.put Barney.x, Barney.y, 50, idSCENE, 1
     LD2.put Barney.x, Barney.y, 45, idSCENE, 1
    
+    RetraceDelay 1
     LD2.CopyBuffer 1, 0
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   NEXT n%
   
   IF SCENE.Init%("SCENE-PORTAL-1E") THEN
@@ -1983,9 +1999,7 @@ SUB ScenePortal
     LD2.put Barney.x, Barney.y, 46, idSCENE, 1
     LD2.put Barney.x, Barney.y, 50, idSCENE, 1
     LD2.CopyBuffer 1, 0
-    FOR n% = 1 TO 80
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT n%
+    RetraceDelay 80
    
     LD2.RenderFrame
     LD2.put Larry.x, Larry.y, 1, idSCENE, 1
@@ -1997,9 +2011,7 @@ SUB ScenePortal
     LD2.put Barney.x - 16, 144, 84, idSCENE, 0
     LD2.put Barney.x, 144, 85, idSCENE, 0
     LD2.CopyBuffer 1, 0
-    FOR n% = 1 TO 40
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT n%
+    RetraceDelay 40
    
     LD2.RenderFrame
     LD2.put Larry.x, Larry.y, 1, idSCENE, 1
@@ -2011,9 +2023,7 @@ SUB ScenePortal
     LD2.put Barney.x - 16, 144, 90, idSCENE, 0
     LD2.put Barney.x, 144, 91, idSCENE, 0
     LD2.CopyBuffer 1, 0
-    FOR n% = 1 TO 40
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT n%
+    RetraceDelay 40
 
     LD2.RenderFrame
     LD2.put Larry.x, Larry.y, 1, idSCENE, 1
@@ -2025,9 +2035,7 @@ SUB ScenePortal
     LD2.put Barney.x - 16, 144, 90, idSCENE, 0
     LD2.put Barney.x, 144, 93, idSCENE, 0
     LD2.CopyBuffer 1, 0
-    FOR n% = 1 TO 40
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT n%
+    RetraceDelay 40
 
     FOR n% = 1 TO 20
       LD2.RenderFrame
@@ -2040,9 +2048,7 @@ SUB ScenePortal
       LD2.put Barney.x - 16, 144, 94, idSCENE, 0
       LD2.put Barney.x, 144, 95, idSCENE, 0
       LD2.CopyBuffer 1, 0
-      FOR i% = 1 TO 10
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-      NEXT i%
+      RetraceDelay 10
    
       LD2.RenderFrame
       LD2.put Larry.x, Larry.y, 1, idSCENE, 1
@@ -2054,14 +2060,12 @@ SUB ScenePortal
       LD2.put Barney.x - 16, 144, 98, idSCENE, 0
       LD2.put Barney.x, 144, 99, idSCENE, 0
       LD2.CopyBuffer 1, 0
-      FOR i% = 1 TO 10
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-      NEXT i%
+      RetraceDelay 10
     NEXT n%
 
   LD2.SetNumEntities 0
-  LD2.CreateEntity Barney.x - 32, 143, idBOSS2
-  LD2.SetShowLife 1
+  LD2.CreateMob Barney.x - 32, 143, idBOSS2
+  LD2.SetBossBar idBOSS2
   FirstBoss = 1
   LD2.SetAccessLevel 0
   LD2.PlayMusic mscBOSS
@@ -2110,8 +2114,8 @@ SUB SceneRoofTop
   BarneyIsThere% = 1
   LarryPoint% = 0
   BarneyPoint% = 0
-  LarryPos% = 11
-  BarneyPos% = 11
+  LarryPos% = HASWALKYTALKY
+  BarneyPos% = HASWALKYTALKY
   Barney.x = 0
   Barney.y = 144
 
@@ -2170,7 +2174,7 @@ SUB SceneVent1
   Escaped% = LarryTalk("break down this goo.")
   LD2.WriteText ""
 
-  SceneVent = 1
+  SceneVent = 1 '- LD2.CreateItem SCENECOMPLETE, 0, 0, 0
   LD2.SetScene 0
   LarryIsThere% = 0
 
@@ -2194,30 +2198,11 @@ SUB SceneWeaponRoom
 
   DIM x AS INTEGER
 
-  BarneyTalk "Larry!"
-  Escaped% = LarryTalk("Hey barney.")
-  BarneyTalk "Glad to see your still alive."
-  Escaped% = LarryTalk("Why ofcourse...")
-  Escaped% = LarryTalk("I'm always alive.")
-  BarneyTalk "Atleast this time it's for a good thing."
-  BarneyTalk "Like the code-yellow access card."
-  BarneyTalk "Let me have it so I can make a copy."
-  Escaped% = LarryTalk("Wait a minute.")
-  Escaped% = LarryTalk("How do I know if you'll use this for good?")
-  Escaped% = LarryTalk("or evil?")
-  BarneyTalk "..."
-  Escaped% = LarryTalk("...")
-  BarneyTalk "Give me the card, Larry."
-  Escaped% = LarryTalk("Mmmm...")
-  Escaped% = LarryTalk("Okay.")
-  BarneyTalk "Now copying..."
-  Escaped% = LarryTalk("Hey...")
-  Escaped% = LarryTalk("Isn't that illegal?")
-  BarneyTalk "..."
-  Escaped% = LarryTalk("...")
-  BarneyTalk "Here's your card back."
-  BarneyTalk "Now let's head into the back room..."
-  BarneyTalk "and grab some stuff."
+  IF SCENE.Init("SCENE-WEAPONROOM-1A") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
   LD2.WriteText ""
 
   '- Barney runs to the left off the screen
@@ -2231,7 +2216,7 @@ SUB SceneWeaponRoom
     LD2.put x, 144, 45, idSCENE, 1
    
     'FOR i% = 1 TO 4
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
     'NEXT i%
  
     LD2.CopyBuffer 1, 0
@@ -2266,27 +2251,13 @@ SUB SceneWeaponRoom2
 
   DIM x AS INTEGER
 
-  BarneyTalk "Look what I got!"
-  Escaped% = LarryTalk("Hey!")
-  Escaped% = LarryTalk("That's not fair.")
-  Escaped% = LarryTalk("I found the yellow card...")
-  Escaped% = LarryTalk("so I should be entitled to first pick.")
-  BarneyTalk "Well, tuff luck kid."
-  Escaped% = LarryTalk("Kid?")
-  BarneyTalk "Meanwhile, our next job is to find..."
-  BarneyTalk "a code-red access card."
-  Escaped% = LarryTalk("What?!")
-  Escaped% = LarryTalk("Are you crazy?")
-  Escaped% = LarryTalk("It was hard enough trying to find a yellow one.")
-  Escaped% = LarryTalk("And you copied it before we went in so you...")
-  Escaped% = LarryTalk("could go rush in and have the first pick.")
-  Escaped% = LarryTalk("I knew you'd use the card for evil.")
-  Escaped% = LarryTalk("You evil man!")
-  BarneyTalk "Oh stop wining, Larry."
-  BarneyTalk "Now, let's find that red card."
-
+  IF SCENE.Init("SCENE-WEAPONROOM-2A") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
   LD2.WriteText ""
-
+  
   '- Barney runs to the right off the screen
   BarneyTalking% = 1
   FOR x = Barney.x TO Barney.x + 320
@@ -2298,7 +2269,7 @@ SUB SceneWeaponRoom2
     LD2.put x, 144, 45, idSCENE, 0
   
     'FOR i% = 1 TO 4
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    RetraceDelay 1
     'NEXT i%
 
     LD2.CopyBuffer 1, 0
@@ -2309,10 +2280,11 @@ SUB SceneWeaponRoom2
   Barney.x = 2000
 
   LarryPoint% = 0
-  Escaped% = LarryTalk("Tst!")
-  Escaped% = LarryTalk("I knew he would use the card for evil.")
-  Escaped% = LarryTalk("Oh well...")
-  Escaped% = LarryTalk("There should be lots of cool weapons in here.")
+  IF SCENE.Init("SCENE-WEAPONROOM-2B") THEN
+    DO WHILE SCENE.ReadScene%
+      Escaped% = SCENE.DoDialogue%: IF Escaped% THEN EXIT DO
+    LOOP
+  END IF
   LD2.WriteText ""
 
   LD2.SetPlayerFlip 0
@@ -2375,9 +2347,7 @@ FUNCTION SteveTalk% (Text AS STRING)
     LD2.put x, y, 14, idSCENE, Flip
    
     PutRestOfSceners
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
   
     LD2.CopyBuffer 1, 0
   
@@ -2388,9 +2358,7 @@ FUNCTION SteveTalk% (Text AS STRING)
     LD2.put x, y, 14, idSCENE, Flip
   
     PutRestOfSceners
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
 
     LD2.CopyBuffer 1, 0
     
@@ -2406,9 +2374,7 @@ FUNCTION SteveTalk% (Text AS STRING)
   LD2.put x, y, 14, idSCENE, Flip
   
   PutRestOfSceners
-  FOR i% = 1 TO 4
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 4
 
   LD2.CopyBuffer 1, 0
   SteveTalking% = 0
@@ -2452,9 +2418,7 @@ SUB TrooperTalk (Text AS STRING)
 
     PutRestOfSceners
   
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
  
     LD2.CopyBuffer 1, 0
  
@@ -2465,9 +2429,7 @@ SUB TrooperTalk (Text AS STRING)
   
     PutRestOfSceners
 
-    FOR i% = 1 TO 4
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    NEXT i%
+    RetraceDelay 4
 
     LD2.CopyBuffer 1, 0
 
@@ -2480,9 +2442,7 @@ SUB TrooperTalk (Text AS STRING)
 
   PutRestOfSceners
 
-  FOR i% = 1 TO 4
-    WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  NEXT i%
+  RetraceDelay 4
 
   LD2.CopyBuffer 1, 0
   TrooperTalking% = 0
@@ -2506,28 +2466,34 @@ END SUB
 FUNCTION SCENE.DoDialogue%
     
     DIM escaped AS INTEGER
+    DIM dialogue AS STRING
     DIM sid AS STRING
     
+    IF LD2.isDebugMode% THEN LD2.Debug "SCENE.DoDialogue%"
+    
     sid = UCASE$(LTRIM$(RTRIM$(SCENEDATA.speakerId)))
+    dialogue = LTRIM$(RTRIM$(SCENEDATA.speakerDialogue))
     
     SELECT CASE sid
     CASE "NARRATOR"
-        LD2.PopText SCENEDATA.speakerDialogue
+        LD2.PopText dialogue
     CASE "LARRY"
-        escaped =   LarryTalk%( SCENEDATA.speakerDialogue )
+        escaped =   LarryTalk%( dialogue )
     CASE "STEVE"
-        escaped =   SteveTalk%( SCENEDATA.speakerDialogue )
+        escaped =   SteveTalk%( dialogue )
     CASE "BARNEY"
-        'escaped =  BarneyTalk( SCENE.speakerDialogue )
-        BarneyTalk( SCENEDATA.speakerDialogue )
+        'escaped =  BarneyTalk( dialogue )
+        BarneyTalk( dialogue )
     CASE "JANITOR"
-        escaped = JanitorTalk%( SCENEDATA.speakerDialogue )
+        escaped = JanitorTalk%( dialogue )
     CASE "TROOPER"
-        'escaped = TrooperTalk( SCENE.speakerDialogue )
-        TrooperTalk( SCENEDATA.speakerDialogue )
+        'escaped = TrooperTalk( dialogue )
+        TrooperTalk( dialogue )
     END SELECT
     
-    SCENE.DoDialogue = escaped
+    LD2.Debug "d: "+dialogue
+    
+    SCENE.DoDialogue% = escaped
     
 END FUNCTION
 
@@ -2535,6 +2501,8 @@ FUNCTION SCENE.Init%(label AS STRING)
     
     DIM found AS INTEGER
     DIM row AS STRING
+    
+    IF LD2.isDebugMode% THEN LD2.Debug "SCENE.Init% ( "+label+" )"
     
     SCENEDATA.FileId = FREEFILE
     OPEN "data/scenes.txt" FOR INPUT AS SCENEDATA.FileId
@@ -2565,12 +2533,14 @@ FUNCTION SCENE.ReadScene%
     DIM row AS STRING
     DIM found AS INTEGER
     
+    IF LD2.isDebugMode% THEN LD2.Debug "SCENE.ReadScene%"
+    
     DO WHILE NOT EOF(SCENEDATA.FileId)
     
         LINE INPUT #SCENEDATA.FileId, row
-        row = UCASE$(LTRIM$(RTRIM$(row)))
+        row = LTRIM$(RTRIM$(row))
         
-        SELECT CASE row
+        SELECT CASE UCASE$(row)
         CASE "NARRATOR", "LARRY", "STEVE", "BARNEY", "JANITOR", "TROOPER"
             SCENE.SetSpeakerId(row)
         CASE "END"
@@ -2592,3 +2562,22 @@ FUNCTION SCENE.ReadScene%
     SCENE.ReadScene% = found
     
 END FUNCTION
+
+SUB RetraceDelay (qty AS INTEGER)
+    
+    DIM n AS INTEGER
+    FOR n = 0 to qty-1
+        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+    NExT n
+    
+END SUB
+
+SUB Delay (seconds AS DOUBLE)
+    
+    DIM endtime AS DOUBLE
+    
+    endtime = TIMER + seconds
+    
+    WHILE TIMER < endtime: WEND
+    
+END SUB

@@ -1,0 +1,805 @@
+SCENE-1A
+
+    LARRY
+    Well Steve, that was a good game of chess.
+
+    STEVE
+    Only because you won.
+    Wouldn't think so if I won.
+
+    LARRY
+    Are you jealous Steve?
+
+    STEVE
+    Uh...
+    No...infact I think your the one who's jealous.
+
+    LARRY
+    But I'm the guy who won.
+
+    STEVE
+    You're jealous because you didn't lose like me.
+
+    LARRY
+    Alright...
+    That's enough from you.
+
+    STEVE
+    Yeah, I guess so.
+    Well, I gotta get going.
+    Smell ya later.
+
+    LARRY
+    Yep...
+    Smell ya later.
+
+END
+
+SCENE-1B
+
+    STEVE
+    Hey, you got a quarter?
+
+    LARRY
+    No, but...
+    If you kick it, you get one for free.
+
+    STEVE
+    Well, I couldn't agree more.
+
+END
+
+SCENE-1C
+    
+    NARRATOR
+    Steve Drinks The Cola!
+    1 Minute Later
+
+END
+
+SCENE-1D
+    
+    STEVE
+    Larry...
+    I don't feel so good.
+    There's something in the cola...
+    ow...
+
+END
+
+SCENE-1E
+    
+    LARRY
+    Steve!
+    I gotta get help!
+
+END
+
+SCENE-1F
+    
+    NARRATOR
+    The Journey Begins...
+    Again!!
+
+END
+
+SCENE-3A
+    
+        LARRY
+    Hey!
+
+        JANITOR
+    What?
+    
+        LARRY
+    You a doctor?
+    
+    JANITOR
+    Why yes...
+
+END
+
+SCENE-3B
+    
+    JANITOR
+    I use this mop to suck diseases out of people.
+    
+    LARRY
+    This is NO time to be sarcastic!
+    My buddy got sick from something in the cola.
+    He needs help.
+    
+    JANITOR
+    Well, I was only being sarcastic about the mop.
+    I am a doctor.
+    
+    LARRY
+    Seriously?
+    
+    JANITOR
+    Well...
+    
+    LARRY
+    ...
+    
+    JANITOR
+    I used to be one.
+    
+    LARRY
+    Good enough.
+    He needs help fast.
+    Come on!
+
+END
+
+SCENE-3C
+    
+    NARRATOR
+    They Rush To Steve!
+
+END
+
+SCENE-3D
+    
+    JANITOR
+    So...
+    Something in the cola eh?
+    
+    LARRY
+    Apparently.
+    
+    JANITOR
+    Ok, let's see what I can do with him.
+
+END
+
+SCENE-5A
+    
+    LARRY
+    Come on!
+    Hurry up and open elevator!
+
+END
+
+SCENE 5-B
+    
+    LARRY
+    Barney!
+    
+    BARNEY
+    Why hello there.
+    
+    LARRY
+    Thanks man...
+    I owe you
+    
+    BARNEY
+    Actually, you do...
+    twenty bucks from losing that game of pool...
+    ...last night.
+    
+    LARRY
+    Oh yeah...
+    I was gonna get that to you...
+    ...but...
+    
+    BARNEY
+    Just forget about it.
+    If we get out of here alive...
+    then you owe me twenty.
+    
+    LARRY
+    What?
+    Are there more?
+    
+    BARNEY
+    Oh yeah.
+    The building's full of them.
+    
+    LARRY
+    Why?
+    
+    BARNEY
+    I'll explain later.
+    We gotta get to the weapons locker.
+    Come on.
+
+END
+
+SCENE-5C
+    
+    BARNEY
+    Here we are...
+    the weapons locker...
+    Oh, and here, take this.
+    That's a blue access card.
+    Come on Larry...
+    We gotta get you a weapon.
+
+END
+
+SCENE-7A
+    
+    LARRY
+    Wow!
+    I feel like I'm in The Matrix.
+    
+    BARNEY
+    OK, Larry, listen up...
+    This floor is where all the weapons are stored.
+    Grab whatever weapons you feel like.
+    Make sure you pack ammo too.
+    Be careful though...
+    You can only pack so much ammo...
+    So don't go trigger happy and lose all of it.
+    
+    LARRY
+    OK, I gotcha.
+    
+    BARNEY
+    OK...
+    Now here's the problem...
+    All the phones are dead.
+    Something's disconnected the main phone line.
+    So we can't call for help.
+    
+    LARRY
+    Darn!
+    
+    BARNEY
+    We can't access the lobby to get out of here...
+    Because the access level for that floor has...
+    been set to code-red.
+    And the maximum access I have is code-blue.
+    
+    LARRY
+    Darn!
+    
+    BARNEY
+    I just gave you an extra code-blue card.
+    That'll give you access to doors and rooms...
+    that require blue acess and anything lower...
+    which the only thing lower is green...
+    and everybody has access to green.
+    
+    LARRY
+    Cool!
+    
+    BARNEY
+    Meanwhile, this weapons locker dosen't have much.
+    The room behind me has alot more...
+    but...
+    it requires code-yellow access...
+    
+    LARRY
+    Darn!
+    
+    BARNEY
+    We need to split up and see if we can find...
+    a code-yellow access card.
+    
+    LARRY
+    Alright!
+    
+    BARNEY
+    Oh, and here's something else.
+    
+    LARRY
+    A walky-talky...
+    Cool!
+    
+    BARNEY
+    That's for us to keep in touch.
+    
+    LARRY
+    Well, duh.
+    
+    BARNEY
+    OK, Larry...
+    Let's move out.
+
+END
+
+SCENE-STEVE-GONE
+    
+    LARRY
+    Huh?
+    Where's steve?
+
+END
+
+SCENE-FLASHLIGHT-1A
+    
+    LARRY
+    Woah...
+    Where am I?
+    !!!
+    Steve!
+    Your alive!
+    
+    STEVE
+    Yep.
+    What do you remember?
+    
+    LARRY
+    Uh...
+    I was in a dark room...
+    
+    STEVE
+    And?
+    
+    LARRY
+    I was going to do something...
+    Then something hit my head...
+    and I woke up here.
+    
+    STEVE
+    Strange...
+    I woke up here too after I drank the cola.
+    
+    LARRY
+    Do you know about the aliens?
+    
+    STEVE
+    What?!
+    
+    LARRY
+    The buildings been invaded by them.
+    
+    STEVE
+    Not more aliens!
+    
+    LARRY
+    I'm afraid so.
+    
+    STEVE
+    ...
+    
+    LARRY
+    ...
+    
+    STEVE
+    But where are we?
+    
+    LARRY
+    I don't know.
+    I don't recognize this part of the building...
+    if we are in the building.
+    Hmm...
+    I still have my walky-talky.
+
+END
+
+SCENE-FLASHLIGHT-1B
+    
+    LARRY
+    Barney...come in...
+    Are you there? over...
+
+END
+
+SCENE-FLASHLIGHT-1C
+    
+    BARNEY
+    Hehehe...
+    
+    LARRY
+    Huh?
+    
+    BARNEY
+    This building's mine now.
+    
+    LARRY
+    !!!
+    What?!
+    
+    BARNEY
+    It's too bad for you, Larry.
+    I was thinking of letting you in on the deal...
+    but I knew you would be too stubborn.
+    
+    LARRY
+    What deal?
+    
+    BARNEY
+    The aliens have technology far superior to us...
+    It's only a matter of time before the earth...
+    is taken over and ruled by then.
+    So they contacted us for helping them make...
+    that happen faster.
+    
+    LARRY
+    Barney! You traitor!
+    
+    BARNEY
+    Hehehe...
+    I told you I would tell you what was going on.
+    
+    LARRY
+    What did you do to help the aliens, Barney!
+    
+    BARNEY
+    Me and some friends built a portal for them...
+    A portal that directly leads from our world...
+    to theirs, and their world to ours.
+    
+    LARRY
+    You're mad!
+    
+    BARNEY
+    Mad!
+    I'll tell you what's mad...
+    Mad is believing that we can stop these...
+    high-tech aliens from invading our planet.
+    
+    LARRY
+    Our planet?!
+    You've betrayed this planet.
+    
+    BARNEY
+    I saved it is what.
+    Now, since I've got you trapped in there...
+    There's no one that can stop me now.
+    Hehehe...
+    
+    LARRY
+    ...
+
+END
+
+SCENE-FLASHLIGHT-1D
+    
+    STEVE
+    ...
+    What do we do?
+    
+    LARRY
+    First, we should find a way out of here.
+    
+    STEVE
+    We can't.
+    
+    LARRY
+    What?
+    
+    STEVE
+    I've searched everywhere...
+    There's no way out...
+
+END
+
+SCENE-FLASHLIGHT-2A
+    
+    LARRY
+    Hmm...
+    The vent's open.
+    Steve!
+    
+    NARRATOR
+    Larry and Steve crawl through the vent
+
+END
+
+SCENE-FLASHLIGHT-2B
+    
+    LARRY
+    Steve.
+    
+    STEVE
+    What?
+    
+    LARRY
+    I thought you said you looked everywhere...
+    
+    STEVE
+    Uh...
+    I thought I did...
+    
+    LARRY
+    Whatever...
+    Room 7 is the weapon's locker.
+    Here's a copy of a code-yellow access card.
+    
+    STEVE
+    ...
+    And?
+    
+    LARRY
+    Sorry...you've been stuck in a room all this
+    time. You aren't aware.
+    
+    STEVE
+    Ah jeez! I don't need more bad news.
+    I thought you already gave me the bad news!
+    Aliens are inside the building. Check.
+    ...
+    What else is there worth noting?
+    
+    LARRY
+    We're trapped inside with them.
+    
+    STEVE
+    !!!
+
+    LARRY
+    The lobby doors are set to code-red.
+    We're not leaving until we find a red card.
+    
+    STEVE
+    Oh...
+    Okay...
+    
+    LARRY
+    This yellow card will help you get around the...
+    building, through green, blue, and yellow doors.
+    
+    STEVE
+    Cool!
+    ...
+    Here's something I found...
+    Look's like it's half of a card.
+    
+    LARRY
+    Thanks...
+    We've got to find the code-red access card...
+    before barney does.
+    He needs it for something...
+    And I'm guessing he wants it for the room above.
+    Let's go.
+
+END
+
+SCENE-PORTAL-1A
+    
+    LARRY
+    Huh!
+
+END
+
+SCENE-PORTAL-1B
+    
+    BARNEY
+    Hello, Larry...
+    
+    STEVE
+    Larry!
+    It's a trap!
+    
+    LARRY
+    Thanks, Steve...
+    but it's kinda late for that.
+    
+    BARNEY
+    I see you managed to escape and find a red card.
+    
+    LARRY
+    Glad to see that you found one too.
+    
+    BARNEY
+    Yep...
+    Steve also found one.
+    
+    STEVE
+    Plus 1 for me!
+    
+    LARRY
+    Talk about the timing.
+    
+    BARNEY
+    It's a shame I was here first.
+    Now I can finally reopen this portal.
+    
+    LARRY
+    Reopen?
+    
+    BARNEY
+    Hahaha!!!
+    Larry, you still make me laugh.
+    How do you think the aliens got here in the
+    first place?
+    
+    LARRY
+    *Shrugs*
+    
+    BARNEY
+    Anyway...
+    It's good to get one last laugh in.
+    One last laugh before you meet your fate.
+    
+    LARRY
+    Sorry, pal...
+    It'll be your last laugh.
+    Like...ever...
+    
+    STEVE
+    Yeah! You tell him, Larry!
+    
+    LARRY
+    *Face palm*
+    
+    BARNEY
+    That's a bold statement coming from you.
+    More like desperate considering your position.
+    ...
+    Now...let's get back to more serious matters.
+    ...
+    Because now...
+    It's time to die!
+
+END
+
+SCENE-PORTAL-1C
+    
+    LARRY
+    Steve!
+    Barney! That was uncalled for!
+    
+    BARNEY
+    It dosen't matter if it was uncalled for...
+    You two looked too much alike...
+    I couldn't take it anymore!
+    
+    LARRY
+    That's it, Barney!
+    
+    BARNEY
+    I'm gonna save you, Larry...
+    Your going to live to see this alien world...
+    that you've been fighting for so long.
+    
+    LARRY
+    Why didn't you kill me before?
+    
+    BARNEY
+    Uh...
+    I kind of...locked myself out...
+    So I needed help finding access cards.
+    Anyway...
+
+END
+
+SCENE-PORTAL-1D
+    
+    BARNEY
+    Open the portal to the jungle area.
+    
+    TROPPER
+    Are you mad?!
+    You just can't open up a portal to the middle...
+    of the jungle!
+    
+    BARNEY
+    Oh, shut up!
+    I can do what I want!
+
+END
+
+SCENE-PORTAL-1E
+
+    LARRY
+    Jeez, man!
+
+END
+
+SCENE-PORTAL-1F
+    
+    LARRY
+    Stop killing!
+    
+    BARNEY
+    You shut up!
+    Or I'll kill you too!
+    Now...
+    Let's open this portal...
+    
+    NARRATOR
+    The Portal Opens...
+
+END
+
+SCENE-WEAPONROOM-1A
+    
+    BARNEY
+    Larry!
+    
+    LARRY
+    Hey, Barney.
+    
+    BARNEY
+    Glad to see you're still alive.
+    
+    LARRY
+    Why, of course...
+    I'm always alive.
+    
+    BARNEY
+    At least this time it's for a good thing...
+    like the code-yellow access card.
+    Let me have it so I can make a copy.
+    
+    LARRY
+    Wait a minute.
+    How do I know if you'll use this card for good?"
+    Or for evil?
+    
+    BARNEY
+    ...
+    ...
+    Give me the card, Larry.
+    
+    LARRY
+    Hmm...
+    Okay.
+    
+    BARNEY
+    Now copying...
+    
+    LARRY
+    Hey...
+    Isn't that illegal?
+    
+    BARNEY
+    ...
+    
+    LARRY
+    ...
+    
+    BARNEY
+    Copying complete!
+    Here's your card back.
+    Now, let's head into the back room...
+    and grab some stuff.
+    
+END
+
+SCENE-WEAPONROOM-2A
+    
+    BARNEY
+    Look what I got!
+    
+    LARRY
+    Hey!
+    That's not fair.
+    I found the yellow card...
+    so I should be entitled to first pick.
+    
+    BARNEY
+    Entitled?
+    You were entitled to die before I stepped out...
+    of the elevator and saved your life.
+    
+    LARRY
+    ...
+    
+    BARNEY
+    Meanwhile, our next job is to find...
+    a code-red access card.
+    
+    LARRY
+    What?!
+    Are you crazy?
+    It was hard enough to find a yellow one.
+    And you copied it before we went in so you...
+    could rush in and have the first pick.
+    I knew you'd use the card for evil!
+    
+    BARNEY
+    Oh, will you stop whining and get with it?
+    
+    LARRY
+    ...
+    
+    BARNEY
+    Now, let's find that red card.
+    
+END
+
+SCENE-WEAPONROOM-2B
+    
+    LARRY
+    Tst!
+    I knew he would use the card for evil.
+    Oh well...
+    There should be lots of cool weapons in here.
+    
+END

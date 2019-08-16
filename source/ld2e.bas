@@ -10,34 +10,56 @@
 
 ' jump and shoot to shatter glass windows???
 ' press down to pick something up (graphic of larry bending down grabbing something)
+' fill not working
+' floor/wall checks (bitmap) not working
+' marks floors that player has been too
+' crawl under tight areas (engine room)
+' every few rooms have restrooms in the back (or somewhere)
+' mess hall -- freezer, kitchen/fryer, pantry
 
   REM $DYNAMIC
+  
+  LD2.Debug "!debugstart!"
+  LD2.Debug "FREE MEMORY:"+STR$(FRE(-1))
   
   A& = SETMEM(-180000)
   
   DIM SHARED Buffer1(32000) AS INTEGER    '- Offscreen buffer
   DIM SHARED Buffer2(32000) AS INTEGER    '- Offscreen buffer
-
-  DIM SHARED sTile(26000) AS INTEGER      '- GFX Tiles (120 standard + 80 mixed)
-  DIM SHARED sEnemy(5980) AS INTEGER      '- GFX Enemies
-  DIM SHARED sLarry(6110) AS INTEGER      '- GFX Larry
-  DIM SHARED sGuts(2080) AS INTEGER       '- GFX Guts
-  DIM SHARED sLight(5720) AS INTEGER      '- GFX Lighting
-  DIM SHARED sFont(1003) AS INTEGER       '- GFX Font
-  DIM SHARED sScene(14170) AS INTEGER     '- GFX Scenes
-  DIM SHARED sObject(3640) AS INTEGER     '- GFX Objects
- 
+  
+  DIM SHARED LarryFile   AS STRING: LarryFile   = "gfx\pp256\images\larry2.put"
+  DIM SHARED TilesFile   AS STRING: TilesFile   = "gfx\pp256\images\ld2tiles.put"  
+  DIM SHARED LightFile   AS STRING: LightFile   = "gfx\ld2light.put"
+  DIM SHARED EnemiesFile AS STRING: EnemiesFile = "gfx\enemies.put"
+  DIM SHARED GutsFile    AS STRING: GutsFile    = "gfx\ld2guts.put"
+  DIM SHARED SceneFile   AS STRING: SceneFile   = "gfx\ld2scene.put"
+  DIM SHARED ObjectsFile AS STRING: ObjectsFile = "gfx\objects.put"
+  DIM SHARED BossFile    AS STRING: BossFile    = "gfx\boss1.put"
+  DIM SHARED FontFile    AS STRING: FontFile    = "gfx\font1.put"
+  
+  DIM SHARED sLarry ( File.getAllocSize&( LarryFile   )) AS INTEGER
+  DIM SHARED sTile  ( File.getAllocSize&( TilesFile   )+(80*130) ) AS INTEGER
+  DIM SHARED sLight ( File.getAllocSize&( LightFile   )) AS INTEGER
+  DIM SHARED sEnemy ( File.getAllocSize&( EnemiesFile )) AS INTEGER
+  DIM SHARED sGuts  ( File.getAllocSize&( GutsFile    )) AS INTEGER
+  DIM SHARED sScene ( File.getAllocSize&( SceneFile   )) AS INTEGER
+  DIM SHARED sObject( File.getAllocSize&( ObjectsFile )) AS INTEGER
+  DIM SHARED sFont  ( File.getAllocSize&( FontFile    )) AS INTEGER
+  
+  LD2.Debug "FREE MEMORY (post sprites alloc ):"+STR$(FRE(-1))
+                                          
   DIM SHARED TileMap(1307) AS INTEGER     '- 2400 = 200*12 // 1206 = 201*12 (divide by 2)
   DIM SHARED MixMap(1307) AS INTEGER      '- 2400 = 200*12 // 1206 = 201*12 (divide by 2)
   DIM SHARED LightMap1(1307) AS INTEGER   '- 2400 = 200*12
   DIM SHARED LightMap2(1307) AS INTEGER   '- 2400 = 200*12
   DIM SHARED AniMap(1307) AS INTEGER      '- 2400 = 200*12
-  DIM SHARED FloorMap(169) AS INTEGER     '- 169  = 200/16(bits) = 12.5 (13) * (13 rows)
+  DIM SHARED FloorMap(163) AS INTEGER     '- 163  = 200/16(bits) = 12.5 (13) * (13 rows)
   DIM SHARED CurrentWeapon AS INTEGER
   DIM SHARED Gravity AS SINGLE
-  DIM SHARED NumEntities AS INTEGER
   DIM SHARED NumGuts AS INTEGER
- 
+  
+  LD2.Debug "FREE MEMORY (post maps alloc ):"+STR$(FRE(-1))
+  
   DIM SHARED Message1 AS STRING
   DIM SHARED SceneMode AS INTEGER
   DIM SHARED HasShotgun AS INTEGER
@@ -50,21 +72,14 @@
   
   CONST PI = 3.141592
 
-  TYPE tEntity
-    id AS INTEGER
-    x AS SINGLE
-    y AS SINGLE
-    flip AS INTEGER
-    velocity AS SINGLE
-    ani AS SINGLE
-    counter AS SINGLE
-    flag AS INTEGER
-    hit AS SINGLE
-    life AS INTEGER
-    shooting AS INTEGER
-    state AS INTEGER
-  END TYPE: DIM SHARED Entity(30) AS tEntity
-  
+CONST MAXGUTS      = 100
+CONST MAXITEMS     = 100 '- per room in case you move everything to another room?
+CONST MAXDOORS     =  15 '- per room
+CONST MAXFLOORS    =  23
+CONST MAXINVENTORY =   7
+
+CONST MAXTILES = 120
+
   DIM SHARED Player AS tPlayer
 
   TYPE tGuts
@@ -75,7 +90,7 @@
     id AS INTEGER
     flip AS INTEGER
     count AS INTEGER
-  END TYPE: DIM SHARED Guts(100) AS tGuts
+  END TYPE: DIM SHARED Guts(MAXGUTS) AS tGuts
  
   TYPE tElevator
     x1 AS INTEGER
@@ -88,7 +103,7 @@
     x AS INTEGER
     y AS INTEGER
     item AS INTEGER
-  END TYPE: DIM SHARED item(100, 23) AS tItem
+  END TYPE: DIM SHARED item(MAXITEMS, MAXFLOORS) AS tItem
 
   TYPE tDoor
     x1 AS INTEGER
@@ -100,20 +115,26 @@
     anicount AS SINGLE
     mx AS INTEGER
     my AS INTEGER
-  END TYPE: DIM SHARED Door(50) AS tDoor
+  END TYPE: DIM SHARED Door(15) AS tDoor
+  
+  'TYPE tRoomData
+  '  numItems AS INTEGER
+  '  numDoors AS INTEGER
+  'END TYPE
  
   DIM SHARED XShift AS DOUBLE
   DIM SHARED CurrentRoom AS INTEGER
-  DIM SHARED NumItems(23) AS INTEGER
-  DIM SHARED WentToRoom(23) AS INTEGER
-  DIM SHARED LoadBackup(23) AS INTEGER
+  DIM SHARED NumItems(MAXFLOORS) AS INTEGER
+  DIM SHARED WentToRoom(MAXFLOORS) AS INTEGER
+  DIM SHARED LoadBackup(MAXFLOORS) AS INTEGER
   DIM SHARED Animation AS SINGLE
   DIM SHARED NumDoors AS INTEGER
   DIM SHARED BossNum AS INTEGER
   DIM SHARED ShowLife AS INTEGER
+  
   Animation = 1
   
-  DIM SHARED Inventory(7) AS tInventory
+  DIM SHARED Inventory(MAXINVENTORY) AS tInventory
  
   CONST EPS = 130
   
@@ -133,10 +154,8 @@
   DIM SHARED BitmapOff   AS INTEGER
   DIM SHARED BitmapPitch AS INTEGER
   
-  CONST MAXTILES = 120
-  
   DIM SHARED GameArgs AS STRING
-  GameArgs = "TEST" '//COMMAND$
+  GameArgs = COMMAND$
   
   DIM SHARED GameMode AS INTEGER
   
@@ -193,7 +212,34 @@ SELECT CASE T
 END SELECT
 END FUNCTION
 
-DEFSNG A-Z
+FUNCTION File.getSize&(filename AS STRING)
+    
+    DIM fileNum AS INTEGER
+    DIM fileSize AS LONG
+    
+    fileNum = FREEFILE
+    OPEN filename FOR BINARY AS fileNum
+        fileSize = LOF(fileNum)
+    CLOSE fileNum
+    
+    File.getSize& = fileSize
+    
+END FUNCTION
+
+FUNCTION File.getAllocSize&(filename AS STRING)
+    
+    DIM fileSize AS LONG
+    
+    fileSize = File.getSize&(filename)
+    fileSize = (fileSize - 7)\2
+    
+    File.getAllocSize& = fileSize
+    
+    LD2.Debug "Allocating"+STR$(filesize)+" ints for "+filename
+    
+END FUNCTION
+
+DEFINT A-Z
 SUB LD2.AddAmmo (Kind AS INTEGER, Amount AS INTEGER)
 
 
@@ -232,6 +278,11 @@ FUNCTION LD2.AddToStatus% (item AS INTEGER, Amount AS INTEGER)
     END IF
   NEXT i
   
+  SELECT CASE item
+    CASE GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
+      LD2.RefreshPlayerAccess
+  END SELECT
+  
   IF added THEN
     LD2.AddToStatus% = 0
   ELSE
@@ -260,103 +311,56 @@ FUNCTION LD2.GetStatusAmount% (slot AS INTEGER)
     
 END FUNCTION
 
-FUNCTION LD2.CheckFloorHit% (NumEntity AS INTEGER)
-
-  DIM bitTable(15) AS INTEGER
+FUNCTION LD2.CheckPlayerFloorHit%
   
-  bitTable(15) = 1
-  bitTable(14) = 2
-  bitTable(13) = 4
-  bitTable(12) = 8
-  bitTable(11) = &h10
-  bitTable(10) = &h20
-  bitTable(9)  = &h40
-  bitTable(8)  = &h80
-  bitTable(7)  = &h100
-  bitTable(6)  = &h200
-  bitTable(5)  = &h400
-  bitTable(4)  = &h800
-  bitTable(3)  = &h1000
-  bitTable(2)  = &h2000
-  bitTable(1)  = &h4000
-  bitTable(0)  = &h8000
-
-  '- Check if the player is on something
-  '-------------------------------------
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
  
-  IF NumEntity = 0 THEN
-
-    DEF SEG = VARSEG(TileMap(0))
-    FOR x% = 2 TO 13 STEP 11
-      px% = INT(Player.x + XShift + x%) \ 16: py% = INT(Player.y) \ 16
-      p% = FloorMap((px%\16) + (py% + 1) * 13)
-      IF (bitTable(px% AND 15) AND p%) <> 0 THEN LD2.CheckFloorHit% = 1: EXIT FUNCTION
-    NEXT x%
-    DEF SEG
-
-  ELSE
-
-    DEF SEG = VARSEG(TileMap(0))
-    FOR x% = 0 TO 15 STEP 15
-      px% = INT(Entity(NumEntity).x + x%) \ 16: py% = INT(Entity(NumEntity).y) \ 16
-      p% = FloorMap((px%\16) + (py% + 1) * 13)
-      IF (bitTable(px% AND 15) AND p%) <> 0 THEN LD2.CheckFloorHit% = 1: EXIT FUNCTION
-    NEXT x%
-    DEF SEG
-
-  END IF
+  FOR x% = 2 TO 13 STEP 11
+    px% = INT(Player.x + XShift + x%) \ 16: py% = INT(Player.y) \ 16
+    p% = PeekBitmap%(px%, py%+1)
+    IF p% THEN LD2.CheckPlayerFloorHit% = 1: EXIT FUNCTION
+  NEXT x%
  
 END FUNCTION
 
-FUNCTION LD2.CheckWallHit% (NumEntity AS INTEGER)
-
-  '- Check if the player has hit a wall
-  '------------------------------------
-  DIM bitTable(15) AS INTEGER
+FUNCTION LD2.CheckMobFloorHit% (mob AS MobType)
   
-  bitTable(15) = 1
-  bitTable(14) = 2
-  bitTable(13) = 4
-  bitTable(12) = 8
-  bitTable(11) = &h10
-  bitTable(10) = &h20
-  bitTable(9)  = &h40
-  bitTable(8)  = &h80
-  bitTable(7)  = &h100
-  bitTable(6)  = &h200
-  bitTable(5)  = &h400
-  bitTable(4)  = &h800
-  bitTable(3)  = &h1000
-  bitTable(2)  = &h2000
-  bitTable(1)  = &h4000
-  bitTable(0)  = &h8000
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
+ 
+  FOR x% = 2 TO 13 STEP 11
+    px% = INT(mob.x + x%) \ 16: py% = INT(mob.y) \ 16
+    p% = PeekBitmap%(px%, py%+1)
+    IF p% THEN LD2.CheckMobFloorHit% = 1: EXIT FUNCTION
+  NEXT x%
+  
+END FUNCTION
 
-  IF NumEntity = 0 THEN
+FUNCTION LD2.CheckPlayerWallHit%
+  
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
+  
+  FOR y% = 0 TO 15 STEP 15
+    FOR x% = 0 TO 15 STEP 15
+      px% = INT(Player.x + XShift + x%) \ 16: py% = INT(Player.y + y%) \ 16
+      p% = PeekBitmap%(px%, py%)
+      IF p% THEN LD2.CheckPlayerWallHit% = 1: EXIT FUNCTION
+    NEXT x%
+  NEXT y%
+  
+END FUNCTION
 
-    DEF SEG = VARSEG(TileMap(0))
-    FOR y% = 0 TO 15 STEP 15
-      FOR x% = 0 TO 15 STEP 15
-        px% = INT(Player.x + XShift + x%) \ 16: py% = INT(Player.y + y%) \ 16
-        p% = FloorMap((px%\16) + py% * 13)
-        IF (bitTable(px% AND 15) AND p%) <> 0 THEN LD2.CheckWallHit% = 1: EXIT FUNCTION
-      NEXT x%
-    NEXT y%
-    DEF SEG
-
-  ELSE
-
-    DEF SEG = VARSEG(TileMap(0))
-    FOR y% = 0 TO 15 STEP 15
-      FOR x% = 0 TO 15 STEP 15
-        px% = INT(Entity(NumEntity).x + x%) \ 16: py% = INT(Entity(NumEntity).y + y%) \ 16
-        p% = FloorMap((px%\16) + py% * 13)
-        IF (bitTable(px% AND 15) AND p%) <> 0 THEN LD2.CheckWallHit% = 1: EXIT FUNCTION
-      NEXT x%
-    NEXT y%
-    DEF SEG
-
-  END IF
-
+FUNCTION LD2.CheckMobWallHit% (mob AS MobType)
+  
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
+  
+  FOR y% = 0 TO 15 STEP 15
+    FOR x% = 0 TO 15 STEP 15
+      px% = INT(mob.x + x%) \ 16: py% = INT(mob.y + y%) \ 16
+      p% = PeekBitmap%(px%, py%)
+      IF p% THEN LD2.CheckMobWallHit% = 1: EXIT FUNCTION
+    NEXT x%
+  NEXT y%
+  
 END FUNCTION
 
 SUB LD2.cls (BufferNum AS INTEGER, Col AS INTEGER)
@@ -372,24 +376,32 @@ END SUB
 
 SUB LD2.fill (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, buffer AS INTEGER)
     
+    DIM bufferSeg AS INTEGER
+    
     IF (buffer < 0) OR (buffer > 2) THEN RETURN
     
-    IF buffer = 0 THEN DEF SEG = &HA000
-    IF buffer = 1 THEN DEF SEG = VARSEG(Buffer1(0))
-    IF buffer = 2 THEN DEF SEG = VARSEG(Buffer2(0))
+    IF buffer = 0 THEN bufferSeg = &HA000
+    IF buffer = 1 THEN bufferSeg = VARSEG(Buffer1(0))
+    IF buffer = 2 THEN bufferSeg = VARSEG(Buffer2(0))
     
-    n& = x + y * 320
+    LD2fill x, y, w, h, col, bufferSeg
     
-    '- TODO: make this assembler
-    FOR sy% = 0 TO h-1
-        FOR sx% = 0 TO w-1
-            POKE n&, col
-            n& = n& + 1
-        NEXT sx%
-        n& = n& + (320-w)
-    NEXT sy%
+END SUB
+
+SUB LD2.fillCircle (x AS INTEGER, y AS INTEGER, r AS INTEGER, col AS INTEGER, buffer AS INTEGER)
     
-    DEF SEG
+    DIM bufferSeg AS INTEGER
+    
+    IF (buffer < 0) OR (buffer > 2) THEN RETURN
+    
+    IF buffer = 0 THEN bufferSeg = &HA000
+    IF buffer = 1 THEN bufferSeg = VARSEG(Buffer1(0))
+    IF buffer = 2 THEN bufferSeg = VARSEG(Buffer2(0))
+    
+    'LD2fill x, y, w, h, col, bufferSeg
+    'r2 = x2 + y2
+    'x2 = y2 - r2
+    'x = (sqrt(y2 - r2) + xarg)*2-1
     
 END SUB
 
@@ -404,53 +416,23 @@ SUB LD2.CopyBuffer (Buffer1 AS INTEGER, Buffer2 AS INTEGER)
 
 END SUB
 
-SUB LD2.CreateEntity (x AS INTEGER, y AS INTEGER, id AS INTEGER)
+SUB LD2.CreateMob (x AS INTEGER, y AS INTEGER, id AS INTEGER)
 
-  '- Create an entity
-  '------------------
+  DIM mob AS MobType
+  
+  mob.x     = x
+  mob.y     = y
+  mob.id    = id
+  mob.life  = -99
+  mob.state = SPAWNED
 
-  NumEntities = NumEntities + 1
-  nm% = NumEntities
-
-  Entity(nm%).x = x
-  Entity(nm%).y = y
-  Entity(nm%).id = id
-  Entity(nm%).life = -99
-  Entity(nm%).state = SPAWNED
+  Mobs.add mob
 
 END SUB
 
-SUB LD2.CreateItem (x AS INTEGER, y AS INTEGER, item AS INTEGER, EntityNum AS INTEGER)
+SUB LD2.DeleteMob (mob AS MobType)
 
-  '- create an item
-
-  DIM i AS INTEGER
-  DIM EN AS INTEGER
-  DIM cr AS INTEGER
- 
-  NumItems = NumItems + 1
-  i = NumItems
-  EN = EntityNum
-  cr = CurrentRoom
-
-  IF EN = 0 THEN
-    item(i, cr).x = x
-    item(i, cr).y = y
-  ELSE
-    item(i, cr).x = Entity(EN).x
-    item(i, cr).y = Entity(EN).y
-  END IF
-
-  item(i, cr).item = item
-
-END SUB
-
-SUB LD2.DeleteEntity (NumEntity AS INTEGER)
-
-  '- Delete an entity
-  '------------------
-
-  SELECT CASE Entity(NumEntity).id
+  SELECT CASE mob.id
     CASE BOSS1
       LD2.StopMusic
     CASE idBOSS2
@@ -458,15 +440,42 @@ SUB LD2.DeleteEntity (NumEntity AS INTEGER)
       LD2.SetAccessLevel CODERED
   END SELECT
  
-  IF Player.flip = 0 THEN LD2.MakeGuts Entity(NumEntity).x + 8, Entity(NumEntity).y + 8, INT(4 * RND(1)) + 4, 1
-  IF Player.flip = 1 THEN LD2.MakeGuts Entity(NumEntity).x + 8, Entity(NumEntity).y + 8, INT(4 * RND(1)) + 4, -1
-  FOR i% = NumEntity TO NumEntities - 1
-    Entity(i%) = Entity(i% + 1)
+  IF Player.flip = 0 THEN LD2.MakeGuts mob.x + 8, mob.y + 8, INT(4 * RND(1)) + 4,  1
+  IF Player.flip = 1 THEN LD2.MakeGuts mob.x + 8, mob.y + 8, INT(4 * RND(1)) + 4, -1
+  FOR i% = 0 TO 4
+    LD2.MakeSparks mob.x + 7, mob.y + 8,  1, -RND(1)*5
+    LD2.MakeSparks mob.x + 7, mob.y + 8,  1,  RND(1)*5
   NEXT i%
-  NumEntities = NumEntities - 1
- 
-  '- Send message that entity is deleted
+  
+  Mobs.remove mob
+  
   LD2.SendMessage msgENTITYDELETED, NumEntity
+
+END SUB
+
+SUB LD2.CreateItem (x AS INTEGER, y AS INTEGER, item AS INTEGER, mobId AS INTEGER)
+
+  '- create an item
+
+  DIM i AS INTEGER
+  DIM EN AS INTEGER
+  DIM cr AS INTEGER
+  DIM mob AS MobType
+ 
+  NumItems = NumItems + 1
+  i = NumItems
+  cr = CurrentRoom
+
+  IF mobId = 0 THEN
+    item(i, cr).x = x
+    item(i, cr).y = y
+  ELSE
+    Mobs.getMob mob, mobId
+    item(i, cr).x = mob.x
+    item(i, cr).y = mob.y
+  END IF
+
+  item(i, cr).item = item
 
 END SUB
 
@@ -498,44 +507,67 @@ SUB LD2.Drop (item%)
   item(n%, CurrentRoom).item = item% - 1
 
   SELECT CASE item%
-    CASE GREENCARD
-      IF Player.code = 1 THEN
-        Player.code = 0
-        LD2.SetCodeLevel 0
-      END IF
-    CASE BLUECARD
-      IF Player.code = 2 THEN
-        Player.code = 0
-        LD2.SetCodeLevel 0
-      END IF
-    CASE YELLOWCARD
-      IF Player.code = 3 THEN
-        Player.code = 0
-        LD2.SetCodeLevel 0
-      END IF
-    CASE REDCARD
-      IF Player.code = 4 THEN
-        Player.code = 0
-        LD2.SetCodeLevel 0
-      END IF
-    CASE WHITECARD
-      Player.WHITECARD = 0
+    CASE GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
+      LD2.RefreshPlayerAccess
   END SELECT
   IF Player.weapon1 = item% - 20 THEN LD2.SetWeapon1 0
  
+END SUB
+
+SUB LD2.RefreshPlayerAccess
+    
+    DIM i AS INTEGER
+    DIM item AS INTEGER
+    DIM maxLevel AS INTEGER
+    
+    Player.code      = 0
+    Player.whitecard = 0
+    LD2.SetCodeLevel 0
+    
+    maxLevel = CODENOTHING
+    FOR i = 0 TO 7
+        item = Inventory(i).id
+        SELECT CASE item
+        CASE GREENCARD
+            IF maxLevel < CODEGREEN  THEN maxLevel = CODEGREEN
+        CASE BLUECARD
+            IF maxLevel < CODEBLUE   THEN maxLevel = CODEBLUE
+        CASE YELLOWCARD
+            IF maxLevel < CODEYELLOW THEN maxLevel = CODEYELLOW
+        CASE REDCARD
+            IF maxLevel < CODERED    THEN maxLevel = CODERED
+        CASE WHITECARD
+            Player.WHITECARD = 1
+        END SELECT
+    NEXT i
+    
+    Player.code = maxLevel
+    LD2.SetCodeLevel maxLevel
+
 END SUB
 
 SUB LD2.Init
 
   '- Initialize Larry The Dinosaur II
   '----------------------------------
+  IF (GameArgs = "TEST") THEN
+    LD2.SetGameMode TESTMODE
+  END IF
+  IF (GameArgs = "DEBUG") THEN
+    LD2.SetGameMode DEBUGMODE
+  END IF
+  
+  IF Game.isDebugMode% THEN
+    LD2.Debug "LD2.Init"
+  END IF
   
   LD2.InitSound
+  Mobs.Init
   
   SCREEN 13
  
   LD2.LoadPalette "gfx\gradient.pal"
-  LD2.LoadSprite "gfx\font1.put", idFONT
+  LD2.LoadSprite FontFile, idFONT
  
   DIM Message AS STRING
 '
@@ -639,14 +671,14 @@ SUB LD2.Init
     NEXT
   DEF SEG
   
-  LD2.LoadSprite "gfx\ld2light.put", idLIGHT
-  LD2.LoadSprite "gfx\pp256\images\ld2tiles.put", idTILE
-  LD2.LoadSprite "gfx\enemies.put", idENEMY
-  LD2.LoadSprite "gfx\pp256\images\larry2.put", idLARRY
-  LD2.LoadSprite "gfx\ld2guts.put", idGUTS
-  LD2.LoadSprite "gfx\ld2scene.put", idSCENE
-  LD2.LoadSprite "gfx\objects.put", idOBJECT
-  LD2.LoadSprite "gfx\boss1.put", idBOSS
+  LD2.LoadSprite LarryFile  , idLARRY  
+  LD2.LoadSprite TilesFile  , idTILE
+  LD2.LoadSprite LightFile  , idLIGHT
+  LD2.LoadSprite EnemiesFile, idENEMY
+  LD2.LoadSprite GutsFile   , idGUTS
+  LD2.LoadSprite SceneFile  , idSCENE
+  LD2.LoadSprite ObjectsFile, idOBJECT
+  LD2.LoadSprite BossFile   , idBOSS
   
   'DEF SEG = VARSEG(Buffer2(0))
   '  BLOAD "gfx\back1.bsv", 0
@@ -664,7 +696,7 @@ SUB LD2.Init
   'end
   
   'Gravity = .04
-  Gravity = .05
+  Gravity = .06
   XShift  = 0
   
 END SUB
@@ -676,19 +708,22 @@ SUB LD2.InitPlayer(p AS tPlayer)
 END SUB
 
 SUB LD2.JumpPlayer (Amount AS SINGLE)
- 
-  '- Make the player jump if he can do so
-  '--------------------------------------
+  
+  IF (TIMER - Player.landtime) < 0.15 THEN
+    EXIT SUB
+  END IF
   
   IF Player.weapon = FIST THEN
     Amount = Amount * 1.1
   END IF
 
-  IF LD2.CheckFloorHit%(0) AND Player.velocity >= 0 THEN
+  IF LD2.CheckPlayerFloorHit% AND Player.velocity >= 0 THEN
     Player.velocity = -Amount
     Player.y = Player.y + Player.velocity*DELAYMOD
   END IF
-
+  
+  LD2.setPlayerState( JUMPING )
+  
 END SUB
 
 SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER)
@@ -809,7 +844,9 @@ SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER
 END SUB
 
 SUB LD2.LoadMap (Filename AS STRING)
-
+  
+  IF LD2.isDebugMode% THEN LD2.Debug "LD2.LoadMap ( "+filename+" )"
+  
   '- Load the map
   '--------------
   DIM Message AS STRING
@@ -828,25 +865,6 @@ SUB LD2.LoadMap (Filename AS STRING)
   WAIT &H3DA, 8: WAIT &H3DA, 8, 8
   LD2.CopyBuffer 1, 0
   
-  DIM bitTable(15) AS INTEGER
-  
-  bitTable(15) = 1
-  bitTable(14) = 2
-  bitTable(13) = 4
-  bitTable(12) = 8
-  bitTable(11) = &h10
-  bitTable(10) = &h20
-  bitTable(9)  = &h40
-  bitTable(8)  = &h80
-  bitTable(7)  = &h100
-  bitTable(6)  = &h200
-  bitTable(5)  = &h400
-  bitTable(4)  = &h800
-  bitTable(3)  = &h1000
-  bitTable(2)  = &h2000
-  bitTable(1)  = &h4000
-  bitTable(0)  = &h8000
-
   NumDoors = 0
   Player.tempcode = 0
   DIM byte AS STRING * 1
@@ -858,6 +876,8 @@ SUB LD2.LoadMap (Filename AS STRING)
   END IF
 
   WentToRoom(CurrentRoom) = 1
+  
+  Mobs.Clear
 
   'IF LoadBackup(CurrentRoom) THEN Filename = RIGHT$(STR$(CurrentRoom), LEN(CurrentRoom)) + "bth.ld2"
  
@@ -934,14 +954,15 @@ SUB LD2.LoadMap (Filename AS STRING)
       GET #MapFile, c&, byte: c& = c& + 1
       GET #MapFile, c&, byte: c& = c& + 1
 
-      DEF SEG = VARSEG(TileMap(0))
+      SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
       FOR y% = 0 TO 12
         GET #MapFile, c&, byte: c& = c& + 1
         GET #MapFile, c&, byte: c& = c& + 1
-        bits% = 0
         FOR x% = 0 TO 200
           GET #MapFile, c&, byte: c& = c& + 1
-          POKE (x% + y% * 200), ASC(byte)
+          DEF SEG = VARSEG(TileMap(0))
+            POKE (x% + y% * 200), ASC(byte)
+          DEF SEG
           IF ASC(byte) = 14 THEN
             Player.y = y% * 16: XShift = x% * 16 - (16 * 8)
             Player.x = 16 * 8
@@ -969,15 +990,12 @@ SUB LD2.LoadMap (Filename AS STRING)
             Door(NumDoors).my = y%
           END IF
           IF ASC(byte) >= 80 AND ASC(byte) <= 109 THEN
-            bits = (bitTable(x% AND 15) OR bits)
-          END IF
-          IF (x% AND 15) = 15 THEN
-            FloorMap((x%\16)+(y%*13)) = bits
-            bits = 0
+            PokeBitmap x%, y%, 1
+          ELSE
+            PokeBitmap x%, y%, 0
           END IF
         NEXT x%
       NEXT y%
-      DEF SEG
 
     '- Load in the light map data
     '----------------------------
@@ -1034,7 +1052,6 @@ SUB LD2.LoadMap (Filename AS STRING)
   CLOSE #MapFile
 
   '- randomly place enemies
-  NumEntities = 0
   DEF SEG = VARSEG(TileMap(0))
   FOR i% = 1 TO 40
     x% = INT(200 * RND(1)) + 1
@@ -1048,29 +1065,12 @@ SUB LD2.LoadMap (Filename AS STRING)
             EXIT DO
           END IF
         LOOP
-        'DO
-          n% = INT(5 * RND(1))
-        'LOOP UNTIL n% <> BLOBMINE
-        SELECT CASE n%
-        CASE 0
-          n% = ROCKMONSTER
-        CASE 1
-          n% = TROOP1
-        CASE 3
-          n% = BLOBMINE
-        CASE 2
-          n% = TROOP2
-        CASE 4
-          n% = JELLYBLOB
-        END SELECT
-        LD2.CreateEntity x% * 16, y% * 16, n%
+        n% = Mobs.GetRandomType%
+        LD2.CreateMob x% * 16, y% * 16, n%
       END IF
     END IF
   NEXT i%
   DEF SEG
-
-  IF CurrentRoom = 23 OR CurrentRoom = 7 OR CurrentRoom = 0 OR CurrentRoom = 12 OR CurrentRoom = 20 OR CurrentRoom = 21 OR CurrentRoom = 1 THEN NumEntities = 0
-  'NumEntities = 0
   
   MixTiles varseg(sTile(0)), varseg(sLight(0)), varseg(TileMap(0)), varseg(MixMap(0)), varseg(LightMap1(0))
 
@@ -1156,6 +1156,8 @@ SUB LD2.RotatePalette
 END SUB
 
 SUB LD2.LoadSprite (Filename AS STRING, BufferNum AS INTEGER)
+  
+  LD2.Debug "LoadSprite ( "+Filename+","+STR$(BufferNum)+" )"
 
   '- Load a sprite set into a given buffer
   '---------------------------------------
@@ -1276,55 +1278,93 @@ SUB LD2.MakeSparks (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTEGE
 
 END SUB
 
-SUB LD2.MovePlayer (XAmount AS DOUBLE)
+SUB LD2.MovePlayer (dx AS DOUBLE)
 
-  '- Move the player
-  '-----------------
+  IF Player.state = CROUCHING THEN
+    EXIT SUB
+  END IF
+  
+  DIM moved AS DOUBLE
+  DIM prevx AS DOUBLE
+  DIM diffx AS DOUBLE
+  DIM prvxs AS DOUBLE
+
   f# = DELAYMOD
-
-  ox% = INT(Player.x)
-  IF Player.weapon = FIST THEN XAmount = XAmount * 1.0625
-  Player.x = Player.x + XAmount*f#
- 
-  IF LD2.CheckWallHit%(0) THEN Player.x = ox%
-
-  IF XAmount < 0 THEN Player.flip = 1 ELSE Player.flip = 0
-  Player.lAni = Player.lAni + ABS(XAmount / 7.5)*f#
+  dx = f#*dx
+  ex = dx*1.0625
+  
+  prevx    = Player.x
+  prvxs    = XShift
   
   IF Player.weapon = FIST THEN
-    IF Player.lAni > 21 AND Player.lAni < 36 THEN Player.lAni = 36
-    IF Player.lAni >= 44 THEN Player.lAni = 36
+    Player.x    = Player.x + ex
+    Player.lAni = Player.lAni + ABS(ex / 7.5)
   ELSE
-    IF Player.lAni >= 26 THEN Player.lAni = 22
-  END IF
-
-  'IF Player.lAni = 22 THEN SOUND 40, .2
-  'IF Player.lAni = 24 THEN SOUND 50, .2
-
-  IF Player.x > 200 THEN
-    XShift = XShift + 1 '*f#
-    Player.x = Player.x - 1 '*f#
-  END IF
-
-  IF Player.x < 120 AND XShift > 0 THEN
-    XShift = XShift - 1 '*f#
-    Player.x = Player.x + 1 '*f#
+    Player.x    = Player.x + dx
+    Player.lAni = Player.lAni + ABS(dx / 7.5)
   END IF
   
-  IF Player.x > 230 THEN
-    XShift = XShift + XAmount '*f#
-    Player.x = Player.x - XAmount '*f#
+  IF LD2.CheckPlayerWallHit% THEN
+    Player.x = prevx
+    Player.lAni = 21
+  ELSE
+    IF dx > 0 THEN
+      IF Player.x > 230 THEN
+        diffx = Player.x - 230
+        XShift = XShift + diffx: Player.x = Player.x - diffx
+      ELSEIF Player.x > 205 THEN
+        XShift = XShift + dx
+        IF player.weapon = FIST THEN
+          Player.x = Player.x - dx
+        ELSE
+          Player.x = Player.x - ex
+        END IF
+      ELSEIF Player.x > 200 THEN
+        XShift = XShift + dx
+        Player.x = Player.x - dx
+      END IF
+    END IF
+    IF dx < 0 THEN
+      IF Player.x <  90 THEN
+        diffx = 90 - Player.x
+        XShift = XShift - diffx: Player.x = Player.x + diffx
+      ELSEIF Player.x < 115 THEN
+        XShift = XShift + dx
+        IF player.weapon = FIST THEN
+            Player.x = Player.x - dx
+        ELSE
+            Player.x = Player.x - ex
+        END IF
+      ELSEIF Player.x < 120 THEN
+        XShift = XShift + dx
+        Player.x = Player.x - dx
+      END IF
+    END IF
+    
+    IF XShift < 0 THEN
+      diffx    = XShift - prvxs
+      XShift   = 0
+      Player.x = Player.x + diffx
+    END IF
+  
+    IF Player.weapon = FIST THEN
+      IF Player.lAni > 21 AND Player.lAni < 36 THEN Player.lAni = 36
+      IF Player.lAni >= 44 THEN Player.lAni = 36
+    ELSE
+      IF Player.lAni >= 26 THEN Player.lAni = 22
+    END IF
   END IF
-
-  IF Player.x < 90 AND XShift > 0 THEN
-    XShift = XShift + XAmount '*f#
-    Player.x = Player.x - XAmount '*f#
-  END IF
-
+  
+  IF dx < 0 THEN Player.flip = 1 ELSE Player.flip = 0
+  
 END SUB
 
 SUB LD2.PickUpItem
-
+  
+  IF Player.state = JUMPING THEN
+    EXIT SUB
+  END IF
+  
   '- Check if player is near an item
   FOR i% = 1 TO NumItems(CurrentRoom)
     IF Player.x + 8 + XShift >= item(i%, CurrentRoom).x AND Player.x + 8 + XShift <= item(i%, CurrentRoom).x + 16 THEN
@@ -1352,8 +1392,16 @@ SUB LD2.PickUpItem
    
     END IF
   NEXT i%
-
+  
+  LD2.SetPlayerState( CROUCHING )
  
+END SUB
+
+SUB LD2.SetPlayerState(state AS INTEGER)
+    
+    Player.state = state
+    Player.stateTimestamp = TIMER
+    
 END SUB
 
 SUB LD2.PopText (Message AS STRING)
@@ -1370,13 +1418,17 @@ SUB LD2.PopText (Message AS STRING)
 END SUB
 
 SUB LD2.ProcessEntities
-
+  
+  'IF LD2.isDebugMode% THEN LD2.Debug "LD2.ProcessEntities"
+  
   '- Process the entities and the player
   DIM i AS INTEGER
   DIM n AS INTEGER
   DIM closed AS INTEGER
-  DIM toDelete(30) AS INTEGER
-  DIM deleteCount AS INTEGER
+  'DIM toDelete(MAXENTITY) AS INTEGER
+  'DIM deleteCount AS INTEGER
+  DIM mob AS MobType
+  DIM deleted AS INTEGER
   
   f# = 1 'DELAYMOD
 
@@ -1410,9 +1462,8 @@ SUB LD2.ProcessEntities
   END IF
 
   STATIC falling AS INTEGER
-  Player.oy = Player.y
-  Player.y = Player.y + Player.velocity*f#
-  IF LD2.CheckFloorHit%(0) = 0 THEN
+  Player.y = Player.y + Player.velocity
+  IF LD2.CheckPlayerFloorHit% = 0 THEN
     falling = 1
     IF Player.weapon = FIST THEN
         Player.lAni = 39
@@ -1430,12 +1481,12 @@ SUB LD2.ProcessEntities
         END IF
     END IF
     falling = 0
-    Player.y = (Player.y \ 16) * 16
+    Player.y = (INT(Player.y) \ 16) * 16
     Player.velocity = 0
   END IF
 
   Player.y = Player.y - 16
-  IF LD2.CheckFloorHit%(0) THEN
+  IF LD2.CheckPlayerFloorHit% THEN
     Player.y = (INT(Player.y) \ 16) * 16 + 32
     Player.velocity = 0
   ELSE
@@ -1473,42 +1524,63 @@ SUB LD2.ProcessEntities
         Player.stillani = 14
     END SELECT
   END IF
+    
+    SELECT CASE Player.state
+    CASE STILL
 
+    CASE RUNNING
 
-  FOR n% = 1 TO NumEntities
+    CASE JUMPING
+        IF falling = 0 THEN
+            Player.state = 0
+            Player.landTime = TIMER
+        END IF
+    CASE CROUCHING
+        IF (TIMER - player.stateTimestamp) > 0.07 THEN
+            Player.state = 0
+        END IF
+    CASE ELSE
+
+    END SELECT
+
+  Mobs.resetNext
+  DO WHILE Mobs.canGetNext%
+    
+    Mobs.getNext mob
+    
+    deleted = 0
+    ox% = INT(mob.x)
    
-    ox% = INT(Entity(n%).x)
-   
-    SELECT CASE Entity(n%).id
+    SELECT CASE mob.id
      
     CASE ROCKMONSTER
         
-        SELECT CASE Entity(n%).state
+        SELECT CASE mob.state
         CASE SPAWNED
 
-            Entity(n%).life  = 8
-            Entity(n%).ani   = 1
-            Entity(n%).state = HOSTILE
+            mob.life  = 8
+            mob.ani   = 1
+            mob.state = HOSTILE
 
         CASE HOSTILE
 
-            Entity(n%).ani = Entity(n%).ani + .1
-            IF Entity(n%).ani > 6 THEN Entity(n%).ani = 1
+            mob.ani = mob.ani + .1
+            IF mob.ani > 6 THEN mob.ani = 1
             
-            IF Entity(n%).hit > 0 THEN
-                Entity(n%).ani = 6
+            IF mob.hit > 0 THEN
+                mob.ani = 6
             ELSE
-                IF Entity(n%).x < Player.x + XShift THEN Entity(n%).x = Entity(n%).x + .5*f#: Entity(n%).flip = 0
-                IF Entity(n%).x > Player.x + XShift THEN Entity(n%).x = Entity(n%).x - .5*f#: Entity(n%).flip = 1
+                IF mob.x < Player.x + XShift THEN mob.x = mob.x + .5*f#: mob.flip = 0
+                IF mob.x > Player.x + XShift THEN mob.x = mob.x - .5*f#: mob.flip = 1
             END IF
             
-            IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
-                IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 10 <= Player.y + 15 THEN
+            IF mob.x + 7 >= Player.x + XShift AND mob.x + 7 <= Player.x + XShift + 15 THEN
+                IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
                     IF INT(10 * RND(1)) + 1 = 1 THEN
                         LD2.PlaySound sfxBLOOD2
                     END IF
                     Player.life = Player.life - 1
-                    LD2.MakeGuts Entity(n%).x + 7, Entity(n%).y + 8, -1, 1
+                    LD2.MakeGuts mob.x + 7, mob.y + 8, -1, 1
                 END IF
             END IF
 
@@ -1516,88 +1588,108 @@ SUB LD2.ProcessEntities
         
     CASE BLOBMINE
         
-        SELECT CASE Entity(n%).state
+        SELECT CASE mob.state
         CASE SPAWNED
         
-            Entity(n%).life  = 8
-            Entity(n%).ani   = 7
-            Entity(n%).state = HOSTILE
-        
-        CASE HOSTILE
-        
-            Entity(n%).ani = Entity(n%).ani + .1*f#
-            IF Entity(n%).ani >= 9 THEN Entity(n%).ani = 7
+            mob.life  = 8
+            mob.ani   = 7
+            mob.state = PLANNING
             
-            IF Entity(n%).x < Player.x + XShift THEN Entity(n%).x = Entity(n%).x + .3333*f#: Entity(n%).flip = 0
-            IF Entity(n%).x > Player.x + XShift THEN Entity(n%).x = Entity(n%).x - .3333*f#: Entity(n%).flip = 1
+        CASE PLANNING
             
-            IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
-                IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 15 <= Player.y + 15 THEN
-                    FOR i% = 0 TO 4
-                        LD2.MakeSparks Entity(n%).x + 7, Entity(n%).y + 8,  1, -RND(1)*5
-                        LD2.MakeSparks Entity(n%).x + 7, Entity(n%).y + 8,  1, RND(1)*5
+            IF mob.x < Player.x + XShift THEN mob.vx =  0.3333*f#: mob.flip = 0
+            IF mob.x > Player.x + XShift THEN mob.vx = -0.3333*f#: mob.flip = 1
+            mob.counter = RND(1)*2+1
+            mob.state = MOVING
+            
+        'CASE SLIDEPREATTACK
+        '
+        'CASE SLIDEATTACK
+        '
+        'CASE PREJUMP
+        '
+        'CASE JUMP
+        
+        CASE MOVING
+        
+            mob.ani = mob.ani + .1*f#
+            IF mob.ani >= 9 THEN mob.ani = 7
+            
+            mob.x = mob.x + mob.vx
+            
+            IF mob.x + 7 >= Player.x + XShift AND mob.x + 7 <= Player.x + XShift + 15 THEN
+                IF mob.y + 10 >= Player.y AND mob.y + 15 <= Player.y + 15 THEN
+                    FOR i% = 0 TO 14
+                        LD2.MakeSparks mob.x + 7, mob.y + 8,  1, -RND(1)*30
+                        LD2.MakeSparks mob.x + 7, mob.y + 8,  1, RND(1)*30
                     NEXT i%
                     LD2.JumpPlayer 2.0
-                    toDelete(deleteCount) = n%: deleteCount = deleteCount + 1
+                    'toDelete(deleteCount) = n%: deleteCount = deleteCount + 1
+                    deleted = 1
                 END IF
+            END IF
+            
+            mob.counter = mob.counter - DELAYMOD*0.0167
+            IF mob.counter <= 0 THEN
+                mob.state = PLANNING
             END IF
             
         END SELECT
         
     CASE TROOP1
         
-        SELECT CASE Entity(n%).state
+        SELECT CASE mob.state
         CASE SPAWNED
             
-            Entity(n%).life  = 4
-            Entity(n%).ani   = 20
-            Entity(n%).state = HOSTILE
+            mob.life  = 4
+            mob.ani   = 20
+            mob.state = HOSTILE
         
         CASE HOSTILE
         
-            IF Entity(n%).hit > 0 THEN
-                Entity(n%).ani = 29
+            IF mob.hit > 0 THEN
+                mob.ani = 29
             ELSE
-            IF ABS(Entity(n%).x - Player.x - XShift) < 50 AND Entity(n%).shooting = 0 THEN
-                IF Player.y + 8 >= Entity(n%).y AND Player.y + 8 <= Entity(n%).y + 15 THEN
-                    IF Player.x + XShift > Entity(n%).x AND Entity(n%).flip = 0 THEN Entity(n%).shooting = 100
-                    IF Player.x + XShift < Entity(n%).x AND Entity(n%).flip = 1 THEN Entity(n%).shooting = 100
+            IF ABS(mob.x - Player.x - XShift) < 50 AND mob.shooting = 0 THEN
+                IF Player.y + 8 >= mob.y AND Player.y + 8 <= mob.y + 15 THEN
+                    IF Player.x + XShift > mob.x AND mob.flip = 0 THEN mob.shooting = 100
+                    IF Player.x + XShift < mob.x AND mob.flip = 1 THEN mob.shooting = 100
                 END IF
             END IF
             
-            IF Entity(n%).shooting = 0 THEN
-                IF Entity(n%).counter = 0 THEN
-                    Entity(n%).counter = -INT(150 * RND(1)) + 1
-                    Entity(n%).flag = INT(2 * RND(1)) + 1
-                ELSEIF Entity(n%).counter > 0 THEN
-                    Entity(n%).ani = Entity(n%).ani + .1
-                    IF Entity(n%).ani > 27 THEN Entity(n%).ani = 21
-                    IF Entity(n%).flag = 1 THEN Entity(n%).x = Entity(n%).x + .5*f#: Entity(n%).flip = 0
-                    IF Entity(n%).flag = 2 THEN Entity(n%).x = Entity(n%).x - .5*f#: Entity(n%).flip = 1
-                    Entity(n%).counter = Entity(n%).counter - 1
+            IF mob.shooting = 0 THEN
+                IF mob.counter = 0 THEN
+                    mob.counter = -INT(150 * RND(1)) + 1
+                    mob.flag = INT(2 * RND(1)) + 1
+                ELSEIF mob.counter > 0 THEN
+                    mob.ani = mob.ani + .1
+                    IF mob.ani > 27 THEN mob.ani = 21
+                    IF mob.flag = 1 THEN mob.x = mob.x + .5*f#: mob.flip = 0
+                    IF mob.flag = 2 THEN mob.x = mob.x - .5*f#: mob.flip = 1
+                    mob.counter = mob.counter - 1
                 ELSE
-                    Entity(n%).counter = Entity(n%).counter + 1
-                    Entity(n%).ani = 20
-                    IF Entity(n%).counter > -1 THEN Entity(n%).counter = INT(150 * RND(1)) + 1
+                    mob.counter = mob.counter + 1
+                    mob.ani = 20
+                    IF mob.counter > -1 THEN mob.counter = INT(150 * RND(1)) + 1
                 END IF
             END IF
             
-            IF Entity(n%).shooting > 0 THEN
+            IF mob.shooting > 0 THEN
                 IF INT(30 * RND(1)) + 1 = 1 THEN
                     LD2.PlaySound sfxLAUGH
                 END IF
                 '- Make entity shoot
-                IF (Entity(n%).shooting AND 7) = 0 THEN
+                IF (mob.shooting AND 7) = 0 THEN
                     LD2.PlaySound sfxMACHINEGUN2
-                        IF Entity(n%).flip = 0 THEN
+                        IF mob.flip = 0 THEN
                         DEF SEG = VARSEG(TileMap(0))
-                        FOR i% = Entity(n%).x + 15 TO Entity(n%).x + 320 STEP 8
-                            px% = i% \ 16: py% = INT(Entity(n%).y + 10) \ 16
+                        FOR i% = mob.x + 15 TO mob.x + 320 STEP 8
+                            px% = i% \ 16: py% = INT(mob.y + 10) \ 16
                             p% = PEEK(px% + py% * 200)
                             IF p% >= 80 AND p% <= 109 THEN EXIT FOR
                             IF i% > Player.x + XShift AND i% < Player.x + 15 + XShift THEN
-                                IF Entity(n%).y + 8 > Player.y AND Entity(n%).y + 8 < Player.y + 15 THEN
-                                    LD2.MakeGuts i%, Entity(n%).y + 8, -1, 1
+                                IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
+                                    LD2.MakeGuts i%, mob.y + 8, -1, 1
                                     Player.life = Player.life - 1
                                 END IF
                             END IF
@@ -1605,13 +1697,13 @@ SUB LD2.ProcessEntities
                         DEF SEG
                     ELSE
                         DEF SEG = VARSEG(TileMap(0))
-                        FOR i% = Entity(n%).x TO Entity(n%).x - 320 STEP -8
-                            px% = i% \ 16: py% = INT(Entity(n%).y + 10) \ 16
+                        FOR i% = mob.x TO mob.x - 320 STEP -8
+                            px% = i% \ 16: py% = INT(mob.y + 10) \ 16
                             p% = PEEK(px% + py% * 200)
                             IF p% >= 80 AND p% <= 109 THEN EXIT FOR
                             IF i% > Player.x + XShift AND i% < Player.x + 15 + XShift THEN
-                                IF Entity(n%).y + 8 > Player.y AND Entity(n%).y + 8 < Player.y + 15 THEN
-                                    LD2.MakeGuts i%, Entity(n%).y + 8, -1, 1
+                                IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
+                                    LD2.MakeGuts i%, mob.y + 8, -1, 1
                                     Player.life = Player.life - 1
                                 END IF
                             END IF
@@ -1619,8 +1711,8 @@ SUB LD2.ProcessEntities
                         DEF SEG
                     END IF
                 END IF
-                Entity(n%).ani = 27 + (Entity(n%).shooting AND 7) \ 4
-                Entity(n%).shooting = Entity(n%).shooting - 1
+                mob.ani = 27 + (mob.shooting AND 7) \ 4
+                mob.shooting = mob.shooting - 1
             END IF
         END IF
         
@@ -1628,55 +1720,55 @@ SUB LD2.ProcessEntities
 
     CASE TROOP2
         
-        SELECT CASE Entity(n%).state
+        SELECT CASE mob.state
         CASE SPAWNED
             
-            Entity(n%).life  = 6
-            Entity(n%).ani   = 30
-            Entity(n%).state = HOSTILE
+            mob.life  = 6
+            mob.ani   = 30
+            mob.state = HOSTILE
             
         CASE HOSTILE
             
-            IF Entity(n%).hit > 0 THEN
-                Entity(n%).ani = 39
+            IF mob.hit > 0 THEN
+                mob.ani = 39
             ELSE
-                IF ABS(Entity(n%).x - Player.x - XShift) < 50 AND Entity(n%).shooting = 0 THEN
-                    IF Player.y + 8 >= Entity(n%).y AND Player.y + 8 <= Entity(n%).y + 15 THEN
-                        IF Player.x + XShift > Entity(n%).x AND Entity(n%).flip = 0 THEN Entity(n%).shooting = 100
-                        IF Player.x + XShift < Entity(n%).x AND Entity(n%).flip = 1 THEN Entity(n%).shooting = 100
+                IF ABS(mob.x - Player.x - XShift) < 50 AND mob.shooting = 0 THEN
+                    IF Player.y + 8 >= mob.y AND Player.y + 8 <= mob.y + 15 THEN
+                        IF Player.x + XShift > mob.x AND mob.flip = 0 THEN mob.shooting = 100
+                        IF Player.x + XShift < mob.x AND mob.flip = 1 THEN mob.shooting = 100
                     END IF
                 END IF
                 
-                IF Entity(n%).shooting = 0 THEN
-                    IF Entity(n%).counter = 0 THEN
-                        Entity(n%).counter = -INT(150 * RND(1)) + 1
-                        Entity(n%).flag = INT(2 * RND(1)) + 1
-                    ELSEIF Entity(n%).counter > 0 THEN
-                        Entity(n%).ani = Entity(n%).ani + .1
-                        IF Entity(n%).ani > 37 THEN Entity(n%).ani = 31
-                        IF Entity(n%).flag = 1 THEN Entity(n%).x = Entity(n%).x + .5*f#: Entity(n%).flip = 0
-                        IF Entity(n%).flag = 2 THEN Entity(n%).x = Entity(n%).x - .5*f#: Entity(n%).flip = 1
-                        Entity(n%).counter = Entity(n%).counter - 1
+                IF mob.shooting = 0 THEN
+                    IF mob.counter = 0 THEN
+                        mob.counter = -INT(150 * RND(1)) + 1
+                        mob.flag = INT(2 * RND(1)) + 1
+                    ELSEIF mob.counter > 0 THEN
+                        mob.ani = mob.ani + .1
+                        IF mob.ani > 37 THEN mob.ani = 31
+                        IF mob.flag = 1 THEN mob.x = mob.x + .5*f#: mob.flip = 0
+                        IF mob.flag = 2 THEN mob.x = mob.x - .5*f#: mob.flip = 1
+                        mob.counter = mob.counter - 1
                     ELSE
-                        Entity(n%).counter = Entity(n%).counter + 1
-                        Entity(n%).ani = 30
-                        IF Entity(n%).counter > -1 THEN Entity(n%).counter = INT(150 * RND(1)) + 1
+                        mob.counter = mob.counter + 1
+                        mob.ani = 30
+                        IF mob.counter > -1 THEN mob.counter = INT(150 * RND(1)) + 1
                     END IF
                 END IF
                 
-                IF Entity(n%).shooting > 0 THEN
+                IF mob.shooting > 0 THEN
                     '- Make entity shoot
-                    IF (Entity(n%).shooting AND 15) = 0 THEN
+                    IF (mob.shooting AND 15) = 0 THEN
                         LD2.PlaySound sfxPISTOL2
-                        IF Entity(n%).flip = 0 THEN
+                        IF mob.flip = 0 THEN
                             DEF SEG = VARSEG(TileMap(0))
-                            FOR i% = Entity(n%).x + 15 TO Entity(n%).x + 320 STEP 8
-                                px% = i% \ 16: py% = INT(Entity(n%).y + 10) \ 16
+                            FOR i% = mob.x + 15 TO mob.x + 320 STEP 8
+                                px% = i% \ 16: py% = INT(mob.y + 10) \ 16
                                 p% = PEEK(px% + py% * 200)
                                 IF p% >= 80 AND p% <= 109 THEN EXIT FOR
                                 IF i% > Player.x + XShift AND i% < Player.x + 15 + XShift THEN
-                                    IF Entity(n%).y + 8 > Player.y AND Entity(n%).y + 8 < Player.y + 15 THEN
-                                        LD2.MakeGuts i%, Entity(n%).y + 8, -1, 1
+                                    IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
+                                        LD2.MakeGuts i%, mob.y + 8, -1, 1
                                         Player.life = Player.life - 2
                                     END IF
                                 END IF
@@ -1684,13 +1776,13 @@ SUB LD2.ProcessEntities
                             DEF SEG
                         ELSE
                             DEF SEG = VARSEG(TileMap(0))
-                            FOR i% = Entity(n%).x TO Entity(n%).x - 320 STEP -8
-                                px% = i% \ 16: py% = INT(Entity(n%).y + 10) \ 16
+                            FOR i% = mob.x TO mob.x - 320 STEP -8
+                                px% = i% \ 16: py% = INT(mob.y + 10) \ 16
                                 p% = PEEK(px% + py% * 200)
                                 IF p% >= 80 AND p% <= 109 THEN EXIT FOR
                                 IF i% > Player.x + XShift AND i% < Player.x + 15 + XShift THEN
-                                    IF Entity(n%).y + 8 > Player.y AND Entity(n%).y + 8 < Player.y + 15 THEN
-                                        LD2.MakeGuts i%, Entity(n%).y + 8, -1, 1
+                                    IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
+                                        LD2.MakeGuts i%, mob.y + 8, -1, 1
                                         Player.life = Player.life - 2
                                     END IF
                                 END IF
@@ -1698,8 +1790,8 @@ SUB LD2.ProcessEntities
                             DEF SEG
                         END IF
                     END IF
-                    Entity(n%).ani = 37 + (Entity(n%).shooting AND 15) \ 8
-                    Entity(n%).shooting = Entity(n%).shooting - 1
+                    mob.ani = 37 + (mob.shooting AND 15) \ 8
+                    mob.shooting = mob.shooting - 1
                 END IF
 
             END IF
@@ -1708,37 +1800,37 @@ SUB LD2.ProcessEntities
        
     CASE JELLYBLOB
         
-        SELECT CASE Entity(n%).state
+        SELECT CASE mob.state
         CASE SPAWNED
             
-            Entity(n%).life = 14
-            Entity(n%).ani = 11
-            Entity(n%).state = HOSTILE
+            mob.life = 14
+            mob.ani = 11
+            mob.state = HOSTILE
             
         CASE HOSTILE
             
-            IF Entity(n%).hit > 0 THEN
-                Entity(n%).ani = 19
+            IF mob.hit > 0 THEN
+                mob.ani = 19
             ELSE
-                Entity(n%).ani = Entity(n%).ani + .1
-                IF Entity(n%).ani > 15 THEN Entity(n%).ani = 11
+                mob.ani = mob.ani + .1
+                IF mob.ani > 15 THEN mob.ani = 11
                 
-                IF ABS(Entity(n%).x - Player.x - XShift) < 100 THEN
-                    IF Entity(n%).x < Player.x + XShift THEN
-                        Entity(n%).x = Entity(n%).x + .8*f#: Entity(n%).flip = 0
+                IF ABS(mob.x - Player.x - XShift) < 100 THEN
+                    IF mob.x < Player.x + XShift THEN
+                        mob.x = mob.x + .8*f#: mob.flip = 0
                     ELSE
-                        Entity(n%).x = Entity(n%).x - .8*f#: Entity(n%).flip = 1
+                        mob.x = mob.x - .8*f#: mob.flip = 1
                     END IF
                 END IF
             END IF
             
-            IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
-                IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 10 <= Player.y + 15 THEN
+            IF mob.x + 7 >= Player.x + XShift AND mob.x + 7 <= Player.x + XShift + 15 THEN
+                IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
                     IF INT(10 * RND(1)) + 1 = 1 THEN
                         LD2.PlaySound sfxBLOOD1
                     END IF
                     Player.life = Player.life - 1
-                    LD2.MakeGuts Entity(n%).x + 7, Entity(n%).y + 8, -1, 1
+                    LD2.MakeGuts mob.x + 7, mob.y + 8, -1, 1
                 END IF
             END IF
             
@@ -1746,116 +1838,130 @@ SUB LD2.ProcessEntities
         
     CASE BOSS1
 
-        IF Entity(n%).life = -99 THEN
-          Entity(n%).life = 100
-          Entity(n%).ani = 41
+        IF mob.life = -99 THEN
+          mob.life = 100
+          mob.ani = 41
         END IF
-        IF Entity(n%).ani < 1 THEN Entity(n%).ani = 41
-        Entity(n%).ani = Entity(n%).ani + .1
-        IF Entity(n%).ani > 43 THEN Entity(n%).ani = 41
+        IF mob.ani < 1 THEN mob.ani = 41
+        mob.ani = mob.ani + .1
+        IF mob.ani > 43 THEN mob.ani = 41
               
-        IF Entity(n%).hit > 0 THEN
-          Entity(n%).ani = 45
+        IF mob.hit > 0 THEN
+          mob.ani = 45
         ELSE
-          IF Entity(n%).x < Player.x + XShift THEN Entity(n%).x = Entity(n%).x + .6*f#: Entity(n%).flip = 1
-          IF Entity(n%).x > Player.x + XShift THEN Entity(n%).x = Entity(n%).x - .6*f#: Entity(n%).flip = 0
+          IF mob.x < Player.x + XShift THEN mob.x = mob.x + .6*f#: mob.flip = 1
+          IF mob.x > Player.x + XShift THEN mob.x = mob.x - .6*f#: mob.flip = 0
         END IF
 
-        IF ABS(Entity(n%).x - (Player.x + XShift)) < 50 AND Entity(n%).counter < 10 THEN
-          Entity(n%).ani = 44
-          IF Entity(n%).x < Player.x + XShift THEN Entity(n%).x = Entity(n%).x + .5*f#: Entity(n%).flip = 1
-          IF Entity(n%).x > Player.x + XShift THEN Entity(n%).x = Entity(n%).x - .5*f#: Entity(n%).flip = 0
+        IF ABS(mob.x - (Player.x + XShift)) < 50 AND mob.counter < 10 THEN
+          mob.ani = 44
+          IF mob.x < Player.x + XShift THEN mob.x = mob.x + .5*f#: mob.flip = 1
+          IF mob.x > Player.x + XShift THEN mob.x = mob.x - .5*f#: mob.flip = 0
         END IF
 
-        Entity(n%).counter = Entity(n%).counter - .1
-        IF Entity(n%).counter < 0 THEN Entity(n%).counter = 20
+        mob.counter = mob.counter - .1
+        IF mob.counter < 0 THEN mob.counter = 20
 
-        IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
-          IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 10 <= Player.y + 15 THEN
+        IF mob.x + 7 >= Player.x + XShift AND mob.x + 7 <= Player.x + XShift + 15 THEN
+          IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
             IF INT(10 * RND(1)) + 1 = 1 THEN
               LD2.PlaySound sfxBLOOD2
             END IF
             Player.life = Player.life - 1
-            LD2.MakeGuts Entity(n%).x + 7, Entity(n%).y + 8, -1, 1
+            LD2.MakeGuts mob.x + 7, mob.y + 8, -1, 1
           END IF
         END IF
    
     CASE idBOSS2
 
-        IF Entity(n%).life = -99 THEN
-          Entity(n%).life = 100
-          Entity(n%).ani = 0
+        IF mob.life = -99 THEN
+          mob.life = 100
+          mob.ani = 0
         END IF
 
-        Entity(n%).ani = Entity(n%).ani + 20
-        IF Entity(n%).ani >= 360 THEN Entity(n%).ani = 0
+        mob.ani = mob.ani + 20
+        IF mob.ani >= 360 THEN mob.ani = 0
 
-        Entity(n%).y = Entity(n%).y + 1
-        IF LD2.CheckFloorHit%(n%) = 1 THEN
-          Entity(n%).y = Entity(n%).y - Entity(n%).velocity
-          IF Entity(n%).counter = 0 THEN
-            IF ABS(Entity(n%).x - (Player.x + XShift)) < 50 THEN
-              Entity(n%).velocity = -1.2
+        mob.y = mob.y + 1
+        IF LD2.CheckMobFloorHit%(mob) = 1 THEN
+          mob.y = mob.y - mob.velocity
+          IF mob.counter = 0 THEN
+            IF ABS(mob.x - (Player.x + XShift)) < 50 THEN
+              mob.velocity = -1.2
             END IF
           
-            IF Entity(n%).x < Player.x + XShift THEN
-              Entity(n%).x = Entity(n%).x + 1.1
-              Entity(n%).flip = 0
+            IF mob.x < Player.x + XShift THEN
+              mob.x = mob.x + 1.1
+              mob.flip = 0
             ELSE
-              Entity(n%).x = Entity(n%).x - 1.1
-              Entity(n%).flip = 1
+              mob.x = mob.x - 1.1
+              mob.flip = 1
             END IF
           END IF
         ELSE
-          IF Entity(n%).counter = 0 THEN
-            IF ABS(Entity(n%).x - (Player.x + XShift) + 7) < 4 AND Entity(n%).counter = 0 AND Entity(n%).velocity >= 0 THEN
-              Entity(n%).velocity = INT(2 * RND(1)) + 2
-              Entity(n%).counter = 50
+          IF mob.counter = 0 THEN
+            IF ABS(mob.x - (Player.x + XShift) + 7) < 4 AND mob.counter = 0 AND mob.velocity >= 0 THEN
+              mob.velocity = INT(2 * RND(1)) + 2
+              mob.counter = 50
             END IF
           
-            IF Entity(n%).flip = 0 THEN Entity(n%).x = Entity(n%).x + 1.7*f#
-            IF Entity(n%).flip = 1 THEN Entity(n%).x = Entity(n%).x - 1.7*f#
+            IF mob.flip = 0 THEN mob.x = mob.x + 1.7*f#
+            IF mob.flip = 1 THEN mob.x = mob.x - 1.7*f#
           END IF
         END IF
-        Entity(n%).counter = Entity(n%).counter - 1
-        IF Entity(n%).counter < 0 THEN Entity(n%).counter = 0
-        Entity(n%).y = Entity(n%).y - 1
+        mob.counter = mob.counter - 1
+        IF mob.counter < 0 THEN mob.counter = 0
+        mob.y = mob.y - 1
 
-        IF Entity(n%).x + 7 >= Player.x + XShift AND Entity(n%).x + 7 <= Player.x + XShift + 15 THEN
-          IF Entity(n%).y + 10 >= Player.y AND Entity(n%).y + 10 <= Player.y + 15 THEN
+        IF mob.x + 7 >= Player.x + XShift AND mob.x + 7 <= Player.x + XShift + 15 THEN
+          IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
             Player.life = Player.life - 1
           END IF
         END IF
        
     END SELECT
  
-    IF Entity(n%).hit > 0 THEN Entity(n%).hit = Entity(n%).hit - .1
+    IF mob.hit > 0 THEN mob.hit = mob.hit - .1
 
-    IF LD2.CheckWallHit%(n%) THEN
-      Entity(n%).x = ox%
-      IF Entity(n%).id = TROOP1 THEN Entity(n%).counter = 0
-      IF Entity(n%).id = TROOP2 THEN Entity(n%).counter = 0
+    IF LD2.CheckMobWallHit%(mob) THEN
+      mob.x = ox%
+      IF mob.id = TROOP1 THEN mob.counter = 0
+      IF mob.id = TROOP2 THEN mob.counter = 0
     END IF
    
-    IF LD2.CheckFloorHit%(n%) = 0 THEN
-      Entity(n%).y = Entity(n%).y + Entity(n%).velocity
-      Entity(n%).velocity = Entity(n%).velocity + Gravity
-      IF Entity(n%).velocity > 3 THEN Entity(n%).velocity = 3
-      IF LD2.CheckWallHit%(n%) THEN
-        IF Entity(n%).velocity >= 0 THEN
-          Entity(n%).y = (Entity(n%).y \ 16) * 16 - 16
+    IF LD2.CheckMobFloorHit%(mob) = 0 THEN
+      mob.y = mob.y + mob.velocity
+      mob.velocity = mob.velocity + Gravity
+      IF mob.velocity > 3 THEN mob.velocity = 3
+      IF LD2.CheckMobWallHit%(mob) THEN
+        IF mob.velocity >= 0 THEN
+          mob.y = (mob.y \ 16) * 16 - 16
         ELSE
-          Entity(n%).y = (Entity(n%).y \ 16) * 16
-          Entity(n%).velocity = -Entity(n%).velocity
+          mob.y = (mob.y \ 16) * 16
+          mob.velocity = -mob.velocity
         END IF
       END IF
     ELSE
-      Entity(n%).velocity = 0
+      mob.velocity = 0
     END IF
- 
-  NEXT n%
-
+    
+    IF deleted THEN
+        LD2.DeleteMob mob
+    ELSE
+        Mobs.update mob
+    END IF
+    
+  LOOP
+  
+  '- delete flagged entities
+  'FOR i = 0 TO deleteCount-1
+  '  LD2.DeleteEntity toDelete(i)
+  'NEXT i
+  
+  
   LD2.ProcessGuts
+  
+  
   PutLarryX INT(Player.x), INT(XShift)
   PutLarryX2 INT(Player.x), INT(XShift)
  
@@ -1870,78 +1976,113 @@ SUB LD2.ProcessEntities
       SetElevate 1
     END IF
   END IF
+  
+  
+  LD2.ProcessDoors
+  
+  
+END SUB
 
-  '- check if player is near door
-  s7% = 7
-  FOR i = 1 TO NumDoors
-    closed = 0
-    IF Player.code >= Door(i).code OR Player.tempcode >= Door(i).code OR (Player.WHITECARD = 1 AND Door(i).code = CODEWHITE) THEN
-      IF Door(i).ani = 0 THEN
-	IF Player.x + s7% + XShift >= Door(i).x1 AND Player.x + s7% + XShift <= Door(i).x2 THEN
-	  IF Player.y + 7 >= Door(i).y1 AND Player.y + 7 <= Door(i).y2 THEN
-	    LD2.PlaySound sfxDOORUP
-	    Door(i).anicount = .2
-	    Player.tempcode = 0
-	  END IF
-	END IF
-      ELSE
-	IF Player.x + s7% + XShift >= Door(i).x1 AND Player.x + s7% + XShift <= Door(i).x2 THEN
-	  IF Player.y + 7 >= Door(i).y1 AND Player.y + 7 <= Door(i).y2 THEN
-	    Door(i).anicount = .2
-	  ELSE
-	    closed = 1
-	  END IF
-	ELSE
-	  closed = 1
-	END IF
-	IF closed THEN
-	  IF NumEntities = 0 THEN
-	    IF Door(i).ani = 4 THEN LD2.PlaySound sfxDOORDOWN
-	    Door(i).anicount = -.2
-	  END IF
-	  FOR n = 1 TO NumEntities
-	    IF Entity(n).x + s7% >= Door(i).x1 AND Entity(n).x + s7% <= Door(i).x2 THEN
-	      IF Entity(n).y + 7 >= Door(i).y1 AND Entity(n).y + 7 <= Door(i).y2 THEN
-		Door(i).anicount = .2
-		EXIT FOR
-	      ELSE
-		IF Door(i).ani = 4 THEN LD2.PlaySound sfxDOORDOWN
-		Door(i).anicount = -.2
-	      END IF
-	    ELSE
-	      IF Door(i).ani = 4 THEN LD2.PlaySound sfxDOORDOWN
-	      Door(i).anicount = -.2
-	    END IF
-	  NEXT n
-	END IF
-      END IF
-      Door(i).ani = Door(i).ani + Door(i).anicount*f#
-      IF Door(i).ani >= 4 THEN
-        Door(i).ani = 4
-      END IF
-      IF Door(i).ani <= 0 THEN
-        Door(i).ani = 0
-        Door(i).anicount = 0
-      END IF
-      IF Door(i).ani > 0 AND Door(i).ani < 4 THEN
-        LD2.PutTile Door(i).mx, Door(i).my, 101 + Door(i).ani, 1
-      ELSEIF Door(i).ani = 4 THEN
-        LD2.PutTile Door(i).mx, Door(i).my, 52, 1 '// caution stripes
-        LD2.SetFloor Door(i).mx, Door(i).my, 0
-      ELSE
-        IF Door(i).code = CODEWHITE THEN
-          LD2.PutTile Door(i).mx, Door(i).my, 106, 1
-        ELSE
-          LD2.PutTile Door(i).mx, Door(i).my, 89 + Door(i).code, 1
-        END IF
-        LD2.SetFloor Door(i).mx, Door(i).my, 1
-      END IF
+SUB LD2.OpenDoor (id AS INTEGER)
+    
+    DIM doorIsClosed AS INTEGER
+    
+    doorIsClosed   = (Door(id).ani = 0)
+    
+    IF doorIsClosed THEN
+        LD2.PlaySound sfxDOORUP
+        Player.tempcode = 0       '- used temp card (if had one)
     END IF
-  NEXT i
     
+    Door(id).anicount = DOOROPENSPEED
     
-    FOR i = 0 TO deleteCount-1
-        LD2.DeleteEntity toDelete(i)
+END SUB
+
+SUB LD2.CloseDoor (id AS INTEGER)
+    
+    DIM doorIsOpen AS INTEGER
+    
+    doorIsOpen     = (Door(id).ani = 4)
+    
+    IF doorIsOpen THEN
+        LD2.PlaySound sfxDOORDOWN
+    END IF
+    
+    Door(id).anicount = DOORCLOSESPEED
+    
+END SUB
+
+SUB LD2.ProcessDoors
+    
+    DIM i AS INTEGER
+    DIM pcx AS INTEGER
+    DIM pcy AS INTEGER
+    DIM ecx AS INTEGER
+    DIM ecy AS INTEGER
+    DIM playerHasAccess AS INTEGER
+    DIM playerIsNear AS INTEGER
+    DIM entityIsNear AS INTEGER
+    DIM doorIsOpen AS INTEGER
+    DIM doorIsMoving AS INTEGER
+    DIM mob AS MobType
+    
+    pcx = Player.x + XShift + 7
+    pcy = Player.y + 7
+    
+    FOR i = 1 TO NumDoors
+        
+        playerHasAccess = (Player.code >= Door(i).code) OR (Player.tempcode >= Door(i).code) OR (Player.WHITECARD = 1 AND Door(i).code = CODEWHITE)
+        playerIsNear    = (pcx >= Door(i).x1) AND (pcx <= Door(i).x2) AND (pcy >= Door(i).y1) AND (pcy <= Door(i).y2)
+        doorIsMoving    = (Door(i).ani > 0) AND (Door(i).ani < 4)
+        
+        IF playerHasAccess AND playerIsNear THEN
+            LD2.OpenDoor i
+        ELSEIF doorIsMoving THEN '- allow entities to piggyback through doors
+            entityIsNear = 0
+            Mobs.resetNext
+            DO WHILE Mobs.canGetNext%
+                Mobs.getNext mob
+                ecx = mob.x + 7
+                ecy = mob.y + 7
+                entityIsNear = (ecx >= Door(i).x1) AND (ecx <= Door(i).x2) AND (ecy >= Door(i).y1) AND (ecy <= Door(i).y2)
+                IF entityIsNear THEN
+                    EXIT DO
+                END IF
+            LOOP
+            IF entityIsNear THEN
+                LD2.OpenDoor i
+            ELSE
+                LD2.CloseDoor i
+            END IF
+        ELSE
+            LD2.CloseDoor i
+        END IF
+        
+        Door(i).ani = Door(i).ani + Door(i).anicount * DELAYMOD
+        IF Door(i).ani >= 4 THEN
+            Door(i).ani = 4
+        END IF
+        IF Door(i).ani <= 0 THEN
+            Door(i).ani = 0
+        END IF
+        
+        doorIsOpen   = (Door(i).ani = 4)
+        doorIsMoving = (Door(i).ani > 0) AND (Door(i).ani < 4)
+        
+        IF doorIsMoving THEN
+            LD2.PutTile Door(i).mx, Door(i).my, DOOROPEN + Door(i).ani, 1
+        ELSEIF doorIsOpen THEN
+            LD2.PutTile Door(i).mx, Door(i).my, DOORBACK, 1
+            LD2.SetFloor Door(i).mx, Door(i).my, 0
+        ELSE
+            IF Door(i).code = CODEWHITE THEN
+                LD2.PutTile Door(i).mx, Door(i).my, DOORW, 1
+            ELSE
+                LD2.PutTile Door(i).mx, Door(i).my, DOOR0 + Door(i).code, 1
+            END IF
+            LD2.SetFloor Door(i).mx, Door(i).my, 1
+        END IF
+        
     NEXT i
 
 END SUB
@@ -2072,7 +2213,7 @@ SUB LD2.PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGE
 
   FOR n% = 1 TO LEN(Text)
     IF MID$(Text, n%, 1) <> " " THEN
-      LD2put65 ((n% * 6 - 6) + x), y, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Text, n%, 1)) - 32))), b%
+      LD2put65c ((n% * 6 - 6) + x), y, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Text, n%, 1)) - 32))), b%
     END IF
   NEXT n%
 
@@ -2091,7 +2232,7 @@ SUB LD2.PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, 
 
   FOR n% = 1 TO LEN(Text)
     IF MID$(Text, n%, 1) <> " " THEN
-      LD2putCol65 ((n% * 6 - 6) + x), y, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Text, n%, 1)) - 32))), col, b%
+      LD2putCol65c ((n% * 6 - 6) + x), y, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Text, n%, 1)) - 32))), col, b%
     END IF
   NEXT n%
 
@@ -2103,62 +2244,38 @@ SUB LD2.PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
 
   '- Put a tile on the given layer
   '-------------------------------
+  
+  DIM m AS INTEGER
+  m = (x + y * 200)
 
-  IF Layer = 1 THEN
+  SELECT CASE Layer
+  CASE 1
     DEF SEG = VARSEG(TileMap(0))
-    POKE (x + y * 200), Tile
+    POKE VARPTR(TileMap(0))+m, Tile
     DEF SEG = VARSEG(MixMap(0))
-    POKE (x + y * 200), Tile
-  END IF
-  IF Layer = 2 THEN
+    POKE VARPTR(MixMap(0))+m, Tile
+  CASE 2
     DEF SEG = VARSEG(LightMap1(0))
-    POKE (x + y * 200), Tile
-  END IF
-  IF Layer = 3 THEN
+    POKE VARPTR(LightMap1(0))+m, Tile
+  CASE 3
     DEF SEG = VARSEG(LightMap2(0))
-    POKE (x + y * 200), Tile
-  END IF
+    POKE VARPTR(LightMap2(0))+m, Tile
+  END SELECT
   DEF SEG
 
 END SUB
 
 SUB LD2.SetFloor(x AS INTEGER, y AS INTEGER, blocked AS INTEGER)
 
-  DIM bitTable(15) AS INTEGER
-  
-  bitTable(15) = 1
-  bitTable(14) = 2
-  bitTable(13) = 4
-  bitTable(12) = 8
-  bitTable(11) = &h10
-  bitTable(10) = &h20
-  bitTable(9)  = &h40
-  bitTable(8)  = &h80
-  bitTable(7)  = &h100
-  bitTable(6)  = &h200
-  bitTable(5)  = &h400
-  bitTable(4)  = &h800
-  bitTable(3)  = &h1000
-  bitTable(2)  = &h2000
-  bitTable(1)  = &h4000
-  bitTable(0)  = &h8000
-  
-  DIM p AS INTEGER
-  
-  p = (x\16)+y*13
-  
-  IF blocked = 1 THEN
-      FloorMap(p) = (FloorMap(p) AND bitTable(x AND 15))
-  ELSE
-      FloorMap(p) = (FloorMap(p)  OR bitTable(x AND 15)) XOR bitTable(x AND 15)
-  END IF
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
+  PokeBitmap x, y, blocked
 
 END SUB
 
 SUB LD2.RenderFrame
 
-  '- Render a frame
-  '----------------
+  'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame"
+
   DIM spriteIdx    AS INTEGER
   DIM lightIdx     AS INTEGER
   DIM tempIdx      AS INTEGER
@@ -2223,19 +2340,24 @@ SUB LD2.RenderFrame
   'LD2Scroll VARSEG(Buffer2(0))
   LD2copyFull VARSEG(Buffer2(0)), VARSEG(Buffer1(0))
   
-  DIM skipLight(20) AS INTEGER '// 26 = (24*13)/16(bits) (24bits to hold 20w -- leaving 4bits unused)
+  DIM skipLight(20) AS INTEGER '// 20 = (24*13)/16(bits) (24bits to hold 20w -- leaving 4bits unused)
   
   SetBitmap VARSEG(skipLight(0)), VARPTR(skipLight(0)), 20
   
+  'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- hole punching for dynamic light"
+  
+  DIM mob AS MobType
   lft% = 0
   rgt% = 19
-  FOR n% = 0 TO NumEntities
+  Mobs.resetNext
+  DO WHILE Mobs.canGetNext%
+    Mobs.getNext mob
     IF n% = 0 THEN
       ex% = INT(Player.x + (INT(XShift) AND 15)) \ 16
       ey% = INT(Player.y)\16
     ELSE
-      ex% = INT(Entity(n%).x - XShift + (INT(XShift) AND 15)) \ 16
-      ey% = INT(Entity(n%).y)\16
+      ex% = INT(mob.x - XShift + (INT(XShift) AND 15)) \ 16
+      ey% = INT(mob.y)\16
     END IF
     IF (ex% >= lft%) AND (ex% <= rgt%) THEN
       PokeBitmap (ex%+0), (ey%+0), 1
@@ -2243,8 +2365,10 @@ SUB LD2.RenderFrame
       PokeBitmap (ex%+0), (ey%+1), 1
       PokeBitmap (ex%+1), (ey%+1), 1
     END IF
-  NEXT n%
- 
+  LOOP
+  
+  'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- draw tile map and light map 2"
+   
   IF Lighting2 THEN '// background/window lighting
     yp% = 0
     FOR y% = 0 TO 12
@@ -2267,10 +2391,10 @@ SUB LD2.RenderFrame
           LD2putf xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1
         END IF
         '// background lighting (mostly for windows)
-        DEF SEG = segLightMap2: l% = PEEK(ml%): DEF SEG
-        IF l% THEN
-          LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
-        END IF
+        'DEF SEG = segLightMap2: l% = PEEK(ml%): DEF SEG
+        'IF l% THEN
+        '  LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
+        'END IF
         xp% = xp% + 16
         mt% = mt% + 1
         mx% = mx% + 1
@@ -2306,50 +2430,65 @@ SUB LD2.RenderFrame
       yp% = yp% + 16
     NEXT
   END IF
+  
+  'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- draw mobs"
  
   '- Draw the entities
   '-------------------
-  FOR n% = 1 TO NumEntities
-    IF Entity(n%).id <> idBOSS2 THEN
-      LD2put INT(Entity(n%).x) - INT(XShift), INT(Entity(n%).y), VARSEG(sEnemy(0)), VARPTR(sEnemy(EPS * INT(Entity(n%).ani))), VARSEG(Buffer1(0)), Entity(n%).flip
+  Mobs.resetNext
+  DO WHILE Mobs.canGetNext%
+    Mobs.getNext mob
+    IF mob.id <> idBOSS2 THEN
+      LD2put INT(mob.x) - INT(XShift), INT(mob.y), VARSEG(sEnemy(0)), VARPTR(sEnemy(EPS * INT(mob.ani))), VARSEG(Buffer1(0)), mob.flip
     ELSE
-      IF Entity(n%).flip = 0 THEN
-        LD2put INT(Entity(n%).x) - INT(XShift) + (COS((Entity(n%).ani + 180) * PI / 180) * 2) + 1, INT(Entity(n%).y) + SIN((Entity(n%).ani + 180) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), Entity(n%).flip
-        LD2put INT(Entity(n%).x) - INT(XShift), INT(Entity(n%).y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 100)), VARSEG(Buffer1(0)), Entity(n%).flip
-        LD2put INT(Entity(n%).x) - INT(XShift) + 16, INT(Entity(n%).y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 101)), VARSEG(Buffer1(0)), Entity(n%).flip
-        LD2put INT(Entity(n%).x) - INT(XShift) + (COS(Entity(n%).ani * PI / 180) * 2) + 1, INT(Entity(n%).y) + SIN(Entity(n%).ani * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), Entity(n%).flip
-        LD2put INT(Entity(n%).x) - INT(XShift) - 2 + COS((Entity(n%).ani + 270) * PI / 180), INT(Entity(n%).y) - 10 + SIN((Entity(n%).ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 106)), VARSEG(Buffer1(0)), Entity(n%).flip
-        LD2put INT(Entity(n%).x) - INT(XShift) - 2 + COS((Entity(n%).ani + 270) * PI / 180), INT(Entity(n%).y) + 6 + SIN((Entity(n%).ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 107)), VARSEG(Buffer1(0)), Entity(n%).flip
+      IF mob.flip = 0 THEN
+        LD2put INT(mob.x) - INT(XShift) + (COS((mob.ani + 180) * PI / 180) * 2) + 1, INT(mob.y) + SIN((mob.ani + 180) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift), INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 100)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 16, INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 101)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift) + (COS(mob.ani * PI / 180) * 2) + 1, INT(mob.y) + SIN(mob.ani * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift) - 2 + COS((mob.ani + 270) * PI / 180), INT(mob.y) - 10 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 106)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift) - 2 + COS((mob.ani + 270) * PI / 180), INT(mob.y) + 6 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 107)), VARSEG(Buffer1(0)), mob.flip
       ELSE
-        LD2put INT(Entity(n%).x) - INT(XShift) + 14 - (COS((Entity(n%).ani + 180) * PI / 180) * 2) + 1, INT(Entity(n%).y) + SIN((Entity(n%).ani + 180) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), Entity(n%).flip
-        LD2put INT(Entity(n%).x) - INT(XShift) + 16, INT(Entity(n%).y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 100)), VARSEG(Buffer1(0)), Entity(n%).flip
-        LD2put INT(Entity(n%).x) - INT(XShift), INT(Entity(n%).y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 101)), VARSEG(Buffer1(0)), Entity(n%).flip
-        LD2put INT(Entity(n%).x) - INT(XShift) + 14 - (COS(Entity(n%).ani * PI / 180) * 2) + 1, INT(Entity(n%).y) + SIN(Entity(n%).ani * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), Entity(n%).flip
-        LD2put INT(Entity(n%).x) - INT(XShift) + 18 - COS((Entity(n%).ani + 270) * PI / 180), INT(Entity(n%).y) - 10 + SIN((Entity(n%).ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 106)), VARSEG(Buffer1(0)), Entity(n%).flip
-        LD2put INT(Entity(n%).x) - INT(XShift) + 18 - COS((Entity(n%).ani + 270) * PI / 180), INT(Entity(n%).y) + 6 + SIN((Entity(n%).ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 107)), VARSEG(Buffer1(0)), Entity(n%).flip
+        LD2put INT(mob.x) - INT(XShift) + 14 - (COS((mob.ani + 180) * PI / 180) * 2) + 1, INT(mob.y) + SIN((mob.ani + 180) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 16, INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 100)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift), INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 101)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 14 - (COS(mob.ani * PI / 180) * 2) + 1, INT(mob.y) + SIN(mob.ani * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 18 - COS((mob.ani + 270) * PI / 180), INT(mob.y) - 10 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 106)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 18 - COS((mob.ani + 270) * PI / 180), INT(mob.y) + 6 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 107)), VARSEG(Buffer1(0)), mob.flip
       END IF
     END IF
-  NEXT n%
-
+  LOOP
+  
+  'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- draw items"
+  
   '- draw the items
   '----------------
   FOR i% = 1 TO NumItems(CurrentRoom)
     LD2put item(i%, CurrentRoom).x - INT(XShift), item(i%, CurrentRoom).y, VARSEG(sObject(0)), VARPTR(sObject(EPS * item(i%, CurrentRoom).item)), VARSEG(Buffer1(0)), 0
   NEXT i%
-
+  
+  'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- draw player"
+  
   '- draw the player
   '-----------------
   IF SceneMode = 0 THEN
     px% = INT(Player.x): py% = INT(Player.y)
     lan% = INT(Player.lAni): uan% = INT(Player.uAni)
-    IF (Player.weapon = FIST) AND (lan% >= 36) THEN
-      LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), VARSEG(Buffer1(0)), Player.flip
-    ELSE
-      LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), VARSEG(Buffer1(0)), Player.flip
-      LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * uan%)), VARSEG(Buffer1(0)), Player.flip
-    END IF
+    SELECT CASE Player.state
+    CASE CROUCHING
+        LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * LARRYCROUCH)), VARSEG(Buffer1(0)), Player.flip
+    CASE STILL, RUNNING, JUMPING, ELSE
+        IF (Player.weapon = FIST) AND (lan% >= 36) THEN
+            LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), VARSEG(Buffer1(0)), Player.flip
+        ELSE
+            LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), VARSEG(Buffer1(0)), Player.flip
+            LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * uan%)), VARSEG(Buffer1(0)), Player.flip
+        END IF
+    END SELECT
   END IF
-
+  
+  'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- draw guts"
+  
   '- Draw the guts
   '-------------------
   FOR n% = 1 TO NumGuts
@@ -2358,11 +2497,12 @@ SUB LD2.RenderFrame
     ELSE
       cx% = INT(Guts(n%).x+7 - XShift)
       cy% = INT(Guts(n%).y+7    )
-      sz% = 20-Guts(n%).id
+      sz% = (20-Guts(n%).id)
       LD2.fill cx%-sz%, cy%-sz%, sz%*2, sz%*2, Guts(n%).id+11, 1
     END IF
   NEXT n%
-
+  
+  'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- draw dynamic lighting / light map 1"
   '- Draw the lighting
   '-------------------
   'IF Lighting1 THEN
@@ -2417,6 +2557,8 @@ SUB LD2.RenderFrame
   'IF Player.weapon = FIST THEN LD2.PutText 0, 8, "AMMO  : INF", 1
   'LD2.PutText 241, 0, "LIVES:" + STR$(NumLives), 1
   
+  'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- draw player stats"
+  
   DIM pad AS INTEGER
   pad = 3
   'LD2.fill   0, 0, 80+pad*2, 16+pad*2, 20, 1
@@ -2443,10 +2585,11 @@ SUB LD2.RenderFrame
     FOR x% = 1 TO 4
       LD2putl 319 - (x% * 16 - 16), 180, VARSEG(sLight(0)), VARPTR(sLight(EPS * 2)), VARSEG(Buffer1(0))
     NEXT x%
-    IF Entity(ShowLife).id = BOSS1 THEN LD2.put 272 + XShift, 180, 40, idENEMY, 1
-    IF Entity(ShowLife).id = idBOSS2 THEN LD2.put 270 + XShift - 3, 180, 76, idSCENE, 0
-    IF Entity(ShowLife).id = idBOSS2 THEN LD2.put 270 + XShift + 13, 180, 77, idSCENE, 0
-    LD2.PutText 288, 184, STR$(Entity(ShowLife).life), 1
+    Mobs.GetMob mob, ShowLife
+    IF ShowLife = BOSS1 THEN LD2.put 272 + XShift, 180, 40, idENEMY, 1
+    IF ShowLife = idBOSS2 THEN LD2.put 270 + XShift - 3, 180, 76, idSCENE, 0
+    IF ShowLife = idBOSS2 THEN LD2.put 270 + XShift + 13, 180, 77, idSCENE, 0
+    LD2.PutText 288, 184, STR$(mob.life), 1
   END IF
   
   DIM revealText AS STRING
@@ -2506,10 +2649,11 @@ SUB LD2.RenderFrame
   END IF
   
   IF LD2.isDebugMode% THEN
-    LD2.putText 0, 24, "FPS: " + STR$(FPS), 1
-    LD2.putText 0, 32, "PLX: " + STR$(INT(Player.x)), 1
-    LD2.putText 0, 40, "XSH: " + STR$(INT(XShift)), 1
-    LD2.putText 0, 48, "P-X: " + STR$(INT(Player.x-XShift)), 1
+    LD2.putText 0, 48, "FPS: " + STR$(FPS), 1
+    LD2.putText 0, 56, "PLX: " + STR$(INT(Player.x)), 1
+    LD2.putText 0, 64, "XSH: " + STR$(INT(XShift)), 1
+    LD2.putText 0, 72, "P-X: " + STR$(INT(Player.x-XShift)), 1
+    LD2.putText 0, 80, "MOB: " + STR$(Mobs.Count%), 1
   END IF
 
   '- Switch to letter box mode if in scene mode
@@ -2561,7 +2705,9 @@ END SUB
 
 SUB LD2.SetNumEntities (NE AS INTEGER)
 
-  NumEntities = NE
+  IF NE = 0 THEN
+    Mobs.clear
+  END IF
 
 END SUB
 
@@ -2644,9 +2790,9 @@ SUB LD2.SetShotgun (OnOff AS INTEGER)
 
 END SUB
 
-SUB LD2.SetShowLife (i AS INTEGER)
+SUB LD2.SetBossBar (mobId AS INTEGER)
 
-  ShowLife = i
+  ShowLife = mobId
 
 END SUB
 
@@ -2709,11 +2855,76 @@ SUB LD2.SetXShift (ShiftX AS INTEGER)
 
 END SUB
 
+FUNCTION GetNextWord$ (text AS STRING)
+    
+    DIM i AS INTEGER
+    DIM word AS STRING
+    STATIC start AS INTEGER
+    STATIC prevText AS STRING
+    
+    IF (text <> prevText) OR (start = 0) THEN
+        start = 1
+        prevText = text
+    END IF
+    
+    i = INSTR(1, text, " ")
+    IF i > 0 THEN
+        word = MID$(text, 1, i-1)
+    ELSE
+        word = text
+    END IF
+    
+    start = i+1
+    
+    GetNextWord$ = word$
+    
+END FUNCTION
+
+SUB LD2.ConsoleCommand (commandText AS STRING)
+    
+    DIM optionName AS STRING
+    DIM optionVal  AS SINGLE
+    
+    commandText = UCASE$(LTRIM$(RTRIM$(commandText)))
+    
+    IF LEFT$(commandText, 4) = "SET " THEN
+        commandText = RIGHT$(commandText, LEN(commandText)-4)
+        optionName = GetNextWord$(commandText)
+        optionVal  = VAL(GetNextWord$(commandText))
+        LD2.setConfig optionName, optionVal
+    END IF
+    
+END SUB
+
+SUB LD2.SetConfig (optionName AS STRING, optionVal AS SINGLE)
+    
+    SELECT CASE optionName
+    CASE "GRAVITY"
+        Config.gravity = optionVal
+    CASE "DOORSPEED"
+        Config.doorspeed = optionVal
+    CASE "PUNCHSPEED"
+        Config.punchspeed = optionVal
+    CASE "SHOTGUNSPEED"
+        Config.shotgunspeed = optionVal
+    CASE "MACHINEGUNSPEED"
+        Config.machinegunspeed = optionVal
+    CASE "PISTOLSPEED"
+        Config.pistolspeed = optionVal
+    CASE "DEAGLESPEED"
+        Config.deaglespeed = optionVal
+    CASE "RUNNINGSPEED"
+        Config.runningspeed = optionVal
+    CASE "JUMPINGSPEED"
+        Config.jumpingspeed = optionVal
+    END SELECT
+
+END SUB
+
 SUB LD2.Shoot
-
-  '- Make the player shoot
-  '-----------------------
-
+  
+  DIM mob AS MobType
+  
   IF Player.weapon = SHOTGUN AND Player.shells = 0 THEN EXIT SUB
   IF (Player.weapon = PISTOL OR Player.weapon = MACHINEGUN) AND Player.bullets = 0 THEN EXIT SUB
   IF Player.weapon = DESERTEAGLE AND Player.deagles = 0 THEN EXIT SUB
@@ -2748,41 +2959,47 @@ SUB LD2.Shoot
         p% = PEEK(px% + py% * 200)
         IF p% >= 80 AND p% <= 109 THEN EXIT SUB
        
-        FOR n% = 1 TO NumEntities
-          IF i% > Entity(n%).x AND i% < Entity(n%).x + 15 THEN
-            IF Player.y + 8 > Entity(n%).y AND Player.y + 8 < Entity(n%).y + 15 THEN
-              Entity(n%).hit = 1
+        Mobs.resetNext
+        DO WHILE Mobs.canGetNext%
+          Mobs.getNext mob
+          IF i% > mob.x AND i% < mob.x + 15 THEN
+            IF Player.y + 8 > mob.y AND Player.y + 8 < mob.y + 15 THEN
+              mob.hit = 1
               ht% = 1
              
               SELECT CASE Player.weapon
                 CASE SHOTGUN
-                  dist% = ABS(i% - (Entity(n%).x+7))
+                  dist% = ABS(i% - (mob.x+7))
                   SELECT CASE dist%
                   CASE 0 TO 15
-                    Entity(n%).life = Entity(n%).life - 6
+                    mob.life = mob.life - 6
                   CASE 16 TO 47
-                    Entity(n%).life = Entity(n%).life - 4
+                    mob.life = mob.life - 4
                   CASE 48 TO 79
-                    Entity(n%).life = Entity(n%).life - 3
+                    mob.life = mob.life - 3
                   CASE ELSE
-                    Entity(n%).life = Entity(n%).life - 2
+                    mob.life = mob.life - 2
                   END SELECT
                 CASE MACHINEGUN
-                  Entity(n%).life = Entity(n%).life - 2
+                  mob.life = mob.life - 2
                 CASE PISTOL
-                  Entity(n%).life = Entity(n%).life - 1
+                  mob.life = mob.life - 1
                 CASE DESERTEAGLE
-                  Entity(n%).life = Entity(n%).life - 5
+                  mob.life = mob.life - 5
               END SELECT
 
-              IF Entity(n%).life <= 0 THEN LD2.DeleteEntity n%
+              IF mob.life <= 0 THEN
+                LD2.DeleteMob mob
+              ELSE
+                Mobs.update mob
+              END IF
               'LD2.MakeGuts i%, INT(Player.y + 8), INT(4 * RND(1)) + 1, 1
               LD2.MakeGuts i%, INT(Player.y + 8), -1, 1
               EXIT FOR
             END IF
           END IF
           IF ht% = 1 THEN EXIT FOR
-        NEXT n%
+        LOOP
         IF ht% = 1 THEN EXIT FOR
       NEXT i%
       DEF SEG
@@ -2796,31 +3013,37 @@ SUB LD2.Shoot
         p% = PEEK(px% + py% * 200)
         IF p% >= 80 AND p% <= 109 THEN EXIT SUB
 
-        FOR n% = 1 TO NumEntities
-          IF i% > Entity(n%).x AND i% < Entity(n%).x + 15 THEN
-            IF Player.y + 8 > Entity(n%).y AND Player.y + 8 < Entity(n%).y + 15 THEN
-              Entity(n%).hit = 1
+        Mobs.resetNext
+        DO WHILE Mobs.canGetNext%
+          Mobs.getNext mob
+          IF i% > mob.x AND i% < mob.x + 15 THEN
+            IF Player.y + 8 > mob.y AND Player.y + 8 < mob.y + 15 THEN
+              mob.hit = 1
               ht% = 1
              
               SELECT CASE Player.weapon
                 CASE SHOTGUN
-                  Entity(n%).life = Entity(n%).life - 3
+                  mob.life = mob.life - 3
                 CASE MACHINEGUN
-                  Entity(n%).life = Entity(n%).life - 2
+                  mob.life = mob.life - 2
                 CASE PISTOL
-                  Entity(n%).life = Entity(n%).life - 1
+                  mob.life = mob.life - 1
                 CASE DESERTEAGLE
-                  Entity(n%).life = Entity(n%).life - 5
+                  mob.life = mob.life - 5
               END SELECT
              
-              IF Entity(n%).life <= 0 THEN LD2.DeleteEntity n%
+              IF mob.life <= 0 THEN
+                LD2.DeleteMob mob
+              ELSE
+                Mobs.update mob
+              END IF
               'LD2.MakeGuts i%, INT(Player.y + 8), INT(4 * RND(1)) + 1, -1
               LD2.MakeGuts i%, INT(Player.y + 8), -1, -1
-              EXIT FOR
+              EXIT DO
             END IF
           END IF
-          IF ht% = 1 THEN EXIT FOR
-        NEXT n%
+          IF ht% = 1 THEN EXIT DO
+        LOOP
         IF ht% = 1 THEN EXIT FOR
       NEXT i%
       DEF SEG
@@ -2832,29 +3055,31 @@ SUB LD2.Shoot
 
     LD2.PlaySound sfxPUNCH
    
-    FOR n% = 1 TO NumEntities
-      IF Player.x + 14 + XShift > Entity(n%).x AND Player.x + 14 + XShift < Entity(n%).x + 15 AND Player.y + 10 > Entity(n%).y AND Player.y + 10 < Entity(n%).y + 15 AND Player.flip = 0 THEN
-     
-	Entity(n%).hit = 1
-	Entity(n%).life = Entity(n%).life - 1
-	IF Entity(n%).life <= 0 THEN LD2.DeleteEntity n%
-	LD2.PlaySound sfxBLOOD2
-	LD2.MakeGuts Player.x + 14 + XShift, INT(Player.y + 8), -1, 1
-	EXIT FOR
-
-      ELSEIF Player.x + 1 + XShift > Entity(n%).x AND Player.x + 1 + XShift < Entity(n%).x + 15 AND Player.y + 10 > Entity(n%).y AND Player.y + 10 < Entity(n%).y + 15 AND Player.flip = 1 THEN
-
-	Entity(n%).hit = 1
-	Entity(n%).life = Entity(n%).life - 1
-	IF Entity(n%).life <= 0 THEN LD2.DeleteEntity n%
-	LD2.PlaySound sfxBLOOD2
-	LD2.MakeGuts Player.x + 1 + XShift, INT(Player.y + 8), -1, -1
-	EXIT FOR
-
+    Mobs.resetNext
+    DO WHILE Mobs.canGetNext%
+      Mobs.getNext mob
+      IF Player.x + 14 + XShift > mob.x AND Player.x + 14 + XShift < mob.x + 15 AND Player.y + 10 > mob.y AND Player.y + 10 < mob.y + 15 AND Player.flip = 0 THEN
+        
+        mob.hit = 1
+        mob.life = mob.life - 1
+        IF mob.life <= 0 THEN LD2.DeleteMob mob ELSE Mobs.update mob
+        LD2.PlaySound sfxBLOOD2
+        LD2.MakeGuts Player.x + 14 + XShift, INT(Player.y + 8), -1, 1
+        EXIT DO
+        
+      ELSEIF Player.x + 1 + XShift > mob.x AND Player.x + 1 + XShift < mob.x + 15 AND Player.y + 10 > mob.y AND Player.y + 10 < mob.y + 15 AND Player.flip = 1 THEN
+        
+        mob.hit = 1
+        mob.life = mob.life - 1
+        IF mob.life <= 0 THEN LD2.DeleteMob mob ELSE Mobs.update mob
+        LD2.PlaySound sfxBLOOD2
+        LD2.MakeGuts Player.x + 1 + XShift, INT(Player.y + 8), -1, -1
+        EXIT DO
+        
       END IF
-   
-    NEXT n%
-
+        
+    LOOP
+    
   END IF
 
 END SUB
@@ -2904,6 +3129,7 @@ SUB LD2.CountFrame
 
   STATIC seconds AS DOUBLE
   STATIC first AS INTEGER
+  DIM AVGMOD AS DOUBLE
   
   IF first = 0 THEN
     seconds  = TIMER
@@ -2922,16 +3148,12 @@ SUB LD2.CountFrame
     FPSCOUNT = 0
     F#       = FPS
     DELAYMOD = 60/F#
+    'AVGMOD   = 60/AVGFPS
     IF DELAYMOD < 1 THEN DELAYMOD = 1
+    'IF DELAYMOD > AVGMOD THEN DELAYMOD = AVGMOD
   END IF
 
 END SUB
-
-FUNCTION LD2.GetGameArgs$
-    
-    LD2.GetGameArgs$ = GameArgs
-    
-END FUNCTION
 
 FUNCTION LD2.isTestMode%
     
@@ -2960,10 +3182,15 @@ SUB MixTiles(spriteSeg AS INTEGER, lightSeg AS INTEGER, tileMapSeg AS INTEGER, m
   DIM x AS INTEGER
   DIM y AS INTEGER
   DIM m AS INTEGER
+  DIM skip AS INTEGER
+  DIM sprite AS INTEGER
   
   DIM hashes(80) AS INTEGER 'STRING
   DIM hashCount AS INTEGER
   DIM found AS INTEGER
+  
+  DIM aniMapSeg AS INTEGER
+  aniMapSeg = VARSEG(AniMap(0))
   
   'PRINT "Generating static lighting..."
   '
@@ -2972,30 +3199,44 @@ SUB MixTiles(spriteSeg AS INTEGER, lightSeg AS INTEGER, tileMapSeg AS INTEGER, m
   FOR y = 0 TO 13
     FOR x = 0 TO 199
       
+      skip = 0
+      
+      'DEF SEG = tileMapSeg
+      'sprite = PEEK(m)
+      'IF (sprite = DOOR0) OR (sprite = DOOR1) OR (sprite = DOOR2) OR (sprite = DOOR3) OR (sprite = DOORW) THEN
+      '  skip = 1
+      'END IF
+      'DEF SEG
+      
       DEF SEG = tileMapSeg : spritePtr = VARPTR(sTile(EPS * PEEK(m))): DEF SEG
       DEF SEG = lightMapSeg: lightPtr  = VARPTR(sLight(EPS * PEEK(m))): DEF SEG
+      a% = 0
+      DEF SEG = aniMapSeg  : a% = PEEK(m): DEF SEG
       
       DEF SEG = lightMapSeg: l% = PEEK(m): DEF SEG
       
-      IF l% <> 0 THEN
-		  LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr, tempPtr
-		  hash  = VAL(GetSpriteHash$(lightSeg, tempPtr))
-		  found = -1
-		  FOR i = 0 TO hashCount-1
-			IF hash = hashes(i) THEN
-			  found = i
-			  EXIT FOR
-			END IF
-		  NEXT i
-		  IF found = -1 THEN
-			hashes(hashCount) = hash
-			LD2copySprite lightSeg, tempPtr, spriteSeg, VARPTR(sTile(EPS * (120+hashCount)))
-			DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (120+hashCount): DEF SEG
-			hashCount = hashCount + 1
-			IF hashCount > 80 THEN PRINT "TOO MANY HASHES": END
-		  ELSE
-			DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (120+found): DEF SEG
-		  END IF
+      IF (l% <> 0) AND (skip = 0) THEN
+          FOR aa% = 0 TO a%
+              DEF SEG = tileMapSeg : spritePtr = VARPTR(sTile(EPS * (PEEK(m)+aa%))): DEF SEG
+              LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr, tempPtr
+              hash  = VAL(GetSpriteHash$(lightSeg, tempPtr))
+              found = -1
+              FOR i = 0 TO hashCount-1
+                IF hash = hashes(i) THEN
+                  found = i
+                  EXIT FOR
+                END IF
+              NEXT i
+              IF found = -1 THEN
+                hashes(hashCount) = hash
+                LD2copySprite lightSeg, tempPtr, spriteSeg, VARPTR(sTile(EPS * (120+hashCount)))
+                DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (120+hashCount): DEF SEG
+                hashCount = hashCount + 1
+                IF hashCount > 80 THEN EXIT SUB 'PRINT "TOO MANY HASHES": END
+              ELSE
+                DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (120+found): DEF SEG
+              END IF
+          NEXT aa%
       ELSE
         DEF SEG = tileMapSeg: t% = PEEK(m): DEF SEG
         DEF SEG = mixMapSeg : POKE VARPTR(MixMap(0))+m, t%: DEF SEG
@@ -3094,7 +3335,7 @@ FUNCTION PeekBitmap%(x AS INTEGER, y AS INTEGER)
     DEF SEG
     
     bit = (bits AND (2^(x AND 7)))
-    IF bit > 0 THEN bit = 1
+    IF bit <> 0 THEN bit = 1
     
     PeekBitmap% = bit
     
@@ -3103,6 +3344,20 @@ END FUNCTION
 SUB LD2.Debug(message AS STRING)
     
     DIM logFile AS INTEGER
+    DIM timeStr AS STRING
+    STATIC lastTime AS DOUBLE
+    
+    IF message = "!debugstart!" THEN
+        message  = DATE$+" "+TIME$+" START DEBUG SESSION"
+        lastTime = TIMER
+    ELSE
+        timeStr  = STR$(TIMER-lastTime)
+        lastTime = TIMER
+        IF LEFT$(timeStr, 1) = "." THEN
+            timeStr = "0"+timeStr
+        END IF
+        message  = timeStr+SPACE$(15-LEN(timeStr))+message
+    END IF
     
     logFile = FREEFILE
     OPEN "log/debug.log" FOR APPEND AS logFile
