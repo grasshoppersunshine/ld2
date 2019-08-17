@@ -5,9 +5,15 @@
   REM $INCLUDE: 'INC\LD2SND.BI'
   REM $INCLUDE: 'INC\LD2GFX.BI'
   REM $INCLUDE: 'INC\LD2E.BI'
-  REM $INCLUDE: 'INC\LD2.BI'
+  REM $INCLUDE: 'INC\LD2EPUB.BI'
+  REM $INCLUDE: 'INC\LD2PUB.BI'
   REM $INCLUDE: 'INC\TITLE.BI'
-
+  REM $INCLUDE: 'INC\MOBS.BI'
+  
+  DECLARE SUB DeleteMob (mob AS MobType)
+  DECLARE FUNCTION CheckMobFloorHit% (mob AS MobType)
+  DECLARE FUNCTION CheckMobWallHit% (mob AS MobType)
+  
 ' jump and shoot to shatter glass windows???
 ' press down to pick something up (graphic of larry bending down grabbing something)
 ' fill not working
@@ -19,46 +25,45 @@
 
   REM $DYNAMIC
   
-  LD2.Debug "!debugstart!"
-  LD2.Debug "FREE MEMORY:"+STR$(FRE(-1))
+  REDIM SHARED Buffer1(0) AS INTEGER    '- Offscreen buffer
+  REDIM SHARED Buffer2(0) AS INTEGER    '- Offscreen buffer
   
-  A& = SETMEM(-180000)
+  DIM SHARED LarryFile   AS STRING
+  DIM SHARED TilesFile   AS STRING
+  DIM SHARED LightFile   AS STRING
+  DIM SHARED EnemiesFile AS STRING
+  DIM SHARED GutsFile    AS STRING
+  DIM SHARED SceneFile   AS STRING
+  DIM SHARED ObjectsFile AS STRING
+  DIM SHARED BossFile    AS STRING
+  DIM SHARED FontFile    AS STRING
   
-  DIM SHARED Buffer1(32000) AS INTEGER    '- Offscreen buffer
-  DIM SHARED Buffer2(32000) AS INTEGER    '- Offscreen buffer
+  REDIM SHARED sLarry (0) AS INTEGER
+  REDIM SHARED sTile  (0) AS INTEGER
+  REDIM SHARED sLight (0) AS INTEGER
+  REDIM SHARED sEnemy (0) AS INTEGER
+  REDIM SHARED sGuts  (0) AS INTEGER
+  REDIM SHARED sScene (0) AS INTEGER
+  REDIM SHARED sObject(0) AS INTEGER
+  REDIM SHARED sFont  (0) AS INTEGER
   
-  DIM SHARED LarryFile   AS STRING: LarryFile   = "gfx\pp256\images\larry2.put"
-  DIM SHARED TilesFile   AS STRING: TilesFile   = "gfx\pp256\images\ld2tiles.put"  
-  DIM SHARED LightFile   AS STRING: LightFile   = "gfx\ld2light.put"
-  DIM SHARED EnemiesFile AS STRING: EnemiesFile = "gfx\enemies.put"
-  DIM SHARED GutsFile    AS STRING: GutsFile    = "gfx\ld2guts.put"
-  DIM SHARED SceneFile   AS STRING: SceneFile   = "gfx\ld2scene.put"
-  DIM SHARED ObjectsFile AS STRING: ObjectsFile = "gfx\objects.put"
-  DIM SHARED BossFile    AS STRING: BossFile    = "gfx\boss1.put"
-  DIM SHARED FontFile    AS STRING: FontFile    = "gfx\font1.put"
+  REDIM SHARED TileMap  (0) AS INTEGER
+  REDIM SHARED MixMap   (0) AS INTEGER
+  REDIM SHARED LightMap1(0) AS INTEGER
+  REDIM SHARED LightMap2(0) AS INTEGER
+  REDIM SHARED AniMap   (0) AS INTEGER
+  REDIM SHARED FloorMap (0) AS INTEGER
   
-  DIM SHARED sLarry ( File.getAllocSize&( LarryFile   )) AS INTEGER
-  DIM SHARED sTile  ( File.getAllocSize&( TilesFile   )+(80*130) ) AS INTEGER
-  DIM SHARED sLight ( File.getAllocSize&( LightFile   )) AS INTEGER
-  DIM SHARED sEnemy ( File.getAllocSize&( EnemiesFile )) AS INTEGER
-  DIM SHARED sGuts  ( File.getAllocSize&( GutsFile    )) AS INTEGER
-  DIM SHARED sScene ( File.getAllocSize&( SceneFile   )) AS INTEGER
-  DIM SHARED sObject( File.getAllocSize&( ObjectsFile )) AS INTEGER
-  DIM SHARED sFont  ( File.getAllocSize&( FontFile    )) AS INTEGER
-  
-  LD2.Debug "FREE MEMORY (post sprites alloc ):"+STR$(FRE(-1))
-                                          
-  DIM SHARED TileMap(1307) AS INTEGER     '- 2400 = 200*12 // 1206 = 201*12 (divide by 2)
-  DIM SHARED MixMap(1307) AS INTEGER      '- 2400 = 200*12 // 1206 = 201*12 (divide by 2)
-  DIM SHARED LightMap1(1307) AS INTEGER   '- 2400 = 200*12
-  DIM SHARED LightMap2(1307) AS INTEGER   '- 2400 = 200*12
-  DIM SHARED AniMap(1307) AS INTEGER      '- 2400 = 200*12
-  DIM SHARED FloorMap(163) AS INTEGER     '- 163  = 200/16(bits) = 12.5 (13) * (13 rows)
+  REDIM SHARED Items      (MAXITEMS, MAXFLOORS) AS tItem
+  REDIM SHARED NumItems   (MAXFLOORS) AS INTEGER
+  REDIM SHARED Guts       (MAXGUTS) AS tGuts
+  REDIM SHARED Doors      (MAXDOORS) AS tDoor
+  REDIM SHARED Inventory  (MAXINVENTORY) AS tInventory
+  REDIM SHARED WentToRoom (MAXFLOORS) AS INTEGER          '- replace with roomitem token
+
   DIM SHARED CurrentWeapon AS INTEGER
   DIM SHARED Gravity AS SINGLE
   DIM SHARED NumGuts AS INTEGER
-  
-  LD2.Debug "FREE MEMORY (post maps alloc ):"+STR$(FRE(-1))
   
   DIM SHARED Message1 AS STRING
   DIM SHARED SceneMode AS INTEGER
@@ -70,100 +75,35 @@
   DIM SHARED FPSCOUNT AS INTEGER
   DIM SHARED DELAYMOD AS DOUBLE
   
-  CONST PI = 3.141592
-
-CONST MAXGUTS      = 100
-CONST MAXITEMS     = 100 '- per room in case you move everything to another room?
-CONST MAXDOORS     =  15 '- per room
-CONST MAXFLOORS    =  23
-CONST MAXINVENTORY =   7
-
-CONST MAXTILES = 120
-
   DIM SHARED Player AS tPlayer
-
-  TYPE tGuts
-    x AS SINGLE
-    y AS SINGLE
-    velocity AS SINGLE
-    speed AS SINGLE
-    id AS INTEGER
-    flip AS INTEGER
-    count AS INTEGER
-  END TYPE: DIM SHARED Guts(MAXGUTS) AS tGuts
- 
-  TYPE tElevator
-    x1 AS INTEGER
-    y1 AS INTEGER
-    x2 AS INTEGER
-    y2 AS INTEGER
-  END TYPE: DIM SHARED Elevator AS tElevator
-
-  TYPE tItem
-    x AS INTEGER
-    y AS INTEGER
-    item AS INTEGER
-  END TYPE: DIM SHARED item(MAXITEMS, MAXFLOORS) AS tItem
-
-  TYPE tDoor
-    x1 AS INTEGER
-    y1 AS INTEGER
-    x2 AS INTEGER
-    y2 AS INTEGER
-    code AS INTEGER
-    ani AS SINGLE
-    anicount AS SINGLE
-    mx AS INTEGER
-    my AS INTEGER
-  END TYPE: DIM SHARED Door(15) AS tDoor
+  DIM SHARED Elevator AS tElevator
   
-  'TYPE tRoomData
-  '  numItems AS INTEGER
-  '  numDoors AS INTEGER
-  'END TYPE
- 
   DIM SHARED XShift AS DOUBLE
   DIM SHARED CurrentRoom AS INTEGER
-  DIM SHARED NumItems(MAXFLOORS) AS INTEGER
-  DIM SHARED WentToRoom(MAXFLOORS) AS INTEGER
-  DIM SHARED LoadBackup(MAXFLOORS) AS INTEGER
+  
   DIM SHARED Animation AS SINGLE
   DIM SHARED NumDoors AS INTEGER
   DIM SHARED BossNum AS INTEGER
   DIM SHARED ShowLife AS INTEGER
-  
-  Animation = 1
-  
-  DIM SHARED Inventory(MAXINVENTORY) AS tInventory
- 
-  CONST EPS = 130
-  
-  CONST msgENTITYDELETED = 1
-  CONST msgGOTYELLOWCARD = 2
-
-  Player.code = CODEBLUE
-
+  DIM SHARED GameFlags AS INTEGER
   DIM SHARED NumLives AS INTEGER
-  NumLives = 1
   DIM SHARED Lighting1 AS INTEGER
   DIM SHARED Lighting2 AS INTEGER
-  Lighting1 = 1
-  Lighting2 = 1
-  
-  DIM SHARED BitmapSeg   AS INTEGER
-  DIM SHARED BitmapOff   AS INTEGER
-  DIM SHARED BitmapPitch AS INTEGER
-  
+  DIM SHARED PlayerAtElevator AS INTEGER
   DIM SHARED GameArgs AS STRING
-  GameArgs = COMMAND$
-  
   DIM SHARED GameMode AS INTEGER
+
+
   
   DIM SHARED GAME.RevealText AS STRING
   
-  TIMER ON
-  
-  LD2.Start
+
+
+  DIM SHARED BitmapSeg   AS INTEGER
+  DIM SHARED BitmapOff   AS INTEGER
+  DIM SHARED BitmapPitch AS INTEGER
+
+
 
 REM $STATIC
 DEFINT A-Z
@@ -235,7 +175,7 @@ FUNCTION File.getAllocSize&(filename AS STRING)
     
     File.getAllocSize& = fileSize
     
-    LD2.Debug "Allocating"+STR$(filesize)+" ints for "+filename
+    IF LD2.isDebugMode% THEN LD2.Debug "Allocating"+STR$(filesize)+" ints for "+filename
     
 END FUNCTION
 
@@ -261,6 +201,14 @@ SUB LD2.AddLives (Amount AS INTEGER)
 
   NumLives = NumLives + Amount
 
+END SUB
+
+SUB AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
+    
+    IF LD2.isDebugMode% THEN LD2.Debug "AddMusic ("+STR$(id)+", "+filepath+","+STR$(loopmusic)+" )"
+    
+    LD2.AddMusic id, filepath, loopmusic
+    
 END SUB
 
 FUNCTION LD2.AddToStatus% (item AS INTEGER, Amount AS INTEGER)
@@ -289,6 +237,12 @@ FUNCTION LD2.AddToStatus% (item AS INTEGER, Amount AS INTEGER)
     LD2.AddToStatus% = 1
   END IF
 
+END FUNCTION
+
+FUNCTION LD2.AtElevator%
+    
+    LD2.AtElevator% = PlayerAtElevator
+    
 END FUNCTION
 
 FUNCTION LD2.GetStatusItem% (slot AS INTEGER)
@@ -323,14 +277,14 @@ FUNCTION LD2.CheckPlayerFloorHit%
  
 END FUNCTION
 
-FUNCTION LD2.CheckMobFloorHit% (mob AS MobType)
+FUNCTION CheckMobFloorHit% (mob AS MobType)
   
   SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
  
   FOR x% = 2 TO 13 STEP 11
     px% = INT(mob.x + x%) \ 16: py% = INT(mob.y) \ 16
     p% = PeekBitmap%(px%, py%+1)
-    IF p% THEN LD2.CheckMobFloorHit% = 1: EXIT FUNCTION
+    IF p% THEN CheckMobFloorHit% = 1: EXIT FUNCTION
   NEXT x%
   
 END FUNCTION
@@ -349,7 +303,7 @@ FUNCTION LD2.CheckPlayerWallHit%
   
 END FUNCTION
 
-FUNCTION LD2.CheckMobWallHit% (mob AS MobType)
+FUNCTION CheckMobWallHit% (mob AS MobType)
   
   SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
   
@@ -357,7 +311,7 @@ FUNCTION LD2.CheckMobWallHit% (mob AS MobType)
     FOR x% = 0 TO 15 STEP 15
       px% = INT(mob.x + x%) \ 16: py% = INT(mob.y + y%) \ 16
       p% = PeekBitmap%(px%, py%)
-      IF p% THEN LD2.CheckMobWallHit% = 1: EXIT FUNCTION
+      IF p% THEN CheckMobWallHit% = 1: EXIT FUNCTION
     NEXT x%
   NEXT y%
   
@@ -430,16 +384,18 @@ SUB LD2.CreateMob (x AS INTEGER, y AS INTEGER, id AS INTEGER)
 
 END SUB
 
-SUB LD2.DeleteMob (mob AS MobType)
-
+SUB DeleteMob (mob AS MobType)
+  
   SELECT CASE mob.id
     CASE BOSS1
+      LD2.SetFlag BOSSKILLED
       LD2.StopMusic
     CASE idBOSS2
+      LD2.SetFlag BOSSKILLED
       LD2.PlayMusic mscWANDERING
       LD2.SetAccessLevel CODERED
   END SELECT
- 
+  
   IF Player.flip = 0 THEN LD2.MakeGuts mob.x + 8, mob.y + 8, INT(4 * RND(1)) + 4,  1
   IF Player.flip = 1 THEN LD2.MakeGuts mob.x + 8, mob.y + 8, INT(4 * RND(1)) + 4, -1
   FOR i% = 0 TO 4
@@ -449,7 +405,17 @@ SUB LD2.DeleteMob (mob AS MobType)
   
   Mobs.remove mob
   
-  LD2.SendMessage msgENTITYDELETED, NumEntity
+END SUB
+
+SUB LD2.DeleteMob (mobId AS INTEGER)
+  
+  DIM mob AS MobType
+  mob.id = -1
+  Mobs.GetMob mob, mobId
+  
+  IF mob.id <> -1 THEN
+    DeleteMob mob
+  END IF
 
 END SUB
 
@@ -458,24 +424,23 @@ SUB LD2.CreateItem (x AS INTEGER, y AS INTEGER, item AS INTEGER, mobId AS INTEGE
   '- create an item
 
   DIM i AS INTEGER
-  DIM EN AS INTEGER
   DIM cr AS INTEGER
   DIM mob AS MobType
  
-  NumItems = NumItems + 1
-  i = NumItems
   cr = CurrentRoom
+  NumItems(cr) = NumItems(cr) + 1
+  i = NumItems(cr)
 
   IF mobId = 0 THEN
-    item(i, cr).x = x
-    item(i, cr).y = y
+    Items(i, cr).x = x
+    Items(i, cr).y = y
   ELSE
     Mobs.getMob mob, mobId
-    item(i, cr).x = mob.x
-    item(i, cr).y = mob.y
+    Items(i, cr).x = mob.x
+    Items(i, cr).y = mob.y
   END IF
 
-  item(i, cr).item = item
+  Items(i, cr).item = item
 
 END SUB
 
@@ -487,7 +452,7 @@ SUB LD2.Drop (item%)
   NumItems(CurrentRoom) = NumItems(CurrentRoom) + 1
   n% = NumItems(CurrentRoom)
 
-  item(n%, CurrentRoom).x = Player.x + XShift
+  Items(n%, CurrentRoom).x = Player.x + XShift
  
   y% = Player.y
   DEF SEG = VARSEG(TileMap(0))
@@ -503,8 +468,8 @@ SUB LD2.Drop (item%)
   DEF SEG
 
 
-  item(n%, CurrentRoom).y = (y% \ 16) * 16
-  item(n%, CurrentRoom).item = item% - 1
+  Items(n%, CurrentRoom).y = (y% \ 16) * 16
+  Items(n%, CurrentRoom).item = item% - 1
 
   SELECT CASE item%
     CASE GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
@@ -547,129 +512,97 @@ SUB LD2.RefreshPlayerAccess
 END SUB
 
 SUB LD2.Init
-
-  '- Initialize Larry The Dinosaur II
-  '----------------------------------
-  IF (GameArgs = "TEST") THEN
-    LD2.SetGameMode TESTMODE
-  END IF
-  IF (GameArgs = "DEBUG") THEN
-    LD2.SetGameMode DEBUGMODE
-  END IF
   
-  IF Game.isDebugMode% THEN
+  DIM bytesToInts AS INTEGER
+  DIM bitsToInts AS INTEGER
+
+  GameArgs    = COMMAND$
+  GameArgs    = UCASE$(LTRIM$(RTRIM$(GameArgs)))
+
+  SELECT CASE GameArgs
+  CASE "TEST"
+    LD2.SetGameMode TESTMODE
+  CASE "DEBUG"
+    LD2.SetGameMode DEBUGMODE
+  CASE "PROFILE"
+    'LD2.SetGameMode (DEBUGMODE OR PROFILEMODE)
+  END SELECT
+  
+  IF LD2.isDebugMode% THEN
+    LD2.Debug "!debugstart!"
     LD2.Debug "LD2.Init"
   END IF
   
+  TIMER ON
+  RANDOMIZE TIMER
+  
+  '- Init SHAREDs
+  '--------------------------------------------
+  LarryFile   = "gfx\pp256\images\larry2.put"
+  TilesFile   = "gfx\pp256\images\ld2tiles.put"  
+  LightFile   = "gfx\ld2light.put"
+  EnemiesFile = "gfx\enemies.put"
+  GutsFile    = "gfx\ld2guts.put"
+  SceneFile   = "gfx\ld2scene.put"
+  ObjectsFile = "gfx\objects.put"
+  BossFile    = "gfx\boss1.put"
+  FontFile    = "gfx\font1.put"
+  Animation   = 1
+  Player.code = CODEBLUE
+  NumLives    = 1
+  Lighting1   = 1
+  Lighting2   = 1
+  Gravity     = 0.06
+  XShift      = 0
+  '--------------------------------------------
+  
+  '--------------------------------------------
+  IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY:"+STR$(FRE(-1))
+  '--------------------------------------------
+  REDIM sLarry ( File.getAllocSize&( LarryFile   )) AS INTEGER
+  REDIM sTile  ( File.getAllocSize&( TilesFile   )+(80*130) ) AS INTEGER
+  REDIM sLight ( File.getAllocSize&( LightFile   )) AS INTEGER
+  REDIM sEnemy ( File.getAllocSize&( EnemiesFile )) AS INTEGER
+  REDIM sGuts  ( File.getAllocSize&( GutsFile    )) AS INTEGER
+  REDIM sScene ( File.getAllocSize&( SceneFile   )) AS INTEGER
+  REDIM sObject( File.getAllocSize&( ObjectsFile )) AS INTEGER
+  REDIM sFont  ( File.getAllocSize&( FontFile    )) AS INTEGER
+  '--------------------------------------------
+  IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY ( post sprites alloc ):"+STR$(FRE(-1))
+  '--------------------------------------------
+  REDIM Buffer1 ( 32000 ) AS INTEGER
+  REDIM Buffer2 ( 32000 ) AS INTEGER
+  '--------------------------------------------
+  IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY ( post buffers alloc ):"+STR$(FRE(-1))
+  '--------------------------------------------
+  bytesToInts = INT((201*13)/2)+1
+  REDIM TileMap  ( bytesToInts ) AS INTEGER
+  REDIM MixMap   ( bytesToInts ) AS INTEGER
+  REDIM LightMap1( bytesToInts ) AS INTEGER
+  REDIM LightMap2( bytesToInts ) AS INTEGER
+  REDIM AniMap   ( bytesToInts ) AS INTEGER
+  bitsToInts = INT((201*13)/16)+1
+  REDIM FloorMap ( bitsToInts ) AS INTEGER
+  '--------------------------------------------
+  IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY ( post maps alloc ):"+STR$(FRE(-1))
+  '--------------------------------------------
+  REDIM Items      (MAXITEMS, MAXFLOORS) AS tItem
+  REDIM NumItems   (MAXFLOORS) AS INTEGER
+  REDIM Doors      (MAXDOORS) AS tDoor
+  REDIM Guts       (MAXGUTS) AS tGuts
+  REDIM Inventory  (MAXINVENTORY) AS tInventory
+  REDIM WentToRoom (MAXFLOORS) AS INTEGER  
+  '--------------------------------------------
+  IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY ( post other alloc ):"+STR$(FRE(-1))
+  '--------------------------------------------
+  
   LD2.InitSound
-  Mobs.Init
   
-  SCREEN 13
- 
-  LD2.LoadPalette "gfx\gradient.pal"
-  LD2.LoadSprite FontFile, idFONT
- 
-  DIM Message AS STRING
-'
-'  IF nil% THEN
-'    Message = "Please run SETUP"
-'    CLS
-'    LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
-'    DO: LOOP UNTIL keyboard(&H39)
-'    DO: LOOP WHILE keyboard(&H39)
-'    END
-'  ELSE
-'    Message = "Loading...Please Wait..."
-'    CLS
-'    LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
-'  END IF
-
-    LD2.AddMusic mscTHEME, "sfx\theme.gdm", 0
-    LD2.AddMusic mscWANDERING, "sfx\wander.gdm", 1
-    LD2.AddMusic mscINTRO, "sfx\intro.gdm", 1
-    LD2.AddMusic mscUHOH, "sfx\uhoh.gdm", 0
-    LD2.AddMusic mscMARCHoftheUHOH, "sfx\scent.gdm", 0
-'  DS4QB.LoadMusic mscWANDERING, "sfx/creepy.mp3", DEFAULT
-'  DS4QB.LoadMusic mscINTRO, "sfx/intro.mp3", DEFAULT
-'  DS4QB.LoadMusic mscENDING, "sfx/ending.mod", DEFAULT
-'  DS4QB.LoadMusic mscBOSS, "sfx/boss.mp3", DEFAULT
-'  DS4QB.LoadMusic mscTHEME, "sfx/intro.mod", DEFAULT
-'  DS4QB.LoadSound sndUHOH, "sfx/uhoh.mp3", DEFAULT
-'  DS4QB.LoadSound sndSHOTGUN, "sfx/shotgun.mp3", DEFAULT
-'  DS4QB.LoadSound sndMACHINEGUN, "sfx/mgun.mp3", DEFAULT
-'  DS4QB.LoadSound sndPISTOL, "sfx/pistol.mp3", DEFAULT
-'  DS4QB.LoadSound sndDESERTEAGLE, "sfx/deagle.mp3", DEFAULT
-'  DS4QB.LoadSound sndMACHINEGUN2, "sfx/mgun.mp3", DEFAULT
-'  DS4QB.LoadSound sndPISTOL2, "sfx/pistol.mp3", DEFAULT
-'  DS4QB.LoadSound sndBLOOD1, "sfx/blood1.mp3", DEFAULT
-'  DS4QB.LoadSound sndBLOOD2, "sfx/blood2.mp3", DEFAULT
-'  DS4QB.LoadSound sndDOORDOWN, "sfx/doordown.mp3", DEFAULT
-'  DS4QB.LoadSound sndDOORUP, "sfx/doorup.mp3", DEFAULT
-'  DS4QB.LoadSound sndPUNCH, "sfx/punch.mp3", DEFAULT
-'  DS4QB.LoadSound sndEQUIP, "sfx/equip.mp3", DEFAULT
-'  DS4QB.LoadSound sndPICKUP, "sfx/pickup.mp3", DEFAULT
-'  DS4QB.LoadSound sndLAUGH, "sfx/laugh.mp3", DEFAULT
- 
-  CLS
- 
-  IF (NOT LD2.isTestMode%) AND (NOT LD2.isDebugMode%) THEN
-  LD2.LoadBitmap "gfx\warning.bmp", 1, 0
-  
-  WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  LD2.CopyBuffer 1, 0
- 
-  DO: LOOP UNTIL keyboard(&H39)
-  DO: LOOP WHILE keyboard(&H39)
-  CLS
-
-  LD2.LoadBitmap "gfx\logo.bmp", 1, 0
-  'WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  LD2.CopyBuffer 1, 0
- 
-  DO: LOOP UNTIL keyboard(&H39)
-  DO: LOOP WHILE keyboard(&H39)
-  CLS
- 
-  LD2.LoadBitmap "gfx\title.bmp", 1, 0
-  WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  LD2.CopyBuffer 1, 0
- 
-  LD2.PlayMusic mscTHEME
-  DO
-    IF keyboard(&H2) OR keyboard(&H4F) THEN
-	  EXIT DO
-    END IF
-    IF keyboard(&H3) OR keyboard(&H50) THEN
-	  LD2.PlaySound sfxSELECT
-	  FOR i% = 1 TO 35: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-      LD2.ShowCredits
-      CLS
-      LD2.LoadBitmap "gfx\title.bmp", 1, 0
-      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-      LD2.CopyBuffer 1, 0
-    END IF
-    IF keyboard(&H4) OR keyboard(&H51) THEN
-      LD2.PlaySound sfxSELECT
-      FOR i% = 1 TO 70: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-      CLS
-      LD2.LoadPalette "gfx\gradient.pal"
-      LD2.ShutDown
-    END IF
-  LOOP
-  LD2.PlaySound sfxSELECT
-  FOR i% = 1 TO 35: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-  
-  LD2.StopMusic
-  
-  END IF
-  
-  LD2.LoadPalette "gfx\pp256\palettes\gradient.pal"
-  CLS
-  DEF SEG = VARSEG(Buffer1(0))
-    FOR n& = 0 TO 63999
-      POKE (n&), 0
-    NEXT
-  DEF SEG
+  AddMusic mscTHEME, "sfx\theme.gdm", 0
+  AddMusic mscWANDERING, "sfx\wander.gdm", 1
+  AddMusic mscINTRO, "sfx\intro.gdm", 1
+  AddMusic mscUHOH, "sfx\uhoh.gdm", 0
+  AddMusic mscMARCHoftheUHOH, "sfx\scent.gdm", 0
   
   LD2.LoadSprite LarryFile  , idLARRY  
   LD2.LoadSprite TilesFile  , idTILE
@@ -679,25 +612,16 @@ SUB LD2.Init
   LD2.LoadSprite SceneFile  , idSCENE
   LD2.LoadSprite ObjectsFile, idOBJECT
   LD2.LoadSprite BossFile   , idBOSS
+  LD2.LoadSprite FontFile, idFONT
   
-  'DEF SEG = VARSEG(Buffer2(0))
-  '  BLOAD "gfx\back1.bsv", 0
-  'DEF SEG
-  LD2.LoadBitmap "gfx\back.bmp", 1, 1
- ' LD2copyFull VARSEG(Buffer2(0)), &HA000
-  'LD2.LoadBitmap "gfx\back.bmp", 2, 1
-  'LD2copyFull VARSEG(Buffer2(0)), &HA000
-  'DO: LOOP UNTIL keyboard(&h39)
-  'DO: LOOP WHILE keyboard(&h39)
-  'DEF SEG = VARSEG(Buffer2(0))
-  '  BLOAD "gfx\back1.bsv", 0
-  'DEF SEG
-  'DO: LOOP UNTIL keyboard(&h39)
-  'end
+  Mobs.Init
   
-  'Gravity = .04
-  Gravity = .06
-  XShift  = 0
+  SCREEN 13
+  CLS
+  LD2.LoadPalette "gfx\gradient.pal"
+  LD2.LoadBitmap  "gfx\back.bmp", 2, 1
+  
+  IF LD2.isDebugMode% THEN LD2.Debug "LD2.Init SUCCESS"
   
 END SUB
 
@@ -727,9 +651,9 @@ SUB LD2.JumpPlayer (Amount AS SINGLE)
 END SUB
 
 SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER)
-
-  '- Load a bitmap onto the given buffer
-
+  
+  IF LD2.isDebugMode% THEN LD2.Debug "LD2.LoadBitmap ( "+Filename+","+STR$(BufferNum)+","+STR$(Convert)+" )"
+  
   DIM byte AS STRING * 1
   DIM byteR AS STRING * 1
   DIM byteG AS STRING * 1
@@ -840,7 +764,9 @@ SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER
     DEF SEG
 
   CLOSE #1
-
+  
+  IF LD2.isDebugMode% THEN LD2.Debug "LD2.LoadBitmap SUCCESS"
+  
 END SUB
 
 SUB LD2.LoadMap (Filename AS STRING)
@@ -879,8 +805,6 @@ SUB LD2.LoadMap (Filename AS STRING)
   
   Mobs.Clear
 
-  'IF LoadBackup(CurrentRoom) THEN Filename = RIGHT$(STR$(CurrentRoom), LEN(CurrentRoom)) + "bth.ld2"
- 
   DIM MapFile AS INTEGER
   MapFile = FREEFILE
 
@@ -971,23 +895,23 @@ SUB LD2.LoadMap (Filename AS STRING)
           END IF
           IF ASC(byte) >= 90 AND ASC(byte) <= 93 THEN
             NumDoors = NumDoors + 1
-            Door(NumDoors).x1 = x% * 16 - 16
-            Door(NumDoors).x2 = x% * 16 + 32
-            Door(NumDoors).y1 = y% * 16
-            Door(NumDoors).y2 = y% * 16 + 16
-            Door(NumDoors).code = CODEGREEN + (ASC(byte) - 90)
-            Door(NumDoors).mx = x%
-            Door(NumDoors).my = y%
+            Doors(NumDoors).x1 = x% * 16 - 16
+            Doors(NumDoors).x2 = x% * 16 + 32
+            Doors(NumDoors).y1 = y% * 16
+            Doors(NumDoors).y2 = y% * 16 + 16
+            Doors(NumDoors).code = CODEGREEN + (ASC(byte) - 90)
+            Doors(NumDoors).mx = x%
+            Doors(NumDoors).my = y%
           END IF
           IF ASC(byte) = 106 THEN
             NumDoors = NumDoors + 1
-            Door(NumDoors).x1 = x% * 16 - 16
-            Door(NumDoors).x2 = x% * 16 + 32
-            Door(NumDoors).y1 = y% * 16
-            Door(NumDoors).y2 = y% * 16 + 16
-            Door(NumDoors).code = CODEWHITE
-            Door(NumDoors).mx = x%
-            Door(NumDoors).my = y%
+            Doors(NumDoors).x1 = x% * 16 - 16
+            Doors(NumDoors).x2 = x% * 16 + 32
+            Doors(NumDoors).y1 = y% * 16
+            Doors(NumDoors).y2 = y% * 16 + 16
+            Doors(NumDoors).code = CODEWHITE
+            Doors(NumDoors).mx = x%
+            Doors(NumDoors).my = y%
           END IF
           IF ASC(byte) >= 80 AND ASC(byte) <= 109 THEN
             PokeBitmap x%, y%, 1
@@ -1038,10 +962,10 @@ SUB LD2.LoadMap (Filename AS STRING)
       END IF
       FOR i% = 1 TO NumItems(CurrentRoom)
         IF did% = 0 THEN
-          GET #MapFile, c&, item(i%, CurrentRoom).x: c& = c& + 2
-          GET #MapFile, c&, item(i%, CurrentRoom).y: c& = c& + 2
-          GET #MapFile, c&, byte: item(i%, CurrentRoom).item = ASC(byte): c& = c& + 1
-          IF CurrentRoom = 7 THEN item(i%, CurrentRoom).y = item(i%, CurrentRoom).y - 4
+          GET #MapFile, c&, Items(i%, CurrentRoom).x: c& = c& + 2
+          GET #MapFile, c&, Items(i%, CurrentRoom).y: c& = c& + 2
+          GET #MapFile, c&, byte: Items(i%, CurrentRoom).item = ASC(byte): c& = c& + 1
+          IF CurrentRoom = 7 THEN Items(i%, CurrentRoom).y = Items(i%, CurrentRoom).y - 4
         ELSE
           c& = c& + 2
           c& = c& + 2
@@ -1077,10 +1001,9 @@ SUB LD2.LoadMap (Filename AS STRING)
 END SUB
 
 SUB LD2.LoadPalette (Filename AS STRING)
-
-  '- Load the palette
-  '------------------
-
+  
+  IF LD2.isDebugMode% THEN LD2.Debug "LD2.LoadPalette ( "+Filename+" )"
+  
   DIM PaletteArray(0 TO 255) AS LONG
   DIM RGBVal(0 TO 255, 0 TO 2) AS INTEGER
 
@@ -1157,7 +1080,7 @@ END SUB
 
 SUB LD2.LoadSprite (Filename AS STRING, BufferNum AS INTEGER)
   
-  LD2.Debug "LoadSprite ( "+Filename+","+STR$(BufferNum)+" )"
+  IF LD2.isDebugMod% THEN LD2.Debug "LoadSprite ( "+Filename+","+STR$(BufferNum)+" )"
 
   '- Load a sprite set into a given buffer
   '---------------------------------------
@@ -1367,23 +1290,23 @@ SUB LD2.PickUpItem
   
   '- Check if player is near an item
   FOR i% = 1 TO NumItems(CurrentRoom)
-    IF Player.x + 8 + XShift >= item(i%, CurrentRoom).x AND Player.x + 8 + XShift <= item(i%, CurrentRoom).x + 16 THEN
+    IF Player.x + 8 + XShift >= Items(i%, CurrentRoom).x AND Player.x + 8 + XShift <= Items(i%, CurrentRoom).x + 16 THEN
      
       LD2.PlaySound sfxPICKUP
      
       '- Send message if player picked up something important
-      SELECT CASE item(i%, CurrentRoom).item + 1
+      SELECT CASE Items(i%, CurrentRoom).item + 1
         CASE 19
-          LD2.SendMessage msgGOTYELLOWCARD, 0
+          LD2.SetFlag GOTYELLOWCARD
       END SELECT
      
-      n% = LD2.AddToStatus(item(i%, CurrentRoom).item + 1, 1)
+      n% = LD2.AddToStatus(Items(i%, CurrentRoom).item + 1, 1)
       IF n% = 0 THEN
         IF i% = NumItems(CurrentRoom) THEN
-          item(T%, CurrentRoom).item = 0
+          Items(T%, CurrentRoom).item = 0
         ELSE
           FOR T% = i% TO NumItems(CurrentRoom) - 1
-            item(T%, CurrentRoom) = item(T% + 1, CurrentRoom)
+            Items(T%, CurrentRoom) = Items(T% + 1, CurrentRoom)
           NEXT T%
         END IF
         NumItems(CurrentRoom) = NumItems(CurrentRoom) - 1
@@ -1883,7 +1806,7 @@ SUB LD2.ProcessEntities
         IF mob.ani >= 360 THEN mob.ani = 0
 
         mob.y = mob.y + 1
-        IF LD2.CheckMobFloorHit%(mob) = 1 THEN
+        IF CheckMobFloorHit%(mob) = 1 THEN
           mob.y = mob.y - mob.velocity
           IF mob.counter = 0 THEN
             IF ABS(mob.x - (Player.x + XShift)) < 50 THEN
@@ -1923,17 +1846,17 @@ SUB LD2.ProcessEntities
  
     IF mob.hit > 0 THEN mob.hit = mob.hit - .1
 
-    IF LD2.CheckMobWallHit%(mob) THEN
+    IF CheckMobWallHit%(mob) THEN
       mob.x = ox%
       IF mob.id = TROOP1 THEN mob.counter = 0
       IF mob.id = TROOP2 THEN mob.counter = 0
     END IF
    
-    IF LD2.CheckMobFloorHit%(mob) = 0 THEN
+    IF CheckMobFloorHit%(mob) = 0 THEN
       mob.y = mob.y + mob.velocity
       mob.velocity = mob.velocity + Gravity
       IF mob.velocity > 3 THEN mob.velocity = 3
-      IF LD2.CheckMobWallHit%(mob) THEN
+      IF CheckMobWallHit%(mob) THEN
         IF mob.velocity >= 0 THEN
           mob.y = (mob.y \ 16) * 16 - 16
         ELSE
@@ -1946,7 +1869,7 @@ SUB LD2.ProcessEntities
     END IF
     
     IF deleted THEN
-        LD2.DeleteMob mob
+        DeleteMob mob
     ELSE
         Mobs.update mob
     END IF
@@ -1960,12 +1883,8 @@ SUB LD2.ProcessEntities
   
   
   LD2.ProcessGuts
-  
-  
-  PutLarryX INT(Player.x), INT(XShift)
-  PutLarryX2 INT(Player.x), INT(XShift)
  
-  SetElevate 0
+  PlayerAtElevator = 0
   '- check if Player is at elevator
   IF Scene% <> 4 AND Player.x + 7 + XShift >= Elevator.x1 AND Player.x + 7 + XShift <= Elevator.x2 THEN
     IF Player.y + 7 >= Elevator.y1 AND Player.y + 7 <= Elevator.y2 THEN
@@ -1973,7 +1892,7 @@ SUB LD2.ProcessEntities
       LD2.PutTile Elevator.x1 \ 16, Elevator.y1 \ 16, 16, 1
       LD2.PutTile Elevator.x2 \ 16 - 1, Elevator.y2 \ 16 - 1, 16, 1
       LD2.PutTile Elevator.x2 \ 16, Elevator.y2 \ 16 - 1, 14, 1
-      SetElevate 1
+      PlayerAtElevator = 1
     END IF
   END IF
   
@@ -1987,14 +1906,14 @@ SUB LD2.OpenDoor (id AS INTEGER)
     
     DIM doorIsClosed AS INTEGER
     
-    doorIsClosed   = (Door(id).ani = 0)
+    doorIsClosed   = (Doors(id).ani = 0)
     
     IF doorIsClosed THEN
         LD2.PlaySound sfxDOORUP
         Player.tempcode = 0       '- used temp card (if had one)
     END IF
     
-    Door(id).anicount = DOOROPENSPEED
+    Doors(id).anicount = DOOROPENSPEED
     
 END SUB
 
@@ -2002,13 +1921,13 @@ SUB LD2.CloseDoor (id AS INTEGER)
     
     DIM doorIsOpen AS INTEGER
     
-    doorIsOpen     = (Door(id).ani = 4)
+    doorIsOpen     = (Doors(id).ani = 4)
     
     IF doorIsOpen THEN
         LD2.PlaySound sfxDOORDOWN
     END IF
     
-    Door(id).anicount = DOORCLOSESPEED
+    Doors(id).anicount = DOORCLOSESPEED
     
 END SUB
 
@@ -2031,9 +1950,9 @@ SUB LD2.ProcessDoors
     
     FOR i = 1 TO NumDoors
         
-        playerHasAccess = (Player.code >= Door(i).code) OR (Player.tempcode >= Door(i).code) OR (Player.WHITECARD = 1 AND Door(i).code = CODEWHITE)
-        playerIsNear    = (pcx >= Door(i).x1) AND (pcx <= Door(i).x2) AND (pcy >= Door(i).y1) AND (pcy <= Door(i).y2)
-        doorIsMoving    = (Door(i).ani > 0) AND (Door(i).ani < 4)
+        playerHasAccess = (Player.code >= Doors(i).code) OR (Player.tempcode >= Doors(i).code) OR (Player.WHITECARD = 1 AND Doors(i).code = CODEWHITE)
+        playerIsNear    = (pcx >= Doors(i).x1) AND (pcx <= Doors(i).x2) AND (pcy >= Doors(i).y1) AND (pcy <= Doors(i).y2)
+        doorIsMoving    = (Doors(i).ani > 0) AND (Doors(i).ani < 4)
         
         IF playerHasAccess AND playerIsNear THEN
             LD2.OpenDoor i
@@ -2044,7 +1963,7 @@ SUB LD2.ProcessDoors
                 Mobs.getNext mob
                 ecx = mob.x + 7
                 ecy = mob.y + 7
-                entityIsNear = (ecx >= Door(i).x1) AND (ecx <= Door(i).x2) AND (ecy >= Door(i).y1) AND (ecy <= Door(i).y2)
+                entityIsNear = (ecx >= Doors(i).x1) AND (ecx <= Doors(i).x2) AND (ecy >= Doors(i).y1) AND (ecy <= Doors(i).y2)
                 IF entityIsNear THEN
                     EXIT DO
                 END IF
@@ -2058,29 +1977,29 @@ SUB LD2.ProcessDoors
             LD2.CloseDoor i
         END IF
         
-        Door(i).ani = Door(i).ani + Door(i).anicount * DELAYMOD
-        IF Door(i).ani >= 4 THEN
-            Door(i).ani = 4
+        Doors(i).ani = Doors(i).ani + Doors(i).anicount * DELAYMOD
+        IF Doors(i).ani >= 4 THEN
+            Doors(i).ani = 4
         END IF
-        IF Door(i).ani <= 0 THEN
-            Door(i).ani = 0
+        IF Doors(i).ani <= 0 THEN
+            Doors(i).ani = 0
         END IF
         
-        doorIsOpen   = (Door(i).ani = 4)
-        doorIsMoving = (Door(i).ani > 0) AND (Door(i).ani < 4)
+        doorIsOpen   = (Doors(i).ani = 4)
+        doorIsMoving = (Doors(i).ani > 0) AND (Doors(i).ani < 4)
         
         IF doorIsMoving THEN
-            LD2.PutTile Door(i).mx, Door(i).my, DOOROPEN + Door(i).ani, 1
+            LD2.PutTile Doors(i).mx, Doors(i).my, DOOROPEN + Doors(i).ani, 1
         ELSEIF doorIsOpen THEN
-            LD2.PutTile Door(i).mx, Door(i).my, DOORBACK, 1
-            LD2.SetFloor Door(i).mx, Door(i).my, 0
+            LD2.PutTile Doors(i).mx, Doors(i).my, DOORBACK, 1
+            LD2.SetFloor Doors(i).mx, Doors(i).my, 0
         ELSE
-            IF Door(i).code = CODEWHITE THEN
-                LD2.PutTile Door(i).mx, Door(i).my, DOORW, 1
+            IF Doors(i).code = CODEWHITE THEN
+                LD2.PutTile Doors(i).mx, Doors(i).my, DOORW, 1
             ELSE
-                LD2.PutTile Door(i).mx, Door(i).my, DOOR0 + Door(i).code, 1
+                LD2.PutTile Doors(i).mx, Doors(i).my, DOOR0 + Doors(i).code, 1
             END IF
-            LD2.SetFloor Door(i).mx, Door(i).my, 1
+            LD2.SetFloor Doors(i).mx, Doors(i).my, 1
         END IF
         
     NEXT i
@@ -2464,7 +2383,7 @@ SUB LD2.RenderFrame
   '- draw the items
   '----------------
   FOR i% = 1 TO NumItems(CurrentRoom)
-    LD2put item(i%, CurrentRoom).x - INT(XShift), item(i%, CurrentRoom).y, VARSEG(sObject(0)), VARPTR(sObject(EPS * item(i%, CurrentRoom).item)), VARSEG(Buffer1(0)), 0
+    LD2put Items(i%, CurrentRoom).x - INT(XShift), Items(i%, CurrentRoom).y, VARSEG(sObject(0)), VARPTR(sObject(EPS *  Items(i%, CurrentRoom).item)), VARSEG(Buffer1(0)), 0
   NEXT i%
   
   'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- draw player"
@@ -2679,6 +2598,24 @@ SUB LD2.RenderFrame
 
 END SUB
 
+FUNCTION LD2.HasFlag% (flag AS INTEGER)
+    
+    LD2.HasFlag% = (GameFlags AND flag)
+    
+END FUNCTION
+
+SUB LD2.SetFlag (flag AS INTEGER)
+    
+    GameFlags = (GameFlags OR flag)
+    
+END SUB
+
+SUB LD2.ClearFlag (flag AS INTEGER)
+    
+    GameFlags = (GameFlags OR flag) XOR flag
+    
+END SUB
+
 SUB LD2.SetAccessLevel (CodeNum AS INTEGER)
 
   IF CodeNum = CODEWHITE THEN
@@ -2694,12 +2631,6 @@ SUB LD2.SetCodeLevel (Num AS INTEGER)
   '- this function was missing (I'm guessing/hoping it's just this)
   
   CodeNum = Num
-
-END SUB
-
-SUB LD2.SetLoadBackup (NumRoom AS INTEGER)
-
-  LoadBackup(NumRoom) = 1
 
 END SUB
 
@@ -2989,7 +2920,7 @@ SUB LD2.Shoot
               END SELECT
 
               IF mob.life <= 0 THEN
-                LD2.DeleteMob mob
+                DeleteMob mob
               ELSE
                 Mobs.update mob
               END IF
@@ -3033,7 +2964,7 @@ SUB LD2.Shoot
               END SELECT
              
               IF mob.life <= 0 THEN
-                LD2.DeleteMob mob
+                DeleteMob mob
               ELSE
                 Mobs.update mob
               END IF
@@ -3062,7 +2993,7 @@ SUB LD2.Shoot
         
         mob.hit = 1
         mob.life = mob.life - 1
-        IF mob.life <= 0 THEN LD2.DeleteMob mob ELSE Mobs.update mob
+        IF mob.life <= 0 THEN DeleteMob mob ELSE Mobs.update mob
         LD2.PlaySound sfxBLOOD2
         LD2.MakeGuts Player.x + 14 + XShift, INT(Player.y + 8), -1, 1
         EXIT DO
@@ -3071,7 +3002,7 @@ SUB LD2.Shoot
         
         mob.hit = 1
         mob.life = mob.life - 1
-        IF mob.life <= 0 THEN LD2.DeleteMob mob ELSE Mobs.update mob
+        IF mob.life <= 0 THEN DeleteMob mob ELSE Mobs.update mob
         LD2.PlaySound sfxBLOOD2
         LD2.MakeGuts Player.x + 1 + XShift, INT(Player.y + 8), -1, -1
         EXIT DO
@@ -3350,6 +3281,15 @@ SUB LD2.Debug(message AS STRING)
     IF message = "!debugstart!" THEN
         message  = DATE$+" "+TIME$+" START DEBUG SESSION"
         lastTime = TIMER
+        
+        logFile = FREEFILE
+        OPEN "log/debug.log" FOR APPEND AS logFile
+            WRITE #logFile, STRING$(72, "=")
+            WRITE #logFile, "= "+SPC$(70)
+            WRITE #logFile, "= "+message
+            WRITE #logFile, "= "+SPC$(70)
+            WRITE #logFile, STRING$(72, "=")
+        CLOSE logFile
     ELSE
         timeStr  = STR$(TIMER-lastTime)
         lastTime = TIMER
@@ -3357,11 +3297,11 @@ SUB LD2.Debug(message AS STRING)
             timeStr = "0"+timeStr
         END IF
         message  = timeStr+SPACE$(15-LEN(timeStr))+message
+        
+        logFile = FREEFILE
+        OPEN "log/debug.log" FOR APPEND AS logFile
+            WRITE #logFile, message
+        CLOSE logFile
     END IF
-    
-    logFile = FREEFILE
-    OPEN "log/debug.log" FOR APPEND AS logFile
-        WRITE #logFile, message
-    CLOSE logFile
     
 END SUB

@@ -1,5 +1,11 @@
 SCENE-1A
+    
+    LARRY [ X  92, Y 144, FACE RIGHT ]
 
+    STEVE [ X 124, Y 144, FACE LEFT  ]
+    
+    MUSIC WANDERING
+    
     LARRY
     Well Steve, that was a good game of chess.
 
@@ -36,8 +42,8 @@ SCENE-1A
 END
 
 SCENE-1B
-
-    STEVE
+    
+    STEVE [ FACE RIGHT, WALKTO 154, WAIT 0.3333, FACE LEFT ]
     Hey, you got a quarter?
 
     LARRY
@@ -46,7 +52,8 @@ SCENE-1B
 
     STEVE
     Well, I couldn't agree more.
-
+    [ KICK, CROUCH, WAIT 0.3333, STAND, WAIT 0.3333 ]
+    
 END
 
 SCENE-1C
@@ -54,17 +61,19 @@ SCENE-1C
     NARRATOR
     Steve Drinks The Cola!
     1 Minute Later
-
+    
 END
 
 SCENE-1D
     
-    STEVE
+    STEVE [ SICK, WAIT 1.3333 ]
     Larry...
     I don't feel so good.
     There's something in the cola...
     ow...
-
+    [ PASSEDOUT   ]
+    [ WAIT 1.3333 ]
+    
 END
 
 SCENE-1E

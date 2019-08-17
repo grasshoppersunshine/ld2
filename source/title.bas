@@ -3,9 +3,11 @@
 
 REM $INCLUDE: 'INC\LD2GFX.BI'
 REM $INCLUDE: 'INC\LD2SND.BI'
-REM $INCLUDE: 'INC\LD2E.BI'
-REM $INCLUDE: 'INC\LD2.BI'
+REM $INCLUDE: 'INC\LD2EPUB.BI'
+REM $INCLUDE: 'INC\LD2PUB.BI'
 REM $INCLUDE: 'INC\TITLE.BI'
+
+'inc\ld2pub.bi -- only needed for music ids
 
 SUB LD2.EndDemo
 
@@ -33,7 +35,10 @@ SUB LD2.Intro
 
   DIM Message(10) AS STRING
   CONST idLIGHT = 4
- 
+  
+  CLS
+  LD2.LoadPalette "gfx\pp256\palettes\gradient.pal"
+  
   Message(1) = "Nearing The End of The Cretaceous Period..."
   Message(2) = "Dinosaurs were well evolved and highly civilized."
   Message(3) = "Then, Aliens came to conquer the world."
