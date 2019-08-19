@@ -1,0 +1,69 @@
+NOTHING        , Empty         , Empty
+MEDIKIT50      , Medikit +50   , Medikit +50
+MEDIKIT100     , Medikit +100  , Medikit +100
+GRENADE        , Grenade       , Grenade
+SHELLS         , Shells        , Shotgun Shells
+BULLETS        , Bullets       , Bullets
+DEAGLEAMMO     , Magnum Rounds , Magnum Rounds
+WHITECARD      , White Card    , White Card
+WHITECARD1     , White Card (L), White Card (Left-Half)
+WHITECARD2     , White Card (R), White Card (Right-Half)
+FLASHLIGHTNOBAT, Flashlight    , Flashlight (No Batteries)
+MYSTERYMEAT    , Mystery Meat  , Mystery Meat
+CHEMICAL409    , Chemical 409  , Chemical 409
+CHEMICAL410    , Chemical 410  , Chemical 410
+JANITORNOTE    , Janitor Note  , Janitor Note
+BATTERIES      , Batteries     , Batteries
+FLASHLIGHT     , Flashlight    , Flashlight
+GREENCARD      , Green Card    , Code-Green Access Card
+BLUECARD       , Blue Card     , Code-Blue Access Card
+YELLOWCARD     , Yellow Card   , Code-Yellow Access Card
+REDCARD        , Red Card      , Code-Red Access Card
+SHOTGUN        , Shotgun       , Shotgun
+MACHINEGUN     , Machine-Gun   , Machine-Gun
+PISTOL         , Pistol        , Pistol
+DESERTEAGLE    , Magnum        , Magnum
+WALKIETALKIE   , Walkie-Talkie , Walkie-Talkie
+EXTRALIFE      , Extra Life    , Extra Life
+
+LIGHTER        , Lighter       , Lighter
+MOLOTOV        , Molotov       , Molotov Cocktail
+WINEBOTTLE     , Wine Bottle   , Wine Bottle
+NAPKIN         , Napkin        , Paper Napkin
+LEADPIPE       , Lead Pipe     , Lead Pipe
+WRENCH         , Wrench        , Metal Wrench
+TRAMPOLINE     , Trampoline    , Trampoline
+FLASK          , Flask         , Metal Flask
+
+SODACAN        , Soda Can      , Soda Can
+BAGOFSOIL      , Potting Soil  , Bag of Potting Soil
+SHOVEL         , Shovel        , Shovel
+GLOVES         , Gloves        , Nitrile Gloves (Chemical Resistant)
+PLUNGER        , Toilet Plunger, Toilet Plunger
+
+CROSSBOW       , Crossbow      , Carbon Fiber Crossbow
+ARROWS         , Arrows        , Arrows
+
+WD40           , Lubricant Spry, Penetrating Oil and Water-Displacing Spray
+
+SMALLKEY       , SML Bronze Key, Small Bronze Key
+SILVERKEY      , SML Silver Key, Small Silver Key
+LOCKERKEY      , Locker Key    , Locker Key
+
+GLASSJAR       , Glass Jar     , Glass Jar
+
+CHARCOALSTICK  , Charcoal Stick, Charcoal Stick
+
+TOHRTANIUMAXE  , Tohrtaniume Ax, Tohrtanium Throwing Axe
+
+WATERPROOFLIGHTER, Waterproof LTR, Waterproof Lighter
+
+TOWEL          , Ragged Towel  , Ragged Towel (stick in vent or exhause pipe?)
+
+PANCAKEMIX     , Pancake Mix   , Pancake Mix (no idea)
+
+AIRFILTER      , AIRFILTER     , Air Filter (for furnace?)
+
+FLARES         , Flares        , Emergency Flares
+FIREEXT        , Fire Ext.     , Fire Extinguisher
+AED            , AED           , AED (Automated External Defibrillator)

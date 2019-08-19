@@ -17,12 +17,15 @@
   PUBLIC  LD2copySprite
   PUBLIC  LD2copyFull
   PUBLIC  LD2cls
+  PUBLIC  LD2andcls
   PUBLIC  LD2put65
   PUBLIC  LD2put65c
   PUBLIC  LD2putCol65
   PUBLIC  LD2putCol65c
   PUBLIC  LD2pset
   PUBLIC  LD2fill
+  PUBLIC  LD2fillm
+  PUBLIC  LD2fillw
   
   ;- LD2put: PUT ( skip pixels with zero value )
   ;-       : Draws a sprite 16X16 in size onto the given layer excluding
@@ -426,20 +429,15 @@
           jz skipPixelLD2PL
             mov bl, es:[di]
             mov bh, bl
-            and bh, 15
-            cmp al, bh
-            jle skipBlacken
-              sub bl, bh
-              jmp skipDarken
-            skipBlacken:
-              sub bl, al
-            skipDarken:
-              mov al, bl
-              stosb
-              jmp skipIncmntLD2PL
+            and bh, 240
+            sub bl, al
+            cmp bl, bh
+            jae notBelowBlack
+              mov bl, bh
+            notBelowBlack:
+              mov es:[di], bl
           skipPixelLD2PL:
             inc di
-          skipIncmntLD2PL:
         loop horizontalLD2PL
         add di, 320
         sub di, dx
@@ -584,20 +582,15 @@
       jz skipPixelLD2PWL2
         mov bl, es:[di]
         mov bh, bl
-        and bh, 15
-        cmp al, bh
-        jle skipBlackenLD2PWL2
-          sub bl, bh
-          jmp skipDarkenLD2PWL2
-        skipBlackenLD2PWL2:
-          sub bl, al
-        skipDarkenLD2PWL2:
-          mov al, bl
-          stosb
-          jmp skipIncmntLD2PWL2
+        and bh, 240
+        sub bl, al
+        cmp bl, bh
+        jae notBelowBlackLD2PWL2
+          mov bl, bh
+        notBelowBlackLD2PWL2:
+          mov es:[di], bl
       skipPixelLD2PWL2:
         inc di
-      skipIncmntLD2PWL2:
     loop mixLightLoop
 	
 	pop ds
@@ -710,23 +703,16 @@
       test al, al
       jz skipPixelLD2MWL
         mov bl, es:[di]
-        push bx
-          mov bh, bl
-          and bl, 15
-          sub bh, bl
-          mov ah, bh
-        pop bx
+        mov bh, bl
+        and bh, 240
         sub bl, al
-        cmp bl, ah
-        ja storALWLLD2MWL
-          mov bl, ah
-        storALWLLD2MWL:
-          mov al, bl
-          stosb
-          jmp skipIncmntLD2MWL
+        cmp bl, bh
+        jae notBelowBlackLD2MWL
+          mov bl, bh
+        notBelowBlackLD2MWL:
+          mov es:[di], bl
       skipPixelLD2MWL:
         inc di
-      skipIncmntLD2MWL:
     loop mixLightLoopLD2MWL
 	
 	pop ds
@@ -830,7 +816,8 @@
 
     MOV   BX, [BP+06]
     MOV   AX, [BX]    ;- Get the color
-
+    MOV   AH, AL
+    
     MOV   BX, [BP+08]
     MOV   ES, [BX]
     MOV   DI, 0       ;- Set up the buffer
@@ -843,6 +830,31 @@
     RET   4
 
   LD2cls ENDP
+  
+  LD2andcls PROC
+
+    PUSH  BP
+    MOV   BP, SP      ;- Set up the stack
+
+    MOV   BX, [BP+08]
+    MOV   ES, [BX]
+    MOV   DI, 0       ;- Set up the buffer
+
+    MOV   CX, 7D00h   ;- CX = 32000
+    
+    MOV   BX, [BP+06]
+    MOV   BX, [BX]    ;- Get the color
+
+    LD2AndLoop:
+      mov ax, es:[di]
+      and ax, bx
+      stosw
+    LOOP LD2AndLoop
+    
+    POP   BP
+    RET   4
+
+  LD2andcls ENDP
 
   ;- LD2put65: Draws a sprite 6X5 in size onto the given layer
   ;-        : (Layer is an integer array of 32000)
@@ -1366,6 +1378,221 @@
     RET 12
     
   LD2fill ENDP
+  
+  ;- fill menus
+  LD2fillm PROC
+    
+    PUSH  BP
+    MOV   BP, SP
+    PUSH  DS
+    
+    MOV   BX, [BP+06] ;- Buffer Seg
+    MOV   ES, [BX]
+    XOR   DI, DI
+    
+    ;# width
+    mov bx, [bp+12]
+    mov cx, [bx]
+    cmp cx, 0
+    jz endLD2F
+    ;# X
+    mov bx, [bp+16]
+    mov bx, [bx]
+
+    cmp bx, 0
+    jge skipXbelowZeroLD2FM
+        add cx, bx
+        jle endLD2F
+        xor bx, bx
+    skipXbelowZeroLD2FM:
+
+    mov ax, 320
+    sub ax, cx
+    cmp bx, ax
+    jle skipXabove304LD2FM
+        cmp bx, 320
+        jge endLD2FM
+        push bx
+            sub bx, 320
+            neg bx
+            mov cx, bx
+        pop bx
+    skipXabove304LD2FM:
+
+    add di, bx ;# x location
+    mov dx, cx ;# width
+
+    ;# height
+    mov bx, [bp+10]
+    mov cx, [bx]
+    cmp cx, 0
+    jz endLD2FM
+    ;# Y
+    mov bx, [bp+14]
+    mov bx, [bx]
+
+    cmp bx, 0
+    jge skipYbelowZeroLD2FM
+        add cx, bx
+        jle endLD2F
+        xor bx, bx
+    skipYbelowZeroLD2FM:
+
+    mov ax, 200
+    sub ax, cx
+    cmp bx, ax
+    jle skipYabove184LD2FM
+        cmp bx, 200
+        jge endLD2FM
+        push bx
+            sub bx, 200
+            neg bx
+            mov cx, bx
+        pop bx
+    skipYabove184LD2FM:
+
+    push bx
+        shl bx, 8
+        add di, bx
+    pop bx
+    shl bx, 6
+    add di, bx ;# y location
+               ;# cx is height
+    
+    mov  bx, [bp+08] ;- color
+    mov  ax, [bx]
+    xchg al, ah
+    
+    mov bx, 320
+    sub bx, dx
+    FillBoxVLD2FM:
+        push cx
+        mov cx, dx
+        FillBoxHLD2FM:
+            mov al, es:[di]
+            and al,  3
+            or  al, ah
+            mov es:[di], al
+            inc di
+        LOOP FillBoxHLD2FM
+        pop cx
+        add di, bx
+    LOOP FillBoxVLD2FM
+    
+    ENDLD2FM:
+
+    POP DS
+    POP BP
+    RET 12
+    
+  LD2fillm ENDP
+
+  ;- fill water
+  LD2fillw PROC
+    
+    PUSH  BP
+    MOV   BP, SP
+    PUSH  DS
+    
+    MOV   BX, [BP+06] ;- Buffer Seg
+    MOV   ES, [BX]
+    XOR   DI, DI
+    
+    ;# width
+    mov bx, [bp+12]
+    mov cx, [bx]
+    cmp cx, 0
+    jz endLD2F
+    ;# X
+    mov bx, [bp+16]
+    mov bx, [bx]
+
+    cmp bx, 0
+    jge skipXbelowZeroLD2FW
+        add cx, bx
+        jle endLD2FW
+        xor bx, bx
+    skipXbelowZeroLD2FW:
+
+    mov ax, 320
+    sub ax, cx
+    cmp bx, ax
+    jle skipXabove304LD2FW
+        cmp bx, 320
+        jge endLD2FW
+        push bx
+            sub bx, 320
+            neg bx
+            mov cx, bx
+        pop bx
+    skipXabove304LD2FW:
+
+    add di, bx ;# x location
+    mov dx, cx ;# width
+
+    ;# height
+    mov bx, [bp+10]
+    mov cx, [bx]
+    cmp cx, 0
+    jz endLD2FW
+    ;# Y
+    mov bx, [bp+14]
+    mov bx, [bx]
+
+    cmp bx, 0
+    jge skipYbelowZeroLD2FW
+        add cx, bx
+        jle endLD2FW
+        xor bx, bx
+    skipYbelowZeroLD2FW:
+
+    mov ax, 200
+    sub ax, cx
+    cmp bx, ax
+    jle skipYabove184LD2FW
+        cmp bx, 200
+        jge endLD2FW
+        push bx
+            sub bx, 200
+            neg bx
+            mov cx, bx
+        pop bx
+    skipYabove184LD2FW:
+
+    push bx
+        shl bx, 8
+        add di, bx
+    pop bx
+    shl bx, 6
+    add di, bx ;# y location
+               ;# cx is height
+    
+    mov bx, [bp+08] ;- color
+    mov ax, [bx]
+    
+    mov bx, 320
+    sub bx, dx
+    FillBoxVLD2FW:
+        push cx
+        mov cx, dx
+        FillBoxHLD2FW:
+            mov al, es:[di]
+            and al, 15
+            or  al, 64
+            mov es:[di], al
+            inc di
+        LOOP FillBoxHLD2FW
+        pop cx
+        add di, bx
+    LOOP FillBoxVLD2FW
+    
+    ENDLD2FW:
+
+    POP DS
+    POP BP
+    RET 12
+    
+  LD2fillw ENDP
   
   END
   

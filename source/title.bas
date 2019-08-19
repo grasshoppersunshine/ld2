@@ -3,16 +3,15 @@
 
 REM $INCLUDE: 'INC\LD2GFX.BI'
 REM $INCLUDE: 'INC\LD2SND.BI'
-REM $INCLUDE: 'INC\LD2EPUB.BI'
-REM $INCLUDE: 'INC\LD2PUB.BI'
+REM $INCLUDE: 'INC\LD2E.BI'
+REM $INCLUDE: 'INC\LD2.BI'
 REM $INCLUDE: 'INC\TITLE.BI'
 
-'inc\ld2pub.bi -- only needed for music ids
+'inc\ld2.bi -- only needed for music ids
 
 SUB LD2.EndDemo
 
   DIM Message(10) AS STRING
-  CONST idLIGHT = 4
 
   Message(1) = "End Of Demo"
   Message(2) = "Larry The Dinosaur II"
@@ -34,7 +33,6 @@ SUB LD2.Intro
   '- Intro to Larry The Dinosaur II
 
   DIM Message(10) AS STRING
-  CONST idLIGHT = 4
   
   CLS
   LD2.LoadPalette "gfx\pp256\palettes\gradient.pal"
@@ -147,3 +145,92 @@ SUB LD2.ShowCredits
 
 END SUB
 
+SUB LD2.Ad
+ 
+  '- Intro to Larry The Dinosaur II
+
+  DIM Message(10) AS STRING
+  DIM textColor AS INTEGER
+  DIM backColor AS INTEGER
+  
+  textColor = 57
+  backColor = 48
+  
+  LD2.cls 0, backColor
+  LD2.LoadPalette "gfx\pp256\palettes\gradient.pal"
+  
+  Message(1) = "This October"
+  Message(2) = "stay away from the vending machines" '- longer time
+  Message(3) = "because"
+  Message(4) = "there's something in the cola" '- longer time
+  Message(5) = ""
+  Message(6) = "somethinginthecola.com"
+ 
+  LD2.PlayMusic mscWANDERING
+  FOR i% = 0 TO 330: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
+
+  FOR i% = 1 TO 6
+
+    LD2.cls 1, backColor
+    FOR y% = 1 TO 8
+ 
+      LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), textColor, 1
+
+      FOR n% = 1 TO 9 - y%
+        FOR x% = 1 TO 20
+          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
+          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
+        NEXT x%
+      NEXT n%
+
+      LD2.CopyBuffer 1, 0
+
+      FOR n% = 1 TO 20
+        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+        IF keyboard(&H39) THEN
+          LD2.FadeOutMusic        
+          EXIT SUB
+        END IF
+      NEXT n%
+
+    NEXT y%
+ 
+    IF i% <> 7 THEN
+      FOR n% = 1 TO 200
+        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+        IF keyboard(&H39) THEN
+          LD2.FadeOutMusic
+          EXIT SUB
+        END IF
+      NEXT n%
+    ELSE
+      LD2.FadeOutMusic
+    END IF
+
+    FOR y% = 1 TO 8
+
+      LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), textColor, 1
+
+      FOR n% = 1 TO y%
+        FOR x% = 1 TO 20
+          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
+          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
+        NEXT x%
+      NEXT n%
+
+      LD2.CopyBuffer 1, 0
+
+      FOR n% = 1 TO 20
+        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+        IF keyboard(&H39) THEN
+          LD2.FadeOutMusic
+          EXIT SUB
+        END IF
+      NEXT n%
+     
+    NEXT y%
+
+  NEXT i%
+
+
+END SUB
