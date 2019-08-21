@@ -67,3 +67,4 @@ AIRFILTER      , AIRFILTER     , Air Filter (for furnace?)
 FLARES         , Flares        , Emergency Flares
 FIREEXT        , Fire Ext.     , Fire Extinguisher
 AED            , AED           , AED (Automated External Defibrillator)
+

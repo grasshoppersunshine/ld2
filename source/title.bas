@@ -8,6 +8,14 @@ REM $INCLUDE: 'INC\LD2.BI'
 REM $INCLUDE: 'INC\TITLE.BI'
 
 'inc\ld2.bi -- only needed for music ids
+TYPE TextType
+    text AS STRING*40
+    subtext AS STRING*40
+    colr AS INTEGER
+    seconds AS SINGLE
+    doFadeIn AS INTEGER
+    doFadeOut AS INTEGER
+END TYPE
 
 SUB LD2.EndDemo
 
@@ -35,7 +43,7 @@ SUB LD2.Intro
   DIM Message(10) AS STRING
   
   CLS
-  LD2.LoadPalette "gfx\pp256\palettes\gradient.pal"
+  LD2.LoadPalette "gfx\gradient.pal"
   
   Message(1) = "Nearing The End of The Cretaceous Period..."
   Message(2) = "Dinosaurs were well evolved and highly civilized."
@@ -147,8 +155,6 @@ END SUB
 
 SUB LD2.Ad
  
-  '- Intro to Larry The Dinosaur II
-
   DIM Message(10) AS STRING
   DIM textColor AS INTEGER
   DIM backColor AS INTEGER
@@ -157,80 +163,55 @@ SUB LD2.Ad
   backColor = 48
   
   LD2.cls 0, backColor
-  LD2.LoadPalette "gfx\pp256\palettes\gradient.pal"
+  LD2.LoadPalette "gfx\gradient.pal"
+  LD2.FadeOut 0.05
   
-  Message(1) = "This October"
-  Message(2) = "stay away from the vending machines" '- longer time
-  Message(3) = "because"
-  Message(4) = "there's something in the cola" '- longer time
-  Message(5) = ""
-  Message(6) = "somethinginthecola.com"
+  'Message(1) = "This October"
+  'Message(2) = "stay away from the vending machines" '- longer time
+  'Message(3) = "because"
+  'Message(4) = "there's something in the cola" '- longer time (not 3.3333, 4.5 maybe)
+  'Message(5) = ""
+  'Message(6) = "L A R R Y   T H E   D I N O S A U R   I I"
+  'Message(7) = "Something in the Cola"
  
   LD2.PlayMusic mscWANDERING
-  FOR i% = 0 TO 330: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-
-  FOR i% = 1 TO 6
+  'FOR i% = 0 TO 330: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
+  '
+  'FOR i% = 1 TO 7
+  FOR i% = 1 TO 0
 
     LD2.cls 1, backColor
-    FOR y% = 1 TO 8
  
+    IF i% < 6 THEN
       LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), textColor, 1
+    END IF
+    IF i% = 6 THEN
+      LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), textColor, 1
+    END IF
+    IF i% = 7 THEN
+      LD2.PutTextCol ((320 - LEN(Message(i%-1)) * 6) / 2), 60, Message(i%-1), textColor, 1
+      LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 76, Message(i%), 40, 1
+    END IF
 
-      FOR n% = 1 TO 9 - y%
-        FOR x% = 1 TO 20
-          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
-          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
-        NEXT x%
-      NEXT n%
-
-      LD2.CopyBuffer 1, 0
-
-      FOR n% = 1 TO 20
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-        IF keyboard(&H39) THEN
-          LD2.FadeOutMusic        
-          EXIT SUB
-        END IF
-      NEXT n%
-
-    NEXT y%
+    LD2.CopyBuffer 1, 0
+    LD2.FadeIn 0.05
  
-    IF i% <> 7 THEN
-      FOR n% = 1 TO 200
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-        IF keyboard(&H39) THEN
-          LD2.FadeOutMusic
-          EXIT SUB
-        END IF
-      NEXT n%
-    ELSE
+    FOR n% = 1 TO 240
+      WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+      IF keyboard(&H39) THEN
+        LD2.FadeOutMusic
+        EXIT SUB
+      END IF
+    NEXT n%
+    IF i% = 7 THEN
       LD2.FadeOutMusic
     END IF
 
-    FOR y% = 1 TO 8
-
-      LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), textColor, 1
-
-      FOR n% = 1 TO y%
-        FOR x% = 1 TO 20
-          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
-          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
-        NEXT x%
-      NEXT n%
-
-      LD2.CopyBuffer 1, 0
-
-      FOR n% = 1 TO 20
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-        IF keyboard(&H39) THEN
-          LD2.FadeOutMusic
-          EXIT SUB
-        END IF
-      NEXT n%
-     
-    NEXT y%
+    LD2.FadeOut 0.05
 
   NEXT i%
-
-
+  
+  LD2.cls 0, backColor
+  LD2.RestorePalette
+  
 END SUB

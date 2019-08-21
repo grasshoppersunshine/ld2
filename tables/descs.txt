@@ -25,3 +25,4 @@ PISTOL         , "Weak, but still good for shooting at things.||Fire-Power: 1||F
 DESERTEAGLE    , "This handgun packs a punch.||Fire-Power: 5|| Firing-Rate: Slow"
 WALKIETALKIE   , "A two-way radio. I can use this to contact Barney."
 EXTRALIFE      , "Gives me an extra life if I use it."
+

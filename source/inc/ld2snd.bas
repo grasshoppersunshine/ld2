@@ -11,7 +11,7 @@ SUB SoundAdapter.Init
 
 	DIM ErrorFlag AS INTEGER
 	
-	ErrorFlag = LoadMSE("SFX\SB1X.MSE", 0, 45, 4096, &HFFFF, &HFF, &HFF)
+	ErrorFlag = LoadMSE("SOUND\SB1X.MSE", 0, 45, 4096, &HFFFF, &HFF, &HFF)
 	
 	SELECT CASE ErrorFlag
 	CASE 0

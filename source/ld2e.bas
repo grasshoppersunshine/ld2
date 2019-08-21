@@ -9,11 +9,6 @@
   REM $INCLUDE: 'INC\TITLE.BI'
   REM $INCLUDE: 'INC\MOBS.BI'
   
-  TYPE tInventory
-    id AS INTEGER
-    qty AS INTEGER
-  END TYPE
-
   TYPE tGuts
     x AS SINGLE
     y AS SINGLE
@@ -36,6 +31,13 @@
     y AS INTEGER
     item AS INTEGER
   END TYPE
+  
+  TYPE SaveItemType
+    x AS INTEGER
+    y AS INTEGER
+    id AS INTEGER
+    roomid AS INTEGER
+  END TYPE
 
   TYPE tDoor
     x1 AS INTEGER
@@ -48,7 +50,69 @@
     mx AS INTEGER
     my AS INTEGER
   END TYPE
-
+  
+  CONST TESTMODE = 1
+  CONST DEBUGMODE = 2
+  
+  '= SPRITES (LD2TILES.PUT)
+  '========================
+  CONST DOOR0 = 89
+  CONST DOOR1 = 90
+  CONST DOOR2 = 91
+  CONST DOOR3 = 92
+  CONST DOORW = 106
+  CONST DOORBACK = 52
+  CONST DOOROPEN = 101
+  CONST LARRYCROUCH = 28
+  
+  '= DOORS
+  '========================
+  CONST DOOROPENSPEED = .2
+  CONST DOORCLOSESPEED = -.2
+  
+  '= MAPS/ROOMS/FLOORS
+  '========================
+  CONST MAPW = 128
+  CONST MAPH = 13
+  
+  '= PLAYER STATES
+  '========================
+  CONST STILL = 1
+  CONST RUNNING = 2
+  CONST JUMPING = 3
+  CONST CROUCHING = 4
+  
+  '= ENEMY/ENTITY STATES
+  '========================
+  CONST SPAWNED = 1
+  CONST HOSTILE = 2
+  CONST PLANNING = 3
+  CONST MOVING = 4
+  
+  '= BYTES PER SPRITE
+  '========================
+  CONST EPS = 130
+  
+  '= THE ALMIGHT PIE
+  '= (PIE FLAVORED!)
+  '========================
+  CONST PI = 3.141592
+  
+  '= ARRAY MAXES
+  '========================
+  CONST MAXGUTS      = 100
+  CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)
+  CONST MAXDOORS     =  16 '- per room
+  CONST MAXFLOORS    =  23
+  CONST MAXINVENTORY =  63
+  CONST MAXINVSLOTS  =   7
+  CONST MAXTILES     = 120
+  
+  CONST MAXLIFE    = 100
+  CONST MAXSHELLS  = 80
+  CONST MAXBULLETS = 200
+  CONST MAXDEAGLES = 48
+  
 '======================
 '= PRIVATE METHODS
 '======================
@@ -67,11 +131,14 @@
   DECLARE SUB ProcessDoors ()
   DECLARE SUB RefreshPlayerAccess ()
   DECLARE SUB RotatePalette ()
-  DECLARE SUB SetCodeLevel (Num AS INTEGER)
+  DECLARE SUB SaveItems (filename AS STRING)
   DECLARE SUB SetConfig (optionName AS STRING, optionVal AS SINGLE)
   DECLARE SUB SetFloor (x AS INTEGER, y AS INTEGER, blocked AS INTEGER)
   DECLARE SUB SetGameMode (mode AS INTEGER)
   DECLARE SUB SetPlayerState (state AS INTEGER)
+  DECLARE SUB WaitSeconds (seconds AS DOUBLE)
+  DECLARE SUB GetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
+  DECLARE SUB SetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
 
 '======================
 '= HASH MODULE
@@ -132,18 +199,23 @@
   REDIM SHARED AniMap   (0) AS INTEGER
   REDIM SHARED FloorMap (0) AS INTEGER
   
-  REDIM SHARED Items      (MAXITEMS, MAXFLOORS) AS tItem
-  REDIM SHARED NumItems   (MAXFLOORS) AS INTEGER
-  REDIM SHARED Guts       (MAXGUTS) AS tGuts
-  REDIM SHARED Doors      (MAXDOORS) AS tDoor
-  REDIM SHARED Inventory  (MAXINVENTORY) AS tInventory
-  REDIM SHARED WentToRoom (MAXFLOORS) AS INTEGER          '- replace with roomitem token
-
-  DIM SHARED CurrentWeapon AS INTEGER
-  DIM SHARED Gravity AS SINGLE
-  DIM SHARED NumGuts AS INTEGER
+  REDIM SHARED Items      (0) AS tItem
+  REDIM SHARED Guts       (0) AS tGuts
+  REDIM SHARED Doors      (0) AS tDoor
+  REDIM SHARED Inventory  (0) AS INTEGER
+  REDIM SHARED InvSlots   (0) AS INTEGER
+  REDIM SHARED WentToRoom (0) AS INTEGER          '- replace with roomitem token
   
-  DIM SHARED Message1 AS STRING
+  REDIM SHARED RGBpal(0) AS INTEGER
+
+  DIM SHARED Gravity AS SINGLE
+  DIM SHARED NumItems AS INTEGER
+  DIM SHARED NumDoors AS INTEGER
+  DIM SHARED NumGuts AS INTEGER
+  DIM SHARED NumInvSlots AS INTEGER
+  DIM SHARED NumLives AS INTEGER
+  
+  DIM SHARED SceneCaption AS STRING
   DIM SHARED SceneMode AS INTEGER
   DIM SHARED Scene%
   
@@ -159,18 +231,17 @@
   DIM SHARED CurrentRoom AS INTEGER
   
   DIM SHARED Animation AS SINGLE
-  DIM SHARED NumDoors AS INTEGER
+  
   DIM SHARED BossNum AS INTEGER
   DIM SHARED ShowLife AS INTEGER
   DIM SHARED GameFlags AS INTEGER
-  DIM SHARED NumLives AS INTEGER
-  DIM SHARED Lighting1 AS INTEGER
-  DIM SHARED Lighting2 AS INTEGER
+  
+  DIM SHARED Lighting1 AS INTEGER '- infront of player
+  DIM SHARED Lighting2 AS INTEGER '- behind player
   DIM SHARED PlayerAtElevator AS INTEGER
-  DIM SHARED GameArgs AS STRING
-  DIM SHARED GameMode AS INTEGER
-
-
+  DIM SHARED ElevatorIsLocked AS INTEGER
+  DIM SHARED GameArgs AS STRING   '- COMMAND$
+  DIM SHARED GameMode AS INTEGER  '- test/debug
   
   DIM SHARED GAME.RevealText AS STRING
   
@@ -260,15 +331,16 @@ DEFINT A-Z
 SUB LD2.AddAmmo (Kind AS INTEGER, Amount AS INTEGER)
 
 
-  IF Kind = 1 THEN Player.shells = Player.shells + Amount
-  IF Kind = 2 THEN Player.bullets = Player.bullets + Amount
-  IF Kind = 3 THEN Player.deagles = Player.deagles + Amount
+  IF Kind = 1 THEN Inventory(SHELLS) = Inventory(SHELLS) + Amount
+  IF Kind = 2 THEN Inventory(BULLETS) = Inventory(BULLETS) + Amount
+  IF Kind = 3 THEN Inventory(DEAGLES) = Inventory(DEAGLES) + Amount
   IF Kind = -1 THEN Player.life = Player.life + Amount
 
-  IF Player.life > 100 THEN Player.life = 100
-  IF Player.shells > 80 THEN Player.shells = 80
-  IF Player.bullets > 200 THEN Player.bullets = 200
-  IF Player.deagles > 48 THEN Player.deagles = 48
+
+  IF Player.life > MAXLIFE THEN Player.life = MAXLIFE
+  IF Inventory(SHELLS) > MAXSHELLS THEN Inventory(SHELLS) = MAXSHELLS
+  IF Inventory(BULLETS) > MAXBULLETS THEN Inventory(BULLETS) = MAXBULLETS
+  IF Inventory(DEAGLES) > MAXDEAGLES THEN Inventory(DEAGLES) = MAXDEAGLES
 
   LD2.PlaySound sfxEQUIP
 
@@ -289,39 +361,52 @@ SUB AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
 END SUB
 
 FUNCTION LD2.AddToStatus% (item AS INTEGER, Amount AS INTEGER)
+    
+    IF LD2.isDebugMode% THEN LD2.Debug "LD2.AddToStatus% ("+STR$(item)+","+STR$(Amount)+" )"
+    
+    DIM i AS INTEGER
+    DIM added AS INTEGER
 
-  DIM i AS INTEGER
-  DIM added AS INTEGER
-  
-  added = 0
-  FOR i = 0 TO 7
-    IF Inventory(i).id = 0 THEN
-      Inventory(i).id = item
-      Inventory(i).qty = Amount
-      added = 1
-      EXIT FOR
+    FOR i = 0 TO NumInvSlots-1
+        IF InvSlots(i) = item THEN
+            Inventory(item) = Inventory(item) + Amount
+            added = 1
+            EXIT FOR
+        END IF
+    NEXT i
+
+    IF added = 0 THEN
+        FOR i = 0 TO NumInvSlots-1
+            IF InvSlots(i) = 0 THEN
+                InvSlots(i) = item
+                Inventory(item) = Amount
+                EXIT FOR
+            END IF
+        NEXT i
     END IF
-  NEXT i
-  
-  SELECT CASE item
-    CASE GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
-      RefreshPlayerAccess
-  END SELECT
-  
-  IF added THEN
-    LD2.AddToStatus% = 0
-  ELSE
-    LD2.AddToStatus% = 1
-  END IF
+
+    IF added THEN
+        SELECT CASE item
+        CASE GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
+            RefreshPlayerAccess
+        END SELECT
+    END IF
+
+    IF added THEN
+        LD2.AddToStatus% = 0
+    ELSE
+        LD2.AddToStatus% = 1
+    END IF
 
 END FUNCTION
 
 SUB LD2.ClearInventorySlot (slot AS INTEGER)
     
     DIM i AS INTEGER
+    i = InvSlots(slot)
     
-    Inventory(slot).id  = 0
-    Inventory(slot).qty = 0
+    Inventory(i) = 0
+    InvSlots(slot) = 0
     
 END SUB
 
@@ -331,10 +416,24 @@ FUNCTION LD2.AtElevator%
     
 END FUNCTION
 
+SUB LD2.LockElevator
+    
+    ElevatorIsLocked = 1
+    
+END SUB
+
+SUB LD2.UnlockElevator
+    
+    ElevatorIsLocked = 0
+    
+END SUB
+
 FUNCTION LD2.GetStatusItem% (slot AS INTEGER)
     
-    IF slot >= 0 AND slot <= 7 THEN
-        LD2.GetStatusItem% = Inventory(slot).id
+    IF LD2.isDebugMode% THEN LD2.Debug "LD2.GetStatusItem% ("+STR$(slot)+" )"
+    
+    IF slot >= 0 AND slot <= NumInvSlots THEN
+        LD2.GetStatusItem% = InvSlots(slot)
     ELSE
         LD2.GetStatusItem% = -1
     END IF
@@ -343,8 +442,8 @@ END FUNCTION
 
 FUNCTION LD2.GetStatusAmount% (slot AS INTEGER)
     
-    IF slot >= 0 AND slot <= 7 THEN
-        LD2.GetStatusAmount% = Inventory(slot).qty
+    IF slot >= 0 AND slot <= NumInvSlots THEN
+        LD2.GetStatusAmount% = Inventory(InvSlots(slot))
     ELSE
         LD2.GetStatusAmount% = -1
     END IF
@@ -353,7 +452,7 @@ END FUNCTION
 
 FUNCTION CheckPlayerFloorHit%
   
-  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
  
   FOR x% = 2 TO 13 STEP 11
     px% = INT(Player.x + XShift + x%) \ 16: py% = INT(Player.y) \ 16
@@ -365,7 +464,7 @@ END FUNCTION
 
 FUNCTION CheckMobFloorHit% (mob AS MobType)
   
-  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
  
   FOR x% = 2 TO 13 STEP 11
     px% = INT(mob.x + x%) \ 16: py% = INT(mob.y) \ 16
@@ -377,7 +476,7 @@ END FUNCTION
 
 FUNCTION CheckPlayerWallHit%
   
-  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
   
   FOR y% = 0 TO 15 STEP 15
     FOR x% = 0 TO 15 STEP 15
@@ -391,7 +490,7 @@ END FUNCTION
 
 FUNCTION CheckMobWallHit% (mob AS MobType)
   
-  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
   
   FOR y% = 0 TO 15 STEP 15
     FOR x% = 0 TO 15 STEP 15
@@ -502,7 +601,7 @@ SUB DeleteMob (mob AS MobType)
     CASE idBOSS2
       LD2.SetFlag BOSSKILLED
       LD2.PlayMusic mscWANDERING
-      LD2.SetAccessLevel CODERED
+      Inventory(AUTH) = REDACCESS
   END SELECT
   
   IF Player.flip = 0 THEN LD2.MakeGuts mob.x + 8, mob.y + 8, INT(4 * RND(1)) + 4,  1
@@ -536,20 +635,19 @@ SUB LD2.CreateItem (x AS INTEGER, y AS INTEGER, item AS INTEGER, mobId AS INTEGE
   DIM cr AS INTEGER
   DIM mob AS MobType
  
-  cr = CurrentRoom
-  NumItems(cr) = NumItems(cr) + 1
-  i = NumItems(cr)
+  NumItems = NumItems + 1
+  i = NumItems
 
   IF mobId = 0 THEN
-    Items(i, cr).x = x
-    Items(i, cr).y = y
+    Items(i).x = x
+    Items(i).y = y
   ELSE
     Mobs.getMob mob, mobId
-    Items(i, cr).x = mob.x
-    Items(i, cr).y = mob.y
+    Items(i).x = mob.x
+    Items(i).y = mob.y
   END IF
 
-  Items(i, cr).item = item
+  Items(i).item = item
 
 END SUB
 
@@ -558,17 +656,17 @@ SUB LD2.Drop (item%)
   '- drop an item
   '--------------
 
-  NumItems(CurrentRoom) = NumItems(CurrentRoom) + 1
-  n% = NumItems(CurrentRoom)
+  NumItems = NumItems + 1
+  n% = NumItems
 
-  Items(n%, CurrentRoom).x = Player.x + XShift
+  Items(n%).x = Player.x + XShift
  
   y% = Player.y
   DEF SEG = VARSEG(TileMap(0))
   DO
   FOR x% = 0 TO 15 STEP 15
     px% = INT(Player.x + XShift + x%) \ 16: py% = y% \ 16
-    IF PEEK(px% + (py% + 1) * 200) >= 80 THEN
+    IF PEEK(px% + (py% + 1) * MAPW) >= 80 THEN
       EXIT DO
     END IF
   NEXT x%
@@ -577,8 +675,8 @@ SUB LD2.Drop (item%)
   DEF SEG
 
 
-  Items(n%, CurrentRoom).y = (y% \ 16) * 16
-  Items(n%, CurrentRoom).item = item% - 1
+  Items(n%).y = (y% \ 16) * 16
+  Items(n%).item = item% - 1
 
   SELECT CASE item%
     CASE GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
@@ -588,33 +686,19 @@ SUB LD2.Drop (item%)
  
 END SUB
 
-SUB LD2.FadeOut
-  
-  DIM bufferSeg AS INTEGER
-  
-  bufferSeg = VARSEG(Buffer1(0))
-  
-  LD2andcls bufferSeg, &HF7F7: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2.CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-  LD2andcls bufferSeg, &HF3F3: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2.CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-  LD2andcls bufferSeg, &HF1F1: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2.CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-  LD2andcls bufferSeg, &HF0F0: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2.CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-  LD2cls    bufferSeg, &H0000: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2.CopyBuffer 1, 0: FOR i% = 0 TO 25: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-  
-END SUB
-
-SUB LD2.FadeIn
-  
-  DIM bufferSeg AS INTEGER
-  
-  bufferSeg = VARSEG(Buffer1(0))
-  
-  '- why not just fade out the palette?
-  'LD2.CopyBufferAnd &hF0F0, 1, 0: FOR i% = 0 TO 9: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-  'LD2.CopyBufferAnd &hF1F1, 1, 0: FOR i% = 0 TO 9: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-  'LD2.CopyBufferAnd &hF3F3, 1, 0: FOR i% = 0 TO 9: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-  'LD2.CopyBufferAnd &hF7F7, 1, 0: FOR i% = 0 TO 9: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-  
-END SUB
+'SUB LD2.FadeOut
+'  
+'  DIM bufferSeg AS INTEGER
+'  
+'  bufferSeg = VARSEG(Buffer1(0))
+'  
+'  LD2andcls bufferSeg, &HF7F7: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2.CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
+'  LD2andcls bufferSeg, &HF3F3: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2.CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
+'  LD2andcls bufferSeg, &HF1F1: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2.CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
+'  LD2andcls bufferSeg, &HF0F0: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2.CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
+'  LD2cls    bufferSeg, &H0000: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2.CopyBuffer 1, 0: FOR i% = 0 TO 25: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
+'  
+'END SUB
 
 SUB RefreshPlayerAccess
     
@@ -622,29 +706,27 @@ SUB RefreshPlayerAccess
     DIM item AS INTEGER
     DIM maxLevel AS INTEGER
     
-    Player.code      = 0
-    Player.whitecard = 0
-    SetCodeLevel 0
+    Inventory(AUTH) = 0
+    Inventory(WHITECARD) = 0
     
     maxLevel = CODENOTHING
     FOR i = 0 TO 7
-        item = Inventory(i).id
+        item = Inventory(InvSlots(i))
         SELECT CASE item
         CASE GREENCARD
-            IF maxLevel < CODEGREEN  THEN maxLevel = CODEGREEN
+            IF maxLevel < GREENACCESS  THEN maxLevel = GREENACCESS
         CASE BLUECARD
-            IF maxLevel < CODEBLUE   THEN maxLevel = CODEBLUE
+            IF maxLevel < BLUEACCESS   THEN maxLevel = BLUEACCESS
         CASE YELLOWCARD
-            IF maxLevel < CODEYELLOW THEN maxLevel = CODEYELLOW
+            IF maxLevel < YELLOWACCESS THEN maxLevel = YELLOWACCESS
         CASE REDCARD
-            IF maxLevel < CODERED    THEN maxLevel = CODERED
+            IF maxLevel < REDACCESS    THEN maxLevel = REDACCESS
         CASE WHITECARD
-            Player.WHITECARD = 1
+            Inventory(WHITECARD) = 1
         END SELECT
     NEXT i
     
-    Player.code = maxLevel
-    SetCodeLevel maxLevel
+    Inventory(AUTH) = maxLevel
 
 END SUB
 
@@ -675,8 +757,8 @@ SUB LD2.Init
   
   '- Init SHAREDs
   '--------------------------------------------
-  LarryFile   = "gfx\pp256\images\larry2.put"
-  TilesFile   = "gfx\pp256\images\ld2tiles.put"  
+  LarryFile   = "gfx\larry2.put"
+  TilesFile   = "gfx\ld2tiles.put"
   LightFile   = "gfx\ld2light.put"
   EnemiesFile = "gfx\enemies.put"
   GutsFile    = "gfx\ld2guts.put"
@@ -685,7 +767,7 @@ SUB LD2.Init
   BossFile    = "gfx\boss1.put"
   FontFile    = "gfx\font1.put"
   Animation   = 1
-  Player.code = CODEBLUE
+  Inventory(AUTH) = BLUEACCESS
   NumLives    = 1
   Lighting1   = 1
   Lighting2   = 1
@@ -712,34 +794,40 @@ SUB LD2.Init
   '--------------------------------------------
   IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY ( post buffers alloc ):"+STR$(FRE(-1))
   '--------------------------------------------
-  bytesToInts = INT((201*13)/2)+1
+  bytesToInts = INT((MAPW*MAPH)/2)+1
   REDIM TileMap  ( bytesToInts ) AS INTEGER
   REDIM MixMap   ( bytesToInts ) AS INTEGER
   REDIM LightMap1( bytesToInts ) AS INTEGER
   REDIM LightMap2( bytesToInts ) AS INTEGER
   REDIM AniMap   ( bytesToInts ) AS INTEGER
-  bitsToInts = INT((201*13)/16)+1
+  bitsToInts = INT((MAPW*MAPH)/16)+1
   REDIM FloorMap ( bitsToInts ) AS INTEGER
   '--------------------------------------------
   IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY ( post maps alloc ):"+STR$(FRE(-1))
   '--------------------------------------------
-  REDIM Items      (MAXITEMS, MAXFLOORS) AS tItem
-  REDIM NumItems   (MAXFLOORS) AS INTEGER
+  REDIM Items      (MAXITEMS) AS tItem
   REDIM Doors      (MAXDOORS) AS tDoor
   REDIM Guts       (MAXGUTS) AS tGuts
-  REDIM Inventory  (MAXINVENTORY) AS tInventory
+  REDIM Inventory  (MAXINVENTORY) AS INTEGER
+  REDIM InvSlots   (MAXINVSLOTS) AS INTEGER
   REDIM WentToRoom (MAXFLOORS) AS INTEGER  
+  REDIM RGBPal     (384)       AS INTEGER
   '--------------------------------------------
   IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY ( post other alloc ):"+STR$(FRE(-1))
   '--------------------------------------------
   
+  NumItems = 0
+  NumDoors = 0
+  NumGuts = 0
+  NumInvSlots = 8
+  
   LD2.InitSound
   
-  AddMusic mscTHEME, "sfx\theme.gdm", 0
-  AddMusic mscWANDERING, "sfx\wander.gdm", 1
-  AddMusic mscINTRO, "sfx\intro.gdm", 1
-  AddMusic mscUHOH, "sfx\uhoh.gdm", 0
-  AddMusic mscMARCHoftheUHOH, "sfx\scent.gdm", 0
+  AddMusic mscTHEME, "sound\theme.gdm", 0
+  AddMusic mscWANDERING, "sound\wander.gdm", 1
+  AddMusic mscINTRO, "sound\intro.gdm", 1
+  AddMusic mscUHOH, "sound\uhoh.gdm", 0
+  AddMusic mscMARCHoftheUHOH, "sound\scent.gdm", 0
   
   LoadSprites LarryFile  , idLARRY  
   LoadSprites TilesFile  , idTILE
@@ -913,6 +1001,70 @@ SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER
   
 END SUB
 
+SUB SaveItems (filename AS STRING)
+    
+    DIM InFile AS INTEGER
+    DIM OutFile AS INTEGER
+    DIM item AS tItem
+    DIM roomId AS INTEGER
+    DIM roomCount AS INTEGER
+    DIM i AS INTEGER
+    
+    DIM tmpFile AS STRING
+    tmpFile = "save/items.tmp"
+    
+    InFile = FREEFILE: OutFile = FREEFILE
+    OPEN filename FOR BINARY AS InFile
+    OPEN tmpFile FOR BINARY AS OutFile
+    
+    GET InFile, , roomCount '- count of rooms that have been saved (not total floors)
+    'FOR roomId = 0 TO roomCount-1
+    '    IF roomId = Current
+    'NEXT roomId
+    
+    GET InFile, , roomId
+    GET InFile, , roomItemCount
+    
+    FOR roomId = 0 TO roomCount-1
+        IF roomId = CurrentRoom THEN
+            PUT OutFile, , roomId
+            PUT OutFile, , roomItemCount
+            FOR i = 0 TO NumItems-1
+                item = Items(i)
+                IF CurrentRoom = 7 THEN
+                    item.y = item.y + 4
+                END IF
+                PUT OutFile, , item
+            NEXT i
+        ELSE
+            PUT OutFile, , roomId
+            PUT OutFile, , roomItemCount
+            FOR i = 0 TO roomItemCount-1
+                GET InFile, , item
+                IF CurrentRoom = 7 THEN
+                    item.y = item.y + 4
+                END IF
+                PUT OutFile, , item
+            NEXT i
+        END IF
+    NEXT roomId
+    
+    CLOSE InFile
+    CLOSE OutFile
+    
+    '- ERASE FILE
+    OPEN filename FOR OUTPUT AS OutFile
+    CLOSE OutFile
+    
+    OPEN tmpFile FOR BINARY AS InFile
+    OPEN filename FOR BINARY AS OutFile
+    DO WHILE NOT EOF(1)
+        GET #1, , i
+        PUT #1, , i
+    LOOP
+    
+END SUB
+
 SUB LD2.LoadMap (Filename AS STRING)
   
   IF LD2.isDebugMode% THEN LD2.Debug "LD2.LoadMap ( "+filename+" )"
@@ -921,10 +1073,22 @@ SUB LD2.LoadMap (Filename AS STRING)
   DIM bufferSeg AS INTEGER
   bufferSeg = VARSEG(Buffer1(0))
   
-  LD2.FadeOut
+  LD2.FadeOut 0.05
+  
+  IF WentToRoom(CurrentRoom) = 0 THEN
+    did% = 0
+  ELSE
+    did% = 1
+  END IF
+
+  WentToRoom(CurrentRoom) = 1
+  
+  'SaveItems "save/items"+LTRIM$(STR$(CurrentRoom))+".bin"
   
   '- Load the map
   '--------------
+  LD2.cls 0, 0
+  LD2.RestoreFade
   
   Message = "..Loading..."
   LD2.cls 1, 0
@@ -940,16 +1104,8 @@ SUB LD2.LoadMap (Filename AS STRING)
   LD2.CopyBuffer 1, 0
   
   NumDoors = 0
-  Player.tempcode = 0
+  Inventory(TEMPAUTH) = 0
   DIM byte AS STRING * 1
-  
-  IF WentToRoom(CurrentRoom) = 0 THEN
-    did% = 0
-  ELSE
-    did% = 1
-  END IF
-
-  WentToRoom(CurrentRoom) = 1
   
   Mobs.Clear
 
@@ -1026,15 +1182,17 @@ SUB LD2.LoadMap (Filename AS STRING)
       GET #MapFile, c&, byte: c& = c& + 1
       GET #MapFile, c&, byte: c& = c& + 1
 
-      SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
+      SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
       FOR y% = 0 TO 12
         GET #MapFile, c&, byte: c& = c& + 1
         GET #MapFile, c&, byte: c& = c& + 1
         FOR x% = 0 TO 200
           GET #MapFile, c&, byte: c& = c& + 1
-          DEF SEG = VARSEG(TileMap(0))
-            POKE (x% + y% * 200), ASC(byte)
-          DEF SEG
+          IF x% < MAPW THEN
+            DEF SEG = VARSEG(TileMap(0))
+              POKE (x% + y% * MAPW), ASC(byte)
+            DEF SEG
+          END IF
           IF ASC(byte) = 14 THEN
             Player.y = y% * 16: XShift = x% * 16 - (16 * 8)
             Player.x = 16 * 8
@@ -1047,7 +1205,7 @@ SUB LD2.LoadMap (Filename AS STRING)
             Doors(NumDoors).x2 = x% * 16 + 32
             Doors(NumDoors).y1 = y% * 16
             Doors(NumDoors).y2 = y% * 16 + 16
-            Doors(NumDoors).code = CODEGREEN + (ASC(byte) - 90)
+            Doors(NumDoors).code = GREENACCESS + (ASC(byte) - 90)
             Doors(NumDoors).mx = x%
             Doors(NumDoors).my = y%
           END IF
@@ -1057,7 +1215,7 @@ SUB LD2.LoadMap (Filename AS STRING)
             Doors(NumDoors).x2 = x% * 16 + 32
             Doors(NumDoors).y1 = y% * 16
             Doors(NumDoors).y2 = y% * 16 + 16
-            Doors(NumDoors).code = CODEWHITE
+            Doors(NumDoors).code = WHITEACCESS
             Doors(NumDoors).mx = x%
             Doors(NumDoors).my = y%
           END IF
@@ -1077,9 +1235,9 @@ SUB LD2.LoadMap (Filename AS STRING)
         GET #MapFile, c&, byte: c& = c& + 1
         FOR x% = 0 TO 200
           GET #MapFile, c&, byte: c& = c& + 1
-          DEF SEG = VARSEG(LightMap1(0)): POKE (x% + y% * 200), ASC(byte): DEF SEG
+          IF x% < MAPW THEN DEF SEG = VARSEG(LightMap1(0)): POKE (x% + y% * MAPW), ASC(byte): DEF SEG
           GET #MapFile, c&, byte: c& = c& + 1
-          DEF SEG = VARSEG(LightMap2(0)): POKE (x% + y% * 200), ASC(byte): DEF SEG
+          IF x% < MAPW THEN DEF SEG = VARSEG(LightMap2(0)): POKE (x% + y% * MAPW), ASC(byte): DEF SEG
         NEXT x%
       NEXT y%
 
@@ -1092,7 +1250,7 @@ SUB LD2.LoadMap (Filename AS STRING)
         GET #MapFile, c&, byte: c& = c& + 1
         FOR x% = 0 TO 200
           GET #MapFile, c&, byte: c& = c& + 1
-          POKE (x% + y% * 200), ASC(byte)
+          IF x% < MAPW THEN POKE (x% + y% * MAPW), ASC(byte)
         NEXT x%
       NEXT y%
       DEF SEG
@@ -1104,16 +1262,16 @@ SUB LD2.LoadMap (Filename AS STRING)
       GET #MapFile, c&, byte: c& = c& + 1
 
       IF did% = 0 THEN
-        GET #MapFile, c&, byte: NumItems(CurrentRoom) = ASC(byte): c& = c& + 1
+        GET #MapFile, c&, byte: NumItems = ASC(byte): c& = c& + 1
       ELSE
         c& = c& + 1
       END IF
-      FOR i% = 1 TO NumItems(CurrentRoom)
+      FOR i% = 1 TO NumItems
         IF did% = 0 THEN
-          GET #MapFile, c&, Items(i%, CurrentRoom).x: c& = c& + 2
-          GET #MapFile, c&, Items(i%, CurrentRoom).y: c& = c& + 2
-          GET #MapFile, c&, byte: Items(i%, CurrentRoom).item = ASC(byte): c& = c& + 1
-          IF CurrentRoom = 7 THEN Items(i%, CurrentRoom).y = Items(i%, CurrentRoom).y - 4
+          GET #MapFile, c&, Items(i%).x: c& = c& + 2
+          GET #MapFile, c&, Items(i%).y: c& = c& + 2
+          GET #MapFile, c&, byte: Items(i%).item = ASC(byte): c& = c& + 1
+          IF CurrentRoom = 7 THEN Items(i%).y = Items(i%).y - 4
         ELSE
           c& = c& + 2
           c& = c& + 2
@@ -1126,12 +1284,12 @@ SUB LD2.LoadMap (Filename AS STRING)
   '- randomly place enemies
   DEF SEG = VARSEG(TileMap(0))
   FOR i% = 1 TO 40
-    x% = INT(200 * RND(1)) + 1
-    y% = INT(12 * RND(1)) + 1
+    x% = INT(MAPW * RND(1))
+    y% = INT(MAPH * RND(1))
     IF x% * 16 - 16 < Elevator.x1 - 80 THEN
-      IF PEEK(x% + y% * 200) > 0 AND PEEK(x% + y% * 200) < 80 THEN
+      IF PEEK(x% + y% * MAPW) > 0 AND PEEK(x% + y% * MAPW) < 80 THEN
         DO
-          IF PEEK(x% + (y% + 1) * 200) > 0 AND PEEK(x% + (y% + 1) * 200) < 80 THEN
+          IF PEEK(x% + (y% + 1) * MAPW) > 0 AND PEEK(x% + (y% + 1) * MAPW) < 80 THEN
             y% = y% + 1
           ELSE
             EXIT DO
@@ -1144,44 +1302,50 @@ SUB LD2.LoadMap (Filename AS STRING)
   NEXT i%
   DEF SEG
   
-  'MixTiles varseg(sTile(0)), varseg(sLight(0)), varseg(TileMap(0)), varseg(MixMap(0)), varseg(LightMap1(0)), varseg(LightMap2(0))
-
+  MixTiles varseg(sTile(0)), varseg(sLight(0)), varseg(TileMap(0)), varseg(MixMap(0)), varseg(LightMap1(0)), varseg(LightMap2(0))
+  
+  LD2.SetFlag MAPISLOADED
+  
 END SUB
 
 SUB LD2.LoadPalette (Filename AS STRING)
   
   IF LD2.isDebugMode% THEN LD2.Debug "LD2.LoadPalette ( "+Filename+" )"
   
-  DIM PaletteArray(0 TO 255) AS LONG
-  DIM RGBVal(0 TO 255, 0 TO 2) AS INTEGER
+  DIM PaletteArray(255) AS LONG
+  DIM p AS INTEGER
 
   OPEN Filename FOR BINARY AS #1
- 
-  FOR n% = 0 TO 255
-    GET #1, , Col&
-    PaletteArray(n%) = Col&
-  NEXT n%
- 
+    FOR n% = 0 TO 255
+      GET #1, , c&
+      PaletteArray(n%) = c&
+    NEXT n%
   CLOSE #1
-          
+  
+  DEF SEG = VARSEG(RGBPal(0))
+  p = VARPTR(RGBPal(0))
   FOR n% = 0 TO 255
     c& = PaletteArray(n%)
-    b% = c& \ 65536: c& = c& - b% * 65536
-    g% = c& \ 256: c& = c& - g% * 256
-    r% = c&
-    RGBVal(n%, 0) = r%
-    RGBVal(n%, 1) = g%
-    RGBVal(n%, 2) = b%
+    r% = (c& AND &hFF)
+    g% = (c& \ &h100) AND &hFF
+    b% = (c& \ &h10000)
+    POKE p, r%: p = p + 1
+    POKE p, g%: p = p + 1
+    POKE p, b%: p = p + 1
   NEXT n%
- 
+  DEF SEG
+  
   WAIT &H3DA, &H8, &H8: WAIT &H3DA, &H8
- 
+  
+  DEF SEG = VARSEG(RGBPal(0))
+  p = VARPTR(RGBPal(0))
   FOR n% = 0 TO 255
     OUT &H3C8, n%
-    OUT &H3C9, RGBVal(n%, 0)
-    OUT &H3C9, RGBVal(n%, 1)
-    OUT &H3C9, RGBVal(n%, 2)
+    OUT &H3C9, PEEK(p): p = p + 1
+    OUT &H3C9, PEEK(p): p = p + 1
+    OUT &H3C9, PEEK(p): p = p + 1
   NEXT n%
+  DEF SEG
 
 END SUB
 
@@ -1438,27 +1602,27 @@ SUB LD2.PickUpItem
   END IF
   
   '- Check if player is near an item
-  FOR i% = 1 TO NumItems(CurrentRoom)
-    IF Player.x + 8 + XShift >= Items(i%, CurrentRoom).x AND Player.x + 8 + XShift <= Items(i%, CurrentRoom).x + 16 THEN
+  FOR i% = 1 TO NumItems
+    IF Player.x + 8 + XShift >= Items(i%).x AND Player.x + 8 + XShift <= Items(i%).x + 16 THEN
      
       LD2.PlaySound sfxPICKUP
      
       '- Send message if player picked up something important
-      SELECT CASE Items(i%, CurrentRoom).item + 1
-        CASE 19
+      SELECT CASE Items(i%).item
+        CASE YELLOWCARD
           LD2.SetFlag GOTYELLOWCARD
       END SELECT
      
-      n% = LD2.AddToStatus(Items(i%, CurrentRoom).item + 1, 1)
+      n% = LD2.AddToStatus(Items(i%).item, 1)
       IF n% = 0 THEN
-        IF i% = NumItems(CurrentRoom) THEN
-          Items(T%, CurrentRoom).item = 0
+        IF i% = NumItems THEN
+          Items(i%).item = 0
         ELSE
-          FOR T% = i% TO NumItems(CurrentRoom) - 1
-            Items(T%, CurrentRoom) = Items(T% + 1, CurrentRoom)
-          NEXT T%
+          FOR t% = i% TO NumItems - 1
+            Items(t%) = Items(t% + 1)
+          NEXT t%
         END IF
-        NumItems(CurrentRoom) = NumItems(CurrentRoom) - 1
+        NumItems = NumItems - 1
         EXIT FOR
       END IF
    
@@ -1468,6 +1632,42 @@ SUB LD2.PickUpItem
   SetPlayerState( CROUCHING )
  
 END SUB
+
+SUB LD2.PlayerAddItem (id AS INTEGER)
+    
+    IF Inventory(id) = 0 THEN
+        Inventory(id) = 1
+    END IF
+    
+END SUB
+
+SUB LD2.PlayerAddQty (id AS INTEGER, qty AS INTEGER)
+    
+    Inventory(id) = Inventory(id) + qty
+    
+END SUB
+
+FUNCTION LD2.PlayerGetQty% (id AS INTEGER)
+    
+    LD2.PlayerGetQty% = Inventory(id)
+    
+END FUNCTION
+
+SUB LD2.PlayerSetQty (id AS INTEGER, qty AS INTEGER)
+    
+    Inventory(id) = qty
+    
+END SUB
+
+FUNCTION LD2.PlayerHasItem% (id AS INTEGER)
+    
+    IF Inventory(id) > 0 THEN
+        LD2.PlayerHasItem% = 1
+    ELSE
+        LD2.PlayerHasItem% = 0
+    END IF
+    
+END FUNCTION
 
 SUB SetPlayerState(state AS INTEGER)
     
@@ -1511,20 +1711,20 @@ SUB LD2.ProcessEntities
       LD2.ShutDown
     ELSE
       LD2.PopText "Lives Left:" + STR$(NumLives)
-      Player.life = 100
+      Player.life = MAXLIFE
       Player.uAni = 500
-      IF CurrentRoom = 23 THEN
-        Player.shells = 40
-        Player.bullets = 50
+      IF CurrentRoom = ROOFTOP THEN
+        Inventory(SHELLS) = 40
+        Inventory(BULLETS) = 50
         XShift = 1200
         Player.x = 80
-      ELSEIF CurrentRoom = 21 THEN
-        Player.shells = 40
-        Player.bullets = 50
+      ELSEIF CurrentRoom = PORTALROOM THEN
+        Inventory(SHELLS) = 40
+        Inventory(BULLETS) = 50
         XShift = 300
         Player.x = 80
       ELSE
-        CurrentRoom = 7
+        CurrentRoom = WEAPONSLOCKER
         LD2.LoadMap "7th.LD2"
         XShift = 560
         Player.x = 80
@@ -1753,7 +1953,7 @@ SUB LD2.ProcessEntities
                         DEF SEG = VARSEG(TileMap(0))
                         FOR i% = mob.x + 15 TO mob.x + 320 STEP 8
                             px% = i% \ 16: py% = INT(mob.y + 10) \ 16
-                            p% = PEEK(px% + py% * 200)
+                            p% = PEEK(px% + py% * MAPW)
                             IF p% >= 80 AND p% <= 109 THEN EXIT FOR
                             IF i% > Player.x + XShift AND i% < Player.x + 15 + XShift THEN
                                 IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
@@ -1767,7 +1967,7 @@ SUB LD2.ProcessEntities
                         DEF SEG = VARSEG(TileMap(0))
                         FOR i% = mob.x TO mob.x - 320 STEP -8
                             px% = i% \ 16: py% = INT(mob.y + 10) \ 16
-                            p% = PEEK(px% + py% * 200)
+                            p% = PEEK(px% + py% * MAPW)
                             IF p% >= 80 AND p% <= 109 THEN EXIT FOR
                             IF i% > Player.x + XShift AND i% < Player.x + 15 + XShift THEN
                                 IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
@@ -1832,7 +2032,7 @@ SUB LD2.ProcessEntities
                             DEF SEG = VARSEG(TileMap(0))
                             FOR i% = mob.x + 15 TO mob.x + 320 STEP 8
                                 px% = i% \ 16: py% = INT(mob.y + 10) \ 16
-                                p% = PEEK(px% + py% * 200)
+                                p% = PEEK(px% + py% * MAPW)
                                 IF p% >= 80 AND p% <= 109 THEN EXIT FOR
                                 IF i% > Player.x + XShift AND i% < Player.x + 15 + XShift THEN
                                     IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
@@ -1846,7 +2046,7 @@ SUB LD2.ProcessEntities
                             DEF SEG = VARSEG(TileMap(0))
                             FOR i% = mob.x TO mob.x - 320 STEP -8
                                 px% = i% \ 16: py% = INT(mob.y + 10) \ 16
-                                p% = PEEK(px% + py% * 200)
+                                p% = PEEK(px% + py% * MAPW)
                                 IF p% >= 80 AND p% <= 109 THEN EXIT FOR
                                 IF i% > Player.x + XShift AND i% < Player.x + 15 + XShift THEN
                                     IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
@@ -2031,7 +2231,7 @@ SUB LD2.ProcessEntities
  
   PlayerAtElevator = 0
   '- check if Player is at elevator
-  IF Scene% <> 4 AND Player.x + 7 + XShift >= Elevator.x1 AND Player.x + 7 + XShift <= Elevator.x2 THEN
+  IF (ElevatorIsLocked = 0) AND Player.x + 7 + XShift >= Elevator.x1 AND Player.x + 7 + XShift <= Elevator.x2 THEN
     IF Player.y + 7 >= Elevator.y1 AND Player.y + 7 <= Elevator.y2 THEN
       LD2.PutTile Elevator.x1 \ 16 - 1, Elevator.y1 \ 16, 15, 1
       LD2.PutTile Elevator.x1 \ 16, Elevator.y1 \ 16, 16, 1
@@ -2055,7 +2255,7 @@ SUB OpenDoor (id AS INTEGER)
     
     IF doorIsClosed THEN
         LD2.PlaySound sfxDOORUP
-        Player.tempcode = 0       '- used temp card (if had one)
+        Inventory(TEMPAUTH) = 0
     END IF
     
     Doors(id).anicount = DOOROPENSPEED
@@ -2089,13 +2289,17 @@ SUB ProcessDoors
     DIM doorIsOpen AS INTEGER
     DIM doorIsMoving AS INTEGER
     DIM mob AS MobType
+    DIM code AS INTEGER
+    DIM tempcode AS INTEGER
     
     pcx = Player.x + XShift + 7
     pcy = Player.y + 7
+    code = Inventory(AUTH)
+    tempcode = Inventory(TEMPAUTH)
     
     FOR i = 1 TO NumDoors
         
-        playerHasAccess = (Player.code >= Doors(i).code) OR (Player.tempcode >= Doors(i).code) OR (Player.WHITECARD = 1 AND Doors(i).code = CODEWHITE)
+        playerHasAccess = (code >= Doors(i).code) OR (tempcode >= Doors(i).code) OR (Inventory(WHITECARD) = 1 AND code = WHITEACCESS)
         playerIsNear    = (pcx >= Doors(i).x1) AND (pcx <= Doors(i).x2) AND (pcy >= Doors(i).y1) AND (pcy <= Doors(i).y2)
         doorIsMoving    = (Doors(i).ani > 0) AND (Doors(i).ani < 4)
         
@@ -2139,7 +2343,7 @@ SUB ProcessDoors
             LD2.PutTile Doors(i).mx, Doors(i).my, DOORBACK, 1
             SetFloor Doors(i).mx, Doors(i).my, 0
         ELSE
-            IF Doors(i).code = CODEWHITE THEN
+            IF Doors(i).code = WHITEACCESS THEN
                 LD2.PutTile Doors(i).mx, Doors(i).my, DOORW, 1
             ELSE
                 LD2.PutTile Doors(i).mx, Doors(i).my, DOOR0 + Doors(i).code, 1
@@ -2258,13 +2462,6 @@ SUB LD2.put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, fl
 
 END SUB
 
-SUB LD2.PutRoofCode (code AS STRING)
-
-  '- MISSING
-  '- I think this adds the code to the "note item" description
-
-END SUB
-
 SUB LD2.PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
 
   '- Put text onto the screen
@@ -2310,7 +2507,7 @@ SUB LD2.PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
   '-------------------------------
   
   DIM m AS INTEGER
-  m = (x + y * 200)
+  m = (x + y * MAPW)
 
   SELECT CASE Layer
   CASE 1
@@ -2331,9 +2528,15 @@ END SUB
 
 SUB SetFloor(x AS INTEGER, y AS INTEGER, blocked AS INTEGER)
 
-  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), 200
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
   PokeBitmap x, y, blocked
 
+END SUB
+
+SUB LD2.RefreshScreen
+    
+    LD2.CopyBuffer 1, 0
+    
 END SUB
 
 SUB LD2.RenderFrame
@@ -2421,7 +2624,7 @@ SUB LD2.RenderFrame
     yp% = 0
     FOR y% = 0 TO 12
       xp% = 0 - (INT(XShift) AND 15)
-      m%  = ((INT(XShift) \ 16) + y% * 200)
+      m%  = ((INT(XShift) \ 16) + y% * MAPW)
       mt% = ptrTileMap  + m%
       mx% = ptrMixMap   + m%
       ma% = ptrAniMap   + m%
@@ -2456,7 +2659,7 @@ SUB LD2.RenderFrame
     yp% = 0
     FOR y% = 0 TO 12
       xp% = 0 - (INT(XShift) AND 15)
-      m%  = ((INT(XShift) \ 16) + y% * 200)
+      m%  = ((INT(XShift) \ 16) + y% * MAPW)
       mt% = ptrTileMap + m%
       mx% = ptrMixMap  + m%
       ma% = ptrAniMap  + m%
@@ -2513,8 +2716,8 @@ SUB LD2.RenderFrame
   
   '- draw the items
   '----------------
-  FOR i% = 1 TO NumItems(CurrentRoom)
-    LD2put Items(i%, CurrentRoom).x - INT(XShift), Items(i%, CurrentRoom).y, VARSEG(sObject(0)), VARPTR(sObject(EPS *  Items(i%, CurrentRoom).item)), VARSEG(Buffer1(0)), 0
+  FOR i% = 1 TO NumItems
+    LD2put Items(i%).x - INT(XShift), Items(i%).y, VARSEG(sObject(0)), VARPTR(sObject(EPS *  Items(i%).item)), VARSEG(Buffer1(0)), 0
   NEXT i%
   
   'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- draw player"
@@ -2527,7 +2730,7 @@ SUB LD2.RenderFrame
     SELECT CASE Player.state
     CASE CROUCHING
         LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * LARRYCROUCH)), VARSEG(Buffer1(0)), Player.flip
-    CASE STILL, RUNNING, JUMPING, ELSE
+    CASE ELSE 'STILL, RUNNING, JUMPING, ELSE
         IF (Player.weapon = FIST) AND (lan% >= 36) THEN
             LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), VARSEG(Buffer1(0)), Player.flip
         ELSE
@@ -2560,7 +2763,7 @@ SUB LD2.RenderFrame
   '  yp% = 0
   '  FOR y% = 1 TO 13
   '    xp% = 0 - (XShift AND 15)
-  '    m% = (XShift \ 16) + (y% - 1) * 200
+  '    m% = (XShift \ 16) + (y% - 1) * MAPW
   '    FOR x% = 1 TO 21
   '      l% = PEEK(m%)
   '      IF l% THEN
@@ -2577,7 +2780,7 @@ SUB LD2.RenderFrame
     yp% = 0
     FOR y% = 0 TO 12
       xp% = 0 - (INT(XShift) AND 15)
-      m%  = ((INT(XShift) \ 16) + y% * 200)
+      m%  = ((INT(XShift) \ 16) + y% * MAPW)
       ml% = ptrLightMap + m%
       FOR x% = 0 TO 20 '// yes, 21 (+1 for hangover when scrolling)
         doDynamicLighting% = PeekBitmap%(x%, y%)
@@ -2624,10 +2827,10 @@ SUB LD2.RenderFrame
   END SELECT
   'LD2put 320-18-16-pad, pad, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 46)), VARSEG(Buffer1(0)), 0
   LD2.putTextCol pad+16, pad+3, STR$(Player.life), 15, 1
-  IF Player.weapon = SHOTGUN     THEN LD2.PutTextCol pad+16, pad+12+3, STR$(Player.shells ), 15, 1
-  IF Player.weapon = MACHINEGUN  THEN LD2.PutTextCol pad+16, pad+12+3, STR$(Player.bullets), 15, 1
-  IF Player.weapon = PISTOL      THEN LD2.PutTextCol pad+16, pad+12+3, STR$(Player.bullets), 15, 1
-  IF Player.weapon = DESERTEAGLE THEN LD2.PutTextCol pad+16, pad+12+3, STR$(Player.deagles), 15, 1
+  IF Player.weapon = SHOTGUN     THEN LD2.PutTextCol pad+16, pad+12+3, STR$(Inventory(SHELLS)), 15, 1
+  IF Player.weapon = MACHINEGUN  THEN LD2.PutTextCol pad+16, pad+12+3, STR$(Inventory(BULLETS)), 15, 1
+  IF Player.weapon = PISTOL      THEN LD2.PutTextCol pad+16, pad+12+3, STR$(Inventory(BULLETS)), 15, 1
+  IF Player.weapon = DESERTEAGLE THEN LD2.PutTextCol pad+16, pad+12+3, STR$(Inventory(DEAGLES)), 15, 1
   IF Player.weapon = FIST        THEN LD2.PutTextCol pad+16, pad+12+3, " INF", 15, 1
   'LD2.PutTextCol 320-18-pad, pad+3, STR$(NumLives), 15, 1
 
@@ -2722,11 +2925,10 @@ SUB LD2.RenderFrame
  
   '- Draw the text
   '-------------------
-  FOR n% = 1 TO LEN(Message1)
-    IF MID$(Message1, n%, 1) <> " " THEN LD2put65 ((n% * 6 - 6) + 20), 180, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Message1, n%, 1)) - 32))), VARSEG(Buffer1(0))
+  FOR n% = 1 TO LEN(SceneCaption)
+    IF MID$(SceneCaption, n%, 1) <> " " THEN LD2put65 ((n% * 6 - 6) + 20), 180, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(SceneCaption, n%, 1)) - 32))), VARSEG(Buffer1(0))
   NEXT n%
- 
-
+  
 END SUB
 
 FUNCTION LD2.HasFlag% (flag AS INTEGER)
@@ -2749,10 +2951,10 @@ END SUB
 
 SUB LD2.SetAccessLevel (CodeNum AS INTEGER)
 
-  IF CodeNum = CODEWHITE THEN
-    Player.WHITECARD = 1
+  IF CodeNum = WHITEACCESS THEN
+    Inventory(WHITECARD) = 1
   ELSE
-    Player.code = CodeNum
+    Inventory(AUTH) = CodeNum
   END IF
 
 END SUB
@@ -2789,15 +2991,7 @@ SUB LD2.RestoreBuffer (bufferNum AS INTEGER)
     
 END SUB
 
-SUB SetCodeLevel (Num AS INTEGER)
-
-  '- this function was missing (I'm guessing/hoping it's just this)
-  
-  CodeNum = Num
-
-END SUB
-
-SUB LD2.SetNumEntities (NE AS INTEGER)
+SUB LD2.ClearMobs
 
   IF NE = 0 THEN
     Mobs.clear
@@ -2841,7 +3035,7 @@ SUB LD2.SetRoom (Room AS INTEGER)
  
 END SUB
 
-SUB LD2.SetScene (OnOff AS INTEGER)
+SUB LD2.SetSceneMode (OnOff AS INTEGER)
 
   '- Set to scene mode on or off
   '-----------------------------
@@ -2862,9 +3056,9 @@ SUB LD2.SetBossBar (mobId AS INTEGER)
 
 END SUB
 
-SUB LD2.SetTempCode (CodeNum AS INTEGER)
+SUB LD2.SetTempAccess (accessLevel AS INTEGER)
 
-  Player.tempcode = CodeNum
+  Inventory(TEMPAUTH) = accessLevel
 
 END SUB
 
@@ -2892,10 +3086,7 @@ SUB LD2.SetWeapon1 (WeaponNum AS INTEGER)
 
   LD2.PlaySound sfxEQUIP
 
-  IF Player.weapon = Player.weapon1 THEN s% = 1
   Player.weapon1 = WeaponNum
-
-  IF s% = 1 THEN LD2.SetWeapon SHOTGUN
  
 END SUB
 
@@ -2904,10 +3095,7 @@ SUB LD2.SetWeapon2 (WeaponNum AS INTEGER)
   '- Set the secondary weapon for the player
   '-----------------------------------------
 
-  IF Player.weapon = Player.Weapon2 THEN s% = 1
-  Player.Weapon2 = WeaponNum
-
-  IF s% = 1 THEN LD2.SetWeapon MACHINEGUN
+  Player.weapon2 = WeaponNum
 
 END SUB
 
@@ -2991,9 +3179,9 @@ SUB LD2.Shoot
   
   DIM mob AS MobType
   
-  IF Player.weapon = SHOTGUN AND Player.shells = 0 THEN EXIT SUB
-  IF (Player.weapon = PISTOL OR Player.weapon = MACHINEGUN) AND Player.bullets = 0 THEN EXIT SUB
-  IF Player.weapon = DESERTEAGLE AND Player.deagles = 0 THEN EXIT SUB
+  IF Player.weapon = SHOTGUN AND Inventory(SHELLS) = 0 THEN EXIT SUB
+  IF (Player.weapon = PISTOL OR Player.weapon = MACHINEGUN) AND Inventory(BULLETS) = 0 THEN EXIT SUB
+  IF Player.weapon = DESERTEAGLE AND Inventory(DEAGLES) = 0 THEN EXIT SUB
 
   Player.shooting = 1
  
@@ -3001,9 +3189,9 @@ SUB LD2.Shoot
   IF Player.uAni = Player.stillani THEN
 
     Player.uAni = Player.uAni + 1
-    IF Player.weapon = SHOTGUN THEN Player.shells = Player.shells - 1
-    IF Player.weapon = PISTOL OR Player.weapon = MACHINEGUN THEN Player.bullets = Player.bullets - 1
-    IF Player.weapon = DESERTEAGLE THEN Player.deagles = Player.deagles - 1
+    IF Player.weapon = SHOTGUN THEN Inventory(SHELLS) = Inventory(SHELLS) - 1
+    IF Player.weapon = PISTOL OR Player.weapon = MACHINEGUN THEN Inventory(BULLETS) = Inventory(BULLETS) - 1
+    IF Player.weapon = DESERTEAGLE THEN Inventory(DEAGLES) = Inventory(DEAGLES) - 1
 
     SELECT CASE Player.weapon
       CASE SHOTGUN
@@ -3022,7 +3210,7 @@ SUB LD2.Shoot
       FOR i% = Player.x + XShift + 15 TO Player.x + XShift + 320 STEP 8
  
         px% = i% \ 16: py% = INT(Player.y + 10) \ 16
-        p% = PEEK(px% + py% * 200)
+        p% = PEEK(px% + py% * MAPW)
         IF p% >= 80 AND p% <= 109 THEN EXIT SUB
        
         Mobs.resetNext
@@ -3080,7 +3268,7 @@ SUB LD2.Shoot
       FOR i% = Player.x + XShift TO Player.x + XShift - 320 STEP -8
 
         px% = i% \ 16: py% = INT(Player.y + 10) \ 16
-        p% = PEEK(px% + py% * 200)
+        p% = PEEK(px% + py% * MAPW)
         IF p% >= 80 AND p% <= 109 THEN EXIT SUB
 
         Mobs.resetNext
@@ -3203,7 +3391,7 @@ SUB LD2.WriteText (Text AS STRING)
   '- Write text
 
   Text = UCASE$(Text)
-  Message1 = Text
+  SceneCaption = Text
 
 END SUB
 
@@ -3354,10 +3542,10 @@ SUB MixTiles(spriteSeg AS INTEGER, lightSeg AS INTEGER, tileMapSeg AS INTEGER, m
     NEXT x
   NEXT y
   
-  DEF SEG = VARSEG(sTile(0))
-    BSAVE "gfx\pp256\images\test0.put", VARPTR(sTile(0)), (EPS*120*2)
-    BSAVE "gfx\pp256\images\test1.put", VARPTR(sTile(EPS*120)), (EPS*hashCount*2)
-  DEF SEG
+  'DEF SEG = VARSEG(sTile(0))
+  '  BSAVE "gfx\pp256\images\test0.put", VARPTR(sTile(0)), (EPS*120*2)
+  '  BSAVE "gfx\pp256\images\test1.put", VARPTR(sTile(EPS*120)), (EPS*hashCount*2)
+  'DEF SEG
 
 END SUB
 
@@ -3374,7 +3562,7 @@ FUNCTION IntToBase64$(i as integer)
 END FUNCTION
 
 FUNCTION GetSpriteHash$(spriteSeg AS INTEGER, spritePtr AS INTEGER)
-
+    'TODO -- write hash contents to file and then compare that (could be too slow?)
 	DIM x AS INTEGER
 	DIM y AS INTEGER
 	DIM hash AS STRING
@@ -3462,9 +3650,9 @@ SUB LD2.Debug(message AS STRING)
         logFile = FREEFILE
         OPEN "log/debug.log" FOR APPEND AS logFile
             WRITE #logFile, STRING$(72, "=")
-            WRITE #logFile, "= "+SPC$(70)
+            WRITE #logFile, "= "+SPACE$(70)
             WRITE #logFile, "= "+message
-            WRITE #logFile, "= "+SPC$(70)
+            WRITE #logFile, "= "+SPACE$(70)
             WRITE #logFile, STRING$(72, "=")
         CLOSE logFile
     ELSE
@@ -3480,5 +3668,153 @@ SUB LD2.Debug(message AS STRING)
             WRITE #logFile, message
         CLOSE logFile
     END IF
+    
+END SUB
+
+SUB WaitSeconds (seconds AS DOUBLE)
+    
+    DIM endtime AS DOUBLE
+    
+    endtime = TIMER + seconds
+    
+    WHILE TIMER < endtime: WEND
+    
+END SUB
+
+
+SUB GetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
+    
+    IF (idx >= 0) AND (idx <= 255) THEN
+        
+        OUT &H3C7, idx
+        
+        r = INP(&H3C9)
+        g = INP(&H3C9)
+        b = INP(&H3C9)
+        
+    END IF
+    
+END SUB
+
+SUB SetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
+    
+    IF (idx >= 0) AND (idx <= 255) THEN
+        
+        OUT &H3C8, idx
+        
+        OUT &H3C9, r
+        OUT &H3C9, g
+        OUT &H3C9, b
+        
+    END IF
+    
+END SUB
+
+SUB LD2.FadeOut (delay AS DOUBLE)
+    
+    IF LD2.isDebugMode% THEN LD2.Debug "LD2.FadeOut ("+STR$(delay)+" )"
+    
+    DIM n AS INTEGER
+    DIM r AS INTEGER
+    DIM g AS INTEGER
+    DIM b AS INTEGER
+    DIM allzero AS INTEGER
+    
+    DIM speed AS INTEGER
+    
+    speed = 2
+    
+    DO
+        allzero = 1
+        FOR n = 0 TO 255
+            
+            GetRGB n, r, g, b
+            
+            r = r - 2
+            g = g - 2
+            b = b - 2
+            
+            IF r < 0 THEN r = 0 ELSE allzero = 0
+            IF g < 0 THEN g = 0 ELSE allzero = 0
+            IF b < 0 THEN b = 0 ELSE allzero = 0
+            
+            SetRGB n, r, g, b
+            
+        NEXT n
+        
+        'WaitSeconds delay
+        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+        
+    LOOP UNTIL allzero
+    
+END SUB
+
+SUB LD2.FadeIn (delay AS DOUBLE)
+    
+    IF LD2.isDebugMode% THEN LD2.Debug "LD2.FadeIn ("+STR$(delay)+" )"
+    
+    DIM n AS INTEGER
+    DIM r AS INTEGER
+    DIM g AS INTEGER
+    DIM b AS INTEGER
+    DIM p AS INTEGER
+    DIM rmx AS INTEGER
+    DIM gmx AS INTEGER
+    DIM bmx AS INTEGER
+    DIM stp AS INTEGER
+    DIM allset AS INTEGER
+    DIM speed AS INTEGER
+    
+    speed = 2
+    
+    DEF SEG = VARSEG(RGBPal(0))
+    stp = VARPTR(RGBPal(0))
+    
+    DO
+        p = stp
+        allset = 1
+        FOR n = 0 TO 255
+            
+            GetRGB n, r, g, b
+            
+            r = r + speed
+            g = g + speed
+            b = b + speed
+            
+            rmx = PEEK(p): p = p + 1
+            gmx = PEEK(p): p = p + 1
+            bmx = PEEK(p): p = p + 1
+            
+            IF r > rmx THEN r = rmx ELSE allset = 0
+            IF g > gmx THEN g = gmx ELSE allset = 0
+            IF b > bmx THEN b = bmx ELSE allset = 0
+            
+            SetRGB n, r, g, b
+            
+        NEXT n
+        
+        'WaitSeconds delay
+        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
+        
+    LOOP UNTIL allset
+    
+    DEF SEG
+    
+END SUB
+
+SUB LD2.RestoreFade
+    
+    DIM n AS INTEGER
+    DIM p AS INTEGER
+    
+    DEF SEG = VARSEG(RGBPal(0))
+    p = VARPTR(RGBPal(0))
+    FOR n = 0 TO 255
+        OUT &H3C8, n
+        OUT &H3C9, PEEK(p): p = p + 1
+        OUT &H3C9, PEEK(p): p = p + 1
+        OUT &H3C9, PEEK(p): p = p + 1
+    NEXT n
+    DEF SEG
     
 END SUB

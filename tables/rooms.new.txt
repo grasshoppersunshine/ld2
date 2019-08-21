@@ -1,6 +1,7 @@
 31, "31st.ld2", "Rooftop            ", ""   
 30, "30th.ld2", "Sky Room           ", "ALL"
 00, ""        , "-------------------", ""
+29, "29th.ld2", "Library            ", ""
 29, "29th.ld2", "Unknown            ", ""   
 28, "28th.ld2", "Unknown            ", ""   
 27, "27th.ld2", "Engineering        ", "ALL"

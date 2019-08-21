@@ -1,4 +1,4 @@
-NOTHING        , ""                        , "There's nothing here to use."
+NOTHING        , ""                        , "I can't use nothing."
 MEDIKIT50      , "Used Medikit +50"        , "Can't use. Already at full health."
 MEDIKIT100     , "Used Medikit +100"       , "Can't use. Already at full health."
 GRENADE        , "GRENADE is ignited"      , "Can't use. I can only handle one at a time."
