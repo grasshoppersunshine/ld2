@@ -151,6 +151,8 @@ DECLARE SUB LD2E.Init ()
     IF UCASE$(key$) = "L" THEN LD2E.Load: key$ = "6"
 
     IF key$ = CHR$(9) THEN CurrentTile = EditMap(Cursor.x \ 16 + XScroll, Cursor.y \ 16)
+    IF UCASE$(key$) = "Q" THEN CurrentTileL = LightMap1(Cursor.x \ 16 + XScroll, Cursor.y \ 16)
+    IF UCASE$(key$) = "W" THEN CurrentTileL = LightMap2(Cursor.x \ 16 + XScroll, Cursor.y \ 16)
 
     IF CurrentTile < 0 THEN CurrentTile = 0
     IF CurrentTile > 159 THEN CurrentTile = 159

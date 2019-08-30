@@ -2,6 +2,7 @@
 '- July, 2002 - Created by Joe King
 '==================================
 
+  REM $INCLUDE: 'INC\COMMON.BI'
   REM $INCLUDE: 'INC\LD2SND.BI'
   REM $INCLUDE: 'INC\LD2GFX.BI'
   REM $INCLUDE: 'INC\LD2E.BI'
@@ -50,9 +51,6 @@
     mx AS INTEGER
     my AS INTEGER
   END TYPE
-  
-  CONST TESTMODE = 1
-  CONST DEBUGMODE = 2
   
   '= SPRITES (LD2TILES.PUT)
   '========================
@@ -122,7 +120,6 @@
   DECLARE FUNCTION CheckPlayerFloorHit% ()
   DECLARE FUNCTION CheckPlayerWallHit% ()
   DECLARE SUB CloseDoor (id AS INTEGER)
-  DECLARE SUB ConsoleCommand (commandText AS STRING)
   DECLARE SUB LoadSprites (filename AS STRING, BufferNum AS INTEGER)
   DECLARE SUB DeleteMob (mob AS MobType)
   DECLARE SUB MakeSparks (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTEGER)
@@ -132,11 +129,9 @@
   DECLARE SUB RefreshPlayerAccess ()
   DECLARE SUB RotatePalette ()
   DECLARE SUB SaveItems (filename AS STRING)
-  DECLARE SUB SetConfig (optionName AS STRING, optionVal AS SINGLE)
   DECLARE SUB SetFloor (x AS INTEGER, y AS INTEGER, blocked AS INTEGER)
-  DECLARE SUB SetGameMode (mode AS INTEGER)
   DECLARE SUB SetPlayerState (state AS INTEGER)
-  DECLARE SUB WaitSeconds (seconds AS DOUBLE)
+  
   DECLARE SUB GetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
   DECLARE SUB SetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
 
@@ -144,7 +139,6 @@
 '= HASH MODULE
 '======================
   DECLARE FUNCTION IntToBase64$ (i AS INTEGER)
-  DECLARE FUNCTION GetSpriteHash$ (spriteSeg AS INTEGER, spritePtr AS INTEGER)
   
 '======================
 '= BIT MAP MODULE
@@ -170,9 +164,6 @@
 
   REM $DYNAMIC
   
-  REDIM SHARED Buffer1(0) AS INTEGER    '- Offscreen buffer
-  REDIM SHARED Buffer2(0) AS INTEGER    '- Offscreen buffer
-  
   DIM SHARED LarryFile   AS STRING
   DIM SHARED TilesFile   AS STRING
   DIM SHARED LightFile   AS STRING
@@ -183,30 +174,30 @@
   DIM SHARED BossFile    AS STRING
   DIM SHARED FontFile    AS STRING
   
-  REDIM SHARED sLarry (0) AS INTEGER
-  REDIM SHARED sTile  (0) AS INTEGER
-  REDIM SHARED sLight (0) AS INTEGER
-  REDIM SHARED sEnemy (0) AS INTEGER
-  REDIM SHARED sGuts  (0) AS INTEGER
-  REDIM SHARED sScene (0) AS INTEGER
-  REDIM SHARED sObject(0) AS INTEGER
-  REDIM SHARED sFont  (0) AS INTEGER
+  DIM SHARED sLarry (0) AS INTEGER
+  DIM SHARED sTile  (0) AS INTEGER
+  DIM SHARED sLight (0) AS INTEGER
+  DIM SHARED sEnemy (0) AS INTEGER
+  DIM SHARED sGuts  (0) AS INTEGER
+  DIM SHARED sScene (0) AS INTEGER
+  DIM SHARED sObject(0) AS INTEGER
+  DIM SHARED sFont  (0) AS INTEGER
   
-  REDIM SHARED TileMap  (0) AS INTEGER
-  REDIM SHARED MixMap   (0) AS INTEGER
-  REDIM SHARED LightMap1(0) AS INTEGER
-  REDIM SHARED LightMap2(0) AS INTEGER
-  REDIM SHARED AniMap   (0) AS INTEGER
-  REDIM SHARED FloorMap (0) AS INTEGER
+  DIM SHARED TileMap  (0) AS INTEGER
+  DIM SHARED MixMap   (0) AS INTEGER
+  DIM SHARED LightMap1(0) AS INTEGER
+  DIM SHARED LightMap2(0) AS INTEGER
+  DIM SHARED AniMap   (0) AS INTEGER
+  DIM SHARED FloorMap (0) AS INTEGER
   
-  REDIM SHARED Items      (0) AS tItem
-  REDIM SHARED Guts       (0) AS tGuts
-  REDIM SHARED Doors      (0) AS tDoor
-  REDIM SHARED Inventory  (0) AS INTEGER
-  REDIM SHARED InvSlots   (0) AS INTEGER
-  REDIM SHARED WentToRoom (0) AS INTEGER          '- replace with roomitem token
+  DIM SHARED Items      (0) AS tItem
+  DIM SHARED Guts       (0) AS tGuts
+  DIM SHARED Doors      (0) AS tDoor
+  DIM SHARED Inventory  (0) AS INTEGER
+  DIM SHARED InvSlots   (0) AS INTEGER
+  DIM SHARED WentToRoom (0) AS INTEGER          '- replace with roomitem token
   
-  REDIM SHARED RGBpal(0) AS INTEGER
+  DIM SHARED TransparentSprites (0) AS INTEGER
 
   DIM SHARED Gravity AS SINGLE
   DIM SHARED NumItems AS INTEGER
@@ -214,6 +205,7 @@
   DIM SHARED NumGuts AS INTEGER
   DIM SHARED NumInvSlots AS INTEGER
   DIM SHARED NumLives AS INTEGER
+  DIM SHARED NumLoadedTiles AS INTEGER
   
   DIM SHARED SceneCaption AS STRING
   DIM SHARED SceneMode AS INTEGER
@@ -241,64 +233,13 @@
   DIM SHARED PlayerAtElevator AS INTEGER
   DIM SHARED ElevatorIsLocked AS INTEGER
   DIM SHARED GameArgs AS STRING   '- COMMAND$
-  DIM SHARED GameMode AS INTEGER  '- test/debug
   
   DIM SHARED GAME.RevealText AS STRING
-  
-
 
   DIM SHARED BitmapSeg   AS INTEGER
   DIM SHARED BitmapOff   AS INTEGER
   DIM SHARED BitmapPitch AS INTEGER
 
-
-
-REM $STATIC
-DEFINT A-Z
-FUNCTION keyboard (T%)
-STATIC kbcontrol%(), kbmatrix%(), Firsttime, StatusFlag
-IF Firsttime = 0 THEN
- DIM kbcontrol%(128)
- DIM kbmatrix%(128)
- code$ = ""
- code$ = code$ + "E91D00E93C00000000000000000000000000000000000000000000000000"
- code$ = code$ + "00001E31C08ED8BE24000E07BF1400FCA5A58CC38EC0BF2400B85600FAAB"
- code$ = code$ + "89D8ABFB1FCB1E31C08EC0BF2400BE14000E1FFCFAA5A5FB1FCBFB9C5053"
- code$ = code$ + "51521E560657E460B401A8807404B400247FD0E088C3B700B0002E031E12"
- code$ = code$ + "002E8E1E100086E08907E4610C82E661247FE661B020E6205F075E1F5A59"
- code$ = code$ + "5B589DCF"
- DEF SEG = VARSEG(kbcontrol%(0))
- FOR i% = 0 TO 155
- d% = VAL("&h" + MID$(code$, i% * 2 + 1, 2))
- POKE VARPTR(kbcontrol%(0)) + i%, d%
- NEXT i%
- i& = 16
- n& = VARSEG(kbmatrix%(0)): l& = n& AND 255: h& = ((n& AND &HFF00) \ 256): POKE i&, l&: POKE i& + 1, h&: i& = i& + 2
- n& = VARPTR(kbmatrix%(0)): l& = n& AND 255: h& = ((n& AND &HFF00) \ 256): POKE i&, l&: POKE i& + 1, h&: i& = i& + 2
- DEF SEG
- Firsttime = 1
-END IF
-SELECT CASE T
- CASE 1 TO 128
- keyboard = kbmatrix%(T)
- CASE -1
- IF StatusFlag = 0 THEN
- DEF SEG = VARSEG(kbcontrol%(0))
- CALL ABSOLUTE(0)
- DEF SEG
- StatusFlag = 1
- END IF
- CASE -2
- IF StatusFlag = 1 THEN
- DEF SEG = VARSEG(kbcontrol%(0))
- CALL ABSOLUTE(3)
- DEF SEG
- StatusFlag = 0
- END IF
- CASE ELSE
- keyboard = 0
-END SELECT
-END FUNCTION
 
 FUNCTION File.getSize&(filename AS STRING)
     
@@ -319,11 +260,11 @@ FUNCTION File.getAllocSize&(filename AS STRING)
     DIM fileSize AS LONG
     
     fileSize = File.getSize&(filename)
-    fileSize = (fileSize - 7)\2
+    fileSize = ((fileSize-7)\2)+1 '- todo: only add +1 if remainder
     
     File.getAllocSize& = fileSize
     
-    IF LD2.isDebugMode% THEN LD2.Debug "Allocating"+STR$(filesize)+" ints for "+filename
+    IF LD2.isDebugMode% THEN LD2.Debug "Allocating"+STR$(filesize*2)+" bytes for "+filename
     
 END FUNCTION
 
@@ -350,6 +291,12 @@ SUB LD2.AddLives (Amount AS INTEGER)
 
   NumLives = NumLives + Amount
 
+END SUB
+
+SUB LD2.SetLives (Amount AS INTEGER)
+  
+  NumLives = Amount
+  
 END SUB
 
 SUB AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
@@ -450,6 +397,12 @@ FUNCTION LD2.GetStatusAmount% (slot AS INTEGER)
     
 END FUNCTION
 
+SUB LD2.GetPlayer (p AS tPlayer)
+    
+    p = Player
+    
+END SUB
+
 FUNCTION CheckPlayerFloorHit%
   
   SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
@@ -501,82 +454,6 @@ FUNCTION CheckMobWallHit% (mob AS MobType)
   NEXT y%
   
 END FUNCTION
-
-SUB LD2.cls (BufferNum AS INTEGER, Col AS INTEGER)
-
-  '- clear a buffer with the given color
-  '-------------------------------------
-
-  IF BufferNum = 0 THEN LD2cls &HA000, Col
-  IF BufferNum = 1 THEN LD2cls VARSEG(Buffer1(0)), Col
-  IF BufferNum = 2 THEN LD2cls VARSEG(Buffer2(0)), Col
- 
-END SUB
-
-SUB LD2.fill (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, buffer AS INTEGER)
-    
-    DIM bufferSeg AS INTEGER
-    
-    IF (buffer < 0) OR (buffer > 2) THEN RETURN
-    
-    IF buffer = 0 THEN bufferSeg = &HA000
-    IF buffer = 1 THEN bufferSeg = VARSEG(Buffer1(0))
-    IF buffer = 2 THEN bufferSeg = VARSEG(Buffer2(0))
-    
-    LD2fill x, y, w, h, col, bufferSeg
-    
-END SUB
-
-SUB LD2.fillm (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, buffer AS INTEGER)
-    
-    DIM bufferSeg AS INTEGER
-    
-    IF (buffer < 0) OR (buffer > 2) THEN RETURN
-    
-    IF buffer = 0 THEN bufferSeg = &HA000
-    IF buffer = 1 THEN bufferSeg = VARSEG(Buffer1(0))
-    IF buffer = 2 THEN bufferSeg = VARSEG(Buffer2(0))
-    
-    LD2fillm x, y, w, h, col, bufferSeg
-    
-END SUB
-
-SUB LD2.fillw (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, buffer AS INTEGER)
-    
-    DIM bufferSeg AS INTEGER
-    
-    IF (buffer < 0) OR (buffer > 2) THEN RETURN
-    
-    IF buffer = 0 THEN bufferSeg = &HA000
-    IF buffer = 1 THEN bufferSeg = VARSEG(Buffer1(0))
-    IF buffer = 2 THEN bufferSeg = VARSEG(Buffer2(0))
-    
-    LD2fillw x, y, w, h, col, bufferSeg
-    
-END SUB
-
-SUB LD2.CopyBuffer (Buffer1 AS INTEGER, Buffer2 AS INTEGER)
-
-  IF Buffer1 = 1 AND Buffer2 = 0 THEN
-    LD2copyFull VARSEG(Buffer1(0)), &HA000
-  ELSE
-    DIM srcSeg AS INTEGER
-    DIM dstSeg AS INTEGER
-    
-    IF (srcSeg < 0) OR (srcSeg > 2) THEN RETURN
-    IF (dstSeg < 0) OR (dstSeg > 2) THEN RETURN
-    
-    IF buffer1 = 0 THEN srcSeg = &HA000
-    IF buffer1 = 1 THEN srcSeg = VARSEG(Buffer1(0))
-    IF buffer1 = 2 THEN srcSeg = VARSEG(Buffer2(0))
-    IF buffer2 = 0 THEN dstSeg = &HA000
-    IF buffer2 = 1 THEN dstSeg = VARSEG(Buffer1(0))
-    IF buffer2 = 2 THEN dstSeg = VARSEG(Buffer2(0))
-    
-    LD2copyFull srcSeg, dstSeg
-  END IF
-
-END SUB
 
 SUB LD2.CreateMob (x AS INTEGER, y AS INTEGER, id AS INTEGER)
 
@@ -634,20 +511,24 @@ SUB LD2.CreateItem (x AS INTEGER, y AS INTEGER, item AS INTEGER, mobId AS INTEGE
   DIM i AS INTEGER
   DIM cr AS INTEGER
   DIM mob AS MobType
- 
-  NumItems = NumItems + 1
-  i = NumItems
+  
+  IF NumItems < MAXITEMS THEN
+      NumItems = NumItems + 1
+      i = NumItems
 
-  IF mobId = 0 THEN
-    Items(i).x = x
-    Items(i).y = y
+      IF mobId = 0 THEN
+        Items(i).x = x
+        Items(i).y = y
+      ELSE
+        Mobs.getMob mob, mobId
+        Items(i).x = mob.x
+        Items(i).y = mob.y
+      END IF
+      
+      Items(i).item = item
   ELSE
-    Mobs.getMob mob, mobId
-    Items(i).x = mob.x
-    Items(i).y = mob.y
+    LD2.Debug "ERROR! NumItems >= MAXITEMS -- "+STR$(NumItems)+" >= "+STR$(MAXITEMS)
   END IF
-
-  Items(i).item = item
 
 END SUB
 
@@ -662,17 +543,16 @@ SUB LD2.Drop (item%)
   Items(n%).x = Player.x + XShift
  
   y% = Player.y
-  DEF SEG = VARSEG(TileMap(0))
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
   DO
-  FOR x% = 0 TO 15 STEP 15
-    px% = INT(Player.x + XShift + x%) \ 16: py% = y% \ 16
-    IF PEEK(px% + (py% + 1) * MAPW) >= 80 THEN
-      EXIT DO
-    END IF
-  NEXT x%
+    FOR x% = 0 TO 15 STEP 15
+      px% = INT(Player.x + XShift + x%) \ 16: py% = y% \ 16
+      IF PeekBitmap%(px%, py% + 1) THEN
+        EXIT DO
+      END IF
+    NEXT x%
     y% = y% + 16
   LOOP
-  DEF SEG
 
 
   Items(n%).y = (y% \ 16) * 16
@@ -734,18 +614,37 @@ SUB LD2.Init
   
   DIM bytesToInts AS INTEGER
   DIM bitsToInts AS INTEGER
+  DIM word AS STRING
 
   GameArgs    = COMMAND$
   GameArgs    = UCASE$(LTRIM$(RTRIM$(GameArgs)))
-
-  SELECT CASE GameArgs
-  CASE "TEST"
-    SetGameMode TESTMODE
-  CASE "DEBUG"
-    SetGameMode DEBUGMODE
-  CASE "PROFILE"
-    'SetGameMode (DEBUGMODE OR PROFILEMODE)
-  END SELECT
+  
+  DIM i AS INTEGER
+  FOR i = 1 TO LEN(GameArgs)
+    IF (MID$(GameArgs, i, 1) <> " ") THEN
+      word = word + MID$(GameArgs, i, 1)
+    END IF
+    IF LEN(word) AND ((MID$(GameArgs, i, 1) = " ") OR (i = LEN(GameArgs))) THEN
+      SELECT CASE word
+        CASE "TEST"
+          LD2.SetFlag TESTMODE
+        CASE "DEBUG"
+          LD2.SetFlag DEBUGMODE
+        CASE "PROFILE"
+          'LD2.SetFlag PROFILEMODE
+        CASE "LOG"
+        CASE "INFO"
+        CASE "PATH"
+        CASE "NOSOUND"
+          LD2.SetFlag NOSOUND
+        CASE "NOMIX"
+          LD2.SetFlag NOMIX
+        CASE "SKIP"
+          LD2.SetFlag SKIPOPENING
+      END SELECT
+      word = ""
+    END IF
+  NEXT i
   
   IF LD2.isDebugMode% THEN
     LD2.Debug "!debugstart!"
@@ -754,6 +653,11 @@ SUB LD2.Init
   
   TIMER ON
   RANDOMIZE TIMER
+  
+  nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
+  
+  PRINT "Allocating memory..."
+  WaitSeconds 0.3333
   
   '- Init SHAREDs
   '--------------------------------------------
@@ -767,7 +671,6 @@ SUB LD2.Init
   BossFile    = "gfx\boss1.put"
   FontFile    = "gfx\font1.put"
   Animation   = 1
-  Inventory(AUTH) = BLUEACCESS
   NumLives    = 1
   Lighting1   = 1
   Lighting2   = 1
@@ -779,18 +682,19 @@ SUB LD2.Init
   IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY:"+STR$(FRE(-1))
   '--------------------------------------------
   REDIM sLarry ( File.getAllocSize&( LarryFile   )) AS INTEGER
-  REDIM sTile  ( File.getAllocSize&( TilesFile   )+(80*130) ) AS INTEGER
+  'REDIM sTile  ( 0 ) AS INTEGER 'File.getAllocSize&( TilesFile   )+(80*130) ) AS INTEGER
+  REDIM sTile  ( EPS*(64+80) ) AS INTEGER '- make sure we have enough memory for max possible
   REDIM sLight ( File.getAllocSize&( LightFile   )+( 1*130) ) AS INTEGER
   REDIM sEnemy ( File.getAllocSize&( EnemiesFile )) AS INTEGER
   REDIM sGuts  ( File.getAllocSize&( GutsFile    )) AS INTEGER
-  REDIM sScene ( File.getAllocSize&( SceneFile   )) AS INTEGER
+  REDIM sScene ( File.getAllocSize&( SceneFile   )) AS INTEGER '- only load scene sprites during scene / free after
   REDIM sObject( File.getAllocSize&( ObjectsFile )) AS INTEGER
   REDIM sFont  ( File.getAllocSize&( FontFile    )) AS INTEGER
+  REDIM TransparentSprites (255) AS INTEGER
   '--------------------------------------------
   IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY ( post sprites alloc ):"+STR$(FRE(-1))
   '--------------------------------------------
-  REDIM Buffer1 ( 32000 ) AS INTEGER
-  REDIM Buffer2 ( 32000 ) AS INTEGER
+  GFX.InitBuffers
   '--------------------------------------------
   IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY ( post buffers alloc ):"+STR$(FRE(-1))
   '--------------------------------------------
@@ -811,7 +715,6 @@ SUB LD2.Init
   REDIM Inventory  (MAXINVENTORY) AS INTEGER
   REDIM InvSlots   (MAXINVSLOTS) AS INTEGER
   REDIM WentToRoom (MAXFLOORS) AS INTEGER  
-  REDIM RGBPal     (384)       AS INTEGER
   '--------------------------------------------
   IF LD2.isDebugMode% THEN LD2.Debug "FREE MEMORY ( post other alloc ):"+STR$(FRE(-1))
   '--------------------------------------------
@@ -821,16 +724,30 @@ SUB LD2.Init
   NumGuts = 0
   NumInvSlots = 8
   
-  LD2.InitSound
+  IF LD2.NotFlag%(NOSOUND) THEN
+    
+    PRINT "Initializing sound..."
+    WaitSeconds 0.3333
+
+    LD2.InitSound 1
+    
+    AddMusic mscTHEME, "sound\theme.gdm", 0
+    AddMusic mscWANDERING, "sound\wander.gdm", 1
+    AddMusic mscINTRO, "sound\intro.gdm", 1
+    AddMusic mscUHOH, "sound\uhoh.gdm", 0
+    AddMusic mscMARCHoftheUHOH, "sound\scent.gdm", 0
+    
+  ELSE
+    
+    LD2.InitSound 0
+    
+  END IF
   
-  AddMusic mscTHEME, "sound\theme.gdm", 0
-  AddMusic mscWANDERING, "sound\wander.gdm", 1
-  AddMusic mscINTRO, "sound\intro.gdm", 1
-  AddMusic mscUHOH, "sound\uhoh.gdm", 0
-  AddMusic mscMARCHoftheUHOH, "sound\scent.gdm", 0
+  PRINT "Loading sprites..."
+  WaitSeconds 0.3333
   
   LoadSprites LarryFile  , idLARRY  
-  LoadSprites TilesFile  , idTILE
+  'LoadSprites TilesFile  , idTILE
   LoadSprites LightFile  , idLIGHT
   LoadSprites EnemiesFile, idENEMY
   LoadSprites GutsFile   , idGUTS
@@ -844,7 +761,61 @@ SUB LD2.Init
   SCREEN 13
   CLS
   LD2.LoadPalette "gfx\gradient.pal"
-  LD2.LoadBitmap  "gfx\back.bmp", 2, 1
+  'LD2.LoadBitmap  "gfx\back.bmp", 2, 1
+  LD2.CLS 2, 66
+  'DIM i AS INTEGER
+  DIM x AS INTEGER
+  DIM y AS INTEGER
+  DIM r AS INTEGER
+  FOR i = 0 TO 9999
+    'DO
+      x = 320*RND(1)
+      y = 200*RND(1)
+      'IF (x > 150-y) AND (x < 350-y) THEN
+      '  IF (x > 225-y) AND (x < 275-y) THEN
+      '    EXIT DO
+      '  END IF
+      '  IF (x > 175-y) AND (x < 325-y) THEN
+      '    IF INT(2*RND(1)) = 0 THEN EXIT DO
+      '  END IF
+      '  IF INT(3*RND(1)) = 0 THEN EXIT DO
+      'ELSE
+      '  IF INT(5*RND(1)) = 0 THEN
+      '      EXIT DO
+      '  END IF
+      'END IF
+    'LOOP
+    r = 2*RND(1)
+    LD2.pset x, y, 66+r, 2
+  NEXT i
+  FOR i = 0 TO 99
+    'DO
+      x = 320*RND(1)
+      y = 200*RND(1)
+      'IF (x > 150-y) AND (x < 350-y) THEN
+      '  IF (x > 225-y) AND (x < 275-y) THEN
+      '    EXIT DO
+      '  END IF
+      '  IF (x > 175-y) AND (x < 325-y) THEN
+      '    IF INT(2*RND(1)) = 0 THEN EXIT DO
+      '  END IF
+      '  IF INT(3*RND(1)) = 0 THEN EXIT DO
+      'ELSE
+      '  IF INT(5*RND(1)) = 0 THEN
+      '      EXIT DO
+      '  END IF
+      'END IF
+    'LOOP
+    r = 4*RND(1)
+    IF INT(4*RND(1)) = 1 THEN
+      IF INT(2*RND(1)) = 1 THEN
+        r = r - 22
+      ELSE
+        r = r + 12
+      END IF
+    END IF
+    LD2.pset x, y, 72+r, 2
+  NEXT i
   
   '- add method for ld2.addmobtype, move these to ld2.bas
   Mobs.AddType ROCKMONSTER
@@ -879,125 +850,6 @@ SUB LD2.JumpPlayer (Amount AS SINGLE)
   END IF
   
   SetPlayerState( JUMPING )
-  
-END SUB
-
-SUB LD2.LoadBitmap (Filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER)
-  
-  IF LD2.isDebugMode% THEN LD2.Debug "LD2.LoadBitmap ( "+Filename+","+STR$(BufferNum)+","+STR$(Convert)+" )"
-  
-  DIM byte AS STRING * 1
-  DIM byteR AS STRING * 1
-  DIM byteG AS STRING * 1
-  DIM byteB AS STRING * 1
-  DIM bmwidth AS INTEGER
-  DIM bmheight AS INTEGER
- 
-  DIM ConvertTable(255) AS INTEGER
-
-  OPEN Filename FOR BINARY AS #1
-
-    '- load the palette
-
-    GET #1, 23, byte
-    bmheight = ASC(byte)
-    bmwidth = (LOF(1) - 1079) \ bmheight
-    bmheight = bmheight - 1
-
-    c& = 55
-    
-    IF Convert = 0 THEN
-      FOR n% = 0 TO 255
-    
-        OUT &H3C8, n%
-
-        GET #1, c&, byteB
-        c& = c& + 1
-        GET #1, c&, byteG
-        c& = c& + 1
-        GET #1, c&, byteR
-        c& = c& + 2
-     
-        OUT &H3C9, ASC(byteR) \ 4
-        OUT &H3C9, ASC(byteG) \ 4
-        OUT &H3C9, ASC(byteB) \ 4
-
-      NEXT n%
-    ELSE
-      FOR n% = 0 TO 255
-   
-        GET #1, c&, byteB
-        c& = c& + 1
-        GET #1, c&, byteG
-        c& = c& + 1
-        GET #1, c&, byteR
-        c& = c& + 2
-    
-        red% = ASC(byteR) \ 4
-        grn% = ASC(byteG) \ 4
-        blu% = ASC(byteB) \ 4
-
-        oav% = 500
-        c%   = n%
-        FOR i% = 16 TO 255
-           
-          OUT &H3C7, i%
-
-          red2% = INP(&H3C9)
-          grn2% = INP(&H3C9)
-          blu2% = INP(&H3C9)
-
-          rd% = ABS(red% - red2%)
-          gd% = ABS(grn% - grn2%)
-          bd% = ABS(blu% - blu2%)
-
-          av% = (rd% + gd% + bd%) / 3
-          IF av% < oav% THEN
-            oav% = av%
-            c% = i%
-          END IF
-
-        NEXT i%
-        ConvertTable(n%) = c%
-
-      NEXT n%
-    END IF
-  
-    '- put up the image
-    c& = LOF(1) - bmwidth
-   
-    'IF BufferNum = 0 THEN DEF SEG = &HA000
-    'IF BufferNum = 1 THEN DEF SEG = VARSEG(Buffer1(0))
-    'IF BufferNum = 2 THEN DEF SEG = VARSEG(Buffer2(0))
-    IF Convert = 0 THEN
-      IF BufferNum = 0 THEN DEF SEG = &HA000
-      IF BufferNum = 1 THEN DEF SEG = VARSEG(Buffer1(0))
-      FOR y% = 0 TO bmheight
-        FOR x% = 0 TO bmwidth
-          GET #1, c&, byte
-          POKE (x% + y% * 320&), ASC(byte)
-          c& = c& + 1
-        NEXT x%
-        c& = c& - ((bmwidth + 1) * 2)
-      NEXT y%
-    ELSE
-      FOR y% = 0 TO bmheight
-        FOR x% = 0 TO bmwidth
-          GET #1, c&, byte
-          c% = ConvertTable(ASC(byte))
-          DEF SEG = VARSEG(Buffer2(0))
-          POKE (x% + y% * 320&), c%
-          DEF SEG
-          c& = c& + 1
-        NEXT x%
-        c& = c& - ((bmwidth + 1) * 2)
-      NEXT y%
-    END IF
-    DEF SEG
-
-  CLOSE #1
-  
-  IF LD2.isDebugMode% THEN LD2.Debug "LD2.LoadBitmap SUCCESS"
   
 END SUB
 
@@ -1071,9 +923,10 @@ SUB LD2.LoadMap (Filename AS STRING)
   
   DIM Message AS STRING
   DIM bufferSeg AS INTEGER
-  bufferSeg = VARSEG(Buffer1(0))
+  DIM loadedSprites(120) AS INTEGER
+  DIM numLoadedSprites AS INTEGER
   
-  LD2.FadeOut 0.05
+  LD2.FadeOut 2, 0
   
   IF WentToRoom(CurrentRoom) = 0 THEN
     did% = 0
@@ -1088,8 +941,9 @@ SUB LD2.LoadMap (Filename AS STRING)
   '- Load the map
   '--------------
   LD2.cls 0, 0
-  LD2.RestoreFade
+  LD2.RestorePalette
   
+  bufferSeg = GetBufferSeg%(1)
   Message = "..Loading..."
   LD2.cls 1, 0
   LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 1
@@ -1100,14 +954,13 @@ SUB LD2.LoadMap (Filename AS STRING)
       NEXT n%
     NEXT x%
   NEXT y%
-  WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  LD2.CopyBuffer 1, 0
+  LD2.RefreshScreen
   
   NumDoors = 0
   Inventory(TEMPAUTH) = 0
-  DIM byte AS STRING * 1
-  
   Mobs.Clear
+  
+  DIM byte AS STRING * 1
 
   DIM MapFile AS INTEGER
   MapFile = FREEFILE
@@ -1181,7 +1034,10 @@ SUB LD2.LoadMap (Filename AS STRING)
     
       GET #MapFile, c&, byte: c& = c& + 1
       GET #MapFile, c&, byte: c& = c& + 1
-
+      
+      loadedSprites(0) = 0
+      numLoadedSprites = 1
+      
       SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
       FOR y% = 0 TO 12
         GET #MapFile, c&, byte: c& = c& + 1
@@ -1189,9 +1045,23 @@ SUB LD2.LoadMap (Filename AS STRING)
         FOR x% = 0 TO 200
           GET #MapFile, c&, byte: c& = c& + 1
           IF x% < MAPW THEN
-            DEF SEG = VARSEG(TileMap(0))
-              POKE (x% + y% * MAPW), ASC(byte)
-            DEF SEG
+            found% = 0
+            FOR n% = 0 TO numLoadedSprites-1
+                IF loadedSprites(n%) = ASC(byte) THEN
+                    DEF SEG = VARSEG(TileMap(0))
+                    POKE (x% + y% * MAPW), n%
+                    DEF SEG
+                    found% = 1
+                    EXIT FOR
+                END IF
+            NEXT n%
+            IF found% = 0 THEN
+                loadedSprites(numLoadedSprites) = ASC(byte)
+                DEF SEG = VARSEG(TileMap(0))
+                POKE (x% + y% * MAPW), numLoadedSprites
+                DEF SEG
+                numLoadedSprites = numLoadedSprites + 1
+            END IF
           END IF
           IF ASC(byte) = 14 THEN
             Player.y = y% * 16: XShift = x% * 16 - (16 * 8)
@@ -1234,10 +1104,24 @@ SUB LD2.LoadMap (Filename AS STRING)
         GET #MapFile, c&, byte: c& = c& + 1
         GET #MapFile, c&, byte: c& = c& + 1
         FOR x% = 0 TO 200
+          IF x% < MAPW THEN
+            DEF SEG = VARSEG(LightMap2(0)): POKE (x% + y% * MAPW), 0: DEF SEG
+          END IF
           GET #MapFile, c&, byte: c& = c& + 1
-          IF x% < MAPW THEN DEF SEG = VARSEG(LightMap1(0)): POKE (x% + y% * MAPW), ASC(byte): DEF SEG
+          IF x% < MAPW THEN
+            DEF SEG = VARSEG(TileMap(0)): t% = PEEK (x% + y% * MAPW): DEF SEG
+            IF t% = 0 THEN
+              DEF SEG = VARSEG(LightMap2(0)): POKE (x% + y% * MAPW), ASC(byte): DEF SEG
+            ELSE
+              DEF SEG = VARSEG(LightMap1(0)): POKE (x% + y% * MAPW), ASC(byte): DEF SEG
+            END IF
+          END IF
           GET #MapFile, c&, byte: c& = c& + 1
-          IF x% < MAPW THEN DEF SEG = VARSEG(LightMap2(0)): POKE (x% + y% * MAPW), ASC(byte): DEF SEG
+          IF x% < MAPW THEN
+            DEF SEG = VARSEG(LightMap2(0))
+            IF PEEK(x% + y% * MAPW) = 0 THEN POKE (x% + y% * MAPW), ASC(byte)
+            DEF SEG
+          END IF
         NEXT x%
       NEXT y%
 
@@ -1282,117 +1166,65 @@ SUB LD2.LoadMap (Filename AS STRING)
   CLOSE #MapFile
 
   '- randomly place enemies
-  DEF SEG = VARSEG(TileMap(0))
+  SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
   FOR i% = 1 TO 40
     x% = INT(MAPW * RND(1))
     y% = INT(MAPH * RND(1))
     IF x% * 16 - 16 < Elevator.x1 - 80 THEN
-      IF PEEK(x% + y% * MAPW) > 0 AND PEEK(x% + y% * MAPW) < 80 THEN
+      IF PeekBitmap%(x%, y%) = 0 THEN
         DO
-          IF PEEK(x% + (y% + 1) * MAPW) > 0 AND PEEK(x% + (y% + 1) * MAPW) < 80 THEN
+          IF PeekBitmap%(x%, y%+1) = 0 THEN
             y% = y% + 1
           ELSE
             EXIT DO
           END IF
-        LOOP
-        n% = Mobs.GetRandomType%
-        LD2.CreateMob x% * 16, y% * 16, n%
+        LOOP WHILE y% < MAPH
+        IF y% < MAPH THEN
+            n% = Mobs.GetRandomType%
+            LD2.CreateMob x% * 16, y% * 16, n%
+        END IF
       END IF
     END IF
   NEXT i%
-  DEF SEG
   
-  MixTiles varseg(sTile(0)), varseg(sLight(0)), varseg(TileMap(0)), varseg(MixMap(0)), varseg(LightMap1(0)), varseg(LightMap2(0))
+  IF LD2.isDebugMode% THEN LD2.Debug "Loading Loaded Sprites"
+  DIM FileNo AS INTEGER
+  FileNo = FREEFILE
+  LD2.Debug "Floor "+Filename+" has"+STR$(numLoadedSprites)+" unique tile sprites"
+  REDIM sTile ( (numLoadedSprites+80)*EPS ) AS INTEGER
+  DIM BPS AS INTEGER
+  BPS = 16*16+4
+  OPEN TilesFile FOR BINARY AS FileNo
+  FOR n% = 0 TO numLoadedSprites-1
+    TransparentSprites(n%) = 0
+    SEEK #FileNo, 8+BPS*loadedSprites(n%)
+    p% = EPS*n%
+    FOR t% = 0 TO EPS-1
+      GET #FileNo, , i%
+      IF (t% > 1) AND (((i% AND &hFF) = 0) OR ((i% \ &h100) = 0)) THEN
+        TransparentSprites(n%) = 1
+      END IF
+      sTile(p%+t%) = i%
+    NEXT t%
+  NEXT n%
+  CLOSE FileNo
+  IF LD2.isDebugMode% THEN LD2.Debug "Loading Loaded Sprites Done"
+  
+  NumLoadedTiles = numLoadedSprites
+  
+  IF LD2.NotFlag%(NOMIX) THEN
+    IF LD2.isDebugMode% THEN LD2.Debug "Mix Tiles Start"
+    MixTiles VARSEG(sTile(0)), VARSEG(sLight(0)), VARSEG(TileMap(0)), VARSEG(MixMap(0)), VARSEG(LightMap1(0)), VARSEG(LightMap2(0))
+    IF LD2.isDebugMode% THEN LD2.Debug "Mix Tiles Done"
+  ENDIF
   
   LD2.SetFlag MAPISLOADED
   
 END SUB
 
-SUB LD2.LoadPalette (Filename AS STRING)
-  
-  IF LD2.isDebugMode% THEN LD2.Debug "LD2.LoadPalette ( "+Filename+" )"
-  
-  DIM PaletteArray(255) AS LONG
-  DIM p AS INTEGER
-
-  OPEN Filename FOR BINARY AS #1
-    FOR n% = 0 TO 255
-      GET #1, , c&
-      PaletteArray(n%) = c&
-    NEXT n%
-  CLOSE #1
-  
-  DEF SEG = VARSEG(RGBPal(0))
-  p = VARPTR(RGBPal(0))
-  FOR n% = 0 TO 255
-    c& = PaletteArray(n%)
-    r% = (c& AND &hFF)
-    g% = (c& \ &h100) AND &hFF
-    b% = (c& \ &h10000)
-    POKE p, r%: p = p + 1
-    POKE p, g%: p = p + 1
-    POKE p, b%: p = p + 1
-  NEXT n%
-  DEF SEG
-  
-  WAIT &H3DA, &H8, &H8: WAIT &H3DA, &H8
-  
-  DEF SEG = VARSEG(RGBPal(0))
-  p = VARPTR(RGBPal(0))
-  FOR n% = 0 TO 255
-    OUT &H3C8, n%
-    OUT &H3C9, PEEK(p): p = p + 1
-    OUT &H3C9, PEEK(p): p = p + 1
-    OUT &H3C9, PEEK(p): p = p + 1
-  NEXT n%
-  DEF SEG
-
-END SUB
-
-SUB RotatePalette
-    
-    STATIC seconds AS DOUBLE
-    STATIC first   AS INTEGER
-    
-    IF first = 0 THEN
-        first = 1
-        seconds = TIMER
-    END IF
-    
-    IF TIMER > (seconds + 0.10) THEN
-        
-        seconds = TIMER
-        
-        OUT &H3C7, 127
-        
-        r31% = INP(&H3C9)
-        g31% = INP(&H3C9)
-        b31% = INP(&H3C9)
-        
-        FOR n% = 127 TO 112 STEP -1
-            IF n% > 112 THEN
-                OUT &H3C7, n%-1
-                r% = INP(&H3C9)
-                g% = INP(&H3C9)
-                b% = INP(&H3C9)
-            ELSE
-                r% = r31%
-                g% = g31%
-                b% = b31%
-            END IF
-            
-            OUT &H3C8, n%
-            OUT &H3C9, r%
-            OUT &H3C9, g%
-            OUT &H3C9, b%
-        NEXT n%
-    END IF
-
-END SUB
-
 SUB LoadSprites (Filename AS STRING, BufferNum AS INTEGER)
   
-  IF LD2.isDebugMod% THEN LD2.Debug "LoadSprite ( "+Filename+","+STR$(BufferNum)+" )"
+  IF LD2.isDebugMode% THEN LD2.Debug "LoadSprite ( "+Filename+","+STR$(BufferNum)+" )"
 
   '- Load a sprite set into a given buffer
   '---------------------------------------
@@ -2420,86 +2252,72 @@ SUB LD2.ProcessGuts
 END SUB
 
 SUB LD2.put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, flip AS INTEGER)
-
-  '- Put a sprite onto the buffer
-  '------------------------------
-
+  
+  DIM bufferSeg AS INTEGER
+  
+  bufferSeg = GetBufferSeg%(1)
+  
   SELECT CASE id
 
     CASE idTILE
 
-      LD2put x% - XShift, y%, VARSEG(sTile(0)), VARPTR(sTile(EPS * NumSprite)), VARSEG(Buffer1(0)), flip
+      LD2put x% - XShift, y%, VARSEG(sTile(0)), VARPTR(sTile(EPS * NumSprite)), bufferSeg, flip
 
     CASE idENEMY
 
-      LD2put x% - XShift, y%, VARSEG(sEnemy(0)), VARPTR(sEnemy(EPS * NumSprite)), VARSEG(Buffer1(0)), flip
+      LD2put x% - XShift, y%, VARSEG(sEnemy(0)), VARPTR(sEnemy(EPS * NumSprite)), bufferSeg, flip
 
     CASE idLARRY
 
-      LD2put x% - XShift, y%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * NumSprite)), VARSEG(Buffer1(0)), flip
+      LD2put x% - XShift, y%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * NumSprite)), bufferSeg, flip
 
     CASE idGUTS
 
-      LD2put x% - XShift, y%, VARSEG(sGuts(0)), VARPTR(sGuts(EPS * NumSprite)), VARSEG(Buffer1(0)), flip
+      LD2put x% - XShift, y%, VARSEG(sGuts(0)), VARPTR(sGuts(EPS * NumSprite)), bufferSeg, flip
 
     CASE idLIGHT
 
-      LD2putl x% - XShift, y%, VARSEG(sLight(0)), VARPTR(sLight(EPS * NumSprite)), VARSEG(Buffer1(0))
+      LD2putl x% - XShift, y%, VARSEG(sLight(0)), VARPTR(sLight(EPS * NumSprite)), bufferSeg
    
     CASE idFONT
 
-      LD2putl x% - XShift, y%, VARSEG(sFont(0)), VARPTR(sFont(17 * NumSprite)), VARSEG(Buffer1(0))
+      LD2putl x% - XShift, y%, VARSEG(sFont(0)), VARPTR(sFont(17 * NumSprite)), bufferSeg
 
     CASE idSCENE
 
-      LD2put x% - XShift, y%, VARSEG(sScene(0)), VARPTR(sScene(EPS * NumSprite)), VARSEG(Buffer1(0)), flip
+      LD2put x% - XShift, y%, VARSEG(sScene(0)), VARPTR(sScene(EPS * NumSprite)), bufferSeg, flip
 
     CASE idOBJECT
 
-      LD2put x% - XShift, y%, VARSEG(sObject(0)), VARPTR(sObject(EPS * NumSprite)), VARSEG(Buffer1(0)), flip
+      LD2put x% - XShift, y%, VARSEG(sObject(0)), VARPTR(sObject(EPS * NumSprite)), bufferSeg, flip
 
   END SELECT
 
 END SUB
 
-SUB LD2.PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
+SUB LD2.PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, bufferNum AS INTEGER)
 
-  '- Put text onto the screen
-  '--------------------------
-
-  IF BufferNum = 0 THEN b% = &HA000
-  IF BufferNum = 1 THEN b% = VARSEG(Buffer1(0))
-  IF BufferNum = 2 THEN b% = VARSEG(Buffer2(0))
   Text = UCASE$(Text)
 
   FOR n% = 1 TO LEN(Text)
     IF MID$(Text, n%, 1) <> " " THEN
-      LD2put65c ((n% * 6 - 6) + x), y, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Text, n%, 1)) - 32))), b%
+      LD2.put65c ((n% * 6 - 6) + x), y, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Text, n%, 1)) - 32))), bufferNum
     END IF
   NEXT n%
 
-
 END SUB
 
-SUB LD2.PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, BufferNum AS INTEGER)
+SUB LD2.PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, bufferNum AS INTEGER)
 
-  '- Put text onto the screen
-  '--------------------------
-
-  IF BufferNum = 0 THEN b% = &HA000
-  IF BufferNum = 1 THEN b% = VARSEG(Buffer1(0))
-  IF BufferNum = 2 THEN b% = VARSEG(Buffer2(0))
   Text = UCASE$(Text)
 
   FOR n% = 1 TO LEN(Text)
     IF MID$(Text, n%, 1) <> " " THEN
-      LD2putCol65c ((n% * 6 - 6) + x), y, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Text, n%, 1)) - 32))), col, b%
+      LD2.putCol65c ((n% * 6 - 6) + x), y, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Text, n%, 1)) - 32))), col, bufferNum
     END IF
   NEXT n%
 
-
 END SUB
-
 
 SUB LD2.PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
 
@@ -2533,12 +2351,6 @@ SUB SetFloor(x AS INTEGER, y AS INTEGER, blocked AS INTEGER)
 
 END SUB
 
-SUB LD2.RefreshScreen
-    
-    LD2.CopyBuffer 1, 0
-    
-END SUB
-
 SUB LD2.RenderFrame
 
   'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame"
@@ -2568,8 +2380,8 @@ SUB LD2.RenderFrame
   segLightMap2 = VARSEG(LightMap2(0))
   segTile      = VARSEG(sTile(0))
   segLight     = VARSEG(sLight(0))
-  segBuffer1   = VARSEG(Buffer1(0))
-  segBuffer2   = VARSEG(Buffer2(0))
+  segBuffer1   = GetBufferSeg%(1)
+  segBuffer2   = GetBufferSeg%(2)
   
   DIM ptrTileMap   AS INTEGER
   DIM ptrMixMap    AS INTEGER
@@ -2586,7 +2398,7 @@ SUB LD2.RenderFrame
   IF Animation > 9 THEN Animation = 1
 
   'LD2Scroll VARSEG(Buffer2(0))
-  LD2copyFull VARSEG(Buffer2(0)), VARSEG(Buffer1(0))
+  LD2copyFull segBuffer2, segBuffer1
   
   DIM skipLight(20) AS INTEGER '// 20 = (24*13)/16(bits) (24bits to hold 20w -- leaving 4bits unused)
   
@@ -2637,15 +2449,20 @@ SUB LD2.RenderFrame
         ELSE
           DEF SEG = segMixMap : m% = PEEK(mx%): DEF SEG
         END IF
-        IF m% THEN
-          DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
+        IF TransparentSprites(m%) = 0 THEN
+          'DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
+          a% = 0
           LD2putf xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1
+        ELSE
+          'DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
+          a% = 0
+          LD2put xp%-1, yp%-1, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1, 0
+          '// background lighting (mostly for windows)
+          DEF SEG = segLightMap2: l% = PEEK(ml%): DEF SEG
+          IF l% THEN
+            LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
+          END IF
         END IF
-        '// background lighting (mostly for windows)
-        'DEF SEG = segLightMap2: l% = PEEK(ml%): DEF SEG
-        'IF l% THEN
-        '  LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
-        'END IF
         xp% = xp% + 16
         mt% = mt% + 1
         mx% = mx% + 1
@@ -2672,8 +2489,13 @@ SUB LD2.RenderFrame
           DEF SEG = segMixMap : m% = PEEK(mx%): DEF SEG
         END IF
         IF m% THEN
-          DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
-          LD2putf xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1
+          'DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
+          a% = 0
+          'IF TransparentSprites(m%) THEN
+          '  LD2put xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1, 0
+          'ELSE
+            LD2putf xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1
+          'END IF
         END IF
         xp% = xp% + 16
         mt% = mt% + 1
@@ -2690,24 +2512,25 @@ SUB LD2.RenderFrame
   '-------------------
   Mobs.resetNext
   DO WHILE Mobs.canGetNext%
+    '- TODO: only draw entities in frame
     Mobs.getNext mob
     IF mob.id <> idBOSS2 THEN
-      LD2put INT(mob.x) - INT(XShift), INT(mob.y), VARSEG(sEnemy(0)), VARPTR(sEnemy(EPS * INT(mob.ani))), VARSEG(Buffer1(0)), mob.flip
+      LD2put INT(mob.x) - INT(XShift), INT(mob.y), VARSEG(sEnemy(0)), VARPTR(sEnemy(EPS * INT(mob.ani))), segBuffer1, mob.flip
     ELSE
       IF mob.flip = 0 THEN
-        LD2put INT(mob.x) - INT(XShift) + (COS((mob.ani + 180) * PI / 180) * 2) + 1, INT(mob.y) + SIN((mob.ani + 180) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), mob.flip
-        LD2put INT(mob.x) - INT(XShift), INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 100)), VARSEG(Buffer1(0)), mob.flip
-        LD2put INT(mob.x) - INT(XShift) + 16, INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 101)), VARSEG(Buffer1(0)), mob.flip
-        LD2put INT(mob.x) - INT(XShift) + (COS(mob.ani * PI / 180) * 2) + 1, INT(mob.y) + SIN(mob.ani * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), mob.flip
-        LD2put INT(mob.x) - INT(XShift) - 2 + COS((mob.ani + 270) * PI / 180), INT(mob.y) - 10 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 106)), VARSEG(Buffer1(0)), mob.flip
-        LD2put INT(mob.x) - INT(XShift) - 2 + COS((mob.ani + 270) * PI / 180), INT(mob.y) + 6 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 107)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift) + (COS((mob.ani + 180) * PI / 180) * 2) + 1, INT(mob.y) + SIN((mob.ani + 180) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), segBuffer1, mob.flip
+        LD2put INT(mob.x) - INT(XShift), INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 100)), segBuffer1, mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 16, INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 101)), segBuffer1, mob.flip
+        LD2put INT(mob.x) - INT(XShift) + (COS(mob.ani * PI / 180) * 2) + 1, INT(mob.y) + SIN(mob.ani * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), segBuffer1, mob.flip
+        LD2put INT(mob.x) - INT(XShift) - 2 + COS((mob.ani + 270) * PI / 180), INT(mob.y) - 10 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 106)), segBuffer1, mob.flip
+        LD2put INT(mob.x) - INT(XShift) - 2 + COS((mob.ani + 270) * PI / 180), INT(mob.y) + 6 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 107)), segBuffer1, mob.flip
       ELSE
-        LD2put INT(mob.x) - INT(XShift) + 14 - (COS((mob.ani + 180) * PI / 180) * 2) + 1, INT(mob.y) + SIN((mob.ani + 180) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), mob.flip
-        LD2put INT(mob.x) - INT(XShift) + 16, INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 100)), VARSEG(Buffer1(0)), mob.flip
-        LD2put INT(mob.x) - INT(XShift), INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 101)), VARSEG(Buffer1(0)), mob.flip
-        LD2put INT(mob.x) - INT(XShift) + 14 - (COS(mob.ani * PI / 180) * 2) + 1, INT(mob.y) + SIN(mob.ani * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), VARSEG(Buffer1(0)), mob.flip
-        LD2put INT(mob.x) - INT(XShift) + 18 - COS((mob.ani + 270) * PI / 180), INT(mob.y) - 10 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 106)), VARSEG(Buffer1(0)), mob.flip
-        LD2put INT(mob.x) - INT(XShift) + 18 - COS((mob.ani + 270) * PI / 180), INT(mob.y) + 6 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 107)), VARSEG(Buffer1(0)), mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 14 - (COS((mob.ani + 180) * PI / 180) * 2) + 1, INT(mob.y) + SIN((mob.ani + 180) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), segBuffer1, mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 16, INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 100)), segBuffer1, mob.flip
+        LD2put INT(mob.x) - INT(XShift), INT(mob.y) - 14, VARSEG(sScene(0)), VARPTR(sScene(EPS * 101)), segBuffer1, mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 14 - (COS(mob.ani * PI / 180) * 2) + 1, INT(mob.y) + SIN(mob.ani * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 108)), segBuffer1, mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 18 - COS((mob.ani + 270) * PI / 180), INT(mob.y) - 10 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 106)), segBuffer1, mob.flip
+        LD2put INT(mob.x) - INT(XShift) + 18 - COS((mob.ani + 270) * PI / 180), INT(mob.y) + 6 + SIN((mob.ani + 270) * PI / 180), VARSEG(sScene(0)), VARPTR(sScene(EPS * 107)), segBuffer1, mob.flip
       END IF
     END IF
   LOOP
@@ -2717,7 +2540,7 @@ SUB LD2.RenderFrame
   '- draw the items
   '----------------
   FOR i% = 1 TO NumItems
-    LD2put Items(i%).x - INT(XShift), Items(i%).y, VARSEG(sObject(0)), VARPTR(sObject(EPS *  Items(i%).item)), VARSEG(Buffer1(0)), 0
+    LD2put Items(i%).x - INT(XShift), Items(i%).y, VARSEG(sObject(0)), VARPTR(sObject(EPS *  Items(i%).item)), segBuffer1, 0
   NEXT i%
   
   'IF LD2.isDebugMode% THEN LD2.Debug "LD2.RenderFrame -- draw player"
@@ -2729,13 +2552,13 @@ SUB LD2.RenderFrame
     lan% = INT(Player.lAni): uan% = INT(Player.uAni)
     SELECT CASE Player.state
     CASE CROUCHING
-        LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * LARRYCROUCH)), VARSEG(Buffer1(0)), Player.flip
+        LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * LARRYCROUCH)), segBuffer1, Player.flip
     CASE ELSE 'STILL, RUNNING, JUMPING, ELSE
         IF (Player.weapon = FIST) AND (lan% >= 36) THEN
-            LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), VARSEG(Buffer1(0)), Player.flip
+            LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), segBuffer1, Player.flip
         ELSE
-            LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), VARSEG(Buffer1(0)), Player.flip
-            LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * uan%)), VARSEG(Buffer1(0)), Player.flip
+            LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), segBuffer1, Player.flip
+            LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * uan%)), segBuffer1, Player.flip
         END IF
     END SELECT
   END IF
@@ -2746,7 +2569,7 @@ SUB LD2.RenderFrame
   '-------------------
   FOR n% = 1 TO NumGuts
     IF Guts(n%).id < 16 THEN
-      LD2put INT(Guts(n%).x) - INT(XShift), INT(Guts(n%).y), VARSEG(sGuts(0)), VARPTR(sGuts(EPS * Guts(n%).id)), VARSEG(Buffer1(0)), Guts(n%).flip
+      LD2put INT(Guts(n%).x) - INT(XShift), INT(Guts(n%).y), VARSEG(sGuts(0)), VARPTR(sGuts(EPS * Guts(n%).id)), segBuffer1, Guts(n%).flip
     ELSE
       cx% = INT(Guts(n%).x+7 - XShift)
       cy% = INT(Guts(n%).y+7    )
@@ -2818,14 +2641,14 @@ SUB LD2.RenderFrame
   'LD2.fill 240, 0, 80+pad*2, 16+pad*2, 20, 1
   'LD2.fill   1, 1, 80+pad*2-2, 16+pad*2-2, 18, 1
   'LD2.fill 241, 1, 80+pad*2-2, 16+pad*2-2, 18, 1
-  LD2put pad, pad, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 44)), VARSEG(Buffer1(0)), 0
+  LD2put pad, pad, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 44)), segBuffer1, 0
   SELECT CASE Player.weapon
   CASE FIST
-    LD2put pad, pad+12, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 46)), VARSEG(Buffer1(0)), 0
+    LD2put pad, pad+12, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 46)), segBuffer1, 0
   CASE SHOTGUN
-    LD2put pad, pad+12, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 45)), VARSEG(Buffer1(0)), 0
+    LD2put pad, pad+12, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 45)), segBuffer1, 0
   END SELECT
-  'LD2put 320-18-16-pad, pad, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 46)), VARSEG(Buffer1(0)), 0
+  'LD2put 320-18-16-pad, pad, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 46)), segBuffer1, 0
   LD2.putTextCol pad+16, pad+3, STR$(Player.life), 15, 1
   IF Player.weapon = SHOTGUN     THEN LD2.PutTextCol pad+16, pad+12+3, STR$(Inventory(SHELLS)), 15, 1
   IF Player.weapon = MACHINEGUN  THEN LD2.PutTextCol pad+16, pad+12+3, STR$(Inventory(BULLETS)), 15, 1
@@ -2836,7 +2659,7 @@ SUB LD2.RenderFrame
 
   IF ShowLife THEN
     FOR x% = 1 TO 4
-      LD2putl 319 - (x% * 16 - 16), 180, VARSEG(sLight(0)), VARPTR(sLight(EPS * 2)), VARSEG(Buffer1(0))
+      LD2putl 319 - (x% * 16 - 16), 180, VARSEG(sLight(0)), VARPTR(sLight(EPS * 2)), segBuffer1
     NEXT x%
     Mobs.GetMob mob, ShowLife
     IF ShowLife = BOSS1 THEN LD2.put 272 + XShift, 180, 40, idENEMY, 1
@@ -2913,12 +2736,12 @@ SUB LD2.RenderFrame
   IF SceneMode = 1 THEN
     FOR y% = 1 TO 2
       FOR x% = 1 TO 40
-        LD2putf x% * 16 - 16, y% * 16 - 16, VARSEG(sTile(0)), VARPTR(sTile(0)), VARSEG(Buffer1(0))
+        LD2putf x% * 16 - 16, y% * 16 - 16, VARSEG(sTile(0)), VARPTR(sTile(0)), segBuffer1
       NEXT x%
     NEXT y%
     FOR y% = 12 TO 13
       FOR x% = 1 TO 40
-        LD2putf x% * 16 - 16, y% * 16 - 16, VARSEG(sTile(0)), VARPTR(sTile(0)), VARSEG(Buffer1(0))
+        LD2putf x% * 16 - 16, y% * 16 - 16, VARSEG(sTile(0)), VARPTR(sTile(0)), segBuffer1
       NEXT x%
     NEXT y%
   END IF
@@ -2926,7 +2749,7 @@ SUB LD2.RenderFrame
   '- Draw the text
   '-------------------
   FOR n% = 1 TO LEN(SceneCaption)
-    IF MID$(SceneCaption, n%, 1) <> " " THEN LD2put65 ((n% * 6 - 6) + 20), 180, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(SceneCaption, n%, 1)) - 32))), VARSEG(Buffer1(0))
+    IF MID$(SceneCaption, n%, 1) <> " " THEN LD2put65 ((n% * 6 - 6) + 20), 180, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(SceneCaption, n%, 1)) - 32))), segBuffer1
   NEXT n%
   
 END SUB
@@ -2934,6 +2757,20 @@ END SUB
 FUNCTION LD2.HasFlag% (flag AS INTEGER)
     
     LD2.HasFlag% = (GameFlags AND flag)
+    
+END FUNCTION
+
+FUNCTION LD2.NotFlag% (flag AS INTEGER)
+    
+    DIM hasFlag AS INTEGER
+    
+    hasFLag = (GameFlags AND flag)
+    
+    IF hasFlag THEN
+        LD2.NotFlag% = 0
+    ELSE
+        LD2.NotFlag% = 1
+    END IF
     
 END FUNCTION
 
@@ -2957,38 +2794,6 @@ SUB LD2.SetAccessLevel (CodeNum AS INTEGER)
     Inventory(AUTH) = CodeNum
   END IF
 
-END SUB
-
-SUB LD2.SaveBuffer (bufferNum AS INTEGER)
-    
-    DIM bufferSeg AS INTEGER
-    
-    IF (bufferNum < 0) OR (bufferNum > 2) THEN RETURN
-    
-    IF bufferNum = 0 THEN bufferSeg = &HA000
-    IF bufferNum = 1 THEN bufferSeg = VARSEG(Buffer1(0))
-    IF bufferNum = 2 THEN bufferSeg = VARSEG(Buffer2(0))
-    
-    DEF SEG = bufferSeg
-    BSAVE "gfx\tmp.bsv", 0, 64000
-    DEF SEG
-    
-END SUB
-
-SUB LD2.RestoreBuffer (bufferNum AS INTEGER)
-    
-    DIM bufferSeg AS INTEGER
-    
-    IF (bufferNum < 0) OR (bufferNum > 2) THEN RETURN
-    
-    IF bufferNum = 0 THEN bufferSeg = &HA000
-    IF bufferNum = 1 THEN bufferSeg = VARSEG(Buffer1(0))
-    IF bufferNum = 2 THEN bufferSeg = VARSEG(Buffer2(0))
-    
-    DEF SEG = bufferSeg
-    BLOAD "gfx\tmp.bsv", 0
-    DEF SEG
-    
 END SUB
 
 SUB LD2.ClearMobs
@@ -3106,72 +2911,6 @@ SUB LD2.SetXShift (ShiftX AS INTEGER)
 
   XShift = ShiftX
 
-
-END SUB
-
-FUNCTION GetNextWord$ (text AS STRING)
-    
-    DIM i AS INTEGER
-    DIM word AS STRING
-    STATIC start AS INTEGER
-    STATIC prevText AS STRING
-    
-    IF (text <> prevText) OR (start = 0) THEN
-        start = 1
-        prevText = text
-    END IF
-    
-    i = INSTR(1, text, " ")
-    IF i > 0 THEN
-        word = MID$(text, 1, i-1)
-    ELSE
-        word = text
-    END IF
-    
-    start = i+1
-    
-    GetNextWord$ = word$
-    
-END FUNCTION
-
-SUB LD2.ConsoleCommand (commandText AS STRING)
-    
-    DIM optionName AS STRING
-    DIM optionVal  AS SINGLE
-    
-    commandText = UCASE$(LTRIM$(RTRIM$(commandText)))
-    
-    IF LEFT$(commandText, 4) = "SET " THEN
-        commandText = RIGHT$(commandText, LEN(commandText)-4)
-        optionName = GetNextWord$(commandText)
-        optionVal  = VAL(GetNextWord$(commandText))
-        SetConfig optionName, optionVal
-    END IF
-    
-END SUB
-
-SUB SetConfig (optionName AS STRING, optionVal AS SINGLE)
-    
-    SELECT CASE optionName
-    CASE "GRAVITY"
-        Config.gravity = optionVal
-    CASE "DOORSPEED"
-        Config.doorspeed = optionVal
-    CASE "PUNCHSPEED"
-        Config.punchspeed = optionVal
-    CASE "SHOTGUNSPEED"
-        Config.shotgunspeed = optionVal
-    CASE "MACHINEGUNSPEED"
-        Config.machinegunspeed = optionVal
-    CASE "PISTOLSPEED"
-        Config.pistolspeed = optionVal
-    CASE "DEAGLESPEED"
-        Config.deaglespeed = optionVal
-    CASE "RUNNINGSPEED"
-        Config.runningspeed = optionVal
-    CASE "JUMPINGSPEED"
-        Config.jumpingspeed = optionVal
-    END SELECT
 
 END SUB
 
@@ -3355,19 +3094,11 @@ SUB LD2.Shoot
 END SUB
 
 SUB LD2.ShutDown
-
-  '- Shutdown LD2
- 
-    CLS
-    DIM Message AS STRING
-    Message = "Quitting..."
-    LD2.PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
-
-    LD2.StopMusic
-    LD2.ReleaseSound
-    
-    END
-
+  
+  nil% = keyboard(-2)
+  LD2.StopMusic
+  LD2.ReleaseSound
+  
 END SUB
 
 SUB LD2.SwapLighting
@@ -3416,8 +3147,10 @@ SUB LD2.CountFrame
     AVGFPS   = (AVGFPS + FPSCOUNT) / 2
     FPS      = FPSCOUNT
     FPSCOUNT = 0
-    F#       = FPS
-    DELAYMOD = 60/F#
+    IF F# > 0 THEN
+      F#       = FPS
+      DELAYMOD = 60/F#
+    END IF
     'AVGMOD   = 60/AVGFPS
     IF DELAYMOD < 1 THEN DELAYMOD = 1
     'IF DELAYMOD > AVGMOD THEN DELAYMOD = AVGMOD
@@ -3428,163 +3161,121 @@ END SUB
 
 FUNCTION LD2.isTestMode%
     
-    LD2.isTestMode% = (GameMode = TESTMODE)
+    LD2.isTestMode% = LD2.HasFlag%(TESTMODE)
     
 END FUNCTION
 
 FUNCTION LD2.isDebugMode%
     
-    LD2.isDebugMode% = (GameMode = DEBUGMODE)
+    LD2.isDebugMode% = LD2.HasFlag%(DEBUGMODE)
     
 END FUNCTION
 
-SUB SetGameMode(mode AS INTEGER)
-    
-    GameMode = mode
-    
-END SUB
-
 SUB MixTiles(spriteSeg AS INTEGER, lightSeg AS INTEGER, tileMapSeg AS INTEGER, mixMapSeg AS INTEGER, lightMapSeg1 AS INTEGER, lightMapSeg2 AS INTEGER)
 
-  DIM spritePtr AS INTEGER
-  DIM lightPtr1 AS INTEGER
-  DIM lightPtr2 AS INTEGER
-  DIM tempPtr AS INTEGER
-  DIM hash AS INTEGER 'STRING
-  DIM x AS INTEGER
-  DIM y AS INTEGER
-  DIM m AS INTEGER
-  DIM skip AS INTEGER
-  DIM sprite AS INTEGER
-  
-  DIM hashes(80) AS INTEGER 'STRING
-  DIM hashCount AS INTEGER
-  DIM found AS INTEGER
-  
-  DIM aniMapSeg AS INTEGER
-  aniMapSeg = VARSEG(AniMap(0))
-  
-  'PRINT "Generating static lighting..."
-  '
-  DEF SEG = lightSeg: tempPtr = VARPTR(sLight(EPS * 40)): DEF SEG
-  m = 0
-  FOR y = 0 TO 13
-    FOR x = 0 TO 199
-      
-      skip = 0
-      
-      'DEF SEG = tileMapSeg
-      'sprite = PEEK(m)
-      'IF (sprite = DOOR0) OR (sprite = DOOR1) OR (sprite = DOOR2) OR (sprite = DOOR3) OR (sprite = DOORW) THEN
-      '  skip = 1
-      'END IF
-      'DEF SEG
-      
-      
-      DEF SEG = tileMapSeg  : t%  = PEEK(m): spritePtr = VARPTR(sTile(EPS * t%))  : DEF SEG
-      DEF SEG = lightMapSeg1: l1% = PEEK(m): lightPtr1 = VARPTR(sLight(EPS * l1%)): DEF SEG
-      DEF SEG = lightMapSeg2: l2% = PEEK(m): lightPtr2 = VARPTR(sLight(EPS * l2%)): DEF SEG
-      DEF SEG = aniMapSeg   : a%  = PEEK(m): DEF SEG
-      
-      IF ((l1% <> 0) OR (l2% <> 0)) AND (skip = 0) THEN
-          FOR aa% = 0 TO a%
-              DEF SEG = tileMapSeg : spritePtr = VARPTR(sTile(EPS * (PEEK(m)+aa%))): DEF SEG
-              '- mix tilemap/lightmap2 for tile map
-              IF (l2% <> 0) THEN
-                hash  = VAL(GetSpriteHash$(lightSeg, tempPtr))
-                found = -1
-                FOR i = 0 TO hashCount-1
-                  IF hash = hashes(i) THEN
-                    found = i
-                    EXIT FOR
-                  END IF
-                NEXT i
-                IF found = -1 THEN
-                  hashes(hashCount) = hash
-                  LD2copySprite lightSeg, tempPtr, spriteSeg, VARPTR(sTile(EPS * (120+hashCount)))
-                  DEF SEG = tileMapSeg: POKE VARPTR(TileMap(0))+m, (120+hashCount): DEF SEG
-                  hashCount = hashCount + 1
-                  IF hashCount > 80 THEN EXIT SUB 'PRINT "TOO MANY HASHES": END
+    DIM spritePtr AS INTEGER
+    DIM lightPtr1 AS INTEGER
+    DIM lightPtr2 AS INTEGER
+    DIM tempPtr AS INTEGER
+    DIM hash AS LONG
+    DIM x AS INTEGER
+    DIM y AS INTEGER
+    DIM m AS INTEGER
+    DIM sprite AS INTEGER
+
+    DIM hashes(80) AS LONG
+    DIM hashCount AS INTEGER
+    DIM found AS INTEGER
+
+    DIM aniMapSeg AS INTEGER
+    aniMapSeg = VARSEG(AniMap(0))
+
+    tempPtr = VARPTR(sLight(EPS * 40))
+
+    DIM alwaysProcess(15) AS INTEGER
+    DIM numAlwaysProcess AS INTEGER
+    n% = 0
+    alwaysProcess(n%) = DOOR0: n% = n% + 1
+    alwaysProcess(n%) = DOOR1: n% = n% + 1
+    alwaysProcess(n%) = DOOR2: n% = n% + 1
+    alwaysProcess(n%) = DOOR3: n% = n% + 1
+    alwaysProcess(n%) = DOORW: n% = n% + 1
+    alwaysProcess(n%) = DOOROPEN+0: n% = n% + 1
+    alwaysProcess(n%) = DOOROPEN+1: n% = n% + 1
+    alwaysProcess(n%) = DOOROPEN+2: n% = n% + 1
+    alwaysProcess(n%) = DOOROPEN+3: n% = n% + 1
+    alwaysProcess(n%) = DOORBACK: n% = n% + 1
+    numAlwaysProcess = n%
+
+    m = 0
+    FOR y = 0 TO MAPH-1
+        FOR x = 0 TO MAPW-1
+            IF y >= 0 THEN
+                DEF SEG = tileMapSeg  : t%  = PEEK(m): spritePtr = VARPTR(sTile(EPS * t%))  : DEF SEG
+                DEF SEG = lightMapSeg1: l1% = PEEK(m): lightPtr1 = VARPTR(sLight(EPS * l1%)): DEF SEG
+                DEF SEG = lightMapSeg2: l2% = PEEK(m): lightPtr2 = VARPTR(sLight(EPS * l2%)): DEF SEG
+                'DEF SEG = aniMapSeg   : a%  = PEEK(m): DEF SEG
+            END IF
+            
+            IF y = -1 THEN
+                'FOR n% = 0 TO numAlwaysProcess-1
+                '    IF ((l1% <> 0) OR (l2% <> 0)) AND (t% > 0) THEN
+                '        GOSUB MixTile
+                '    ELSE
+                '        DEF SEG = mixMapSeg : POKE VARPTR(MixMap(0))+m, t%: DEF SEG
+                '    END IF
+                'NEXT n%
+            ELSE
+                IF ((l1% <> 0) OR (l2% <> 0)) AND (t% > 0) THEN
+                    GOSUB MixTile
+                ELSE
+                    DEF SEG = mixMapSeg : POKE VARPTR(MixMap(0))+m, t%: DEF SEG
                 END IF
-              END IF
-              '- mix tilemap/lightmap1/lightmap2 for mixmap
-              IF (l2% <> 0) THEN
-                LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr2, tempPtr
-                IF (l1% <> 0) THEN
-                  LD2mixwl lightSeg, tempPtr, lightSeg, lightPtr1, tempPtr
-                END IF
-              ELSEIF (l1% <> 0) THEN
-                LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr1, tempPtr
-              END IF
-              hash  = VAL(GetSpriteHash$(lightSeg, tempPtr))
-              found = -1
-              FOR i = 0 TO hashCount-1
-                IF hash = hashes(i) THEN
-                  found = i
-                  EXIT FOR
-                END IF
-              NEXT i
-              IF found = -1 THEN
-                hashes(hashCount) = hash
-                LD2copySprite lightSeg, tempPtr, spriteSeg, VARPTR(sTile(EPS * (120+hashCount)))
-                DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (120+hashCount): DEF SEG
-                hashCount = hashCount + 1
-                IF hashCount > 80 THEN EXIT SUB 'PRINT "TOO MANY HASHES": END
-              ELSE
-                DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (120+found): DEF SEG
-              END IF
-          NEXT aa%
-      ELSE
-        DEF SEG = mixMapSeg : POKE VARPTR(MixMap(0))+m, t%: DEF SEG
-      END IF
-      m = m + 1
-      RotatePalette
-    NEXT x
-  NEXT y
-  
+            END IF
+          m = m + 1
+          RotatePalette
+        NEXT x
+    NEXT y
+
+    EXIT SUB
+
+MixTile:
+    DEF SEG = tileMapSeg : spritePtr = VARPTR(sTile(EPS * (PEEK(m)))): DEF SEG
+    IF (l2% <> 0) THEN
+        LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr2, tempPtr
+        IF (l1% <> 0) THEN
+            LD2mixwl lightSeg, tempPtr, lightSeg, lightPtr1, tempPtr
+        END IF
+    ELSEIF (l1% <> 0) THEN
+        LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr1, tempPtr
+    END IF
+    a& = t%: b& = l1%: c& = l2%
+    hash = (a& OR (b&*&H100 OR c&*&H10000))
+    found = -1
+    FOR i = 0 TO hashCount-1
+        IF hash = hashes(i) THEN
+            found = i
+            EXIT FOR
+        END IF
+    NEXT i
+    IF found = -1 THEN
+        hashes(hashCount) = hash
+        LD2copySprite lightSeg, tempPtr, spriteSeg, VARPTR(sTile(EPS * (NumLoadedTiles+hashCount)))
+        DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (NumLoadedTiles+hashCount): DEF SEG
+        TransparentSprites(NumLoadedTiles+hashCount) = TransparentSprites(t%)
+        hashCount = hashCount + 1
+        IF hashCount > 80 THEN RETURN 'PRINT "TOO MANY HASHES": END
+    ELSE
+        DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (NumLoadedTiles+found): DEF SEG
+    END IF
+RETURN
+
   'DEF SEG = VARSEG(sTile(0))
   '  BSAVE "gfx\pp256\images\test0.put", VARPTR(sTile(0)), (EPS*120*2)
   '  BSAVE "gfx\pp256\images\test1.put", VARPTR(sTile(EPS*120)), (EPS*hashCount*2)
   'DEF SEG
 
 END SUB
-
-FUNCTION IntToBase64$(i as integer)
-
-	DIM table AS STRING
-	
-	table = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+="
-	
-	i = (i AND 63) + 1
-	
-	IntToBase64$ = MID$(table, i, 1)
-
-END FUNCTION
-
-FUNCTION GetSpriteHash$(spriteSeg AS INTEGER, spritePtr AS INTEGER)
-    'TODO -- write hash contents to file and then compare that (could be too slow?)
-	DIM x AS INTEGER
-	DIM y AS INTEGER
-	DIM hash AS STRING
-    DIM hint AS INTEGER
-	
-	DEF SEG = spriteSeg
-	
-	hash = ""
-	FOR y = 0 TO 15
-	  FOR x = 0 TO 15
-	    hash = hash + IntToBase64$(PEEK(spritePtr+x+y*16))
-        'hint = hint + PEEK(spritePtr+x+y*16)
-	  NEXT x
-	NEXT y
-	
-	'GetSpriteHash$ = hash
-    FOR x = 0 TO LEN(hash)-1
-        hint = (hint + ASC(MID$(hash, x+1, 1))) XOR x
-    NEXT x
-    GetSpriteHash$ = STR$(hint)
-
-END FUNCTION
 
 SUB SetBitmap(segment AS INTEGER, offset AS INTEGER, pitch AS INTEGER)
     
@@ -3639,182 +3330,6 @@ END FUNCTION
 
 SUB LD2.Debug(message AS STRING)
     
-    DIM logFile AS INTEGER
-    DIM timeStr AS STRING
-    STATIC lastTime AS DOUBLE
-    
-    IF message = "!debugstart!" THEN
-        message  = DATE$+" "+TIME$+" START DEBUG SESSION"
-        lastTime = TIMER
-        
-        logFile = FREEFILE
-        OPEN "log/debug.log" FOR APPEND AS logFile
-            WRITE #logFile, STRING$(72, "=")
-            WRITE #logFile, "= "+SPACE$(70)
-            WRITE #logFile, "= "+message
-            WRITE #logFile, "= "+SPACE$(70)
-            WRITE #logFile, STRING$(72, "=")
-        CLOSE logFile
-    ELSE
-        timeStr  = STR$(TIMER-lastTime)
-        lastTime = TIMER
-        IF LEFT$(timeStr, 1) = "." THEN
-            timeStr = "0"+timeStr
-        END IF
-        message  = timeStr+SPACE$(15-LEN(timeStr))+message
-        
-        logFile = FREEFILE
-        OPEN "log/debug.log" FOR APPEND AS logFile
-            WRITE #logFile, message
-        CLOSE logFile
-    END IF
-    
-END SUB
-
-SUB WaitSeconds (seconds AS DOUBLE)
-    
-    DIM endtime AS DOUBLE
-    
-    endtime = TIMER + seconds
-    
-    WHILE TIMER < endtime: WEND
-    
-END SUB
-
-
-SUB GetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
-    
-    IF (idx >= 0) AND (idx <= 255) THEN
-        
-        OUT &H3C7, idx
-        
-        r = INP(&H3C9)
-        g = INP(&H3C9)
-        b = INP(&H3C9)
-        
-    END IF
-    
-END SUB
-
-SUB SetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
-    
-    IF (idx >= 0) AND (idx <= 255) THEN
-        
-        OUT &H3C8, idx
-        
-        OUT &H3C9, r
-        OUT &H3C9, g
-        OUT &H3C9, b
-        
-    END IF
-    
-END SUB
-
-SUB LD2.FadeOut (delay AS DOUBLE)
-    
-    IF LD2.isDebugMode% THEN LD2.Debug "LD2.FadeOut ("+STR$(delay)+" )"
-    
-    DIM n AS INTEGER
-    DIM r AS INTEGER
-    DIM g AS INTEGER
-    DIM b AS INTEGER
-    DIM allzero AS INTEGER
-    
-    DIM speed AS INTEGER
-    
-    speed = 2
-    
-    DO
-        allzero = 1
-        FOR n = 0 TO 255
-            
-            GetRGB n, r, g, b
-            
-            r = r - 2
-            g = g - 2
-            b = b - 2
-            
-            IF r < 0 THEN r = 0 ELSE allzero = 0
-            IF g < 0 THEN g = 0 ELSE allzero = 0
-            IF b < 0 THEN b = 0 ELSE allzero = 0
-            
-            SetRGB n, r, g, b
-            
-        NEXT n
-        
-        'WaitSeconds delay
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-        
-    LOOP UNTIL allzero
-    
-END SUB
-
-SUB LD2.FadeIn (delay AS DOUBLE)
-    
-    IF LD2.isDebugMode% THEN LD2.Debug "LD2.FadeIn ("+STR$(delay)+" )"
-    
-    DIM n AS INTEGER
-    DIM r AS INTEGER
-    DIM g AS INTEGER
-    DIM b AS INTEGER
-    DIM p AS INTEGER
-    DIM rmx AS INTEGER
-    DIM gmx AS INTEGER
-    DIM bmx AS INTEGER
-    DIM stp AS INTEGER
-    DIM allset AS INTEGER
-    DIM speed AS INTEGER
-    
-    speed = 2
-    
-    DEF SEG = VARSEG(RGBPal(0))
-    stp = VARPTR(RGBPal(0))
-    
-    DO
-        p = stp
-        allset = 1
-        FOR n = 0 TO 255
-            
-            GetRGB n, r, g, b
-            
-            r = r + speed
-            g = g + speed
-            b = b + speed
-            
-            rmx = PEEK(p): p = p + 1
-            gmx = PEEK(p): p = p + 1
-            bmx = PEEK(p): p = p + 1
-            
-            IF r > rmx THEN r = rmx ELSE allset = 0
-            IF g > gmx THEN g = gmx ELSE allset = 0
-            IF b > bmx THEN b = bmx ELSE allset = 0
-            
-            SetRGB n, r, g, b
-            
-        NEXT n
-        
-        'WaitSeconds delay
-        WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-        
-    LOOP UNTIL allset
-    
-    DEF SEG
-    
-END SUB
-
-SUB LD2.RestoreFade
-    
-    DIM n AS INTEGER
-    DIM p AS INTEGER
-    
-    DEF SEG = VARSEG(RGBPal(0))
-    p = VARPTR(RGBPal(0))
-    FOR n = 0 TO 255
-        OUT &H3C8, n
-        OUT &H3C9, PEEK(p): p = p + 1
-        OUT &H3C9, PEEK(p): p = p + 1
-        OUT &H3C9, PEEK(p): p = p + 1
-    NEXT n
-    DEF SEG
+    logdebug message
     
 END SUB

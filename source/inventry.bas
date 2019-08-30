@@ -1,4 +1,5 @@
 REM $INCLUDE: 'INC\INVENTRY.BI'
+REM $INCLUDE: 'INC\LD2E.BI'
 
 DECLARE SUB LoadSids (filename AS STRING)
 DECLARE FUNCTION Inventory.GetUseMsg$ (itemId AS INTEGER, success AS INTEGER)
@@ -41,6 +42,18 @@ FUNCTION Inventory.AddQty% (slot AS INTEGER, qty AS INTEGER)
     END IF
     
 END FUNCTION
+
+SUB Inventory.Clear
+    
+    DIM i AS INTEGER
+    FOR i = 0 TO InventorySize - 1
+        InventoryItems(i).id = 0
+        InventoryItems(i).qty = 0
+        InventoryItems(i).shortName = "Empty"
+        InventoryItems(i).longName = "Empty"
+    NEXT i
+    
+END SUB
 
 FUNCTION Inventory.GetErrorMessage$
     
@@ -202,6 +215,7 @@ SUB Inventory.RemoveItem (item AS InventoryType)
         item.qty = 0
         item.shortName  = "Empty"
         item.longName   = "Empty"
+        InventoryItems(slot) = item
     END IF
     
 END SUB
@@ -241,7 +255,7 @@ END FUNCTION
 
 FUNCTION Inventory.GetFailMsg$ (itemId AS INTEGER)
     
-    Inventory.GetFailMsg$ = Inventory.GetUseMsg$(itemId, 1)
+    Inventory.GetFailMsg$ = Inventory.GetUseMsg$(itemId, 0)
     
 END FUNCTION
 
@@ -255,13 +269,41 @@ FUNCTION Inventory.GetUseMsg$ (itemId AS INTEGER, success AS INTEGER)
     DIM successMsg AS STRING
     DIM failMsg AS STRING
     
+    DIM char AS STRING * 1
+    DIM col  AS STRING
+    DIM row  AS STRING
+    
     ItemsFile = FREEFILE
     OPEN "tables/uses.txt" FOR INPUT AS ItemsFile
     found = 0
     DO WHILE NOT EOF(ItemsFile)
-        INPUT #ItemsFile, sid: IF EOF(ItemsFile) THEN EXIT DO
-        INPUT #ItemsFile, successMsg: IF EOF(ItemsFile) THEN EXIT DO
-        INPUT #ItemsFile, failMsg: IF EOF(ItemsFile) THEN EXIT DO
+        LINE INPUT #ItemsFile, row
+        sid = ""
+        successMsg = ""
+        failMsg = ""
+        col = ""
+        FOR n = 1 TO LEN(row)
+            char = MID$(row, n, 1)
+            IF (char = ",") OR (n = LEN(row)) THEN
+                col = LTRIM$(RTRIM$(col))
+                IF LEFT$(col, 1) = CHR$(34) THEN
+                    col = RIGHT$(col, LEN(col)-1)
+                END IF
+                IF RIGHT$(col, 1) = CHR$(34) THEN
+                    col = LEFT$(col, LEN(col)-1)
+                END IF
+                IF sid = "" THEN
+                    sid = col
+                ELSEIF successMsg = "" THEN
+                    successMsg = col
+                ELSEIF failMsg = "" THEN
+                    failMsg = col
+                END IF
+                col = ""
+            ELSE
+                col = col + char
+            END IF
+        NEXT n
         id = Inventory.SidToItemId%(sid)
         IF itemId = id THEN
             found = 1

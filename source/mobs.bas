@@ -7,8 +7,8 @@ REM $INCLUDE: 'INC\MOBS.BI'
 
 DECLARE FUNCTION Mobs.FindVacantSlot% ()
 
-DIM SHARED MobMobs(MAXMOBS) AS MobType
-DIM SHARED MobTypes(MAXMOBTYPES) AS MobTypeType
+REDIM SHARED MobMobs(0) AS MobType
+REDIM SHARED MobTypes(0) AS MobTypeType
 DIM SHARED numMobs AS INTEGER
 DIM SHARED numMobTypes AS INTEGER
 DIM SHARED firstMob AS INTEGER
@@ -25,7 +25,7 @@ SUB Mobs.Add (mob AS MobType)
     
     i = Mobs.FindVacantSlot%
     
-    IF i >= 0 THEN
+    IF (i >= 0) AND (i < MAXMOBS) THEN
         MobMobs(i).id = mob.id
         MobMobs(i).vx = mob.vx
         MobMobs(i).x = mob.x
@@ -152,7 +152,7 @@ FUNCTION Mobs.FindVacantSlot%
     DIM vacant AS INTEGER
     
     vacant = -1
-    IF lastMob >= 0 THEN
+    IF (lastMob >= 0) AND (lastMob < MAXMOBS) THEN
         FOR n = lastMob TO MAXMOBS - 1
             IF MobMobs(n).vacant THEN
                 vacant = n
@@ -167,7 +167,7 @@ FUNCTION Mobs.FindVacantSlot%
                 END IF
             NEXT n
         END IF
-    ELSE
+    ELSEIF lastMob < MAXMOBS THEN
         vacant = 0
     END IF
     
@@ -228,6 +228,9 @@ FUNCTION Mobs.GetRandomType%
 END FUNCTION
 
 SUB Mobs.Init
+    
+    REDIM MobMobs(MAXMOBS) AS MobType
+    REDIM MobTypes(MAXMOBTYPES) AS MobTypeType
     
     Mobs.Clear
     

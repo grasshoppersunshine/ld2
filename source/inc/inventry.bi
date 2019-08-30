@@ -8,6 +8,7 @@ END TYPE
 
 DECLARE FUNCTION Inventory.Add% (id AS INTEGER, qty AS INTEGER)
 DECLARE FUNCTION Inventory.AddQty% (slot AS INTEGER, qty AS INTEGER)
+DECLARE SUB Inventory.Clear ()
 DECLARE FUNCTION Inventory.GetErrorMessage$ ()
 DECLARE FUNCTION Inventory.GetItem% (item AS InventoryType, slot AS INTEGER)
 DECLARE FUNCTION Inventory.LoadDescription$ (itemId AS INTEGER)

@@ -24,9 +24,11 @@ del lib\nosound.lib >> log\build.log
 
 echo "tasm /os ld2gfx.asm" > log\build.log
 tasm /os ld2gfx.asm >> log\build.log
+echo "bc ld2gfx.bas ld2gfxba.obj,," >> log\build.log
+bc ld2gfx.bas ld2gfxba.obj,, >> log\build.log
 
-echo "lib lib\ld2gfx.lib ld2gfx.obj," >> log\build.log
-lib lib\ld2gfx.lib ld2gfx.obj, >> log\build.log
+echo "lib lib\ld2gfx.lib ld2gfx.obj+ld2gfxba.obj," >> log\build.log
+lib lib\ld2gfx.lib ld2gfx.obj+ld2gfxba.obj, >> log\build.log
 
 echo "bc edit.bas/o/t/c:512;" >> log\build.log
 bc edit.bas/o/t/c:512; >> log\build.log
@@ -76,8 +78,8 @@ copy inc\nosound.obj . >> log\build.log
 echo "del inc\nosound.obj" >> log\build.log
 del inc\nosound.obj >> log\build.log
 
-echo "link /q ld2gfx.obj+nosound.obj,lib\ld2ns.qlb,,lib\qb.lib+lib\bqlb45.lib" >> log\build.log
-link /q ld2gfx.obj+nosound.obj,lib\ld2ns.qlb,,lib\qb.lib+lib\bqlb45.lib >> log\build.log
+echo "link /q ld2gfx.obj+ld2gfxba.obj+nosound.obj,lib\ld2ns.qlb,,lib\qb.lib+lib\bqlb45.lib" >> log\build.log
+link /q ld2gfx.obj+ld2gfxba.obj+nosound.obj,lib\ld2ns.qlb,,lib\qb.lib+lib\bqlb45.lib >> log\build.log
 
 echo "copy inc\ld2snd.lib lib\ld2snd.lib" >> log\build.log
 copy inc\ld2snd.lib lib\ld2snd.lib >> log\build.log
@@ -95,15 +97,19 @@ copy lib\nosound.lib .
 copy lib\ld2snd.lib .
 copy lib\mse_qb.lib .
 
-echo "link /q ld2gfx.obj+ld2snd.obj lib\qb.lib,lib\ld2ws.qlb,,lib\bqlb45.lib+lib\mse_qb.lib" >> log\build.log
-link /q ld2gfx.obj+ld2snd.obj lib\qb.lib,lib\ld2ws.qlb,,lib\bqlb45.lib+lib\mse_qb.lib >> log\build.log
+echo "link /q ld2gfx.obj+ld2gfxba.obj+ld2snd.obj lib\qb.lib,lib\ld2ws.qlb,,lib\bqlb45.lib+lib\mse_qb.lib" >> log\build.log
+link /q ld2gfx.obj+ld2gfxba.obj+ld2snd.obj lib\qb.lib,lib\ld2ws.qlb,,lib\bqlb45.lib+lib\mse_qb.lib >> log\build.log
 
-echo "bc mobs.bas mobs.obj,," >> ..\log\build.log
-bc mobs.bas mobs.obj,, >> ..\log\build.log
-echo "bc inventry.bas inventry.obj,," >> ..\log\build.log
-bc inventry.bas inventry.obj,, >> ..\log\build.log
-echo "bc scene.bas scene.obj,," >> ..\log\build.log
-bc scene.bas scene.obj,, >> ..\log\build.log
+echo "bc common.bas common.obj,," >> log\build.log
+bc common.bas common.obj,, >> log\build.log
+echo "bc mobs.bas mobs.obj,," >> log\build.log
+bc mobs.bas mobs.obj,, >> log\build.log
+echo "bc inventry.bas inventry.obj,," >> log\build.log
+bc inventry.bas inventry.obj,, >> log\build.log
+echo "bc status.bas status.obj,," >> log\build.log
+bc status.bas status.obj,, >> log\build.log
+echo "bc scene.bas scene.obj,," >> log\build.log
+bc scene.bas scene.obj,, >> log\build.log
 echo "bc ld2e.bas ld2e.obj,," >> log\build.log
 bc ld2e.bas ld2e.obj,, >> log\build.log
 echo "bc ld2.bas ld2.obj,," >> log\build.log
@@ -113,27 +119,32 @@ bc title.bas title.obj,, >> log\build.log
 rem echo "link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,nosound.exe,,lib\bcom45.lib+lib\qb.lib+lib\ld2gfx.lib" >> log\build.log
 rem link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,nosound.exe,,lib\bcom45.lib+lib\qb.lib+lib\ld2gfx.lib >> log\build.log
 
-rename ld2e.obj e.obj
-rename title.obj t.obj
-rename mobs.obj m.obj
-rename inventry.obj i.obj
-rename scene.obj s.obj
+rename ld2e.obj e.o
+rename title.obj t.o
+rename mobs.obj m.o
+rename inventry.obj i.o
+rename status.obj st.o
+rename scene.obj sc.o
+rename common.obj c.o
 
 rem echo "link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,nosound.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+lib\mse_qb.lib" >> log\build.log
 rem link /ex /noe /nod:brun45.lib ld2e.obj+ld2.obj+title.obj,nosound.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+lib\mse_qb.lib >> log\build.log
-echo "link /ex /noe /nod:brun45.lib ld2.obj+e.obj+t.obj+m.obj+i.obj+s.obj,ld2.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+mse_qb.lib"
-link /ex /noe /nod:brun45.lib ld2.obj+e.obj+t.obj+m.obj+i.obj+s.obj,ld2.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+mse_qb.lib
+echo "link /ex /noe /nod:brun45.lib ld2.obj+e.o+t.o+m.o+i.o+st.o+sc.o+c.o,ld2.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+mse_qb.lib"
+link /ex /noe /nod:brun45.lib ld2.obj+e.o+t.o+m.o+i.o+st.o+sc.o+c.o,ld2.exe,,bcom45.lib+qb.lib+ld2gfx.lib+ld2snd.lib+mse_qb.lib
 
 del edit.map
 del edit.obj
 del ld2.map
 del ld2.obj
-del e.obj
-del t.obj
-del m.obj
-del i.obj
-del s.obj
+del e.o
+del t.o
+del m.o
+del i.o
+del st.o
+del sc.o
+del c.o
 del ld2gfx.obj
+del ld2gfxba.obj
 del ds4qbpp.obj
 del ld2ns.map
 del ld2ws.map

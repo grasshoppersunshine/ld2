@@ -11,13 +11,17 @@
 ' * Where are the bathrooms around here?
 ' * Anything! I need help NOW!!!
 ' * Troll Barney
+' * Can you tell me about this floor?
+' === Ask Barney about floors
 
+  REM $INCLUDE: 'INC\COMMON.BI'
+  REM $INCLUDE: 'INC\LD2GFX.BI'
   REM $INCLUDE: 'INC\LD2SND.BI'
   REM $INCLUDE: 'INC\LD2E.BI'
   REM $INCLUDE: 'INC\TITLE.BI'
   REM $INCLUDE: 'INC\LD2.BI'
   REM $INCLUDE: 'INC\KEYS.BI'
-  REM $INCLUDE: 'INC\INVENTRY.BI'
+  REM $INCLUDE: 'INC\STATUS.BI'
   REM $INCLUDE: 'INC\SCENE.BI'
   
   TYPE PoseType
@@ -34,16 +38,11 @@
 '======================
   DECLARE FUNCTION CharacterSpeak% (characterId AS INTEGER, caption AS STRING)
   DECLARE FUNCTION DoDialogue% ()
-  DECLARE SUB Drop (item AS InventoryType)
-  DECLARE SUB DrawStatusScreen (title AS STRING)
-  DECLARE SUB EStatusScreen (currentRoomId AS INTEGER)
   DECLARE SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGER)
-  DECLARE SUB Look (item AS InventoryType)
+  DECLARE SUB InitPlayer ()
   DECLARE SUB Main ()
   DECLARE SUB SetAllowedEntities (codeString AS STRING)
   DECLARE SUB Start ()
-  DECLARE SUB StatusScreen ()
-  DECLARE SUB UseItem (item AS InventoryType)
   
 '======================
 '= SCENE-RELATED
@@ -67,7 +66,6 @@
 '======================
 '= CLOCK MODULE
 '======================
-  DECLARE SUB Delay (seconds AS DOUBLE)
   DECLARE SUB RetraceDelay (qty AS INTEGER)
 
 '======================
@@ -78,32 +76,25 @@
   DECLARE SUB GetPose (pose AS PoseType, poseId AS INTEGER)
   DECLARE SUB RenderPoses ()
   DECLARE SUB UpdatePose (target AS PoseType, pose AS PoseType)
-  REDIM SHARED Poses(0) AS PoseType
-  DIM SHARED NumPoses AS INTEGER
   
   '- have walk-talky in inventory that you can look/use/(drop?)
   
-  REM $DYNAMIC
-
   TYPE tScener
 	x AS INTEGER
 	y AS INTEGER
+  END TYPE
+  
 	'facing AS INTEGER
 	'isThere AS INTEGER
 	'isSpeaking AS INTEGER
 	'hasWalkyTalky AS INTEGER
-  END TYPE
   
-  TYPE tFloor
-	floorNo AS INTEGER
-	filename AS STRING * 8
-	label AS STRING * 20
-	allowed AS STRING * 50
-  END TYPE
-
   CONST HASWALKYTALKY = 11
   
-  A& = SETMEM(-180000) '- for BWSB sound/music mixing
+  REM $DYNAMIC
+
+  REDIM SHARED Poses(0) AS PoseType
+  DIM SHARED NumPoses AS INTEGER '- POSES module
   
   DIM SHARED SceneNo%
   DIM SHARED ShiftX AS INTEGER
@@ -124,9 +115,8 @@
   DIM SHARED JanitorIsThere%: DIM SHARED JanitorPoint%: DIM SHARED JanitorTalking%: DIM SHARED JanitorPos%
   DIM SHARED TrooperIsThere%: DIM SHARED TrooperPoint%: DIM SHARED TrooperTalking%: DIM SHARED TrooperPos%
   
-  DIM SHARED selectedInventorySlot AS INTEGER
-  
   Start
+  END
 
 REM $STATIC
 SUB AddPose (pose AS PoseType)
@@ -152,7 +142,7 @@ END SUB
 
 FUNCTION CharacterSpeak% (characterId AS INTEGER, caption AS STRING)
     
-    IF LD2.isDebugMode% THEN LD2.Debug "AddPose ("+STR$(characterId)+", "+caption+" )"
+    IF LD2.isDebugMode% THEN LD2.Debug "CharacterSpeak% ("+STR$(characterId)+", "+caption+" )"
 	
 	'- if pose doesn't exist yet, create it an copy x/y from player
 	
@@ -170,45 +160,50 @@ FUNCTION CharacterSpeak% (characterId AS INTEGER, caption AS STRING)
 	
 	LD2.WriteText caption
 	
-	cursor = 1
-	FOR n = 1 TO LEN(caption)
+    cursor = 1
+	DO
 		cursor = INSTR(cursor, caption, " ")
 		IF cursor THEN
 			WHILE MID$(caption, cursor, 1) = " ": cursor = cursor + 1: WEND
 			words = words + 1
+        ELSE
+            EXIT DO
 		END IF
-	NEXT n
-	
-	FOR n = 0 TO words - 1
-		
-		LD2.RenderFrame
-		
-		UpdatePose renderPose, mouthOpen
+	LOOP
+    IF (words = 0) AND (LEN(caption) > 0) THEN '- trim caption?
+        words = 1
+    END IF
+    
+    FOR n = 0 TO words - 1
+        
+        LD2.RenderFrame
+        UpdatePose renderPose, mouthOpen
 		RenderPoses
 		
-		RetraceDelay 4
+        RetraceDelay 3
 		LD2.RefreshScreen
-		
-		UpdatePose renderPose, mouthClose
+        
+        LD2.RenderFrame
+        UpdatePose renderPose, mouthClose
 		RenderPoses
 		
-		RetraceDelay 4
+        RetraceDelay 3
 		LD2.RefreshScreen
 		
-		IF keyboard(&H39) THEN EXIT FOR
+        IF keyboard(&H39) THEN EXIT FOR
 		IF keyboard(1) THEN escapeFlag = 1: EXIT FOR
 		RetraceDelay 1
-		
+        
 	NEXT n
-	
+
 	DO
 		IF keyboard(1) THEN escapeFlag = 1: EXIT DO
 	LOOP UNTIL keyboard(&H39)
-	
+
 	DO: LOOP WHILE keyboard(1)
-	
-	CharacterSpeak% = escapeFlag
-	
+    
+    CharacterSpeak% = escapeFlag
+    
 END FUNCTION
 
 SUB ClearPoses
@@ -217,16 +212,6 @@ SUB ClearPoses
 	
 	NumPoses = 0
 	REDIM Poses(0) AS PoseType
-	
-END SUB
-
-SUB Delay (seconds AS DOUBLE)
-	
-	DIM endtime AS DOUBLE
-	
-	endtime = TIMER + seconds
-	
-	WHILE TIMER < endtime: WEND
 	
 END SUB
 
@@ -259,243 +244,6 @@ FUNCTION DoDialogue%
 	DoDialogue% = escaped
 	
 END FUNCTION
-
-SUB DrawStatusScreen (title AS STRING)
-	
-	DIM w AS INTEGER
-	DIM h AS INTEGER
-	DIM top AS INTEGER
-	
-	w = 6: h = 6
-	top = 0
-	
-	LD2.CopyBuffer 2, 1
-	LD2.fillm 0, top, 320, 96, 66, 1
-	
-	LD2.PutText w, top + h * 1, title, 1
-	LD2.PutText w, top + h * 2, STRING$(LEN(title), "="), 1
-	LD2.PutText 1, top + h * 15, STRING$(53, "*"), 1
-	
-END SUB
-
-SUB Drop (item AS InventoryType)
-	
-	LD2.Drop item.id
-	LD2.ClearInventorySlot item.slot
-	Inventory.RemoveItem item
-	
-END SUB
-
-SUB EStatusScreen (currentRoomId AS INTEGER)
-	
-	IF LD2.isDebugMode% THEN LD2.Debug "LD2.EStatusScreen (" + STR$(currentRoomId) + " )"
-	
-	DIM top AS INTEGER
-	DIM w AS INTEGER
-	DIM h AS INTEGER
-	DIM i AS INTEGER
-	
-	DIM floorNo AS INTEGER
-	DIM floorStr AS STRING
-	DIM filename AS STRING
-	DIM label AS STRING
-	DIM allowed AS STRING
-	DIM canExit AS INTEGER
-	DIM selectedRoom AS INTEGER
-	DIM selectedFilename AS STRING
-	DIM topFloor AS INTEGER
-	DIM btmFloor AS INTEGER
-	DIM keyOn AS INTEGER
-	DIM keyOff AS INTEGER
-	DIM ElevatorFile AS INTEGER
-	
-	DIM floors(50) AS tFloor
-	DIM numFloors AS INTEGER
-	DIM scroll AS INTEGER
-	DIM doLoadMap AS INTEGER
-	
-	w = 6: h = 6
-	
-	selectedRoom = currentRoomId
-	topFloor = 0
-	btmFloor = 0
-	
-	ElevatorFile = FREEFILE
-	OPEN "tables/rooms.txt" FOR INPUT AS ElevatorFile
-	DO WHILE NOT EOF(ElevatorFile)
-		INPUT #ElevatorFile, floorNo: IF EOF(ElevatorFile) THEN EXIT DO
-		INPUT #ElevatorFile, filename: IF EOF(ElevatorFile) THEN EXIT DO
-		INPUT #ElevatorFile, label
-		INPUT #ElevatorFile, allowed
-		floors(numFloors).floorNo = floorNo
-		floors(numFloors).filename = filename
-		floors(numFloors).label = label
-		floors(numFloors).allowed = allowed
-		numFloors = numFloors + 1
-	LOOP
-	CLOSE ElevatorFile
-	
-	DIM e AS DOUBLE
-	DIM easeTimer AS DOUBLE
-	DIM easeTime AS DOUBLE
-	DIM lft AS INTEGER
-	
-	LD2.SaveBuffer 2
-	LD2.CopyBuffer 0, 2
-	
-	easeTimer = TIMER
-	DO
-		easeTime = TIMER - easeTimer
-		easeTimer = TIMER
-		e = e + .0167 * 3
-		IF e > 1 THEN
-			e = 1
-		END IF
-		lft = -INT((1 - e) * (1 - e) * (1 - e) * 156)
-		LD2.CopyBuffer 2, 1
-		LD2.fillm lft, 0, 156, 200, 66, 1
-		RetraceDelay 1
-		LD2.RefreshScreen
-	LOOP WHILE e < 1
-	
-	DO
-		LD2.CopyBuffer 2, 1
-		LD2.fillm 0, 0, 156, 200, 66, 1
-		
-		LD2.PutText w, h * 1, "Please Select a Floor", 1
-		LD2.PutText w, h * 2, "======================", 1
-		
-		FOR i = 0 TO 32
-			LD2.PutText w * 25, h * i + 1, "*", 1
-		NEXT i
-		
-		'scroll = 28-selectedRoom
-		'IF scroll < 0 THEN scroll = 0
-		'IF scroll > 16 THEN scroll = 16
-		scroll = 0
-		
-		top = h * 4
-		FOR i = scroll TO numFloors - 1
-		
-			floorNo = floors(i).floorNo
-			filename = floors(i).filename
-			label = floors(i).label
-			
-			floorStr = LTRIM$(STR$(floorNo))
-			IF LEN(floorStr) = 1 THEN floorStr = " " + floorStr
-			IF (numFloors - i - 1) = selectedRoom THEN 'floorNo = selectedRoom THEN
-				'LD2.PutTextCol w, top, floorStr+" "+label, 112, 1
-				LD2.fillm w - 1, top - 1, w * 2 + 2, h + 1, 17, 1
-				LD2.fillm w * 3 + 1, top - 1, w * 21 - 3, h + 1, 70, 1
-				LD2.PutTextCol w, top, floorStr, 61, 1
-				LD2.PutTextCol w * 4, top, label, 15, 1
-				selectedFilename = filename
-			ELSE
-				LD2.fillm w - 1, top - 1, w * 2 + 2, h + 1, 48, 1'- 208, 160, 48
-				IF LTRIM$(filename) <> "" THEN
-					'LD2.PutText w, top, floorStr + " " + label, 1
-					LD2.PutTextCol w, top, floorStr, 54, 1
-					LD2.PutText w * 4, top, label, 1
-				ELSE
-					LD2.PutText w, top, "   " + label, 1
-				END IF
-			END IF
-			top = top + h + 1
-			IF floorNo > topFloor THEN topFloor = floorNo
-			IF floorNo < btmFloor THEN btmFloor = floorNo
-			'LD2.RotatePalette
-		NEXT i
-		
-		RetraceDelay 1
-		LD2.RefreshScreen
-		
-		IF canExit = 0 THEN
-			IF keyboard(&HF) = 0 THEN
-			  canExit = 1
-			END IF
-		ELSE
-			IF keyboard(&HF) THEN
-				EXIT DO
-			END IF
-			
-			'- TODO: hold down for one second, then scroll down with delay
-			keyOn = 0
-			IF keyboard(&H48) THEN
-				keyOn = 1
-				IF keyOff THEN
-					selectedRoom = selectedRoom + 1
-					IF LTRIM$(floors(numFloors - selectedRoom - 1).filename) = "" THEN
-						selectedRoom = selectedRoom + 1
-					END IF
-					IF selectedRoom > numFloors - 1 THEN
-						selectedRoom = numFloors - 1
-						LD2.PlaySound sfxDENIED
-					ELSE
-						LD2.PlaySound sfxSELECT
-					END IF
-				END IF
-			END IF
-			IF keyboard(&H50) THEN
-				keyOn = 1
-				IF keyOff THEN
-					selectedRoom = selectedRoom - 1
-					IF LTRIM$(floors(numFloors - selectedRoom - 1).filename) = "" THEN
-						selectedRoom = selectedRoom - 1
-					END IF
-					IF selectedRoom < 0 THEN
-						selectedRoom = 0
-						LD2.PlaySound sfxDENIED
-					ELSE
-						LD2.PlaySound sfxSELECT
-					END IF
-				END IF
-			END IF
-			IF keyboard(&H1C) THEN
-				keyOn = 1
-				IF keyOff THEN
-					LD2.PlaySound sfxSELECT
-					LD2.SetRoom selectedRoom
-					CurrentRoom = selectedRoom
-					'LD2.SetAllowedEntities floors(selectedRoom).allowed
-					doLoadMap = 1
-					EXIT DO
-				END IF
-			END IF
-
-			IF keyOn THEN
-				keyOff = 0
-			ELSE
-				keyOff = 1
-			END IF
-			
-		END IF
-		
-	LOOP
-	
-	DO: LOOP WHILE keyboard(&HF)
-	
-	easeTimer = TIMER
-	e = 0
-	DO
-		easeTime = TIMER - easeTimer
-		easeTimer = TIMER
-		e = e + .0167 * 4
-		IF e > 1 THEN
-			e = 1
-		END IF
-		lft = -INT(e * e * e * 156)
-		LD2.CopyBuffer 2, 1
-		LD2.fillm lft, 0, 156, 200, 66, 1
-		RetraceDelay 1
-		LD2.RefreshScreen
-	LOOP WHILE e < 1
-	LD2.RestoreBuffer 2
-	
-	IF doLoadMap THEN
-		LD2.LoadMap selectedFilename
-	END IF
-	
-END SUB
 
 SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGER)
 	
@@ -579,89 +327,12 @@ SUB GetPose (pose AS PoseType, poseId AS INTEGER)
 	
 END SUB
 
-SUB Look (item AS InventoryType)
-	
-	DIM w AS INTEGER
-	DIM h AS INTEGER
-	DIM top AS INTEGER
-	DIM lft AS INTEGER
-	DIM pad AS INTEGER
-	DIM maxlen AS INTEGER
-
-	DIM desc AS STRING
-	DIM chunk AS STRING
-	DIM word AS STRING
-	DIM char AS STRING
-	
-	w = 6: h = 6
-	top = h * 4
-	lft = w
-	pad = 0
-	maxlen = INT((320 - pad * 2 - lft) / w)
-	
-	desc = Inventory.LoadDescription$(item.id)
-	IF desc = "" THEN
-		desc = "No description found for item id:" + STR$(item.id)
-	END IF
-	
-	DrawStatusScreen item.longName
-	
-	DO WHILE LEN(desc) > 0
-		IF LEN(desc) <= maxlen THEN
-			chunk = desc
-			desc = ""
-		ELSE
-			chunk = LEFT$(desc, maxlen)
-			desc = RIGHT$(desc, LEN(desc) - maxlen)
-			IF (MID$(chunk, maxlen, 1) = " ") THEN
-				chunk = RTRIM$(chunk)
-				desc = LTRIM$(desc)
-			ELSEIF (MID$(chunk, maxlen, 1) <> " ") AND (MID$(desc, maxlen + 1, 1) = " ") THEN
-				desc = LTRIM$(desc)
-			ELSE
-				FOR n = LEN(chunk) TO 1 STEP -1
-					char = MID$(chunk, n, 1)
-					IF char <> " " THEN
-						word = char + word
-					ELSE
-						EXIT FOR
-					END IF
-				NEXT n
-				desc = word + desc
-				chunk = LEFT$(chunk, LEN(chunk) - LEN(word))
-				chunk = RTRIM$(chunk)
-			END IF
-			
-		END IF
-		LD2.PutText lft + pad, top, chunk, 1
-		top = top + h
-	LOOP
-	
-	RetraceDelay 1
-	LD2.RefreshScreen
-	
-	DO
-		IF canExit = 0 THEN
-			IF keyboard(&H1C) = 0 THEN
-				canExit = 1
-			END IF
-		ELSE
-			IF keyboard(&H1C) THEN
-				EXIT DO
-			END IF
-		END IF
-	LOOP
-	
-END SUB
-
 SUB Main
   
   DIM EnteringCode AS INTEGER
   DIM KeyCount AS INTEGER
   DIM RoofCode AS STRING
   DIM FirstBoss AS INTEGER
-  DIM Retrace AS INTEGER
-  Retrace = 1
   
   fm% = 0
   
@@ -672,6 +343,12 @@ SUB Main
   NEXT i%
   
   DO
+    
+    IF LD2.HasFlag%(MAPISLOADED) THEN
+		LD2.SetFlag FADEIN
+		LD2.ClearFlag MAPISLOADED
+	END IF
+    
 	LD2.ProcessEntities
 	LD2.RenderFrame
   
@@ -717,7 +394,6 @@ SUB Main
 	END IF
 	IF CurrentRoom = 1 AND Larry.x >= 1600 THEN
 	  SceneLobby
-	  LD2.ShutDown
 	END IF
 
 	IF SceneVent = 0 AND CurrentRoom = VENTCONTROL AND Larry.x <= 754 THEN SceneVent1
@@ -805,14 +481,13 @@ SUB Main
 	  END IF
 	END IF
 
-	IF Retrace THEN RetraceDelay 1
 	LD2.RefreshScreen
 	LD2.CountFrame
    
-	DontStop% = 0
-	IF keyboard(1) THEN EXIT DO
-	IF keyboard(&H4D) THEN LD2.MovePlayer 1: DontStop% = 1
-	IF keyboard(&H4B) THEN LD2.MovePlayer -1: DontStop% = 1
+	PlayerIsRunning% = 0
+	IF keyboard(1) THEN LD2.SetFlag EXITGAME '- go to pause menu
+	IF keyboard(&H4D) THEN LD2.MovePlayer 1: PlayerIsRunning% = 1
+	IF keyboard(&H4B) THEN LD2.MovePlayer -1: PlayerIsRunning% = 1
 	IF keyboard(&H38) OR keyboard(&H48) THEN LD2.JumpPlayer 1.5
 	IF keyboard(&H1D) OR keyboard(&H10) THEN LD2.Shoot
 	IF keyboard(&H2) THEN LD2.SetWeapon 1
@@ -823,14 +498,14 @@ SUB Main
 	  LD2.SwapLighting
 	  DO: LOOP WHILE keyboard(&H26)
 	END IF
-	IF keyboard(&H2F) THEN
-	  IF Retrace = 1 THEN
-		Retrace = 0
-	  ELSE
-		Retrace = 1
-	  END IF
-	  DO: LOOP WHILE keyboard(&H2F)
-	END IF
+	'IF keyboard(&H2F) THEN
+	'  IF Retrace = 1 THEN
+	'	Retrace = 0
+	'  ELSE
+	'	Retrace = 1
+	'  END IF
+	'  DO: LOOP WHILE keyboard(&H2F)
+	'END IF
 
 	IF keyboard(&HF) AND LD2.AtElevator = 0 THEN StatusScreen
 	IF keyboard(&HF) AND LD2.AtElevator = 1 THEN EStatusScreen CurrentRoom
@@ -851,7 +526,7 @@ SUB Main
 	  END IF
 	END IF
 
-	IF DontStop% = 0 THEN LD2.SetPlayerlAni 21
+	IF PlayerIsRunning% = 0 THEN LD2.SetPlayerlAni 21 '- legs still/standing/not-moving
 
 	IF LD2.HasFlag%(BOSSKILLED) THEN
 		IF CurrentRoom = ROOFTOP AND RoofScene% = 0 THEN
@@ -866,12 +541,8 @@ SUB Main
 		END IF
 		LD2.ClearFlag GOTYELLOWCARD
 	END IF
-	IF LD2.HasFlag%(MAPISLOADED) THEN
-		LD2.FadeIn 1
-		LD2.ClearFlag MAPISLOADED
-	END IF
   
-  LOOP
+  LOOP WHILE LD2.NotFlag%(EXITGAME)
   
 END SUB
 
@@ -989,7 +660,7 @@ SUB Scene1 (skip AS INTEGER)
 	LD2.put Larry.x, Larry.y, 0, idSCENE, 0
 	LD2.put Larry.x, Larry.y, 3, idSCENE, 0
 
-	RetraceDelay 4
+	RetraceDelay 3
 
 	LD2.RefreshScreen
 
@@ -1019,7 +690,7 @@ SUB Scene1 (skip AS INTEGER)
 	LD2.put Larry.x, Larry.y, 0, idSCENE, 0
 	LD2.put Larry.x, Larry.y, 3, idSCENE, 0
 
-	RetraceDelay 20
+	RetraceDelay 19
 
 	LD2.RefreshScreen
 
@@ -1038,7 +709,7 @@ SUB Scene1 (skip AS INTEGER)
 	LD2.put Larry.x, Larry.y, 0, idSCENE, 0
 	LD2.put Larry.x, Larry.y, 3, idSCENE, 0
 
-	RetraceDelay 20
+	RetraceDelay 19
 
 	LD2.RefreshScreen
 
@@ -1228,7 +899,7 @@ SUB Scene3
 
 	LD2.RefreshScreen
 
-	RetraceDelay 2
+	RetraceDelay 1
  
   NEXT y!
   
@@ -1241,7 +912,7 @@ SUB Scene3
 	LD2.put 170, 144, 27, idSCENE, 1
 	LD2.put 208, 144, 30, idSCENE, 0
 	LD2.RefreshScreen
-	RetraceDelay 2
+	RetraceDelay 1
   NEXT i%
   FOR i% = 1 TO 40
 	LD2.ProcessGuts
@@ -1252,7 +923,7 @@ SUB Scene3
 	LD2.put 170, 144, 27, idSCENE, 1
 	LD2.put 208, 144, 31, idSCENE, 0
 	LD2.RefreshScreen
-	RetraceDelay 2
+	RetraceDelay 1
   NEXT i%
   
   LD2.PlaySound sfxSLURP
@@ -1270,7 +941,7 @@ SUB Scene3
 
 	LD2.RefreshScreen
 
-	RetraceDelay 2
+	RetraceDelay 1
 	IF x% = Janitor.x THEN
 	  RetraceDelay 80
 	END IF
@@ -1293,7 +964,7 @@ SUB Scene3
 
 	LD2.RefreshScreen
 	 
-	RetraceDelay 10
+	RetraceDelay 9
 
 	'sd% = INT(RND * (900)) + 40
 	'SOUND sd%, 3
@@ -1358,7 +1029,6 @@ SUB Scene5
 
 	LD2.put x%, INT(y!), 1 + ((x% MOD 20) \ 4), idENEMY, 0
   
-	RetraceDelay 1
 	LD2.RefreshScreen
    
   NEXT x%
@@ -1373,7 +1043,6 @@ SUB Scene5
 	y! = y! + addy!
 	addy! = addy! + .04
    
-	RetraceDelay 1
 	LD2.RefreshScreen
 
 	IF addy! > 0 AND y! >= 112 THEN EXIT FOR
@@ -1404,8 +1073,6 @@ SUB Scene5
 	LD2.put Larry.x, Larry.y, 3, idSCENE, 1
    
 	LD2.RefreshScreen
-
-	RetraceDelay 1
  
   NEXT i%
  
@@ -1439,8 +1106,6 @@ SUB Scene5
 	rx! = rx! - .4
    
 	LD2.RefreshScreen
-
-	RetraceDelay 1
  
   NEXT n%
   
@@ -1460,8 +1125,6 @@ SUB Scene5
 	LD2.put Barney.x, Barney.y, 50, idSCENE, 1
 
 	LD2.RefreshScreen
-
-	RetraceDelay 1
 
   NEXT n%
 
@@ -1507,8 +1170,6 @@ SUB Scene5
 
 	LD2.RefreshScreen
 
-	RetraceDelay 1
-
   NEXT i%
 
   LD2.PutTile 43, 9, 14, 1: LD2.PutTile 46, 9, 15, 1
@@ -1537,7 +1198,6 @@ SUB Scene5
 	x! = x! + .1
 	IF x! >= 4 THEN x! = 0
   
-	RetraceDelay 1
 	LD2.RefreshScreen
 	
   NEXT x%
@@ -1594,7 +1254,6 @@ SUB Scene7
   LD2.SetSceneMode MODEOFF
   LarryIsThere% = 0
   BarneyIsThere% = 0
-  LD2.AddLives 4
 
   CurrentRoom = 7
   SceneNo% = 7
@@ -1717,18 +1376,18 @@ SUB SceneLobby
   LarryPoint% = 0
   LarryPos% = 0
  
-  escaped% = CharacterSpeak%(enLARRY, "hmm...")
+  'escaped% = CharacterSpeak%(enLARRY, "hmm...")
   LD2.FadeOutMusic
-  escaped% = CharacterSpeak%(enLARRY, "It sure is nice to have some fresh air again.")
+  'escaped% = CharacterSpeak%(enLARRY, "It sure is nice to have some fresh air again.")
   LarryPoint% = 1
-  escaped% = CharacterSpeak%(enLARRY, "...")
-  escaped% = CharacterSpeak%(enLARRY, "Poor Steve...")
-  escaped% = CharacterSpeak%(enLARRY, "...sigh...")
-  escaped% = CharacterSpeak%(enLARRY, "...he's in a better place now...")
-  escaped% = CharacterSpeak%(enLARRY, "...probably with his friend, matt...")
+  'escaped% = CharacterSpeak%(enLARRY, "...")
+  'escaped% = CharacterSpeak%(enLARRY, "Poor Steve...")
+  'escaped% = CharacterSpeak%(enLARRY, "...sigh...")
+  'escaped% = CharacterSpeak%(enLARRY, "...he's in a better place now...")
+  'escaped% = CharacterSpeak%(enLARRY, "...probably with his friend, matt...")
   LarryPoint% = 0
-  escaped% = CharacterSpeak%(enLARRY, "many stories ended tonight...")
-  escaped% = CharacterSpeak%(enLARRY, "...but mine lives on...")
+  'escaped% = CharacterSpeak%(enLARRY, "many stories ended tonight...")
+  'escaped% = CharacterSpeak%(enLARRY, "...but mine lives on...")
 
   LD2.WriteText ""
 
@@ -1739,7 +1398,6 @@ SUB SceneLobby
 	LD2.put x%, 144, INT(lan!), idLARRY, 0
 	LD2.put x%, 144, 26, idLARRY, 0
    
-	RetraceDelay 1
 	LD2.RefreshScreen
 	
 	lan! = lan! + .2
@@ -1747,13 +1405,6 @@ SUB SceneLobby
  
   NEXT x%
 
-  LD2.PlayMusic mscENDING
- 
-  LD2.PopText "THE END"
-  LD2.ShowCredits
-
-  LD2.ShutDown
- 
   LarryIsThere% = 0
   BonesIsThere% = 0
   LD2.SetSceneMode MODEOFF
@@ -1818,7 +1469,6 @@ SUB ScenePortal
    
 	rx! = rx! + .4
   
-	RetraceDelay 1
 	LD2.RefreshScreen
 
   NEXT n%
@@ -1840,7 +1490,6 @@ SUB ScenePortal
 	LD2.put Barney.x, Barney.y, 45, idSCENE, 0
    
 	LD2.RefreshScreen
-	RetraceDelay 1
   NEXT n%
   
   IF SCENE.Init%("SCENE-PORTAL-1C") THEN
@@ -1875,8 +1524,6 @@ SUB ScenePortal
  
 	LD2.RefreshScreen
 
-	RetraceDelay 1
-
   NEXT n%
 
   LD2.MakeGuts rx! + 8, 144, 8, 1
@@ -1893,7 +1540,6 @@ SUB ScenePortal
 	LD2.put Barney.x, Barney.y, 50, idSCENE, 1
 	LD2.put Barney.x, Barney.y, 45, idSCENE, 1
    
-	RetraceDelay 1
 	LD2.RefreshScreen
   NEXT n%
   
@@ -2021,12 +1667,12 @@ SUB SceneRoofTop
   Barney.x = 0
   Barney.y = 144
 
-  escaped% = CharacterSpeak%(enLARRY, "Barney, come in.")
-  escaped% = CharacterSpeak%(enBARNEY, "Yea, Larry, I'm here, over.")
-  escaped% = CharacterSpeak%(enLARRY, "I've found a code-yellow access card.")
-  escaped% = CharacterSpeak%(enBARNEY, "Great!")
-  escaped% = CharacterSpeak%(enBARNEY, "Okay, meet me in the weapon's locker, over.")
-  escaped% = CharacterSpeak%(enLARRY, "I copy that.")
+  'escaped% = CharacterSpeak%(enLARRY, "Barney, come in.")
+  'escaped% = CharacterSpeak%(enBARNEY, "Yea, Larry, I'm here, over.")
+  'escaped% = CharacterSpeak%(enLARRY, "I've found a code-yellow access card.")
+  'escaped% = CharacterSpeak%(enBARNEY, "Great!")
+  'escaped% = CharacterSpeak%(enBARNEY, "Okay, meet me in the weapon's locker, over.")
+  'escaped% = CharacterSpeak%(enLARRY, "I copy that.")
   LD2.SetAccessLevel 3
 
   RoofScene% = 2
@@ -2070,10 +1716,10 @@ SUB SceneVent1
   SceneNo% = 0
   Larry.y = 144
 
-  escaped% = CharacterSpeak%(enLARRY, "Woah!")
-  escaped% = CharacterSpeak%(enLARRY, "Some type of crystalized alien goo is in the way.")
-  escaped% = CharacterSpeak%(enLARRY, "I'll need to find some type of chemical to...")
-  escaped% = CharacterSpeak%(enLARRY, "break down this goo.")
+  'escaped% = CharacterSpeak%(enLARRY, "Woah!")
+  'escaped% = CharacterSpeak%(enLARRY, "Some type of crystalized alien goo is in the way.")
+  'escaped% = CharacterSpeak%(enLARRY, "I'll need to find some type of chemical to...")
+  'escaped% = CharacterSpeak%(enLARRY, "break down this goo.")
   LD2.WriteText ""
 
   SceneVent = 1 '- LD2.CreateItem SCENECOMPLETE, 0, 0, 0
@@ -2117,10 +1763,6 @@ SUB SceneWeaponRoom
 	LD2.put x, 144, 54 - ((x MOD 20) \ 4), idSCENE, 1
 	LD2.put x, 144, 45, idSCENE, 1
    
-	'FOR i% = 1 TO 4
-	RetraceDelay 1
-	'NEXT i%
- 
 	LD2.RefreshScreen
 
   NEXT x
@@ -2170,10 +1812,6 @@ SUB SceneWeaponRoom2
 	LD2.put x, 144, 50 + ((x MOD 20) \ 4), idSCENE, 0
 	LD2.put x, 144, 45, idSCENE, 0
   
-	'FOR i% = 1 TO 4
-	RetraceDelay 1
-	'NEXT i%
-
 	LD2.RefreshScreen
 
   NEXT x
@@ -2241,357 +1879,114 @@ SUB SetAllowedEntities (codeString AS STRING)
 END SUB
 
 SUB Start
-
-  CurrentRoom = 14
-  LD2.SetRoom CurrentRoom
- 
-  nil% = keyboard(-1)
-
-  IF Inventory.Init%(8) THEN
-	PRINT Inventory.GetErrMsg$
-	END
-  END IF
-  LD2.Init
   
-  'Mobs.AddType ROCKMONSTER
-  'Mobs.AddType TROOP1
-  'Mobs.AddType TROOP2
-  'Mobs.AddType BLOBMINE
-  'Mobs.AddType JELLYBLOB
+  DIM firstLoop AS INTEGER
+  firstLoop = 1
   
-  IF (LD2.isDebugMode% = 0) AND (LD2.isTestMode% = 0) THEN
-	  
-	  LD2.LoadBitmap "gfx\warning.bmp", 1, 0
-	  
-	  RetraceDelay 1: LD2.RefreshScreen
-	 
-	  DO: LOOP UNTIL keyboard(&H39)
-	  DO: LOOP WHILE keyboard(&H39)
-	  CLS
-
-	  LD2.LoadBitmap "gfx\logo.bmp", 1, 0
-	  RetraceDelay 1: LD2.RefreshScreen
-	 
-	  DO: LOOP UNTIL keyboard(&H39)
-	  DO: LOOP WHILE keyboard(&H39)
-	  CLS
-	 
-	  LD2.LoadBitmap "gfx\title.bmp", 1, 0
-	  RetraceDelay 1: LD2.RefreshScreen
-	 
-	  LD2.PlayMusic mscTHEME
-	  DO
-		IF keyboard(&H2) OR keyboard(&H4F) THEN
-		  EXIT DO
-		END IF
-		IF keyboard(&H3) OR keyboard(&H50) THEN
-		  LD2.PlaySound sfxSELECT
-		  RetraceDelay 35
-		  LD2.ShowCredits
-		  CLS
-		  LD2.LoadBitmap "gfx\title.bmp", 1, 0
-		  RetraceDelay 1: LD2.RefreshScreen
-		END IF
-		IF keyboard(&H4) OR keyboard(&H51) THEN
-		  LD2.PlaySound sfxSELECT
-		  RetraceDelay 70
-		  CLS
-		  LD2.LoadPalette "gfx\gradient.pal"
-		  LD2.ShutDown
-		END IF
-	  LOOP
-	  LD2.PlaySound sfxSELECT
-	  RetraceDelay 35
-	  
-	  LD2.StopMusic
-	  
-	  LD2.Intro
+  DO
+    
+    IF Inventory.Init%(8) THEN
+      PRINT Inventory.GetErrMsg$
+      END
+    END IF
+    
+    CLS
+    PRINT "Larry the Dinosaur II v1.0.21"
+    WaitSeconds 0.5
+    
+    LD2.Init
+    
+    'Mobs.AddType ROCKMONSTER
+    'Mobs.AddType TROOP1
+    'Mobs.AddType TROOP2
+    'Mobs.AddType BLOBMINE
+    'Mobs.AddType JELLYBLOB
+    
+    IF (LD2.NotFlag%(TESTMODE)) AND (LD2.NotFlag%(SKIPOPENING)) THEN '(LD2.isDebugMode% = 0) AND
+      IF firstLoop THEN
+        LD2.PlayMusic mscWANDERING
+        i% = WaitSecondsUntilKey(2.0)
+        TITLE.Opening
+      END IF
+      TITLE.Menu
+    ELSE
+      'LD2.Ad
+    END IF
+    
+    IF LD2.HasFlag%(EXITGAME) THEN
+        EXIT DO
+    END IF
+    
+    IF (LD2.NotFlag%(TESTMODE)) AND (LD2.NotFlag%(SKIPOPENING)) THEN '(LD2.isDebugMode% = 0) AND
+        LD2.FadeOutMusic
+        'i% = WaitSecondsUntilKey%(1.0)
+        TITLE.Intro
+    ELSE
+        'TITLE.Ad
+    END IF
+    
+    CurrentRoom = 14
+    LD2.SetRoom CurrentRoom
+    LD2.LoadMap "14th.ld2"
+    
+    InitPlayer
+    
+    IF LD2.isTestMode% OR LD2.isDebugMode% THEN
+      Scene1 1
+      SceneNo% = 0
+      EStatusScreen 14
+    ELSE
+      Scene1 0
+    END IF
+    
+    Main
+    firstLoop = 0
+    
+  LOOP
   
-  ELSE
-	'LD2.Ad
-  END IF
-  
-  LD2.LoadMap "14th.ld2"
-  
-  DIM p AS tPlayer
-  
-  p.life = 100
-  p.uAni = 26
-  p.lAni = 21
-  p.x = 92
-  p.y = 144
-  p.weapon1 = 0
-  p.weapon2 = 0
-  p.weapon = Player.weapon1
-  'p.shells = 0
-  'p.bullets = 0
-  'p.deagles = 0
-  LD2.InitPlayer p
-  LD2.SetXShift 0
-  
-  LD2.SetAccessLevel GREENACCESS
-
-  IF LD2.isTestMode% OR LD2.isDebugMode% THEN
-	LD2.SetWeapon1 SHOTGUN
-	LD2.SetWeapon2 MACHINEGUN
-	LD2.AddAmmo 1, 99
-	LD2.AddAmmo 2, 99
-	LD2.AddAmmo 3, 99
-	LD2.AddLives 98
-	n% = LD2.AddToStatus(REDCARD, 1)
-	n% = LD2.AddToStatus(WHITECARD, 1)
-	n% = LD2.AddToStatus(WALKIETALKIE, 1)
-	Scene1 1
-	SceneNo% = 0
-	EStatusScreen 14
-  ELSE
-	n% = LD2.AddToStatus(GREENCARD, 1)
-	Scene1 0
-  END IF
-
-  Main
-
-  nil% = keyboard(-2)
   LD2.ShutDown
-
+  
 END SUB
 
-SUB StatusScreen
-	
-	IF LD2.isDebugMode% THEN LD2.Debug "LD2.StatusScreen"
-	
-	DIM top AS INTEGER
-	DIM w AS INTEGER
-	DIM h AS INTEGER
-	DIM i AS INTEGER
-	DIM qty AS INTEGER
-	DIM itemStr AS STRING
-	DIM id AS INTEGER
-	DIM sid AS STRING
-	DIM shortName AS STRING
-	DIM longName AS STRING
-	DIM desc AS STRING
-	DIM found AS INTEGER
-	DIM selected AS InventoryType
-	DIM item AS InventoryType
-	
-	DIM actions(3) AS STRING
-	DIM actionStr AS STRING
-	DIM action AS INTEGER
-	actions(0) = "USE "
-	actions(1) = "LOOK"
-	actions(2) = "MIX "
-	actions(3) = "DROP"
-	
-	w = 6: h = 6
-	
-	FOR i = 0 TO 7 '- change to LD2.GetMaxInvSize% ?
-		id = LD2.GetStatusItem%(i)
-		qty = LD2.GetStatusAmount%(i)
-		IF Inventory.Add%(id, qty) THEN
-			EXIT FOR
-		END IF
-	NEXT i
-	Inventory.RefreshNames
-	
-	action = -1
-	
-	DIM e AS DOUBLE
-	DIM easeTimer AS DOUBLE
-	DIM easeTime AS DOUBLE
-	DIM saveTop AS INTEGER
-	
-	LD2.SaveBuffer 2
-	LD2.CopyBuffer 0, 2
-	
-	easeTimer = TIMER
-	DO
-		easeTime = TIMER - easeTimer
-		easeTimer = TIMER
-		e = e + .0167 * 3
-		IF e > 1 THEN
-			e = 1
-		END IF
-		top = -INT((1 - e) * (1 - e) * (1 - e) * 96)
-		LD2.CopyBuffer 2, 1
-		LD2.fillm 0, top, 320, 96, 66, 1
-		RetraceDelay 1
-		LD2.RefreshScreen
-	LOOP WHILE e < 1
-	
-	DO
-		top = 0
-		LD2.CopyBuffer 2, 1
-		LD2.fillm 0, top, 320, 96, 66, 1
-
-		LD2.PutText w, top + h * 1, "STATUS SCREEN", 1
-		LD2.PutText w, top + h * 2, "=============", 1
-		LD2.PutText 1, top + h * 15, STRING$(53, "*"), 1
-
-		LD2.PutText w * 38, top + h * 1, "INVENTORY", 1
-		LD2.PutText w * 33, top + h * 2, "==================", 1
-
-		saveTop = top
-		top = top + (h * 4)
-		FOR i = 0 TO 7
-			
-			IF Inventory.GetItem%(item, i) THEN
-				'- error
-			END IF
-			itemStr = "( " + item.shortName + " )"
-			
-			IF i = selectedInventorySlot THEN
-				LD2.fillm w * 33, top - 1, w * 19.5, h + 1, 70, 1
-				LD2.PutTextCol 200, top, itemStr, 15, 1
-				selected = item
-			ELSE
-				LD2.PutText 200, top, itemStr, 1
-			END IF
-			
-			top = top + h
-			
-		NEXT i
-		
-		top = saveTop
-		IF action = -1 THEN
-			'itemStr = LTRIM$(RTRIM$(item.shortName))
-			'itemStr = itemStr + SPC$(15-LEN(itemStr))
-			'LD2.fillm INT((320-(w*LEN(itemStr)))/2)-7, top+h*13-1, w*LEN(itemStr)+1+12, h+1, 130, 1
-			'LD2.PutTextCol INT((320-(w*LEN(itemStr)))/2), top + h * 13, itemStr, 15, 1
-		ELSE
-			LD2.PutText w * 21, top + h * 13, "  USE     LOOK    MIX     DROP  ", 1
-			FOR i = 0 TO 3
-				IF i = action THEN
-					actionStr = "( " + actions(i) + " )"
-					LD2.fillm w * (21 + i * 8), top + h * 13 - 1, w * 8, h + 1, 70, 1
-					LD2.PutTextCol w * (21 + i * 8), top + h * 13, actionStr, 15, 1
-				ELSE
-					actionStr = "  " + actions(i) + "  "
-					LD2.PutText w * (21 + i * 8), top + h * 13, actionStr, 1
-				END IF
-			NEXT i
-		END IF
-		
-		RetraceDelay 1
-		LD2.RefreshScreen
-
-		IF canExit = 0 THEN
-			IF keyboard(&HF) = 0 THEN
-				canExit = 1
-			END IF
-		ELSE
-			IF keyboard(&HF) THEN
-				IF action > -1 THEN
-					action = -1
-				ELSE
-					EXIT DO
-				END IF
-			END IF
-				
-			'- TODO: hold down for one second, then scroll down with delay
-			keyOn = 0
-			IF keyboard(&H48) THEN
-				keyOn = 1
-				IF keyOff THEN
-					selectedInventorySlot = selectedInventorySlot - 1
-					IF selectedInventorySlot < 0 THEN
-						selectedInventorySlot = 0
-						LD2.PlaySound sfxDENIED
-					ELSE
-						'action = -1
-						LD2.PlaySound sfxSELECT
-					END IF
-				END IF
-			END IF
-			IF keyboard(&H50) THEN
-				keyOn = 1
-				IF keyOff THEN
-					selectedInventorySlot = selectedInventorySlot + 1
-					IF selectedInventorySlot > 7 THEN
-						selectedInventorySlot = 7
-						LD2.PlaySound sfxDENIED
-					ELSE
-						'action = -1
-						LD2.PlaySound sfxSELECT
-					END IF
-				END IF
-			END IF
-			IF keyboard(&H4B) THEN
-				keyOn = 1
-				IF keyOff THEN
-					action = action - 1
-					IF action < 0 THEN
-						action = 0
-						LD2.PlaySound sfxDENIED
-					ELSE
-						LD2.PlaySound sfxSELECT
-					END IF
-				END IF
-			END IF
-			IF keyboard(&H4D) THEN
-				keyOn = 1
-				IF keyOff THEN
-					action = action + 1
-					IF action > 3 THEN
-						action = 3
-						LD2.PlaySound sfxDENIED
-					ELSE
-						LD2.PlaySound sfxSELECT
-					END IF
-				END IF
-			END IF
-			IF keyboard(&H1C) THEN
-				keyOn = 1
-				IF keyOff THEN
-					IF action > -1 THEN
-						'- DO SUB MENU (LOOK/MIX/DROP/ETC) HERE
-						SELECT CASE action
-						CASE 0  '- USE
-							UseItem selected
-						CASE 1  '- LOOK
-							LD2.PlaySound sfxSELECT2
-							Look selected
-						CASE 2  '- MIX
-						CASE 3  '- Drop
-							LD2.PlaySound sfxDROP
-							Drop selected
-							LD2.RenderFrame
-							LD2.CopyBuffer 0, 2
-						END SELECT
-					ELSE
-						action = 0
-					END IF
-				END IF
-			END IF
-				
-			IF keyOn THEN
-				keyOff = 0
-			ELSE
-				keyOff = 1
-			END IF
-			
-		END IF
-	LOOP
-	
-	DO: LOOP WHILE keyboard(KEYTAB)
-	
-	easeTimer = TIMER
-	e = 0
-	DO
-		easeTime = TIMER - easeTimer
-		easeTimer = TIMER
-		e = e + .0167 * 4
-		IF e > 1 THEN
-			e = 1
-		END IF
-		top = -INT(e * e * e * 96)
-		LD2.CopyBuffer 2, 1
-		LD2.fillm 0, top, 320, 96, 66, 1
-		RetraceDelay 1
-		LD2.RefreshScreen
-	LOOP WHILE e < 1
-	LD2.RestoreBuffer 2
-	
+SUB InitPlayer
+    
+    IF LD2.isDebugMode% THEN LD2.Debug "InitPlayer()"
+    
+    DIM p AS tPlayer
+    
+    p.life = 100
+    p.uAni = 26
+    p.lAni = 21
+    p.x = 92
+    p.y = 144
+    p.weapon1 = 0
+    p.weapon2 = 0
+    p.weapon = Player.weapon1
+    'LD2.ClearStatus (Inventory)
+    LD2.InitPlayer p
+    LD2.SetXShift 0
+    LD2.SetLives 3
+    
+    IF LD2.isTestMode% OR LD2.isDebugMode% THEN
+      LD2.SetWeapon1 SHOTGUN
+      LD2.SetWeapon2 MACHINEGUN
+      LD2.AddAmmo 1, 99
+      LD2.AddAmmo 2, 99
+      LD2.AddAmmo 3, 99
+      LD2.SetLives 99
+      n% = LD2.AddToStatus(WALKIETALKIE, 1)
+      n% = LD2.AddToStatus(REDCARD, 1)
+      n% = LD2.AddToStatus(WHITECARD, 1)
+      n% = LD2.AddToStatus(SHOTGUN, 1)
+      n% = LD2.AddToStatus(MACHINEGUN, 1)
+      n% = LD2.AddToStatus(PISTOL, 1)
+      n% = LD2.AddToStatus(DESERTEAGLE, 1)
+      LD2.SetAccessLevel REDACCESS
+    ELSE
+      n% = LD2.AddToStatus(GREENCARD, 1)
+      LD2.SetAccessLevel GREENACCESS
+    END IF
+    
 END SUB
 
 SUB UpdatePose (target AS PoseType, pose AS PoseType)
@@ -2609,37 +2004,3 @@ SUB UpdatePose (target AS PoseType, pose AS PoseType)
 	NEXT n
 	
 END SUB
-
-SUB UseItem (item AS InventoryType)
-	
-	DIM w AS INTEGER, h AS INTEGER
-	DIM top AS INTEGER
-	DIM text AS STRING
-	
-	w = 6: h = 6
-	
-	SELECT CASE item.id
-	CASE NOTHING
-		text = Inventory.GetFailMsg$(item.id)
-	END SELECT
-	
-	LD2.fillm w * (21 + i * 8), top + h * 13 - 1, w * 8, h + 1, 70, 1
-	LD2.PutTextCol 320 - LEN(text) * w, top + h * 13, text, 15, 1
-	
-	RetraceDelay 1
-	LD2.RefreshScreen
-	
-	DO
-		IF canExit = 0 THEN
-			IF keyboard(&H1C) = 0 THEN
-				canExit = 1
-			END IF
-		ELSE
-			IF keyboard(&H1C) THEN
-				EXIT DO
-			END IF
-		END IF
-	LOOP
-	
-END SUB
-

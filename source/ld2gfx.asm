@@ -14,6 +14,7 @@
   PUBLIC  LD2putl
   PUBLIC  LD2putwl
   PUBLIC  LD2mixwl
+  PUBLIC  LD2andput
   PUBLIC  LD2copySprite
   PUBLIC  LD2copyFull
   PUBLIC  LD2cls
@@ -703,6 +704,8 @@
       test al, al
       jz skipPixelLD2MWL
         mov bl, es:[di]
+        test bl, bl
+        jz skipPixelLD2MWL
         mov bh, bl
         and bh, 240
         sub bl, al
@@ -745,6 +748,168 @@
   
   LD2mixwl ENDP
   
+  LD2andput PROC
+  
+	push bp
+	mov bp, sp
+	push ds
+	
+	;# buffer address
+	mov bx, [bp+08]
+	mov es, [bx]
+	xor di, di
+	;# sprite address
+	mov bx, [bp+10] ;# sprite ptr
+	mov si, [bx]
+	
+	add si, 4       ;# ignore sprite header
+	
+	;# SI add/skip amount
+	xor ax, ax
+	
+	;# X
+	mov bx, [bp+16]
+	mov bx, [bx]
+	
+	mov cx, 16
+	
+	cmp bx, 0
+	jge skipXbelowZeroLD2AP
+	  cmp bx, -16
+	  jle endLD2andput
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  add si, bx
+	  mov ax, bx
+	  xor bx, bx
+	skipXbelowZeroLD2AP:
+	
+	cmp bx, 304
+	jle skipXabove304LD2AP
+	  cmp bx, 320
+	  jge endLD2andput
+	  push bx
+	    sub bx, 320
+	    neg bx
+	    mov cx, bx
+	  pop bx
+	skipXabove304LD2AP:
+	
+	add di, bx ;# x location
+	mov dx, cx ;# width
+	
+	;# Y
+	mov bx, [bp+14]
+	mov bx, [bx]
+	
+	mov cx, 16
+	
+	cmp bx, 0
+	jge skipYbelowZeroLD2AP
+	  cmp bx, -16
+	  jle endLD2andput
+	  neg bx
+	  sub cx, bx
+	  ;# move sprite offset
+	  shl bx, 4
+	  add si, bx
+	  xor bx, bx
+	skipYbelowZeroLD2AP:
+	
+	cmp bx, 184
+	jle skipYabove184LD2AP
+	  cmp bx, 200
+	  jge endLD2andput
+	  push bx
+		sub bx, 200
+		neg bx
+		mov cx, bx
+	  pop bx
+	skipYabove184LD2AP:
+	
+	push bx
+	  shl bx, 8
+	  add di, bx
+	pop bx
+	shl bx, 6
+	add di, bx ;# y location
+	           ;# cx is height
+	
+	mov bx, [bp+06] ;# flip
+	mov bx, [bx]
+	test bx, bx
+	jnz copyFlippedLD2AP
+	
+	mov bx, [bp+12] ;# sprite seg
+	mov ds, [bx]
+	
+	;# copy sprite block to buffer
+	;# dx = width
+	;# cx = height
+	;# ax = SI add/skip amount (16-width)
+	verticalLD2AP:
+      push cx
+        mov cx, dx
+        push si
+        push di
+          horizontalLD2AP:
+            lodsb
+            test al, al
+            jz skipPixelLD2AP
+              not al
+              and es:[di], al
+            skipPixelLD2AP:
+              inc di
+          loop horizontalLD2AP
+        pop di
+        pop si
+        add di, 320
+        add si, 16
+      pop cx
+	loop verticalLD2AP
+	
+	jmp endLD2andput
+	
+	copyFlippedLD2AP:
+	;# copy sprite block to buffer
+	;# dx = width
+	;# cx = height
+	;# ax = SI add/skip amount (16-width)
+	mov bx, [bp+12] ;# sprite seg
+	mov ds, [bx]
+	add si, dx
+	dec si
+	verticalFPLD2AP:
+      push cx
+        mov cx, dx
+        push si
+        push di
+          horizontalFPLD2AP:
+            std
+            lodsb
+            cld
+            test al, al
+            jz skipPixelLD2APFP
+              or es:[di], al
+            skipPixelLD2APFP:
+              inc di
+          loop horizontalFPLD2AP
+        pop di
+        pop si
+        add di, 320
+        add si, 16
+      pop cx
+	loop verticalFPLD2AP
+	
+	;# clean up and return
+	endLD2andput:
+	pop ds
+	pop bp
+	ret 12
+  
+  LD2andput ENDP
+
   ; 06 - destPtr
   ; 08 - destSeg
   ; 10 - srcPtr

@@ -128,6 +128,7 @@ END SUB
 '///====================================================================
 DIM SHARED LD2musicList(8) AS LD2MusicData
 DIM SHARED LD2musicListCount AS INTEGER
+DIM SHARED LD2soundEnabled AS INTEGER
 '///====================================================================
 '/// LD2 Sound Methods end
 '///====================================================================
@@ -136,12 +137,14 @@ SUB LD2.AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
 	
 	DIM i AS INTEGER
 	
-	i = LD2musicListCount
-	LD2musicListCount = LD2musicListCount + 1
-	
-	LD2musicList(i).id = id
-	LD2musicList(i).filepath = filepath
-	LD2musicList(i).loopmusic = loopmusic
+    IF LD2soundEnabled THEN
+        i = LD2musicListCount
+        LD2musicListCount = LD2musicListCount + 1
+        
+        LD2musicList(i).id = id
+        LD2musicList(i).filepath = filepath
+        LD2musicList(i).loopmusic = loopmusic
+    END IF
 	
 END SUB
 
@@ -151,14 +154,16 @@ SUB LD2.FadeInMusic (id AS INTEGER)
 	dim v as integer
 	dim delay as double
 	
-	v = MusicVolume%(0)
-	LD2.PlayMusic id
-	
-	for i = 0 to 63 step 2
-		delay = timer+0.05
-		v = MusicVolume%(i)
-		do: loop while timer < delay
-	next i
+    IF LD2soundEnabled THEN
+        v = MusicVolume%(0)
+        LD2.PlayMusic id
+        
+        for i = 0 to 63 step 2
+            delay = timer+0.05
+            v = MusicVolume%(i)
+            do: loop while timer < delay
+        next i
+    END IF
 
 END SUB
 
@@ -168,55 +173,71 @@ SUB LD2.FadeOutMusic
 	dim v as integer
 	dim delay as double
 	
-	for i = 63 to 0 step -2
-		delay = timer+0.05
-		v = MusicVolume%(i)
-		do: loop while timer < delay
-	next i
+    IF LD2soundEnabled THEN
+        for i = 63 to 0 step -2
+            delay = timer+0.05
+            v = MusicVolume%(i)
+            do: loop while timer < delay
+        next i
+    END IF
 
 END SUB
 
-SUB LD2.InitSound
+SUB LD2.InitSound (enabled AS INTEGER)
 
-	SoundAdapter.Init
+    LD2soundEnabled = enabled
+    IF LD2soundEnabled THEN
+        A& = SETMEM(-180000) '- for BWSB sound/music mixing
+        SoundAdapter.Init
+    END IF
 
 END SUB
 
 SUB LD2.LoadMusic (id AS INTEGER)
 
 	DIM i AS INTEGER
-	FOR i = 0 TO LD2musicListCount - 1
-		IF LD2musicList(i).id = id THEN
-			SoundAdapter.StopMusic
-			SoundAdapter.LoadMusic LD2musicList(i).filepath
-			SoundAdapter.SetMusicLoop LD2musicList(i).loopmusic
-			EXIT FOR
-		END IF
-	NEXT i
+    IF LD2soundEnabled THEN
+        FOR i = 0 TO LD2musicListCount - 1
+            IF LD2musicList(i).id = id THEN
+                SoundAdapter.StopMusic
+                SoundAdapter.LoadMusic LD2musicList(i).filepath
+                SoundAdapter.SetMusicLoop LD2musicList(i).loopmusic
+                EXIT FOR
+            END IF
+        NEXT i
+    END IF
 
 END SUB
 
 SUB LD2.PlayMusic (id AS INTEGER)
 
-	LD2.LoadMusic id
-	SoundAdapter.PlayMusic
+    IF LD2soundEnabled THEN
+        LD2.LoadMusic id
+        SoundAdapter.PlayMusic
+    END IF
 
 END SUB
 
 SUB LD2.PlaySound (id AS INTEGER)
 
-	SoundAdapter.PlaySound id
+    IF LD2soundEnabled THEN
+        SoundAdapter.PlaySound id
+    END IF
 
 END SUB
 
 SUB LD2.ReleaseSound
 
-	SoundAdapter.Release
+    IF LD2soundEnabled THEN
+        SoundAdapter.Release
+    END IF
 
 END SUB
 
 SUB LD2.StopMusic
 
-	SoundAdapter.StopMusic
+    IF LD2soundEnabled THEN
+        SoundAdapter.StopMusic
+    END IF
 
 END SUB

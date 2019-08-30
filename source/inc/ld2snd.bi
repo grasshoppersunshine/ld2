@@ -13,7 +13,7 @@ DECLARE SUB SoundAdapter.SetMusicVolume (vol AS INTEGER)
 DECLARE SUB SoundAdapter.SetMusicLoop (doLoop AS INTEGER)
 DECLARE SUB SoundAdapter.PlaySound (id AS INTEGER)
 
-DECLARE SUB LD2.InitSound ()
+DECLARE SUB LD2.InitSound (enabled AS INTEGER)
 DECLARE SUB LD2.ReleaseSound ()
 DECLARE SUB LD2.AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
 DECLARE SUB LD2.LoadMusic (id AS INTEGER)
