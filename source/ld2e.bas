@@ -556,13 +556,13 @@ SUB LD2.Drop (item%)
 
 
   Items(n%).y = (y% \ 16) * 16
-  Items(n%).item = item% - 1
+  Items(n%).item = item%
 
   SELECT CASE item%
     CASE GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
       RefreshPlayerAccess
   END SELECT
-  IF Player.weapon1 = item% - 20 THEN LD2.SetWeapon1 0
+  'IF Player.weapon1 = item% - 20 THEN LD2.SetWeapon1 0 '- what's this for???
  
 END SUB
 
@@ -1154,7 +1154,7 @@ SUB LD2.LoadMap (Filename AS STRING)
         IF did% = 0 THEN
           GET #MapFile, c&, Items(i%).x: c& = c& + 2
           GET #MapFile, c&, Items(i%).y: c& = c& + 2
-          GET #MapFile, c&, byte: Items(i%).item = ASC(byte): c& = c& + 1
+          GET #MapFile, c&, byte: Items(i%).item = ASC(byte)+1: c& = c& + 1
           IF CurrentRoom = 7 THEN Items(i%).y = Items(i%).y - 4
         ELSE
           c& = c& + 2
