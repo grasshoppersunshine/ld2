@@ -18,7 +18,7 @@ SCENE-1A
 
     STEVE
     Uh...
-    No...infact I think your the one who's jealous.
+    No...infact I think you're the one who's jealous.
 
     LARRY
     But I'm the guy who won.
@@ -728,7 +728,7 @@ SCENE-WEAPONROOM-1A
     
     LARRY
     Wait a minute.
-    How do I know if you'll use this card for good?"
+    How do I know if you'll use this card for good?
     Or for evil?
     
     BARNEY
@@ -810,5 +810,125 @@ SCENE-WEAPONROOM-2B
     I knew he would use the card for evil.
     Oh well...
     There should be lots of cool weapons in here.
+    
+END
+
+SCENE-SURVIVOR-1A
+    
+    LARRY
+    Barney! Come in, over.
+    
+    BARNEY
+    Yep
+    
+    LARRY
+    I found a survivor.
+    I think we need to set up a shelter for him...
+    and for any others we might come across.
+    
+    BARNEY
+    Good idea.
+    Let's use the Sky Room.
+    Have all survivors group there for protection.
+    
+    LARRY
+    Acknowledged, over.
+    
+END
+
+SCENE-JANE-1A
+    
+    GUNSHOT
+    
+    JANE
+    Stand back!
+    If your next move isn't back toward the elevator,
+    I'll lock down this floor and flood it with...
+    nitrous oxide.
+    
+    LARRY
+    ...
+    Nitrous oxide?
+    We'll both find it very funny as we're choking...
+    to death on the fumes.
+    
+    JANE
+    If I'm going to die, I'm taking you with me.
+    
+    LARRY
+    ...
+    Alright, have it your way...
+    to the elevator I go.
+    Smell ya later.
+    
+    JANE
+    ...
+    What?
+    Smell ya later?
+    That's...just terrible...
+    I mean that is the worst, most immature, charmless pun...
+    ...
+    Larry? Is that you?
+    
+    LARRY
+    Guilty!
+    
+END
+
+SCENE-JANE-2A
+    
+    JANE
+    Larry, we have a problem.
+    
+    LARRY
+    What's that?
+    
+    JANE
+    This medical kit isn't enough.
+    
+    LARRY
+    ...
+    
+    JANE
+    Survivors are pooling in...
+    but I don't have the resources to help.
+    I need medical supplies.
+    Lots of them.
+    Or the survivors will die from their wounds.
+    
+END
+
+SCENE MANAGER-1A
+    
+    MANAGER
+    Huh?
+    (turns around)
+    Larry?!
+    
+    LARRY
+    Hey Jim.
+    
+    MANAGER
+    (face palm)
+    ...
+    Of course it's you!
+    ...
+    Of course everyone dies except the one imbecile...
+    in this corporation.
+    ...
+    I could've died with everyone else...
+    That would've been a better fate.
+    
+    LARRY
+    What's that?
+    
+    MANAGER
+    (face palm off)
+    Nothing!
+    Nevermind.
+    Good...to see you still alive.
+    
+    LARRY
+    I know you hate me Jim.
     
 END
