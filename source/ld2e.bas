@@ -52,6 +52,11 @@
     my AS INTEGER
   END TYPE
   
+  TYPE GameEventType
+    id AS INTEGER
+    datum AS INTEGER
+  END TYPE
+  
   '= SPRITES (LD2TILES.PUT)
   '========================
   CONST DOOR0 = 89
@@ -105,6 +110,7 @@
   CONST MAXINVENTORY =  63
   CONST MAXINVSLOTS  =   7
   CONST MAXTILES     = 120
+  CONST MAXEVENTS    =   9
   
   CONST MAXLIFE    = 100
   CONST MAXSHELLS  = 80
@@ -153,15 +159,6 @@
   DECLARE FUNCTION File.getSize& (filename AS STRING)
   DECLARE FUNCTION File.getAllocSize& (filename AS STRING)
   
-' jump and shoot to shatter glass windows???
-' press down to pick something up (graphic of larry bending down grabbing something)
-' fill not working
-' floor/wall checks (bitmap) not working
-' marks floors that player has been too
-' crawl under tight areas (engine room)
-' every few rooms have restrooms in the back (or somewhere)
-' mess hall -- freezer, kitchen/fryer, pantry
-
   REM $DYNAMIC
   
   DIM SHARED LarryFile   AS STRING
@@ -226,13 +223,20 @@
   
   DIM SHARED BossNum AS INTEGER
   DIM SHARED ShowLife AS INTEGER
-  DIM SHARED GameFlags AS INTEGER
   
   DIM SHARED Lighting1 AS INTEGER '- infront of player
   DIM SHARED Lighting2 AS INTEGER '- behind player
   DIM SHARED PlayerAtElevator AS INTEGER
   DIM SHARED ElevatorIsLocked AS INTEGER
-  DIM SHARED GameArgs AS STRING   '- COMMAND$
+  
+  DIM SHARED GameArgs AS STRING
+  DIM SHARED GameFlags AS INTEGER
+  DIM SHARED GameFlagsData AS INTEGER
+  DIM SHARED GameNoticeMsg AS STRING
+  DIM SHARED GameNoticeExpire AS SINGLE
+  
+  REDIM SHARED GameEvents(MAXEVENTS) AS GameEventType
+  DIM SHARED NumGameEvents AS INTEGER
   
   DIM SHARED GAME.RevealText AS STRING
 
@@ -635,7 +639,7 @@ SUB LD2.Init
         CASE "LOG"
         CASE "INFO"
         CASE "PATH"
-        CASE "NOSOUND"
+        CASE "NOSOUND", "NS"
           LD2.SetFlag NOSOUND
         CASE "NOMIX"
           LD2.SetFlag NOMIX
@@ -654,7 +658,7 @@ SUB LD2.Init
   TIMER ON
   RANDOMIZE TIMER
   
-  nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
+  'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
   
   PRINT "Allocating memory..."
   WaitSeconds 0.3333
@@ -824,6 +828,8 @@ SUB LD2.Init
   Mobs.AddType BLOBMINE
   Mobs.AddType JELLYBLOB
   
+'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
+
   IF LD2.isDebugMode% THEN LD2.Debug "LD2.Init SUCCESS"
   
 END SUB
@@ -1172,13 +1178,13 @@ SUB LD2.LoadMap (Filename AS STRING)
     y% = INT(MAPH * RND(1))
     IF x% * 16 - 16 < Elevator.x1 - 80 THEN
       IF PeekBitmap%(x%, y%) = 0 THEN
-        DO
+        DO WHILE y% < (MAPH-1)
           IF PeekBitmap%(x%, y%+1) = 0 THEN
             y% = y% + 1
           ELSE
             EXIT DO
           END IF
-        LOOP WHILE y% < MAPH
+        LOOP
         IF y% < MAPH THEN
             n% = Mobs.GetRandomType%
             LD2.CreateMob x% * 16, y% * 16, n%
@@ -1437,16 +1443,11 @@ SUB LD2.PickUpItem
   FOR i% = 1 TO NumItems
     IF Player.x + 8 + XShift >= Items(i%).x AND Player.x + 8 + XShift <= Items(i%).x + 16 THEN
      
-      LD2.PlaySound sfxPICKUP
-     
-      '- Send message if player picked up something important
-      SELECT CASE Items(i%).item
-        CASE YELLOWCARD
-          LD2.SetFlag GOTYELLOWCARD
-      END SELECT
-     
       n% = LD2.AddToStatus(Items(i%).item, 1)
       IF n% = 0 THEN
+        LD2.SetFlag GOTITEM
+        LD2.SetFlagData Items(i%).item
+        LD2.PlaySound sfxPICKUP
         IF i% = NumItems THEN
           Items(i%).item = 0
         ELSE
@@ -2752,6 +2753,10 @@ SUB LD2.RenderFrame
     IF MID$(SceneCaption, n%, 1) <> " " THEN LD2put65 ((n% * 6 - 6) + 20), 180, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(SceneCaption, n%, 1)) - 32))), segBuffer1
   NEXT n%
   
+  IF TIMER < GameNoticeExpire THEN
+    LD2.PutText 320-6-LEN(GameNoticeMsg)*6, 170, GameNoticeMsg, 1
+  END IF
+  
 END SUB
 
 FUNCTION LD2.HasFlag% (flag AS INTEGER)
@@ -2784,6 +2789,21 @@ SUB LD2.ClearFlag (flag AS INTEGER)
     
     GameFlags = (GameFlags OR flag) XOR flag
     
+END SUB
+
+SUB LD2.SetFlagData (datum AS INTEGER)
+    
+    GameFlagsData = datum
+    
+END SUB
+
+FUNCTION LD2.GetFlagData%
+    
+    LD2.GetFlagData% = GameFlagsData
+    
+END FUNCTION
+
+SUB LD2.GetNextEvent (event AS GameEventType)
 END SUB
 
 SUB LD2.SetAccessLevel (CodeNum AS INTEGER)
@@ -2865,6 +2885,13 @@ SUB LD2.SetTempAccess (accessLevel AS INTEGER)
 
   Inventory(TEMPAUTH) = accessLevel
 
+END SUB
+
+SUB LD2.SetNotice (message AS STRING)
+    
+    GameNoticeMsg = message
+    GameNoticeExpire = TIMER + 5.0
+    
 END SUB
 
 SUB LD2.SetWeapon (NumWeapon AS INTEGER)
@@ -3192,63 +3219,53 @@ SUB MixTiles(spriteSeg AS INTEGER, lightSeg AS INTEGER, tileMapSeg AS INTEGER, m
 
     tempPtr = VARPTR(sLight(EPS * 40))
 
-    DIM alwaysProcess(15) AS INTEGER
-    DIM numAlwaysProcess AS INTEGER
+    DIM skip(15) AS INTEGER
+    DIM numSkip AS INTEGER
     n% = 0
-    alwaysProcess(n%) = DOOR0: n% = n% + 1
-    alwaysProcess(n%) = DOOR1: n% = n% + 1
-    alwaysProcess(n%) = DOOR2: n% = n% + 1
-    alwaysProcess(n%) = DOOR3: n% = n% + 1
-    alwaysProcess(n%) = DOORW: n% = n% + 1
-    alwaysProcess(n%) = DOOROPEN+0: n% = n% + 1
-    alwaysProcess(n%) = DOOROPEN+1: n% = n% + 1
-    alwaysProcess(n%) = DOOROPEN+2: n% = n% + 1
-    alwaysProcess(n%) = DOOROPEN+3: n% = n% + 1
-    alwaysProcess(n%) = DOORBACK: n% = n% + 1
-    numAlwaysProcess = n%
+    skip(n%) = DOOR0: n% = n% + 1
+    skip(n%) = DOOR1: n% = n% + 1
+    skip(n%) = DOOR2: n% = n% + 1
+    skip(n%) = DOOR3: n% = n% + 1
+    skip(n%) = DOORW: n% = n% + 1
+    skip(n%) = DOOROPEN+0: n% = n% + 1
+    skip(n%) = DOOROPEN+1: n% = n% + 1
+    skip(n%) = DOOROPEN+2: n% = n% + 1
+    skip(n%) = DOOROPEN+3: n% = n% + 1
+    skip(n%) = DOORBACK: n% = n% + 1
+    numSkip = n% '- skip process / hole-punch
 
     m = 0
     FOR y = 0 TO MAPH-1
         FOR x = 0 TO MAPW-1
-            IF y >= 0 THEN
-                DEF SEG = tileMapSeg  : t%  = PEEK(m): spritePtr = VARPTR(sTile(EPS * t%))  : DEF SEG
-                DEF SEG = lightMapSeg1: l1% = PEEK(m): lightPtr1 = VARPTR(sLight(EPS * l1%)): DEF SEG
-                DEF SEG = lightMapSeg2: l2% = PEEK(m): lightPtr2 = VARPTR(sLight(EPS * l2%)): DEF SEG
-                'DEF SEG = aniMapSeg   : a%  = PEEK(m): DEF SEG
+            
+            DEF SEG = tileMapSeg  : t%  = PEEK(m): DEF SEG
+            DEF SEG = lightMapSeg1: l1% = PEEK(m): DEF SEG
+            DEF SEG = lightMapSeg2: l2% = PEEK(m): DEF SEG
+            
+            spritePtr = VARPTR(sTile(EPS * t%))
+            lightPtr1 = VARPTR(sLight(EPS * l1%))
+            lightPtr2 = VARPTR(sLight(EPS * l2%))
+            
+            'DEF SEG = aniMapSeg   : a%  = PEEK(m): DEF SEG
+            
+            FOR n% = 0 TO numSkip-1
+                IF t% = skip(n%) THEN
+                END IF
+            NEXT n%
+            IF ((l1% <> 0) OR (l2% <> 0)) AND (t% > 0) THEN
+                GOSUB MixTile
+            ELSE
+                DEF SEG = mixMapSeg : POKE VARPTR(MixMap(0))+m, t%: DEF SEG
             END IF
             
-            IF y = -1 THEN
-                'FOR n% = 0 TO numAlwaysProcess-1
-                '    IF ((l1% <> 0) OR (l2% <> 0)) AND (t% > 0) THEN
-                '        GOSUB MixTile
-                '    ELSE
-                '        DEF SEG = mixMapSeg : POKE VARPTR(MixMap(0))+m, t%: DEF SEG
-                '    END IF
-                'NEXT n%
-            ELSE
-                IF ((l1% <> 0) OR (l2% <> 0)) AND (t% > 0) THEN
-                    GOSUB MixTile
-                ELSE
-                    DEF SEG = mixMapSeg : POKE VARPTR(MixMap(0))+m, t%: DEF SEG
-                END IF
-            END IF
-          m = m + 1
-          RotatePalette
+            m = m + 1
+            RotatePalette
         NEXT x
     NEXT y
 
     EXIT SUB
 
 MixTile:
-    DEF SEG = tileMapSeg : spritePtr = VARPTR(sTile(EPS * (PEEK(m)))): DEF SEG
-    IF (l2% <> 0) THEN
-        LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr2, tempPtr
-        IF (l1% <> 0) THEN
-            LD2mixwl lightSeg, tempPtr, lightSeg, lightPtr1, tempPtr
-        END IF
-    ELSEIF (l1% <> 0) THEN
-        LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr1, tempPtr
-    END IF
     a& = t%: b& = l1%: c& = l2%
     hash = (a& OR (b&*&H100 OR c&*&H10000))
     found = -1
@@ -3258,13 +3275,21 @@ MixTile:
             EXIT FOR
         END IF
     NEXT i
-    IF found = -1 THEN
-        hashes(hashCount) = hash
+    IF (found = -1) AND (hashCount < 80) THEN
+        IF (l2% <> 0) THEN
+            LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr2, tempPtr
+            IF (l1% <> 0) THEN
+                LD2mixwl lightSeg, tempPtr, lightSeg, lightPtr1, tempPtr
+            END IF
+        ELSEIF (l1% <> 0) THEN
+            LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr1, tempPtr
+        END IF
         LD2copySprite lightSeg, tempPtr, spriteSeg, VARPTR(sTile(EPS * (NumLoadedTiles+hashCount)))
         DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (NumLoadedTiles+hashCount): DEF SEG
         TransparentSprites(NumLoadedTiles+hashCount) = TransparentSprites(t%)
+        hashes(hashCount) = hash
         hashCount = hashCount + 1
-        IF hashCount > 80 THEN RETURN 'PRINT "TOO MANY HASHES": END
+        IF hashCount >= 80 THEN LD2.Debug "TOO MANY HASHES"
     ELSE
         DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (NumLoadedTiles+found): DEF SEG
     END IF

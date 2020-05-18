@@ -932,3 +932,21 @@ SCENE MANAGER-1A
     I know you hate me Jim.
     
 END
+
+SCENE-BASEMENT-1A
+    
+    SCIENTISTA and SCIENTISTB
+    [runs to door]
+    
+    SCIENTISTA
+    Hey!
+    Open the door!
+    Let us out!
+    
+    SCIENTISTB
+    You can't just open the door.
+    You need to vent the radiation from the room first.
+    ...
+    Hurry!
+    
+END

@@ -72,14 +72,27 @@ FUNCTION Inventory.GetErrorMessage$
     
 END FUNCTION
 
-FUNCTION Inventory.GetItem% (item AS InventoryType, slot AS INTEGER)
+SUB Inventory.GetItem (item AS InventoryType, id AS INTEGER)
     
-    Inventory.GetItem% = 0
+    DIM i AS INTEGER
+    
+    FOR i = 0 TO InventorySize - 1
+        IF InventoryItems(i).id = id THEN
+            item = InventoryItems(i)
+            EXIT FOR
+        END IF
+    NEXT i
+    
+END SUB
+
+FUNCTION Inventory.GetItemBySlot% (item AS InventoryType, slot AS INTEGER)
+    
+    Inventory.GetItemBySlot% = 0
     
     IF (slot >= 0) AND (slot < InventorySize) THEN
         item = InventoryItems(slot)
     ELSE
-        Inventory.GetItem% = InventoryErr.OUTOFBOUNDS
+        Inventory.GetItemBySlot% = InventoryErr.OUTOFBOUNDS
     END IF
     
 END FUNCTION
@@ -320,6 +333,72 @@ FUNCTION Inventory.GetUseMsg$ (itemId AS INTEGER, success AS INTEGER)
         END IF
     ELSE
         Inventory.GetUseMsg$ = "No use message found for item id:"+STR$(itemId)
+    END IF
+    
+END FUNCTION
+
+FUNCTION Inventory.Mix%(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS STRING)
+    
+    DIM MixesFile AS INTEGER
+    DIM found AS INTEGER
+    DIM sid0 AS STRING
+    DIM sid1 AS STRING
+    DIM resultSid AS STRING
+    DIM resultMsg AS STRING
+    
+    DIM char AS STRING * 1
+    DIM col  AS STRING
+    DIM row  AS STRING
+    
+    MixesFile = FREEFILE
+    OPEN "tables/mixes.txt" FOR INPUT AS MixesFile
+    found = 0
+    DO WHILE NOT EOF(MixesFile)
+        LINE INPUT #MixesFile, row
+        sid0 = ""
+        sid1 = ""
+        resultSid = ""
+        resultMsg = ""
+        col = ""
+        FOR n = 1 TO LEN(row)
+            char = MID$(row, n, 1)
+            IF (char = ",") OR (n = LEN(row)) THEN
+                col = LTRIM$(RTRIM$(col))
+                IF LEFT$(col, 1) = CHR$(34) THEN
+                    col = RIGHT$(col, LEN(col)-1)
+                END IF
+                IF RIGHT$(col, 1) = CHR$(34) THEN
+                    col = LEFT$(col, LEN(col)-1)
+                END IF
+                IF sid0 = "" THEN
+                    sid0 = col
+                ELSEIF sid1 = "" THEN
+                    sid1 = col
+                ELSEIF resultSid = "" THEN
+                    resultSid = col
+                ELSEIF resultMsg = "" THEN
+                    resultMsg = col
+                END IF
+                col = ""
+            ELSE
+                col = col + char
+            END IF
+        NEXT n
+        id0 = Inventory.SidToItemId%(sid0)
+        id1 = Inventory.SidToItemId%(sid1)
+        IF ((itemId0 = id0) AND (itemId1 = id1)) OR ((itemId0 = id1) AND (itemId1 = id0)) THEN
+            found = 1
+            EXIT DO
+        END IF
+    LOOP
+    CLOSE MixesFile
+
+    IF found THEN
+        Inventory.Mix% = Inventory.SidToItemId%(resultSid)
+        resultMixMsg   = resultMsg
+    ELSE
+        Inventory.Mix% = -1
+        resultMixMsg   = "I cannot mix these two items"
     END IF
     
 END FUNCTION

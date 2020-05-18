@@ -242,21 +242,24 @@ SUB TITLE.Ad
   LD2.LoadPalette "gfx\gradient.pal"
   LD2.FadeOut 1, backColor
   
-  Message(1) = "This October"
-  Message(2) = "stay away from the vending machines" '- longer time
-  Message(3) = "because"
-  Message(4) = "there's something in the cola" '- longer time (not 3.3333, 4.5 maybe)
+  Message(1) = "This Fall"
+  Message(2) = "Stay away from the vending machines" '- longer time
+  Message(3) = "Because"
+  Message(4) = "There's something in the cola" '- longer time (not 3.3333, 4.5 maybe)
   Message(5) = ""
   Message(6) = "L A R R Y   T H E   D I N O S A U R   I I"
   Message(7) = "Something in the Cola"
- 
+  Message(8) = "O c t o b e r"
+  Message(9) = ""
+  Message(10) = "Smell ya later"
+  
   LD2.PlayMusic mscWANDERING
   IF WaitSecondsUntilKey%(5.5) = 0 THEN
-      FOR i% = 1 TO 7
+      FOR i% = 1 TO 11
 
         LD2.cls 1, backColor
         
-        IF i% < 6 THEN
+        IF (i% < 6) OR (i% > 7) THEN
           LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), textColor, 1
         END IF
         IF i% = 6 THEN
@@ -264,15 +267,23 @@ SUB TITLE.Ad
         END IF
         IF i% = 7 THEN
           LD2.PutTextCol ((320 - LEN(Message(i%-1)) * 6) / 2), 60, Message(i%-1), textColor, 1
-          LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 76, Message(i%), 40, 1
+          FOR n% = 32 TO 40
+            LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 76, Message(i%), n%, 1
+            LD2.RefreshScreen
+            WaitSeconds 0.10
+          NEXT n%
         END IF
         
         LD2.RefreshScreen
-        LD2.FadeIn 1
+        IF i% <> 7 THEN
+            LD2.FadeIn 1
+        END IF
         
         IF WaitSecondsUntilKey%(4.0) THEN EXIT SUB
         
-        LD2.FadeOut 1, backColor
+        IF i% <> 6 THEN
+            LD2.FadeOut 1, backColor
+        END IF
         
         IF WaitSecondsUntilKey(1.5) THEN EXIT SUB
         
@@ -321,20 +332,120 @@ END SUB
 
 SUB TITLE.AdTwo
     
-    '- distorted faces / shocked faces / faces of pain / faces of death
-    '-
-    '- Horrible things will happen.
-    '-
-    '- Horrible, but speakable, observable things.
-    '-
-    '- ...
-    '-
-    '- Speak them to your friends.
-    '-
-    '-
-    '-
-    '- Larry the Dinosaur 2
-    '-
+  DIM Message(5) AS STRING
+  DIM textColor AS INTEGER
+  DIM backColor AS INTEGER
+  
+  textColor = 40
+  backColor = 32
+  
+  LD2.CLS 0, backColor
+  LD2.LoadPalette "gfx\gradient.pal"
+  LD2.FadeOut 1, backColor
+  
+  Message(1) = "Horrible things will happen"
+  Message(2) = "L A R R Y   T H E   D I N O S A U R   I I"
+  Message(3) = "Something in the Cola"
+  Message(4) = ""
+  Message(5) = "I'll tell you what's mad..."
+  
+  LD2.PlayMusic mscWANDERING
+  IF WaitSecondsUntilKey%(5.5) = 0 THEN
+      
+      a! = 0
+      FOR x! = 70 TO 120 STEP 1
+        LD2.cls 1, backColor
+        LD2.Put INT(x!), 90, (7+(INT(a!) AND 1)), idScene, 0
+        LD2.RefreshScreen
+        WaitSeconds 0.10
+        a! = a! + .2
+        IF x! = 70 THEN
+          LD2.FadeIn 1
+        END IF
+      NEXT x!
+      
+      'LD2.FadeOut 1, backColor
+      
+      a! = 0
+      FOR x! = 120 TO 170 STEP 1
+        LD2.cls 1, backColor
+        LD2.Put INT(x!), 90, (9+(INT(a!) AND 1)), idScene, 0
+        LD2.RefreshScreen
+        WaitSeconds 0.10
+        a! = a! + .2
+        IF x! = 120 THEN
+          LD2.FadeIn 1
+        END IF
+      NEXT x!
+      
+      LD2.FadeOut 1, backColor
+      
+      'a! = 0
+      'FOR x! = 120 TO 170 STEP 1
+      '  LD2.cls 1, backColor
+      '  LD2.Put 100, 90, (34+(INT(a!) AND 1)), idScene, 0
+      '  LD2.RefreshScreen
+      '  WaitSeconds 0.10
+      '  a! = a! + .2
+      '  IF x! = 120 THEN
+      '    LD2.FadeIn 1
+      '  END IF
+      'NEXT x!
+      '
+      'LD2.FadeOut 1, backColor
+      '
+      'a! = 0
+      'FOR x! = 150 TO 100 STEP -1
+      '  LD2.cls 1, backColor
+      '  LD2.Put INT(x!), 90, (46+(INT(a!) AND 1)), idScene, 0
+      '  LD2.RefreshScreen
+      '  WaitSeconds 0.10
+      '  a! = a! + .2
+      '  IF x! = 150 THEN
+      '    LD2.FadeIn 1
+      '  END IF
+      'NEXT x!
+      '
+      'LD2.FadeOut 1, backColor
+      
+      FOR i% = 1 TO 5
+
+        LD2.cls 1, backColor
+        
+        IF (i% < 2) OR (i% > 3) THEN
+          LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), textColor, 1
+        END IF
+        IF i% = 2 THEN
+          LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), 57, 1
+        END IF
+        IF i% = 3 THEN
+          LD2.PutTextCol ((320 - LEN(Message(i%-1)) * 6) / 2), 60, Message(i%-1), 57, 1
+          FOR n% = 32 TO 40
+            LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 76, Message(i%), n%, 1
+            LD2.RefreshScreen
+            WaitSeconds 0.10
+          NEXT n%
+        END IF
+        
+        LD2.RefreshScreen
+        IF i% <> 3 THEN
+            LD2.FadeIn 1
+        END IF
+        
+        IF WaitSecondsUntilKey%(4.0) THEN EXIT SUB
+        
+        IF i% <> 2 THEN
+            LD2.FadeOut 1, backColor
+        END IF
+        
+        IF WaitSecondsUntilKey(1.5) THEN EXIT SUB
+        
+    NEXT i%
+  END IF
+  
+  LD2.FadeOutMusic
+  LD2.CLS 0, backColor
+  LD2.RestorePalette
     
 END SUB
 

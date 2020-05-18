@@ -9,6 +9,8 @@ REM $INCLUDE: 'INC\STATUS.BI'
 DECLARE SUB Drop (item AS InventoryType)
 DECLARE SUB DrawStatusScreen (heading AS STRING)
 DECLARE SUB Look (item AS InventoryType)
+DECLARE SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
+DECLARE SUB RefreshStatusScreen ()
 DECLARE SUB ShowResponse (response AS STRING)
 DECLARE SUB UseItem (item AS InventoryType)
 
@@ -33,13 +35,14 @@ SUB DrawStatusScreen (heading AS STRING)
 END SUB
 
 SUB Drop (item AS InventoryType)
-	
-	LD2.Drop item.id
-	LD2.ClearInventorySlot item.slot
+    
+    LD2.Drop item.id
+    LD2.ClearInventorySlot item.slot
     
     ShowResponse "Dropped " + item.shortName
-    Inventory.RemoveItem item
-	
+    
+    RefreshStatusScreen
+    
 END SUB
 
 SUB EStatusScreen (currentRoomId AS INTEGER)
@@ -209,8 +212,8 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 				IF keyOff THEN
 					LD2.PlaySound sfxSELECT
 					LD2.SetRoom selectedRoom
-					CurrentRoom = selectedRoom
-					'LD2.SetAllowedEntities floors(selectedRoom).allowed
+					currentRoomId = selectedRoom
+                    'LD2.SetAllowedEntities floors(selectedRoom).allowed
 					doLoadMap = 1
 					EXIT DO
 				END IF
@@ -244,7 +247,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 	LOOP WHILE e < 1
 	LD2.RestoreBuffer 2
 	
-	IF doLoadMap THEN
+    IF doLoadMap THEN
 		LD2.LoadMap selectedFilename
 	END IF
 	
@@ -324,6 +327,24 @@ SUB Look (item AS InventoryType)
 	
 END SUB
 
+SUB RefreshStatusScreen
+    
+    DIM i AS INTEGER
+    DIM id AS INTEGER
+    DIM qty AS INTEGER
+    
+    Inventory.Clear
+    FOR i = 0 TO 7 '- change to LD2.GetMaxInvSize% ?
+        id = LD2.GetStatusItem%(i)
+        qty = LD2.GetStatusAmount%(i)
+        IF Inventory.Add%(id, qty) THEN
+            EXIT FOR
+        END IF
+    NEXT i
+    Inventory.RefreshNames
+    
+END SUB
+
 SUB StatusScreen
 	
 	IF LD2.isDebugMode% THEN LD2.Debug "LD2.StatusScreen"
@@ -346,6 +367,8 @@ SUB StatusScreen
     DIM strLife AS STRING
     DIM strWeapon AS STRING
     DIM clr AS INTEGER
+    DIM mixMode AS INTEGER
+    DIM mixItem AS InventoryType
 	
 	DIM actions(3) AS STRING
 	DIM actionStr AS STRING
@@ -357,15 +380,7 @@ SUB StatusScreen
 	
 	w = 6: h = 6
 	
-    Inventory.Clear
-	FOR i = 0 TO 7 '- change to LD2.GetMaxInvSize% ?
-		id = LD2.GetStatusItem%(i)
-		qty = LD2.GetStatusAmount%(i)
-		IF Inventory.Add%(id, qty) THEN
-			EXIT FOR
-		END IF
-	NEXT i
-	Inventory.RefreshNames
+    RefreshStatusScreen
 	
 	action = -1
 	
@@ -408,7 +423,8 @@ SUB StatusScreen
         
         LD2.GetPlayer player
         
-        
+        '- show item that was picked up (lower-right corner of screen: "Picked Up Shotgun")
+        '- copy steve scene sprites over
         
         SELECT CASE Player.life
         CASE IS > 80
@@ -467,7 +483,7 @@ SUB StatusScreen
 		top = top + (h * 4)
 		FOR i = 0 TO 7
 			
-			IF Inventory.GetItem%(item, i) THEN
+			IF Inventory.GetItemBySlot%(item, i) THEN
 				'- error
 			END IF
 			itemStr = "( " + item.shortName + " )"
@@ -490,7 +506,12 @@ SUB StatusScreen
 			'itemStr = itemStr + SPC$(15-LEN(itemStr))
 			'LD2.fillm INT((320-(w*LEN(itemStr)))/2)-7, top+h*13-1, w*LEN(itemStr)+1+12, h+1, 130, 1
 			'LD2.PutTextCol INT((320-(w*LEN(itemStr)))/2), top + h * 13, itemStr, 15, 1
-		ELSE
+		ELSEIF mixMode THEN
+            shortName = LTRIM$(RTRIM$(mixItem.shortName))
+            LD2.PutText w * 21, top + h * 13, "Mix "+SPACE$(LEN(shortName))+" with ", 1
+            LD2.PutTextCol w * 25, top + h * 13, shortName, 56, 1
+            LD2.PutTextCol w * (31+LEN(shortName)), top + h * 13, LTRIM$(RTRIM$(selected.shortName)), 31, 1
+        ELSE
 			LD2.PutText w * 21, top + h * 13, "  USE     LOOK    MIX     DROP  ", 1
 			FOR i = 0 TO 3
 				IF i = action THEN
@@ -574,7 +595,9 @@ SUB StatusScreen
 			IF keyboard(&H1C) THEN
 				keyOn = 1
 				IF keyOff THEN
-					IF action > -1 THEN
+                    IF mixMode THEN
+                        Mix mixItem, selected
+					ELSEIF action > -1 THEN
 						'- DO SUB MENU (LOOK/MIX/DROP/ETC) HERE
 						SELECT CASE action
 						CASE 0  '- USE
@@ -583,6 +606,8 @@ SUB StatusScreen
 							LD2.PlaySound sfxSELECT2
 							Look selected
 						CASE 2  '- MIX
+                            mixMode = 1
+                            mixItem = selected
 						CASE 3  '- Drop
 							LD2.PlaySound sfxDROP
 							Drop selected
@@ -625,16 +650,9 @@ SUB StatusScreen
 END SUB
 
 SUB UseItem (item AS InventoryType)
-	
-	DIM w AS INTEGER, h AS INTEGER
-    DIM i AS INTEGER
-	DIM top AS INTEGER
-    DIM lft AS INTEGER
+
     DIM msg AS STRING
-	DIM text AS STRING
-	
-	w = 6: h = 6
-	
+
     SELECT CASE item.id
     CASE NOTHING
         msg = Inventory.GetFailMsg$(item.id)
@@ -705,6 +723,24 @@ SUB UseItem (item AS InventoryType)
     
     ShowResponse msg
 	
+END SUB
+
+SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
+    
+    DIM msg AS STRING
+    DIM resultId AS INTEGER
+    
+    resultId = Inventory.Mix%(item0.id, item1.id, msg)
+    
+    IF resultId <> -1 THEN
+        LD2.ClearInventorySlot item0.slot
+        LD2.ClearInventorySlot item1.slot
+        nil% = LD2.AddToStatus%(resultId, 1)
+        RefreshStatusScreen
+    END IF
+    
+    ShowResponse msg
+    
 END SUB
 
 SUB ShowResponse (response AS STRING)
