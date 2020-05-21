@@ -1,286 +1,270 @@
-DECLARE SUB Mobs.Clear ()
-DECLARE FUNCTION Mobs.TypeIsEnabled% (id AS INTEGER)
-DECLARE FUNCTION Mobs.GetRandomType% ()
-DECLARE FUNCTION Mobs.CanGetNext% ()
-DECLARE FUNCTION Mobs.Count% ()
-REM $INCLUDE: 'INC\MOBS.BI'
+#include once "inc/mobs.bi"
 
-DECLARE FUNCTION Mobs.FindVacantSlot% ()
-
-REDIM SHARED MobMobs(0) AS MobType
-REDIM SHARED MobTypes(0) AS MobTypeType
-DIM SHARED numMobs AS INTEGER
-DIM SHARED numMobTypes AS INTEGER
-DIM SHARED firstMob AS INTEGER
-DIM SHARED lastMob AS INTEGER
-DIM SHARED curMob AS INTEGER
-
-SUB Mobs.Add (mob AS MobType)
+sub MobileCollection.add (mob AS Mobile)
     
-    STATIC uid AS INTEGER
-    DIM i AS INTEGER
+    static uid as integer
+    dim i as integer
     
     uid = uid + 1
-    IF uid >= &H7FFF THEN uid = 1
+    if uid >= &H7FFF then uid = 1
     
-    i = Mobs.FindVacantSlot%
+    i = this.findVacantSlot()
     
-    IF (i >= 0) AND (i < MAXMOBS) THEN
-        MobMobs(i).id = mob.id
-        MobMobs(i).vx = mob.vx
-        MobMobs(i).x = mob.x
-        MobMobs(i).y = mob.y
-        MobMobs(i).flip = mob.flip
-        MobMobs(i).velocity = mob.velocity
-        MobMobs(i).ani = mob.ani
-        MobMobs(i).counter = mob.counter
-        MobMobs(i).flag = mob.flag
-        MobMobs(i).hit = mob.hit
-        MobMobs(i).life = mob.life
-        MobMobs(i).shooting = mob.shooting
-        MobMobs(i).state = mob.state
-        'MobMobs(i)          =  mob '- try this after everything else works
-        MobMobs(i).uid = uid
-        MobMobs(i).nxt = -1
-        MobMobs(i).vacant = 0
-        MobMobs(i).idx = i
-        IF firstMob = -1 THEN
-            firstMob = i
-            MobMobs(i).prv = -1
-        ELSE
-            MobMobs(i).prv = lastMob
-        END IF
-        IF lastMob = -1 THEN
-            MobMobs(i).nxt = -1
-            lastMob = i
-        ELSE
-            MobMobs(lastMob).nxt = i
-            lastMob = i
-        END IF
-        numMobs = numMobs + 1
-    END IF
+    if (i >= 0) and (i < MAXMOBS) then
+        this._mobs(i).id = mob.id
+        this._mobs(i).vx = mob.vx
+        this._mobs(i).x = mob.x
+        this._mobs(i).y = mob.y
+        this._mobs(i).flip = mob.flip
+        this._mobs(i).velocity = mob.velocity
+        this._mobs(i).ani = mob.ani
+        this._mobs(i).counter = mob.counter
+        this._mobs(i).flag = mob.flag
+        this._mobs(i).hit = mob.hit
+        this._mobs(i).life = mob.life
+        this._mobs(i).shooting = mob.shooting
+        this._mobs(i).state = mob.state
+        'this._mobs(i)          =  mob '- try this after everything else works
+        this._mobs(i).uid = uid
+        this._mobs(i).nxt = -1
+        this._mobs(i).vacant = 0
+        this._mobs(i).idx = i
+        if this._firstMob = -1 then
+            this._firstMob = i
+            this._mobs(i).prv = -1
+        else
+            this._mobs(i).prv = this._lastMob
+        end if
+        if this._lastMob = -1 then
+            this._mobs(i).nxt = -1
+            this._lastMob = i
+        else
+            this._mobs(this._lastMob).nxt = i
+            this._lastMob = i
+        end if
+        this._numMobs = this._numMobs + 1
+    end if
     
-END SUB
+end sub
 
-SUB Mobs.AddType (id AS INTEGER)
+sub MobileCollection.addType (id as integer)
     
-    DIM n AS INTEGER
+    dim n as integer
     
-    n = numMobTypes
-    MobTypes(n).id = id
-    MobTypes(n).enabled = 1
-    numMobTypes = numMobTypes + 1
+    n = this._numMobTypes
+    this._mobTypes(n).id = id
+    this._mobTypes(n).enabled = 1
+    this._numMobTypes += 1
     
-END SUB
+end sub
 
-FUNCTION Mobs.CanGetNext%
+function MobileCollection.canGetNext() as integer
     
-    IF curMob >= 0 THEN
-        Mobs.CanGetNext% = (MobMobs(curMob).nxt >= 0)
-    ELSE
-        Mobs.CanGetNext% = 0
-    END IF
+    if this._curMob >= 0 then
+        return (this._mobs(this._curMob).nxt >= 0)
+    else
+        return 0
+    end if
     
-END FUNCTION
+end function
 
-SUB Mobs.Clear
+sub MobileCollection.clear
     
-    DIM n AS INTEGER
-    FOR n = 0 TO MAXMOBS - 1
-        MobMobs(n).vacant = 1
-    NEXT n
+    dim n as integer
+    for n = 0 to MAXMOBS - 1
+        this._mobs(n).vacant = 1
+    next n
     
-    firstMob = -1
-    labsMob = -1
-    curMob = -1
+    this._firstMob = -1
+    this._lastMob  = -1
+    this._curMob   = -1
+    this._numMobs  = 0
     
-    numMobs = 0
-    
-END SUB
+end sub
 
-FUNCTION Mobs.Count%
+function MobileCollection.count() as integer
     
-    Mobs.Count% = numMobs
+    return this._numMobs
     
-END FUNCTION
+end function
 
-SUB Mobs.DisableAllTypes
+sub MobileCollection.disableAllTypes
     
-    DIM n AS INTEGER
-    FOR n = 0 TO numMobTypes - 1
-        MobTypes(n).enabled = 0
-    NEXT n
+    dim n as integer
+    for n = 0 TO this._numMobTypes - 1
+        this._mobTypes(n).enabled = 0
+    next n
     
-END SUB
+end sub
 
-SUB Mobs.DisableType (id AS INTEGER)
+sub MobileCollection.disableType (id as integer)
     
-    DIM n AS INTEGER
-    FOR n = 0 TO numMobTypes - 1
-        IF MobTypes(n).id = id THEN
-            MobTypes(n).enabled = 0
-            EXIT FOR
-        END IF
-    NEXT n
+    dim n as integer
+    for n = 0 to this._numMobTypes - 1
+        if this._mobTypes(n).id = id then
+            this._mobTypes(n).enabled = 0
+            exit for
+        end if
+    next n
     
-END SUB
+end sub
 
-SUB Mobs.EnableAllTypes
+sub MobileCollection.enableAllTypes
     
-    DIM n AS INTEGER
-    FOR n = 0 TO numMobTypes - 1
-        MobTypes(n).enabled = 1
-    NEXT n
+    dim n as integer
+    for n = 0 to this._numMobTypes - 1
+        this._mobTypes(n).enabled = 1
+    next n
     
-END SUB
+end sub
 
-SUB Mobs.EnableType (id AS INTEGER)
+sub MobileCollection.enableType (id as integer)
     
-    DIM n AS INTEGER
-    FOR n = 0 TO numMobTypes - 1
-        IF MobTypes(n).id = id THEN
-            MobTypes(n).enabled = 1
-            EXIT FOR
-        END IF
-    NEXT n
+    dim n as integer
+    for n = 0 to this._numMobTypes - 1
+        if this._mobTypes(n).id = id then
+            this._mobTypes(n).enabled = 1
+            exit for
+        end if
+    next n
     
-END SUB
+end sub
 
-FUNCTION Mobs.FindVacantSlot%
+function MobileCollection.findVacantSlot () as integer
     
-    DIM n AS INTEGER
-    DIM vacant AS INTEGER
+    dim n as integer
+    dim vacant as integer
     
     vacant = -1
-    IF (lastMob >= 0) AND (lastMob < MAXMOBS) THEN
-        FOR n = lastMob TO MAXMOBS - 1
-            IF MobMobs(n).vacant THEN
+    if (this._lastMob >= 0) and (this._lastMob < MAXMOBS) then
+        for n = this._lastMob to MAXMOBS - 1
+            if this._mobs(n).vacant then
                 vacant = n
-                EXIT FOR
-            END IF
-        NEXT n
-        IF vacant = -1 THEN
-            FOR n = 0 TO lastMob - 1
-                IF MobMobs(n).vacant THEN
+                exit for
+            end if
+        next n
+        if vacant = -1 then
+            for n = 0 to this._lastMob - 1
+                if this._mobs(n).vacant then
                     vacant = n
-                    EXIT FOR
-                END IF
-            NEXT n
-        END IF
-    ELSEIF lastMob < MAXMOBS THEN
+                    exit for
+                end if
+            next n
+        end if
+    elseif this._lastMob < MAXMOBS then
         vacant = 0
-    END IF
+    end if
     
-    Mobs.FindVacantSlot% = vacant
+    return vacant
     
-END FUNCTION
+end function
 
-SUB Mobs.GetMob (mob AS MobType, id AS INTEGER)
+sub MobileCollection.getMob (mob as Mobile, id as integer)
     
-    DIM n AS INTEGER
+    dim n as integer
     
-    n = firstMob
-    DO WHILE n >= 0
-        IF (MobMobs(n).id = id) AND (MobMobs(n).vacant = 0) THEN
-            mob = MobMobs(n)
-            EXIT DO
-        END IF
-        n = MobMobs(n).nxt
-    LOOP
+    n = this._firstMob
+    do while n >= 0
+        if (this._mobs(n).id = id) and (this._mobs(n).vacant = 0) then
+            mob = this._mobs(n)
+            exit do
+        end if
+        n = this._mobs(n).nxt
+    loop
     
-END SUB
+end sub
 
-SUB Mobs.GetNext (mob AS MobType)
+sub MobileCollection.getNext (mob as Mobile)
     
-    mob = MobMobs(curMob)
-    curMob = mob.nxt
+    mob = this._mobs(this._curMob)
+    this._curMob = mob.nxt
     
-END SUB
+end sub
 
-FUNCTION Mobs.GetRandomType%
+function MobileCollection.getRandomType () as integer
     
-    DIM n AS INTEGER
-    DIM r AS INTEGER
-    DIM enabledCount AS INTEGER
-    DIM enabledId AS INTEGER
+    dim n as integer
+    dim r as integer
+    dim enabledCount as integer
+    dim enabledId as integer
     
     enabledCount = 0
-    FOR n = 0 TO numMobTypes - 1
-        IF MobTypes(n).enabled THEN
+    for n = 0 to this._numMobTypes - 1
+        if this._mobTypes(n).enabled then
             enabledCount = enabledCount + 1
-            enabledId = MobTypes(n).id
-        END IF
-    NEXT n
+            enabledId = this._mobTypes(n).id
+        end if
+    next n
     
-    IF enabledCount = 1 THEN
+    if enabledCount = 1 then
         r = enabledId
-    ELSEIF enabledCount > 1 THEN
-        DO
-            r = INT(RND(1) * numMobTypes)
-        LOOP WHILE (MobTypes(r).enabled = 0)
-        r = MobTypes(r).id
-    ELSE
+    elseif enabledCount > 1 then
+        do
+            r = int(rnd(1) * this._numMobTypes)
+        loop while (this._mobTypes(r).enabled = 0)
+        r = this._mobTypes(r).id
+    else
         r = -1
-    END IF
+    end if
     
-    Mobs.GetRandomType% = r
+    return r
     
-END FUNCTION
+end function
 
-SUB Mobs.Init
+sub MobileCollection.init
     
-    REDIM MobMobs(MAXMOBS) AS MobType
-    REDIM MobTypes(MAXMOBTYPES) AS MobTypeType
+    redim this._mobs(MAXMOBS) AS Mobile
+    redim this._mobTypes(MAXMOBTYPES) AS MobileType
     
-    Mobs.Clear
+    this.clear
     
-END SUB
+end sub
 
-SUB Mobs.Remove (mob AS MobType)
+sub MobileCollection.remove (mob as Mobile)
     
-    numMobs = numMobs - 1
-    IF mob.uid = MobMobs(firstMob).uid THEN
-        firstMob = MobMobs(firstMob).nxt
-        MobMobs(firstMob).prv = -1
-        EXIT SUB
-    END IF
-    IF mob.uid = MobMobs(lastMob).uid THEN
-        lastMob = MobMobs(lastMob).prv
-        MobMobs(lastMob).nxt = -1
-        EXIT SUB
-    END IF
+    this._numMobs -= 1
+    if mob.uid = this._mobs(this._firstMob).uid then
+        this._firstMob = this._mobs(this._firstMob).nxt
+        this._mobs(this._firstMob).prv = -1
+        exit sub
+    end if
+    if mob.uid = this._mobs(this._lastMob).uid then
+        this._lastMob = this._mobs(this._lastMob).prv
+        this._mobs(this._lastMob).nxt = -1
+        exit sub
+    end if
     
-    MobMobs(mob.prv).nxt = mob.nxt
-    MobMobs(mob.nxt).prv = mob.prv
+    this._mobs(mob.prv).nxt = mob.nxt
+    this._mobs(mob.nxt).prv = mob.prv
     mob.vacant = 1
     
-END SUB
+end sub
 
-SUB Mobs.resetNext
+sub MobileCollection.resetNext
     
-    curMob = firstMob
+    this._curMob = this._firstMob
     
-END SUB
+end sub
 
-FUNCTION Mobs.TypeIsEnabled% (id AS INTEGER)
+function MobileCollection.typeIsEnabled (id as integer) as integer
     
-    DIM n AS INTEGER
-    DIM enabled AS INTEGER
+    dim n as integer
+    dim enabled as integer
     
     enabled = 0
-    FOR n = 0 TO numMobTypes - 1
-        IF MobTypes(n).id = id THEN
-            enabled = MobTypes(n).enabled
-            EXIT FOR
-        END IF
-    NEXT n
-    Mobs.TypeIsEnabled% = enabled
+    for n = 0 to this._numMobTypes - 1
+        if this._mobTypes(n).id = id then
+            enabled = this._mobTypes(n).enabled
+            exit for
+        end if
+    next n
     
-END FUNCTION
+    return enabled
+    
+end function
 
-SUB Mobs.Update (mob AS MobType)
+sub MobileCollection.update (mob as Mobile)
     
-    MobMobs(mob.idx) = mob
+    this._mobs(mob.idx) = mob
     
-END SUB
-
+end sub
