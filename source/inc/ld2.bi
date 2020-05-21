@@ -2,6 +2,7 @@
 '= ITEMS (SPRITE IDs AND INVENTORY IDs)
 '= ids correspond to location in OBJECTS.PUT
 '===========================================
+CONST FIST = 0
 CONST NOTHING = 0
 CONST MEDIKIT50 = 1
 CONST MEDIKIT100 = 2
