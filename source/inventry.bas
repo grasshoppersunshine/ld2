@@ -1,14 +1,14 @@
-REM $INCLUDE: 'INC\INVENTRY.BI'
-REM $INCLUDE: 'INC\LD2E.BI'
+#include once "INC\INVENTRY.BI"
+#include once "INC\LD2E.BI"
 
 DECLARE SUB LoadSids (filename AS STRING)
-DECLARE FUNCTION Inventory.GetUseMsg$ (itemId AS INTEGER, success AS INTEGER)
+DECLARE FUNCTION Inventory_GetUseMsg (itemId AS INTEGER, success AS INTEGER) as string
 
 REDIM SHARED InventoryItems(0) AS InventoryType
 REDIM SHARED ItemSids(0) AS STRING
 DIM SHARED InventorySize AS INTEGER
 
-FUNCTION Inventory.Add% (id AS INTEGER, qty AS INTEGER)
+FUNCTION Inventory_Add (id AS INTEGER, qty AS INTEGER) as integer
     
     DIM i AS INTEGER
     DIM added AS INTEGER
@@ -24,26 +24,26 @@ FUNCTION Inventory.Add% (id AS INTEGER, qty AS INTEGER)
     NEXT i
     
     IF added THEN
-        Inventory.Add% = 0
+        return 0
     ELSE
-        Inventory.Add% = InventoryErr.NOVACANTSLOT
+        return InventoryErr_NOVACANTSLOT
     END IF
     
 END FUNCTION
 
-FUNCTION Inventory.AddQty% (slot AS INTEGER, qty AS INTEGER)
-    
-    Inventory.AddQty% = 0
+FUNCTION Inventory_AddQty (slot AS INTEGER, qty AS INTEGER) as integer
     
     IF (slot >= 0) AND (slot < InventorySize) THEN
         InventoryItems(slot).qty = InventoryItems(slot).qty + qty
     ELSE
-        Inventory.AddQty% = InventoryErr.OUTOFBOUNDS
+        return InventoryErr_OUTOFBOUNDS
     END IF
+    
+    return 0
     
 END FUNCTION
 
-SUB Inventory.Clear
+SUB Inventory_Clear
     
     DIM i AS INTEGER
     FOR i = 0 TO InventorySize - 1
@@ -55,24 +55,27 @@ SUB Inventory.Clear
     
 END SUB
 
-FUNCTION Inventory.GetErrorMessage$
+FUNCTION Inventory_GetErrorMessage(errorId as integer) as string
     
-    Inventory.GetErrMsg$ = "Invalid error code"
+    dim msg as string
+    msg = "Invalid error code"
     
     SELECT CASE errorId
-    CASE InventoryErr.OUTOFBOUNDS
-        Inventory.GetErrMsg$ = "Specified inventory slot is out of bounds"
-    CASE InventoryErr.INVALIDSIZE
-        Inventory.GetErrMsg$ = "Invalid inventory size (less than zero)"
-    CASE InventoryErr.SIZETOOBIG
-        Inventory.GetErrMsg$ = "Invalid inventory size (too big)"
-    CASE InventoryErr.NOVACANTSLOT
-        Inventory.GetErrMsg$ = "No vacant inventory slot available"
+    CASE InventoryErr_OUTOFBOUNDS
+        msg = "Specified inventory slot is out of bounds"
+    CASE InventoryErr_INVALIDSIZE
+        msg = "Invalid inventory size (less than zero)"
+    CASE InventoryErr_SIZETOOBIG
+        msg = "Invalid inventory size (too big)"
+    CASE InventoryErr_NOVACANTSLOT
+        msg = "No vacant inventory slot available"
     END SELECT
+    
+    return msg
     
 END FUNCTION
 
-SUB Inventory.GetItem (item AS InventoryType, id AS INTEGER)
+SUB Inventory_GetItem (item AS InventoryType, id AS INTEGER)
     
     DIM i AS INTEGER
     
@@ -85,23 +88,21 @@ SUB Inventory.GetItem (item AS InventoryType, id AS INTEGER)
     
 END SUB
 
-FUNCTION Inventory.GetItemBySlot% (item AS InventoryType, slot AS INTEGER)
-    
-    Inventory.GetItemBySlot% = 0
+FUNCTION Inventory_GetItemBySlot (item AS InventoryType, slot AS INTEGER) as integer
     
     IF (slot >= 0) AND (slot < InventorySize) THEN
         item = InventoryItems(slot)
     ELSE
-        Inventory.GetItemBySlot% = InventoryErr.OUTOFBOUNDS
+        return InventoryErr_OUTOFBOUNDS
     END IF
+    
+    return 0
     
 END FUNCTION
 
-FUNCTION Inventory.Init% (size AS INTEGER)
+FUNCTION Inventory_Init (size AS INTEGER) as integer
     
     DIM i AS INTEGER
-    
-    Inventory.Init% = 0
     
     IF (size > 0) AND (size <= INVENTORYMAXSIZE) THEN
         REDIM InventoryItems(size - 1) AS InventoryType
@@ -112,15 +113,17 @@ FUNCTION Inventory.Init% (size AS INTEGER)
         LoadSids "tables/items.txt"
     ELSE
         IF size <= 0 THEN
-            Inventory.Init% = InventoryErr.INVALIDSIZE
+            return InventoryErr_INVALIDSIZE
         ELSE
-            Inventory.Init% = InventoryErr.SIZETOOBIG
+            return InventoryErr_SIZETOOBIG
         END IF
     END IF
     
+    return 0
+    
 END FUNCTION
 
-FUNCTION Inventory.LoadDescription$ (itemId AS INTEGER)
+FUNCTION Inventory_LoadDescription (itemId AS INTEGER) as string
     
     DIM ItemsFile AS INTEGER
     DIM id AS INTEGER
@@ -137,7 +140,7 @@ FUNCTION Inventory.LoadDescription$ (itemId AS INTEGER)
     DO WHILE NOT EOF(ItemsFile)
         INPUT #ItemsFile, sid: IF EOF(ItemsFile) THEN EXIT DO
         INPUT #ItemsFile, desc
-        id = Inventory.SidToItemId%(sid)
+        id = Inventory_SidToItemId(sid)
         IF itemId = id THEN
             found = 1
             EXIT DO
@@ -146,14 +149,14 @@ FUNCTION Inventory.LoadDescription$ (itemId AS INTEGER)
     CLOSE ItemsFile
     
     IF found THEN
-        Inventory.LoadDescription$ = desc
+        return desc
     ELSE
-        Inventory.LoadDescription$ = ""
+        return ""
     END IF
     
 END FUNCTION
 
-SUB Inventory.RefreshNames
+SUB Inventory_RefreshNames
     
     DIM ItemsFile AS INTEGER
     DIM found AS INTEGER
@@ -175,7 +178,7 @@ SUB Inventory.RefreshNames
             INPUT #ItemsFile, sid: IF EOF(ItemsFile) THEN EXIT DO
             INPUT #ItemsFile, shortName: IF EOF(ItemsFile) THEN EXIT DO
             INPUT #ItemsFile, longName: IF EOF(ItemsFile) THEN EXIT DO
-            id = Inventory.SidToItemId%(sid)
+            id = Inventory_SidToItemId(sid)
             IF item = id THEN
                 found = 1
                 EXIT DO
@@ -188,8 +191,8 @@ SUB Inventory.RefreshNames
             InventoryItems(i).slot = i
         ELSE
             InventoryItems(i).id = item
-            InventoryItems(i).shortName = "Item ID: " + LTRIM$(STR$(id))
-            InventoryItems(i).longName = "Item ID: " + LTRIM$(STR$(id))
+            InventoryItems(i).shortName = "Item ID: " + LTRIM(STR(id))
+            InventoryItems(i).longName = "Item ID: " + LTRIM(STR(id))
             InventoryItems(i).slot = i
         END IF
     NEXT i
@@ -197,27 +200,26 @@ SUB Inventory.RefreshNames
     
 END SUB
 
-FUNCTION Inventory.SidToItemId% (sid AS STRING)
+FUNCTION Inventory_SidToItemId (sid AS STRING) as integer
     
     DIM id AS INTEGER
     DIM bound AS INTEGER
     
     bound = UBOUND(ItemSids)
     
-    sid = UCASE$(LTRIM$(RTRIM$(sid)))
+    sid = UCASE(LTRIM(RTRIM(sid)))
     
     FOR id = 0 TO bound
         IF ItemSids(id) = sid THEN
-            Inventory.SidToItemId% = id
-            EXIT FUNCTION
+            return id
         END IF
     NEXT id
     
-    Inventory.SidToItemId% = -1
+    return -1
     
 END FUNCTION
 
-SUB Inventory.RemoveItem (item AS InventoryType)
+SUB Inventory_RemoveItem (item AS InventoryType)
     
     DIM slot AS INTEGER
     
@@ -254,25 +256,25 @@ SUB LoadSids (filename AS STRING)
     SEEK File, 1
     DO WHILE NOT EOF(File)
         INPUT #File, id, sid
-        ItemSids(id) = UCASE$(LTRIM$(RTRIM$(sid)))
+        ItemSids(id) = UCASE(LTRIM(RTRIM(sid)))
     LOOP
     CLOSE File
     
 END SUB
 
-FUNCTION Inventory.GetSuccessMsg$ (itemId AS INTEGER)
+FUNCTION Inventory_GetSuccessMsg (itemId AS INTEGER) as string
     
-    Inventory.GetSuccessMsg$ = Inventory.GetUseMsg$(itemId, 1)
-    
-END FUNCTION
-
-FUNCTION Inventory.GetFailMsg$ (itemId AS INTEGER)
-    
-    Inventory.GetFailMsg$ = Inventory.GetUseMsg$(itemId, 0)
+    return Inventory_GetUseMsg(itemId, 1)
     
 END FUNCTION
 
-FUNCTION Inventory.GetUseMsg$ (itemId AS INTEGER, success AS INTEGER)
+FUNCTION Inventory_GetFailMsg (itemId AS INTEGER) as string
+    
+    return Inventory_GetUseMsg(itemId, 0)
+    
+END FUNCTION
+
+FUNCTION Inventory_GetUseMsg (itemId AS INTEGER, success AS INTEGER) as string
     
     DIM ItemsFile AS INTEGER
     DIM found AS INTEGER
@@ -286,6 +288,8 @@ FUNCTION Inventory.GetUseMsg$ (itemId AS INTEGER, success AS INTEGER)
     DIM col  AS STRING
     DIM row  AS STRING
     
+    dim n as integer
+    
     ItemsFile = FREEFILE
     OPEN "tables/uses.txt" FOR INPUT AS ItemsFile
     found = 0
@@ -296,14 +300,14 @@ FUNCTION Inventory.GetUseMsg$ (itemId AS INTEGER, success AS INTEGER)
         failMsg = ""
         col = ""
         FOR n = 1 TO LEN(row)
-            char = MID$(row, n, 1)
+            char = MID(row, n, 1)
             IF (char = ",") OR (n = LEN(row)) THEN
-                col = LTRIM$(RTRIM$(col))
-                IF LEFT$(col, 1) = CHR$(34) THEN
-                    col = RIGHT$(col, LEN(col)-1)
+                col = LTRIM(RTRIM(col))
+                IF LEFT(col, 1) = CHR(34) THEN
+                    col = RIGHT(col, LEN(col)-1)
                 END IF
-                IF RIGHT$(col, 1) = CHR$(34) THEN
-                    col = LEFT$(col, LEN(col)-1)
+                IF RIGHT(col, 1) = CHR(34) THEN
+                    col = LEFT(col, LEN(col)-1)
                 END IF
                 IF sid = "" THEN
                     sid = col
@@ -317,7 +321,7 @@ FUNCTION Inventory.GetUseMsg$ (itemId AS INTEGER, success AS INTEGER)
                 col = col + char
             END IF
         NEXT n
-        id = Inventory.SidToItemId%(sid)
+        id = Inventory_SidToItemId(sid)
         IF itemId = id THEN
             found = 1
             EXIT DO
@@ -327,17 +331,17 @@ FUNCTION Inventory.GetUseMsg$ (itemId AS INTEGER, success AS INTEGER)
 
     IF found THEN
         IF success THEN
-            Inventory.GetUseMsg$ = successMsg
+            return successMsg
         ELSE
-            Inventory.GetUseMsg$ = failMsg
+            return failMsg
         END IF
     ELSE
-        Inventory.GetUseMsg$ = "No use message found for item id:"+STR$(itemId)
+        return "No use message found for item id:"+STR(itemId)
     END IF
     
 END FUNCTION
 
-FUNCTION Inventory.Mix%(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS STRING)
+FUNCTION Inventory_Mix(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS STRING) as integer
     
     DIM MixesFile AS INTEGER
     DIM found AS INTEGER
@@ -350,6 +354,10 @@ FUNCTION Inventory.Mix%(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS 
     DIM col  AS STRING
     DIM row  AS STRING
     
+    dim id0 as integer
+    dim id1 as integer
+    dim n as integer
+    
     MixesFile = FREEFILE
     OPEN "tables/mixes.txt" FOR INPUT AS MixesFile
     found = 0
@@ -361,14 +369,14 @@ FUNCTION Inventory.Mix%(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS 
         resultMsg = ""
         col = ""
         FOR n = 1 TO LEN(row)
-            char = MID$(row, n, 1)
+            char = MID(row, n, 1)
             IF (char = ",") OR (n = LEN(row)) THEN
-                col = LTRIM$(RTRIM$(col))
-                IF LEFT$(col, 1) = CHR$(34) THEN
-                    col = RIGHT$(col, LEN(col)-1)
+                col = LTRIM(RTRIM(col))
+                IF LEFT(col, 1) = CHR(34) THEN
+                    col = RIGHT(col, LEN(col)-1)
                 END IF
-                IF RIGHT$(col, 1) = CHR$(34) THEN
-                    col = LEFT$(col, LEN(col)-1)
+                IF RIGHT(col, 1) = CHR(34) THEN
+                    col = LEFT(col, LEN(col)-1)
                 END IF
                 IF sid0 = "" THEN
                     sid0 = col
@@ -384,8 +392,8 @@ FUNCTION Inventory.Mix%(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS 
                 col = col + char
             END IF
         NEXT n
-        id0 = Inventory.SidToItemId%(sid0)
-        id1 = Inventory.SidToItemId%(sid1)
+        id0 = Inventory_SidToItemId(sid0)
+        id1 = Inventory_SidToItemId(sid1)
         IF ((itemId0 = id0) AND (itemId1 = id1)) OR ((itemId0 = id1) AND (itemId1 = id0)) THEN
             found = 1
             EXIT DO
@@ -394,11 +402,11 @@ FUNCTION Inventory.Mix%(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS 
     CLOSE MixesFile
 
     IF found THEN
-        Inventory.Mix% = Inventory.SidToItemId%(resultSid)
         resultMixMsg   = resultMsg
+        return Inventory_SidToItemId(resultSid)
     ELSE
-        Inventory.Mix% = -1
         resultMixMsg   = "I cannot mix these two items"
+        return -1
     END IF
     
 END FUNCTION

@@ -1,4 +1,4 @@
-REM $INCLUDE: 'INC\INVENTRY.BI'
+#include once "INC\INVENTRY.BI"
 
 TYPE tFloor
   floorNo AS INTEGER

@@ -6,24 +6,24 @@ TYPE InventoryType
   slot AS INTEGER
 END TYPE
 
-DECLARE FUNCTION Inventory.Add% (id AS INTEGER, qty AS INTEGER)
-DECLARE FUNCTION Inventory.AddQty% (slot AS INTEGER, qty AS INTEGER)
-DECLARE SUB Inventory.Clear ()
-DECLARE FUNCTION Inventory.GetErrorMessage$ ()
-DECLARE SUB Inventory.GetItem (item AS InventoryType, id AS INTEGER)
-DECLARE FUNCTION Inventory.GetItemBySlot% (item AS InventoryType, slot AS INTEGER)
-DECLARE FUNCTION Inventory.Init% (size AS INTEGER)
-DECLARE FUNCTION Inventory.LoadDescription$ (itemId AS INTEGER)
-DECLARE FUNCTION Inventory.Mix%(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS STRING)
-DECLARE SUB Inventory.RefreshNames ()
-DECLARE SUB Inventory.RemoveItem (item AS InventoryType)
-DECLARE FUNCTION Inventory.SidToItemId% (sid AS STRING)
-DECLARE FUNCTION Inventory.GetSuccessMsg$ (itemId AS INTEGER)
-DECLARE FUNCTION Inventory.GetFailMsg$ (itemId AS INTEGER)
+DECLARE FUNCTION Inventory_Add (id AS INTEGER, qty AS INTEGER) as integer
+DECLARE FUNCTION Inventory_AddQty (slot AS INTEGER, qty AS INTEGER) as integer
+DECLARE SUB Inventory_Clear ()
+DECLARE FUNCTION Inventory_GetErrorMessage (errorId as integer) as string
+DECLARE SUB Inventory_GetItem (item AS InventoryType, id AS INTEGER)
+DECLARE FUNCTION Inventory_GetItemBySlot (item AS InventoryType, slot AS INTEGER) as integer
+DECLARE FUNCTION Inventory_Init (size AS INTEGER) as integer
+DECLARE FUNCTION Inventory_LoadDescription (itemId AS INTEGER) as string
+DECLARE FUNCTION Inventory_Mix(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS STRING) as integer
+DECLARE SUB Inventory_RefreshNames ()
+DECLARE SUB Inventory_RemoveItem (item AS InventoryType)
+DECLARE FUNCTION Inventory_SidToItemId (sid AS STRING) as integer
+DECLARE FUNCTION Inventory_GetSuccessMsg (itemId AS INTEGER) as string
+DECLARE FUNCTION Inventory_GetFailMsg (itemId AS INTEGER) as string
 
 CONST INVENTORYMAXSIZE = 99
-CONST InventoryErr.OUTOFBOUNDS = -101
-CONST InventoryErr.INVALIDSIZE = -102
-CONST InventoryErr.SIZETOOBIG = -103
-CONST InventoryErr.NOVACANTSLOT = -104
+CONST InventoryErr_OUTOFBOUNDS = -101
+CONST InventoryErr_INVALIDSIZE = -102
+CONST InventoryErr_SIZETOOBIG = -103
+CONST InventoryErr_NOVACANTSLOT = -104
 
