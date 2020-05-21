@@ -1,3 +1,6 @@
+#pragma once
+#inclib "ld2snd"
+
 TYPE LD2musicData
 	id AS INTEGER
 	filepath AS STRING * 16

@@ -1,6 +1,10 @@
 #include once "SDL2/SDL.bi"
 #include once "inc/sdlgfx.bi"
 
+#define rgb_r(c) (culng(c) and &hff0000) shr &h10
+#define rgb_b(c) (culng(c) and &h00ff00) shr &h8
+#define rgb_g(c) (culng(c) and &h0000ff)
+
 '=======================================================================
 '
 ' Video
@@ -11,13 +15,14 @@ sub Video.init(cols as integer, rows as integer, fullscreen as integer, title as
     this._cols = cols
     this._rows = rows
     this._fullscreen = fullscreen
+    this._palette = 0
     
     SDL_Init( SDL_INIT_VIDEO )
     
     if fullscreen then
         this._window = SDL_CreateWindow( title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP)
     else
-        this._window  = SDL_CreateWindow( title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, cols, rows, SDL_WINDOW_SHOWN)
+        this._window = SDL_CreateWindow( title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, cols, rows, SDL_WINDOW_SHOWN)
     end if
 
     this._renderer = SDL_CreateRenderer( this._window, -1, SDL_RENDERER_PRESENTVSYNC )
@@ -29,39 +34,51 @@ sub Video.init(cols as integer, rows as integer, fullscreen as integer, title as
 
 end sub
 
+sub Video.shutdown()
+    
+    SDL_DestroyWindow(this._window)
+    
+end sub
+
+sub Video.setPalette(p as Palette256 ptr)
+    
+    this._palette = p
+    
+end sub
+
 function Video.getRenderer() as SDL_Renderer ptr
     
     return this._renderer
     
 end function
 
-function Video.loadBmp(filename as string, img_w as integer, img_h as integer, sp_w as integer, sp_h as integer, scale_x as double=1.0, scale_y as double=0) as SDL_Texture ptr
-
-	if scale_y = 0 then
-		scale_y = scale_x
-	end if
-	
-	dim gfxSource as SDL_Surface ptr = SDL_LoadBMP(filename)
-    dim gfxDest as SDL_Texture ptr
-	
-	SDL_SetColorKey( gfxSource, SDL_TRUE, SDL_MapRGB(gfxSource->format, 255, 0, 255) )
-	gfxDest = SDL_CreateTextureFromSurface( this._renderer, gfxSource )
-	
-	dim row_w as integer, row_h as integer
-	row_w = int(img_w / sp_w)
-	row_h = int(img_h / sp_h)
-	
-	dim i as integer
-	for i = 0 to row_w*row_h-1
-		'this._sprites(i).x = (i mod row_w)*sp_w
-		'this._sprites(i).y = int(i/row_w)*sp_h
-		'this._sprites(i).w = sp_w
-		'this._sprites(i).h = sp_h
-	next i
+function Video.getCols() as integer
     
-    return gfxDest
+    return this._cols
 
 end function
+
+function Video.getRows() as integer
+    
+    return this._rows
+
+end function
+
+sub Video.loadBmp(filename as string)
+
+    dim imageSurface as SDL_Surface ptr
+    dim imageTexture as SDL_Texture ptr
+    
+    imageSurface = SDL_LoadBMP(filename)
+    if imageSurface <> NULL then
+        imageTexture = SDL_CreateTextureFromSurface( this._renderer, imageSurface )
+        SDL_SetRenderTarget( this._renderer, NULL )
+        SDL_RenderCopy( this._renderer, imageTexture, NULL, NULL )
+        SDL_FreeSurface(imageSurface)
+        SDL_DestroyTexture(imageTexture)
+    end if
+
+end sub
 
 sub Video.update()
     
@@ -72,6 +89,33 @@ end sub
 sub Video.fill(x as integer, y as integer, w as integer, h as integer, col as integer)
 end sub
 
+sub Video.clearScreen(col as integer)
+    
+    dim r as integer, g as integer, b as integer
+    if this._palette <> 0 then
+        r = this._palette->red(col)
+        g = this._palette->grn(col)
+        b = this._palette->blu(col)
+    else
+        r = rgb_r(col)
+        g = rgb_g(col)
+        b = rgb_b(col)
+    end if
+    
+    this.setAsTarget()
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, SDL_ALPHA_OPAQUE )
+	SDL_RenderFillRect( this._renderer, NULL )
+    
+end sub
+
+sub Video.putPixel(x as integer, y as integer, col as integer)
+end sub
+
+sub Video.setAsTarget()
+    
+    SDL_SetRenderTarget( this._renderer, NULL )
+    
+end sub
 
 '=======================================================================
 '
@@ -84,7 +128,13 @@ sub VideoBuffer.init(v as Video ptr)
     this._renderer = v->getRenderer()
     this._w = v->getCols()
     this._h = v->getRows()
-    this._data = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this._w this._h)
+    this._data = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this._w, this._h)
+    
+end sub
+
+sub VideoBuffer.setPalette(p as Palette256 ptr)
+    
+    this._palette = p
     
 end sub
 
@@ -96,17 +146,58 @@ end sub
 
 sub VideoBuffer.putToScreen()
     
-    SDL_RenderCopy( this._renderer, this._data )
+    SDL_SetRenderTarget( this._renderer, NULL )
+    SDL_RenderCopy( this._renderer, this._data, NULL, NULL )
     
 end sub
 
 sub VideoBuffer.copy(buffer as VideoBuffer ptr)
     
     buffer->setAsTarget()
-    SDL_RenderCopy( this._renderer, this._data )
+    SDL_RenderCopy( this._renderer, this._data, NULL, NULL )
     
 end sub
 
+sub VideoBuffer.clearScreen(col as integer)
+    
+    dim r as integer, g as integer, b as integer
+    if this._palette <> 0 then
+        r = this._palette->red(col)
+        g = this._palette->grn(col)
+        b = this._palette->blu(col)
+    else
+        r = rgb_r(col)
+        g = rgb_g(col)
+        b = rgb_b(col)
+    end if
+    
+    this.setAsTarget()
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, SDL_ALPHA_OPAQUE )
+	SDL_RenderFillRect( this._renderer, NULL )
+    
+end sub
+
+sub VideoBuffer.putPixel(x as integer, y as integer, col as integer)
+    
+    '- TODO !!!
+    
+end sub
+
+sub VideoBuffer.loadBmp(filename as string)
+    
+    dim imageSurface as SDL_Surface ptr
+    dim imageTexture as SDL_Texture ptr
+    
+    imageSurface = SDL_LoadBMP(filename)
+    if imageSurface <> NULL then
+        imageTexture = SDL_CreateTextureFromSurface( this._renderer, imageSurface )
+        SDL_SetRenderTarget( this._renderer, this._data )
+        SDL_RenderCopy( this._renderer, imageTexture, NULL, NULL )
+        SDL_FreeSurface(imageSurface)
+        SDL_DestroyTexture(imageTexture)
+    end if
+    
+end sub
 
 
 '=======================================================================
@@ -242,6 +333,70 @@ sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer,
     SDL_RenderCopy( this._renderer, this._data, @src, @dst)
     
 end sub
+
+
+
+'=======================================================================
+'
+' Palette256
+'
+'=======================================================================
+
+sub Palette256.loadPalette(filename as string)
+    
+    dim loaded(255) as long
+    dim n as integer
+    dim c as long
+    dim r as ubyte
+    dim g as ubyte
+    dim b as ubyte
+
+    open filename for binary as #1
+    for n = 0 to 255
+        get #1, , c
+        loaded(n) = c
+    next n
+    close #1
+
+    for n = 0 to 255
+        c = loaded(n)
+        r = (c and &hFF)
+        g = (c \ &h100) and &hFF
+        b = (c \ &h10000)
+        this._palette(n).r = r shl 2
+        this._palette(n).g = g shl 2
+        this._palette(n).b = b shl 2
+    next n
+
+end sub
+
+function Palette256.rgbval(idx as integer) as integer
+    
+    dim v as RGB8
+    
+    v = this._palette(idx)
+    
+    return rgb(v.r, v.g, v.b)
+    
+end function
+
+function Palette256.red(idx as integer) as integer
+    
+    return this._palette(idx).r
+    
+end function
+
+function Palette256.grn(idx as integer) as integer
+    
+    return this._palette(idx).g
+    
+end function
+
+function Palette256.blu(idx as integer) as integer
+    
+    return this._palette(idx).b
+    
+end function
 
 
 'dim gfx as Video

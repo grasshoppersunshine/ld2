@@ -9,7 +9,7 @@
   #include once "INC\LD2.BI"
   #include once "INC\TITLE.BI"
   #include once "INC\MOBS.BI"
-  #include once "inc/sdlgfx.bi"
+  #include once "inc/sdlgfx.bi" '- TODO -- get rid of this
   
   TYPE tGuts
     x AS SINGLE
@@ -172,17 +172,15 @@
   DIM SHARED BossFile    AS STRING
   DIM SHARED FontFile    AS STRING
   
-  REDIM SHARED sLarry (0) AS INTEGER
-  REDIM SHARED sTile  (0) AS INTEGER
-  REDIM SHARED sLight (0) AS INTEGER
-  REDIM SHARED sEnemy (0) AS INTEGER
-  REDIM SHARED sGuts  (0) AS INTEGER
-  REDIM SHARED sScene (0) AS INTEGER
-  REDIM SHARED sObject(0) AS INTEGER
-  REDIM SHARED sFont  (0) AS INTEGER
+  'REDIM SHARED sLarry (0) AS INTEGER
+  'REDIM SHARED sTile  (0) AS INTEGER
+  'REDIM SHARED sLight (0) AS INTEGER
+  'REDIM SHARED sEnemy (0) AS INTEGER
+  'REDIM SHARED sGuts  (0) AS INTEGER
+  'REDIM SHARED sScene (0) AS INTEGER
+  'REDIM SHARED sObject(0) AS INTEGER
+  'REDIM SHARED sFont  (0) AS INTEGER
 
-    dim shared VideoHandle as Video
-    
     dim shared SpritesLarry as VideoSprites
     dim shared SpritesTile as VideoSprites
     dim shared SpritesLight as VideoSprites
@@ -194,24 +192,23 @@
     dim shared PaletteFile as string
     PaletteFile = "gfx\gradient.pal"
     
-    dim shared VideoBuffer1 as VideoBuffer
-    dim shared VideoBuffer2 as VideoBuffer
+    
   
-  DIM SHARED TileMap  (0,0) AS INTEGER
-  DIM SHARED MixMap   (0,0) AS INTEGER
-  DIM SHARED LightMap1(0,0) AS INTEGER
-  DIM SHARED LightMap2(0,0) AS INTEGER
-  DIM SHARED AniMap   (0,0) AS INTEGER
-  DIM SHARED FloorMap (0,0) AS INTEGER
+  REDIM SHARED TileMap  (0,0) AS INTEGER
+  REDIM SHARED MixMap   (0,0) AS INTEGER
+  REDIM SHARED LightMap1(0,0) AS INTEGER
+  REDIM SHARED LightMap2(0,0) AS INTEGER
+  REDIM SHARED AniMap   (0,0) AS INTEGER
+  REDIM SHARED FloorMap (0,0) AS INTEGER
   
-  DIM SHARED Items      (0) AS tItem
-  DIM SHARED Guts       (0) AS tGuts
-  DIM SHARED Doors      (0) AS tDoor
+  REDIM SHARED Items      (0) AS tItem
+  REDIM SHARED Guts       (0) AS tGuts
+  REDIM SHARED Doors      (0) AS tDoor
   REDIM SHARED Inventory  (0) AS INTEGER
-  DIM SHARED InvSlots   (0) AS INTEGER
-  DIM SHARED WentToRoom (0) AS INTEGER          '- replace with roomitem token
+  REDIM SHARED InvSlots   (0) AS INTEGER
+  REDIM SHARED WentToRoom (0) AS INTEGER          '- replace with roomitem token
   
-  DIM SHARED TransparentSprites (0) AS INTEGER
+  REDIM SHARED TransparentSprites (0) AS INTEGER
 
   DIM SHARED Gravity AS SINGLE
   DIM SHARED NumItems AS INTEGER
@@ -728,35 +725,51 @@ SUB LD2_Init
   '--------------------------------------------
   
   '--------------------------------------------
-  IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY:"+STR(FRE(-1))
+  'IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY:"+STR(FRE(-1))
   '--------------------------------------------
-  REDIM sLarry ( File_getAllocSize( LarryFile   )) AS INTEGER
+  'REDIM sLarry ( File_getAllocSize( LarryFile   )) AS INTEGER
   'REDIM sTile  ( 0 ) AS INTEGER 'File.getAllocSize&( TilesFile   )+(80*130) ) AS INTEGER
-  REDIM sTile  ( EPS*(64+80) ) AS INTEGER '- make sure we have enough memory for max possible
-  REDIM sLight ( File_getAllocSize( LightFile   )+( 1*130) ) AS INTEGER
-  REDIM sEnemy ( File_getAllocSize( EnemiesFile )) AS INTEGER
-  REDIM sGuts  ( File_getAllocSize( GutsFile    )) AS INTEGER
-  REDIM sScene ( File_getAllocSize( SceneFile   )) AS INTEGER '- only load scene sprites during scene / free after
-  REDIM sObject( File_getAllocSize( ObjectsFile )) AS INTEGER
-  REDIM sFont  ( File_getAllocSize( FontFile    )) AS INTEGER
+  'REDIM sTile  ( EPS*(64+80) ) AS INTEGER '- make sure we have enough memory for max possible
+  'REDIM sLight ( File_getAllocSize( LightFile   )+( 1*130) ) AS INTEGER
+  'REDIM sEnemy ( File_getAllocSize( EnemiesFile )) AS INTEGER
+  'REDIM sGuts  ( File_getAllocSize( GutsFile    )) AS INTEGER
+  'REDIM sScene ( File_getAllocSize( SceneFile   )) AS INTEGER '- only load scene sprites during scene / free after
+  'REDIM sObject( File_getAllocSize( ObjectsFile )) AS INTEGER
+  'REDIM sFont  ( File_getAllocSize( FontFile    )) AS INTEGER
+
+  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+LarryFile
+  'SpritesLarry.load( LarryFile )
+  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+TilesFile
+  'SpritesTile.load( TilesFile )
+  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+LightFile
+  'SpritesLight.load( LightFile )
+  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+EnemiesFile
+  'SpritesEnemy.load( EnemiesFile )
+  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+GutsFile
+  'SpritesGuts.load( GutsFile )
+  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+SceneFile
+  'SpritesScene.load( SceneFile )
+  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+ObjectsFile
+  'SpritesObject.load( ObjectsFile )
+  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+FontFile
+  'SpritesFont.load( FontFile )
+
   REDIM TransparentSprites (255) AS INTEGER
   '--------------------------------------------
-  IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY ( post sprites alloc ):"+STR(FRE(-1))
+  'IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY ( post sprites alloc ):"+STR(FRE(-1))
   '--------------------------------------------
-  GFX_InitBuffers
+  'GFX_InitBuffers
   '--------------------------------------------
-  IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY ( post buffers alloc ):"+STR(FRE(-1))
+  IF LD2_isDebugMode() THEN LD2_Debug "Allocating map arrays..."
   '--------------------------------------------
-  bytesToInts = INT((MAPW*MAPH)/2)+1
-  REDIM TileMap  ( bytesToInts ) AS INTEGER
-  REDIM MixMap   ( bytesToInts ) AS INTEGER
-  REDIM LightMap1( bytesToInts ) AS INTEGER
-  REDIM LightMap2( bytesToInts ) AS INTEGER
-  REDIM AniMap   ( bytesToInts ) AS INTEGER
-  bitsToInts = INT((MAPW*MAPH)/16)+1
-  REDIM FloorMap ( bitsToInts ) AS INTEGER
+  REDIM TileMap  ( MAPW, MAPH ) AS INTEGER
+  REDIM MixMap   ( MAPW, MAPH ) AS INTEGER
+  REDIM LightMap1( MAPW, MAPH ) AS INTEGER
+  REDIM LightMap2( MAPW, MAPH ) AS INTEGER
+  REDIM AniMap   ( MAPW, MAPH ) AS INTEGER
+  REDIM FloorMap ( MAPW, MAPH ) AS INTEGER
   '--------------------------------------------
-  IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY ( post maps alloc ):"+STR(FRE(-1))
+  IF LD2_isDebugMode() THEN LD2_Debug "Allocating other arrays..."
   '--------------------------------------------
   REDIM Items      (MAXITEMS) AS tItem
   REDIM Doors      (MAXDOORS) AS tDoor
@@ -765,7 +778,7 @@ SUB LD2_Init
   REDIM InvSlots   (MAXINVSLOTS) AS INTEGER
   REDIM WentToRoom (MAXFLOORS) AS INTEGER  
   '--------------------------------------------
-  IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY ( post other alloc ):"+STR(FRE(-1))
+  'IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY ( post other alloc ):"+STR(FRE(-1))
   '--------------------------------------------
   
   NumItems = 0
@@ -792,6 +805,10 @@ SUB LD2_Init
     
   END IF
   
+  PRINT "Intializing video..."
+  LD2_InitVideo 1, "Larry the Dinosaur 2"
+  LD2_LoadPalette PaletteFile
+  
   PRINT "Loading sprites..."
   WaitSeconds 0.3333
   
@@ -807,12 +824,20 @@ SUB LD2_Init
   
   Mobs.Init
   
-  SCREEN 13
-  CLS
-  LD2_LoadPalette "gfx\gradient.pal"
+  LD2_cls
+  
+  'SCREEN 13
+  'CLS
+  'LD2_LoadPalette "gfx\gradient.pal"
+  'VideoBuffer1.loadPalette(PaletteFile)
+  'VideoBuffer2.loadPalette(PaletteFile)
   'LD2_LoadBitmap  "gfx\back.bmp", 2, 1
-  LD2_CLS 2, 66
+  'LD2_CLS 2, 66
+  'VideoBuffer2.clearScreen(66)
   'DIM i AS INTEGER
+  
+  LD2_cls 2, 66
+  
   DIM x AS INTEGER
   DIM y AS INTEGER
   DIM r AS INTEGER
@@ -979,7 +1004,7 @@ SUB LD2_LoadMap (Filename AS STRING)
   DIM numLoadedSprites AS INTEGER
   dim did as integer
   
-  LD2_FadeOut 2, 0
+  'LD2_FadeOut 2, 0
   
   IF WentToRoom(CurrentRoom) = 0 THEN
     did = 0
@@ -994,7 +1019,7 @@ SUB LD2_LoadMap (Filename AS STRING)
   '- Load the map
   '--------------
   LD2_cls 0, 0
-  LD2_RestorePalette
+  'LD2_RestorePalette
   
   'bufferSeg = GetBufferSeg%(1)
   dim x as integer, y as integer
@@ -1005,7 +1030,8 @@ SUB LD2_LoadMap (Filename AS STRING)
   FOR y = 80 TO 85
     FOR x = 0 TO 15
       FOR n = 0 TO 7
-        LD2pset 126+x*4+n, y, bufferSeg, 112+x
+        'LD2pset 126+x*4+n, y, bufferSeg, 112+x
+        LD2_pset 126+x*4+n, y, 112+x, 1
       NEXT n
     NEXT x
   NEXT y
@@ -1613,7 +1639,7 @@ END SUB
 
 SUB LD2_PopText (Message AS STRING)
 
-    CLS
+    LD2_cls
    
     DO: LOOP WHILE keyboard(&H39)
 
@@ -2532,7 +2558,7 @@ SUB LD2_RenderFrame
 
   ''LD2Scroll VARSEG(Buffer2(0))
   'LD2copyFull segBuffer2, segBuffer1
-  VideoBuffer1.copy(@VideoBuffer2)
+  LD2_CopyBuffer 2, 1
   
   'DIM skipLight(20) AS INTEGER '// 20 = (24*13)/16(bits) (24bits to hold 20w -- leaving 4bits unused)
   '
@@ -2587,7 +2613,7 @@ SUB LD2_RenderFrame
   dim a as integer
   dim l as integer
   
-  VideoBuffer1.setAsTarget()
+  LD2_SetTargetBuffer 1
   IF Lighting2 THEN '// background/window lighting
     yp = 0
     FOR y = 0 TO 12
@@ -2771,8 +2797,7 @@ SUB LD2_RenderFrame
       cx = INT(Guts(n).x+7 - XShift)
       cy = INT(Guts(n).y+7    )
       sz = (20-Guts(n).id)
-      'LD2_fill cx%-sz%, cy%-sz%, sz%*2, sz%*2, Guts(n%).id+11, 1
-      VideoHandle.fill cx-sz, cy-sz, sz*2, sz*2, Guts(n).id+11
+      LD2_fill cx-sz, cy-sz, sz*2, sz*2, Guts(n).id+11, 1
     END IF
   NEXT n
   

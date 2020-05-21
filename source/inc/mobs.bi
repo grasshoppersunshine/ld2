@@ -1,3 +1,6 @@
+#pragma once
+#inclib "mobs"
+
 type Mobile
     id as integer
     vx as double

@@ -1,10 +1,10 @@
-REM $INCLUDE: 'INC\COMMON.BI'
-REM $INCLUDE: 'INC\LD2GFX.BI'
-REM $INCLUDE: 'INC\LD2SND.BI'
-REM $INCLUDE: 'INC\LD2E.BI'
-REM $INCLUDE: 'INC\LD2.BI'
-REM $INCLUDE: 'INC\KEYS.BI'
-REM $INCLUDE: 'INC\STATUS.BI'
+#include once "INC\COMMON.BI"
+#include once "INC\LD2GFX.BI"
+#include once "INC\LD2SND.BI"
+#include once "INC\LD2E.BI"
+#include once "INC\LD2.BI"
+#include once "INC\KEYS.BI"
+#include once "INC\STATUS.BI"
 
 DECLARE SUB Drop (item AS InventoryType)
 DECLARE SUB DrawStatusScreen (heading AS STRING)
@@ -25,19 +25,19 @@ SUB DrawStatusScreen (heading AS STRING)
 	w = 6: h = 6
 	top = 0
 	
-	LD2.CopyBuffer 2, 1
-	LD2.fillm 0, top, 320, 96, 66, 1
+	LD2_CopyBuffer 2, 1
+	LD2_fillm 0, top, 320, 96, 66, 1
 	
-	LD2.PutText w, top + h * 1, heading, 1
-	LD2.PutText w, top + h * 2, STRING$(LEN(heading), "="), 1
-	LD2.PutText 1, top + h * 15, STRING$(53, "*"), 1
+	LD2_PutText w, top + h * 1, heading, 1
+	LD2_PutText w, top + h * 2, STRING(LEN(heading), "="), 1
+	LD2_PutText 1, top + h * 15, STRING(53, "*"), 1
 	
 END SUB
 
 SUB Drop (item AS InventoryType)
     
-    LD2.Drop item.id
-    LD2.ClearInventorySlot item.slot
+    LD2_Drop item.id
+    LD2_ClearInventorySlot item.slot
     
     ShowResponse "Dropped " + item.shortName
     
@@ -47,7 +47,7 @@ END SUB
 
 SUB EStatusScreen (currentRoomId AS INTEGER)
 	
-	IF LD2.isDebugMode% THEN LD2.Debug "LD2.EStatusScreen (" + STR$(currentRoomId) + " )"
+	IF LD2_isDebugMode() THEN LD2_Debug "LD2_EStatusScreen (" + STR(currentRoomId) + " )"
 	
 	DIM top AS INTEGER
 	DIM w AS INTEGER
@@ -99,8 +99,8 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 	DIM easeTime AS DOUBLE
 	DIM lft AS INTEGER
 	
-	LD2.SaveBuffer 2
-	LD2.CopyBuffer 0, 2
+	LD2_SaveBuffer 2
+	LD2_CopyBuffer 0, 2
 	
 	easeTimer = TIMER
 	DO
@@ -111,20 +111,20 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 			e = 1
 		END IF
 		lft = -INT((1 - e) * (1 - e) * (1 - e) * 156)
-		LD2.CopyBuffer 2, 1
-		LD2.fillm lft, 0, 156, 200, 66, 1
-		LD2.RefreshScreen
+		LD2_CopyBuffer 2, 1
+		LD2_fillm lft, 0, 156, 200, 66, 1
+		LD2_RefreshScreen
 	LOOP WHILE e < 1
 	
 	DO
-		LD2.CopyBuffer 2, 1
-		LD2.fillm 0, 0, 156, 200, 66, 1
+		LD2_CopyBuffer 2, 1
+		LD2_fillm 0, 0, 156, 200, 66, 1
 		
-		LD2.PutText w, h * 1, "Please Select a Floor", 1
-		LD2.PutText w, h * 2, "======================", 1
+		LD2_PutText w, h * 1, "Please Select a Floor", 1
+		LD2_PutText w, h * 2, "======================", 1
 		
 		FOR i = 0 TO 32
-			LD2.PutText w * 25, h * i + 1, "*", 1
+			LD2_PutText w * 25, h * i + 1, "*", 1
 		NEXT i
 		
 		'scroll = 28-selectedRoom
@@ -139,32 +139,32 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 			filename = floors(i).filename
 			label = floors(i).label
 			
-			floorStr = LTRIM$(STR$(floorNo))
+			floorStr = LTRIM(STR(floorNo))
 			IF LEN(floorStr) = 1 THEN floorStr = " " + floorStr
 			IF (numFloors - i - 1) = selectedRoom THEN 'floorNo = selectedRoom THEN
-				'LD2.PutTextCol w, top, floorStr+" "+label, 112, 1
-				LD2.fillm w - 1, top - 1, w * 2 + 2, h + 1, 17, 1
-				LD2.fillm w * 3 + 1, top - 1, w * 21 - 3, h + 1, 70, 1
-				LD2.PutTextCol w, top, floorStr, 61, 1
-				LD2.PutTextCol w * 4, top, label, 15, 1
+				'LD2_PutTextCol w, top, floorStr+" "+label, 112, 1
+				LD2_fillm w - 1, top - 1, w * 2 + 2, h + 1, 17, 1
+				LD2_fillm w * 3 + 1, top - 1, w * 21 - 3, h + 1, 70, 1
+				LD2_PutTextCol w, top, floorStr, 61, 1
+				LD2_PutTextCol w * 4, top, label, 15, 1
 				selectedFilename = filename
 			ELSE
-				LD2.fillm w - 1, top - 1, w * 2 + 2, h + 1, 48, 1'- 208, 160, 48
-				IF LTRIM$(filename) <> "" THEN
-					'LD2.PutText w, top, floorStr + " " + label, 1
-					LD2.PutTextCol w, top, floorStr, 54, 1
-					LD2.PutText w * 4, top, label, 1
+				LD2_fillm w - 1, top - 1, w * 2 + 2, h + 1, 48, 1'- 208, 160, 48
+				IF LTRIM(filename) <> "" THEN
+					'LD2_PutText w, top, floorStr + " " + label, 1
+					LD2_PutTextCol w, top, floorStr, 54, 1
+					LD2_PutText w * 4, top, label, 1
 				ELSE
-					LD2.PutText w, top, "   " + label, 1
+					LD2_PutText w, top, "   " + label, 1
 				END IF
 			END IF
 			top = top + h + 1
 			IF floorNo > topFloor THEN topFloor = floorNo
 			IF floorNo < btmFloor THEN btmFloor = floorNo
-			'LD2.RotatePalette
+			'LD2_RotatePalette
 		NEXT i
 		
-		LD2.RefreshScreen
+		LD2_RefreshScreen
 		
 		IF canExit = 0 THEN
 			IF keyboard(&HF) = 0 THEN
@@ -181,14 +181,14 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 				keyOn = 1
 				IF keyOff THEN
 					selectedRoom = selectedRoom + 1
-					IF LTRIM$(floors(numFloors - selectedRoom - 1).filename) = "" THEN
+					IF LTRIM(floors(numFloors - selectedRoom - 1).filename) = "" THEN
 						selectedRoom = selectedRoom + 1
 					END IF
 					IF selectedRoom > numFloors - 1 THEN
 						selectedRoom = numFloors - 1
-						LD2.PlaySound sfxDENIED
+						LD2_PlaySound sfxDENIED
 					ELSE
-						LD2.PlaySound sfxSELECT
+						LD2_PlaySound sfxSELECT
 					END IF
 				END IF
 			END IF
@@ -196,24 +196,24 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 				keyOn = 1
 				IF keyOff THEN
 					selectedRoom = selectedRoom - 1
-					IF LTRIM$(floors(numFloors - selectedRoom - 1).filename) = "" THEN
+					IF LTRIM(floors(numFloors - selectedRoom - 1).filename) = "" THEN
 						selectedRoom = selectedRoom - 1
 					END IF
 					IF selectedRoom < 0 THEN
 						selectedRoom = 0
-						LD2.PlaySound sfxDENIED
+						LD2_PlaySound sfxDENIED
 					ELSE
-						LD2.PlaySound sfxSELECT
+						LD2_PlaySound sfxSELECT
 					END IF
 				END IF
 			END IF
 			IF keyboard(&H1C) THEN
 				keyOn = 1
 				IF keyOff THEN
-					LD2.PlaySound sfxSELECT
-					LD2.SetRoom selectedRoom
+					LD2_PlaySound sfxSELECT
+					LD2_SetRoom selectedRoom
 					currentRoomId = selectedRoom
-                    'LD2.SetAllowedEntities floors(selectedRoom).allowed
+                    'LD2_SetAllowedEntities floors(selectedRoom).allowed
 					doLoadMap = 1
 					EXIT DO
 				END IF
@@ -241,14 +241,14 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 			e = 1
 		END IF
 		lft = -INT(e * e * e * 156)
-		LD2.CopyBuffer 2, 1
-		LD2.fillm lft, 0, 156, 200, 66, 1
-		LD2.RefreshScreen
+		LD2_CopyBuffer 2, 1
+		LD2_fillm lft, 0, 156, 200, 66, 1
+		LD2_RefreshScreen
 	LOOP WHILE e < 1
-	LD2.RestoreBuffer 2
+	LD2_RestoreBuffer 2
 	
     IF doLoadMap THEN
-		LD2.LoadMap selectedFilename
+		LD2_LoadMap selectedFilename
 	END IF
 	
 END SUB
@@ -266,6 +266,8 @@ SUB Look (item AS InventoryType)
 	DIM chunk AS STRING
 	DIM word AS STRING
 	DIM char AS STRING
+    dim n as integer
+    dim canExit as integer
 	
 	w = 6: h = 6
 	top = h * 4
@@ -273,9 +275,9 @@ SUB Look (item AS InventoryType)
 	pad = 0
 	maxlen = INT((320 - pad * 2 - lft) / w)
 	
-	desc = Inventory.LoadDescription$(item.id)
+	desc = Inventory_LoadDescription(item.id)
 	IF desc = "" THEN
-		desc = "No description found for item id:" + STR$(item.id)
+		desc = "No description found for item id:" + STR(item.id)
 	END IF
 	
 	DrawStatusScreen item.longName
@@ -285,16 +287,16 @@ SUB Look (item AS InventoryType)
 			chunk = desc
 			desc = ""
 		ELSE
-			chunk = LEFT$(desc, maxlen)
-			desc = RIGHT$(desc, LEN(desc) - maxlen)
-			IF (MID$(chunk, maxlen, 1) = " ") THEN
-				chunk = RTRIM$(chunk)
-				desc = LTRIM$(desc)
-			ELSEIF (MID$(chunk, maxlen, 1) <> " ") AND (MID$(desc, maxlen + 1, 1) = " ") THEN
-				desc = LTRIM$(desc)
+			chunk = LEFT(desc, maxlen)
+			desc = RIGHT(desc, LEN(desc) - maxlen)
+			IF (MID(chunk, maxlen, 1) = " ") THEN
+				chunk = RTRIM(chunk)
+				desc = LTRIM(desc)
+			ELSEIF (MID(chunk, maxlen, 1) <> " ") AND (MID(desc, maxlen + 1, 1) = " ") THEN
+				desc = LTRIM(desc)
 			ELSE
 				FOR n = LEN(chunk) TO 1 STEP -1
-					char = MID$(chunk, n, 1)
+					char = MID(chunk, n, 1)
 					IF char <> " " THEN
 						word = char + word
 					ELSE
@@ -302,16 +304,16 @@ SUB Look (item AS InventoryType)
 					END IF
 				NEXT n
 				desc = word + desc
-				chunk = LEFT$(chunk, LEN(chunk) - LEN(word))
-				chunk = RTRIM$(chunk)
+				chunk = LEFT(chunk, LEN(chunk) - LEN(word))
+				chunk = RTRIM(chunk)
 			END IF
 			
 		END IF
-		LD2.PutText lft + pad, top, chunk, 1
+		LD2_PutText lft + pad, top, chunk, 1
 		top = top + h
 	LOOP
 	
-	LD2.RefreshScreen
+	LD2_RefreshScreen
 	
 	DO
 		IF canExit = 0 THEN
@@ -333,21 +335,21 @@ SUB RefreshStatusScreen
     DIM id AS INTEGER
     DIM qty AS INTEGER
     
-    Inventory.Clear
-    FOR i = 0 TO 7 '- change to LD2.GetMaxInvSize% ?
-        id = LD2.GetStatusItem%(i)
-        qty = LD2.GetStatusAmount%(i)
-        IF Inventory.Add%(id, qty) THEN
+    Inventory_Clear
+    FOR i = 0 TO 7 '- change to LD2_GetMaxInvSize% ?
+        id = LD2_GetStatusItem(i)
+        qty = LD2_GetStatusAmount(i)
+        IF Inventory_Add(id, qty) THEN
             EXIT FOR
         END IF
     NEXT i
-    Inventory.RefreshNames
+    Inventory_RefreshNames
     
 END SUB
 
 SUB StatusScreen
 	
-	IF LD2.isDebugMode% THEN LD2.Debug "LD2.StatusScreen"
+	IF LD2_isDebugMode() THEN LD2_Debug "LD2_StatusScreen"
 	
 	DIM top AS INTEGER
 	DIM w AS INTEGER
@@ -388,9 +390,12 @@ SUB StatusScreen
 	DIM easeTimer AS DOUBLE
 	DIM easeTime AS DOUBLE
 	DIM saveTop AS INTEGER
+    dim canExit as integer
+    dim keyOn as integer
+    dim keyOff as integer
 	
-	LD2.SaveBuffer 2
-	LD2.CopyBuffer 0, 2
+	LD2_SaveBuffer 2
+	LD2_CopyBuffer 0, 2
 	
 	easeTimer = TIMER
 	DO
@@ -401,27 +406,27 @@ SUB StatusScreen
 			e = 1
 		END IF
 		top = -INT((1 - e) * (1 - e) * (1 - e) * 96)
-		LD2.CopyBuffer 2, 1
-		LD2.fillm 0, top, 320, 96, 66, 1
-		LD2.RefreshScreen
+		LD2_CopyBuffer 2, 1
+		LD2_fillm 0, top, 320, 96, 66, 1
+		LD2_RefreshScreen
 	LOOP WHILE e < 1
     
     DIM player AS tPlayer
 	
 	DO
 		top = 0
-		LD2.CopyBuffer 2, 1
+		LD2_CopyBuffer 2, 1
         
-        LD2.fillm 0, top, 320, 96, 66, 1
+        LD2_fillm 0, top, 320, 96, 66, 1
 
-		LD2.PutText w, top + h * 1, "LARRY", 1
-		LD2.PutText w, top + h * 2, "=============", 1
+		LD2_PutText w, top + h * 1, "LARRY", 1
+		LD2_PutText w, top + h * 2, "=============", 1
         
 
-		LD2.PutText 1, top + h * 15, STRING$(53, "*"), 1
+		LD2_PutText 1, top + h * 15, STRING(53, "*"), 1
         
         
-        LD2.GetPlayer player
+        LD2_GetPlayer player
         
         '- show item that was picked up (lower-right corner of screen: "Picked Up Shotgun")
         '- copy steve scene sprites over
@@ -457,43 +462,43 @@ SUB StatusScreen
             strWeapon = "Magnum"
         END SELECT
         
-        LD2.PutText w, top+h*4, "STATUS: ", 1
-        LD2.PutTextCol w*9, top+h*4, strLife, clr, 1
-        LD2.PutText w, top+h*6, "HEALTH: "+LTRIM$(STR$(Player.life))+"%", 1
-        LD2.PutText w, top+h*8, "WEAPON: "+strWeapon, 1
-        'LD2.put w, top+h*1, 47, idLARRY, 1 '- larry
-        'LD2.put w, top+h*3, 44, idLARRY, 1 '- heart
-        'LD2.putTextCol w+16+w, top+h*3, STR$(Player.life), 15, 1
+        LD2_PutText w, top+h*4, "STATUS: ", 1
+        LD2_PutTextCol w*9, top+h*4, strLife, clr, 1
+        LD2_PutText w, top+h*6, "HEALTH: "+LTRIM(STR(Player.life))+"%", 1
+        LD2_PutText w, top+h*8, "WEAPON: "+strWeapon, 1
+        'LD2_put w, top+h*1, 47, idLARRY, 1 '- larry
+        'LD2_put w, top+h*3, 44, idLARRY, 1 '- heart
+        'LD2_putTextCol w+16+w, top+h*3, STR$(Player.life), 15, 1
         'SELECT CASE player.weapon
         'CASE FIST
-        '    LD2.put w, top+h*5, 46, idLARRY, 1
+        '    LD2_put w, top+h*5, 46, idLARRY, 1
         'CASE SHOTGUN
-        '    LD2.put w, top+h*5, 45, idLARRY, 1
+        '    LD2_put w, top+h*5, 45, idLARRY, 1
         'END SELECT
-        'IF Player.weapon = SHOTGUN     THEN LD2.PutTextCol w+16+w, top+h*5, STR$(Inventory(SHELLS)), 15, 1
-        'IF Player.weapon = MACHINEGUN  THEN LD2.PutTextCol w+16+w, top+h*5, STR$(Inventory(BULLETS)), 15, 1
-        'IF Player.weapon = PISTOL      THEN LD2.PutTextCol w+16+w, top+h*5, STR$(Inventory(BULLETS)), 15, 1
-        'IF Player.weapon = DESERTEAGLE THEN LD2.PutTextCol w+16+w, top+h*5, STR$(Inventory(DEAGLES)), 15, 1
-        'IF Player.weapon = FIST        THEN LD2.PutTextCol w+16+w, top+h*5, " INF", 15, 1
+        'IF Player.weapon = SHOTGUN     THEN LD2_PutTextCol w+16+w, top+h*5, STR$(Inventory(SHELLS)), 15, 1
+        'IF Player.weapon = MACHINEGUN  THEN LD2_PutTextCol w+16+w, top+h*5, STR$(Inventory(BULLETS)), 15, 1
+        'IF Player.weapon = PISTOL      THEN LD2_PutTextCol w+16+w, top+h*5, STR$(Inventory(BULLETS)), 15, 1
+        'IF Player.weapon = DESERTEAGLE THEN LD2_PutTextCol w+16+w, top+h*5, STR$(Inventory(DEAGLES)), 15, 1
+        'IF Player.weapon = FIST        THEN LD2_PutTextCol w+16+w, top+h*5, " INF", 15, 1
 
-		LD2.PutText w * 38, top + h * 1, "INVENTORY", 1
-		LD2.PutText w * 33, top + h * 2, "==================", 1
+		LD2_PutText w * 38, top + h * 1, "INVENTORY", 1
+		LD2_PutText w * 33, top + h * 2, "==================", 1
 
 		saveTop = top
 		top = top + (h * 4)
 		FOR i = 0 TO 7
 			
-			IF Inventory.GetItemBySlot%(item, i) THEN
+			IF Inventory_GetItemBySlot(item, i) THEN
 				'- error
 			END IF
 			itemStr = "( " + item.shortName + " )"
 			
 			IF i = selectedInventorySlot THEN
-				LD2.fillm w * 33, top - 1, w * 19.5, h + 1, 70, 1
-				LD2.PutTextCol 200, top, itemStr, 15, 1
+				LD2_fillm w * 33, top - 1, w * 19.5, h + 1, 70, 1
+				LD2_PutTextCol 200, top, itemStr, 15, 1
 				selected = item
 			ELSE
-				LD2.PutText 200, top, itemStr, 1
+				LD2_PutText 200, top, itemStr, 1
 			END IF
 			
 			top = top + h
@@ -504,28 +509,28 @@ SUB StatusScreen
 		IF action = -1 THEN
 			'itemStr = LTRIM$(RTRIM$(item.shortName))
 			'itemStr = itemStr + SPC$(15-LEN(itemStr))
-			'LD2.fillm INT((320-(w*LEN(itemStr)))/2)-7, top+h*13-1, w*LEN(itemStr)+1+12, h+1, 130, 1
-			'LD2.PutTextCol INT((320-(w*LEN(itemStr)))/2), top + h * 13, itemStr, 15, 1
+			'LD2_fillm INT((320-(w*LEN(itemStr)))/2)-7, top+h*13-1, w*LEN(itemStr)+1+12, h+1, 130, 1
+			'LD2_PutTextCol INT((320-(w*LEN(itemStr)))/2), top + h * 13, itemStr, 15, 1
 		ELSEIF mixMode THEN
-            shortName = LTRIM$(RTRIM$(mixItem.shortName))
-            LD2.PutText w * 21, top + h * 13, "Mix "+SPACE$(LEN(shortName))+" with ", 1
-            LD2.PutTextCol w * 25, top + h * 13, shortName, 56, 1
-            LD2.PutTextCol w * (31+LEN(shortName)), top + h * 13, LTRIM$(RTRIM$(selected.shortName)), 31, 1
+            shortName = LTRIM(RTRIM(mixItem.shortName))
+            LD2_PutText w * 21, top + h * 13, "Mix "+SPACE(LEN(shortName))+" with ", 1
+            LD2_PutTextCol w * 25, top + h * 13, shortName, 56, 1
+            LD2_PutTextCol w * (31+LEN(shortName)), top + h * 13, LTRIM(RTRIM(selected.shortName)), 31, 1
         ELSE
-			LD2.PutText w * 21, top + h * 13, "  USE     LOOK    MIX     DROP  ", 1
+			LD2_PutText w * 21, top + h * 13, "  USE     LOOK    MIX     DROP  ", 1
 			FOR i = 0 TO 3
 				IF i = action THEN
 					actionStr = "( " + actions(i) + " )"
-					LD2.fillm w * (21 + i * 8), top + h * 13 - 1, w * 8, h + 1, 70, 1
-					LD2.PutTextCol w * (21 + i * 8), top + h * 13, actionStr, 15, 1
+					LD2_fillm w * (21 + i * 8), top + h * 13 - 1, w * 8, h + 1, 70, 1
+					LD2_PutTextCol w * (21 + i * 8), top + h * 13, actionStr, 15, 1
 				ELSE
 					actionStr = "  " + actions(i) + "  "
-					LD2.PutText w * (21 + i * 8), top + h * 13, actionStr, 1
+					LD2_PutText w * (21 + i * 8), top + h * 13, actionStr, 1
 				END IF
 			NEXT i
 		END IF
 		
-		LD2.RefreshScreen
+		LD2_RefreshScreen
 
 		IF canExit = 0 THEN
 			IF keyboard(&HF) = 0 THEN
@@ -548,10 +553,10 @@ SUB StatusScreen
 					selectedInventorySlot = selectedInventorySlot - 1
 					IF selectedInventorySlot < 0 THEN
 						selectedInventorySlot = 0
-						LD2.PlaySound sfxDENIED
+						LD2_PlaySound sfxDENIED
 					ELSE
 						'action = -1
-						LD2.PlaySound sfxSELECT
+						LD2_PlaySound sfxSELECT
 					END IF
 				END IF
 			END IF
@@ -561,10 +566,10 @@ SUB StatusScreen
 					selectedInventorySlot = selectedInventorySlot + 1
 					IF selectedInventorySlot > 7 THEN
 						selectedInventorySlot = 7
-						LD2.PlaySound sfxDENIED
+						LD2_PlaySound sfxDENIED
 					ELSE
 						'action = -1
-						LD2.PlaySound sfxSELECT
+						LD2_PlaySound sfxSELECT
 					END IF
 				END IF
 			END IF
@@ -574,9 +579,9 @@ SUB StatusScreen
 					action = action - 1
 					IF action < 0 THEN
 						action = 0
-						LD2.PlaySound sfxDENIED
+						LD2_PlaySound sfxDENIED
 					ELSE
-						LD2.PlaySound sfxSELECT
+						LD2_PlaySound sfxSELECT
 					END IF
 				END IF
 			END IF
@@ -586,9 +591,9 @@ SUB StatusScreen
 					action = action + 1
 					IF action > 3 THEN
 						action = 3
-						LD2.PlaySound sfxDENIED
+						LD2_PlaySound sfxDENIED
 					ELSE
-						LD2.PlaySound sfxSELECT
+						LD2_PlaySound sfxSELECT
 					END IF
 				END IF
 			END IF
@@ -603,16 +608,16 @@ SUB StatusScreen
 						CASE 0  '- USE
 							UseItem selected
 						CASE 1  '- LOOK
-							LD2.PlaySound sfxSELECT2
+							LD2_PlaySound sfxSELECT2
 							Look selected
 						CASE 2  '- MIX
                             mixMode = 1
                             mixItem = selected
 						CASE 3  '- Drop
-							LD2.PlaySound sfxDROP
+							LD2_PlaySound sfxDROP
 							Drop selected
-							LD2.RenderFrame
-							LD2.CopyBuffer 0, 2
+							LD2_RenderFrame
+							LD2_CopyBuffer 0, 2
 						END SELECT
 					ELSE
 						action = 0
@@ -641,11 +646,11 @@ SUB StatusScreen
 			e = 1
 		END IF
 		top = -INT(e * e * e * 96)
-		LD2.CopyBuffer 2, 1
-		LD2.fillm 0, top, 320, 96, 66, 1
-		LD2.RefreshScreen
+		LD2_CopyBuffer 2, 1
+		LD2_fillm 0, top, 320, 96, 66, 1
+		LD2_RefreshScreen
 	LOOP WHILE e < 1
-	LD2.RestoreBuffer 2
+	LD2_RestoreBuffer 2
 	
 END SUB
 
@@ -655,70 +660,70 @@ SUB UseItem (item AS InventoryType)
 
     SELECT CASE item.id
     CASE NOTHING
-        msg = Inventory.GetFailMsg$(item.id)
-        LD2.PlaySound sfxDenied
+        msg = Inventory_GetFailMsg(item.id)
+        LD2_PlaySound sfxDenied
     CASE MEDIKIT50
-        IF LD2.LifeAtMax% THEN
-            msg = Inventory.GetFailMsg$(item.id)
-            LD2.PlaySound sfxDenied
-        ELSE
-            LD2.AddAmmo -1, 50
-            msg = Inventory.GetSuccessMsg$(item.id)
-        END IF
+        'IF LD2_LifeAtMax% THEN
+        '    msg = Inventory_GetFailMsg$(item.id)
+        '    LD2_PlaySound sfxDenied
+        'ELSE
+        '    LD2_AddAmmo -1, 50
+        '    msg = Inventory_GetSuccessMsg$(item.id)
+        'END IF
     CASE MEDIKIT100
-        IF LD2.LifeAtMax% THEN
-            msg = Inventory.GetFailMsg$(item.id)
-            LD2.PlaySound sfxDenied
-        ELSE
-            LD2.AddAmmo -1, 100 '- change to LD2.AddLife MEDIKIT100AMT
-            msg = Inventory.GetSuccessMsg$(item.id)
-        END IF
-        msg = Inventory.GetSuccessMsg$(item.id)
+        'IF LD2_LifeAtMax% THEN
+        '    msg = Inventory_GetFailMsg$(item.id)
+        '    LD2_PlaySound sfxDenied
+        'ELSE
+        '    LD2_AddAmmo -1, 100 '- change to LD2_AddLife MEDIKIT100AMT
+        '    msg = Inventory_GetSuccessMsg$(item.id)
+        'END IF
+        'msg = Inventory_GetSuccessMsg$(item.id)
     CASE GRENADE
     CASE SHELLS
-        'IF LD2.AmmoAtMax%(SHOTGUN) THEN
-        '    msg = Inventory.GetSuccessMsg$(item.id)
-        '    LD2.PlaySound sfxDenied
+        'IF LD2_AmmoAtMax%(SHOTGUN) THEN
+        '    msg = Inventory_GetSuccessMsg$(item.id)
+        '    LD2_PlaySound sfxDenied
         'ELSE
-        '    LD2.AddAmmo SHOTGUN, 4 '- change to LD2.AddAmmo SHOTGUN, SHELLSQTY
-            msg = Inventory.GetSuccessMsg$(item.id)
+        '    LD2_AddAmmo SHOTGUN, 4 '- change to LD2_AddAmmo SHOTGUN, SHELLSQTY
+            msg = Inventory_GetSuccessMsg(item.id)
         'END IF
     CASE BULLETS
-        msg = Inventory.GetSuccessMsg$(item.id)
+        msg = Inventory_GetSuccessMsg(item.id)
     CASE DEAGLES
-        msg = Inventory.GetSuccessMsg$(item.id)
+        msg = Inventory_GetSuccessMsg(item.id)
     CASE GREENCARD
-        msg = Inventory.GetFailMsg$(item.id)
-        LD2.PlaySound sfxDenied
+        msg = Inventory_GetFailMsg(item.id)
+        LD2_PlaySound sfxDenied
     CASE BLUECARD
-        msg = Inventory.GetFailMsg$(item.id)
-        LD2.PlaySound sfxDenied
+        msg = Inventory_GetFailMsg(item.id)
+        LD2_PlaySound sfxDenied
     CASE YELLOWCARD
-        msg = Inventory.GetFailMsg$(item.id)
-        LD2.PlaySound sfxDenied
+        msg = Inventory_GetFailMsg(item.id)
+        LD2_PlaySound sfxDenied
     CASE REDCARD
-        msg = Inventory.GetFailMsg$(item.id)
-        LD2.PlaySound sfxDenied
+        msg = Inventory_GetFailMsg(item.id)
+        LD2_PlaySound sfxDenied
     CASE SHOTGUN
-        LD2.SetWeapon1(SHOTGUN)
-        LD2.SetWeapon 1
-        msg = Inventory.GetSuccessMsg$(item.id)
+        LD2_SetWeapon1(SHOTGUN)
+        LD2_SetWeapon 1
+        msg = Inventory_GetSuccessMsg(item.id)
     CASE MACHINEGUN
-        LD2.SetWeapon1(MACHINEGUN)
-        LD2.SetWeapon 1
-        msg = Inventory.GetSuccessMsg$(item.id)
+        LD2_SetWeapon1(MACHINEGUN)
+        LD2_SetWeapon 1
+        msg = Inventory_GetSuccessMsg(item.id)
     CASE PISTOL
-        LD2.SetWeapon1(PISTOL)
-        LD2.SetWeapon 1
-        msg = Inventory.GetSuccessMsg$(item.id)
+        LD2_SetWeapon1(PISTOL)
+        LD2_SetWeapon 1
+        msg = Inventory_GetSuccessMsg(item.id)
     CASE DESERTEAGLE
-        LD2.SetWeapon1(DESERTEAGLE)
-        LD2.SetWeapon 1
-        msg = Inventory.GetSuccessMsg$(item.id)
+        LD2_SetWeapon1(DESERTEAGLE)
+        LD2_SetWeapon 1
+        msg = Inventory_GetSuccessMsg(item.id)
     CASE EXTRALIFE
-        LD2.AddLives 1
-        'LD2.PlaySound sfxPowerUp
-        msg = Inventory.GetSuccessMsg$(item.id)
+        LD2_AddLives 1
+        'LD2_PlaySound sfxPowerUp
+        msg = Inventory_GetSuccessMsg(item.id)
 	END SELECT
     
     ShowResponse msg
@@ -729,13 +734,14 @@ SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
     
     DIM msg AS STRING
     DIM resultId AS INTEGER
+    dim nil as integer
     
-    resultId = Inventory.Mix%(item0.id, item1.id, msg)
+    resultId = Inventory_Mix(item0.id, item1.id, msg)
     
     IF resultId <> -1 THEN
-        LD2.ClearInventorySlot item0.slot
-        LD2.ClearInventorySlot item1.slot
-        nil% = LD2.AddToStatus%(resultId, 1)
+        LD2_ClearInventorySlot item0.slot
+        LD2_ClearInventorySlot item1.slot
+        nil = LD2_AddToStatus(resultId, 1)
         RefreshStatusScreen
     END IF
     
@@ -750,15 +756,16 @@ SUB ShowResponse (response AS STRING)
     DIM top AS INTEGER
     DIM lft AS INTEGER
     DIM text AS STRING
+    dim canExit as integer
     
     w = 6: h = 6
     lft = w * 21
     top = h * 13 - 1
 
     FOR i = 1 TO LEN(response)
-        LD2.fillm lft, top, 320-(w*21), h + 1, 66, 1
-        LD2.PutTextCol lft+1, top+1, LEFT$(response, i), 15, 1
-        LD2.RefreshScreen
+        LD2_fillm lft, top, 320-(w*21), h + 1, 66, 1
+        LD2_PutTextCol lft+1, top+1, LEFT(response, i), 15, 1
+        LD2_RefreshScreen
         'WaitSeconds 0.05
     NEXT i
 
@@ -768,9 +775,9 @@ SUB ShowResponse (response AS STRING)
         ELSE
             text = response + "_"
         END IF
-        LD2.fillm lft, top, 320-(w*21), h + 1, 66, 1
-        LD2.PutTextCol lft+1, top+1, text, 15, 1
-        LD2.RefreshScreen
+        LD2_fillm lft, top, 320-(w*21), h + 1, 66, 1
+        LD2_PutTextCol lft+1, top+1, text, 15, 1
+        LD2_RefreshScreen
         IF canExit = 0 THEN
             IF keyboard(&H1C) = 0 THEN
                 canExit = 1

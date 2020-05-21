@@ -1,3 +1,5 @@
+#pragma once
+#inclib "status"
 #include once "INC\INVENTRY.BI"
 
 TYPE tFloor

@@ -1,4 +1,4 @@
-REM $INCLUDE: 'INC\SCENE.BI'
+#include once "INC\SCENE.BI"
 
 '======================
 '= PRIVATE MEMBERS
@@ -17,19 +17,19 @@ DIM SHARED SceneData AS SceneType
 '= END PRIVATE MEMBERS
 '======================
 
-FUNCTION SCENE.GetSpeakerDialogue$
+FUNCTION SCENE_GetSpeakerDialogue() as string
     
-    SCENE.GetSpeakerDialogue$ = SceneData.speakerDialogue
-    
-END FUNCTION
-
-FUNCTION SCENE.GetSpeakerId$
-    
-    SCENE.GetSpeakerId$ = SceneData.speakerId
+    return SceneData.speakerDialogue
     
 END FUNCTION
 
-FUNCTION SCENE.Init% (label AS STRING)
+FUNCTION SCENE_GetSpeakerId() as string
+    
+    return SceneData.speakerId
+    
+END FUNCTION
+
+FUNCTION SCENE_Init (label AS STRING) as integer
     
     DIM found AS INTEGER
     DIM row AS STRING
@@ -41,7 +41,7 @@ FUNCTION SCENE.Init% (label AS STRING)
         
     LINE INPUT #SceneData.FileId, row
     
-    row = UCASE$(LTRIM$(RTRIM$(row)))
+    row = UCASE(LTRIM(RTRIM(row)))
     IF row = label THEN
         found = 1
         EXIT DO
@@ -53,11 +53,11 @@ FUNCTION SCENE.Init% (label AS STRING)
         CLOSE SceneData.FileId
     END IF
     
-    SCENE.Init% = found
+    return found
     
 END FUNCTION
 
-FUNCTION SCENE.ReadLine%
+FUNCTION SCENE_ReadLine() as integer
     
     DIM SceneFile AS INTEGER
     DIM row AS STRING
@@ -66,9 +66,9 @@ FUNCTION SCENE.ReadLine%
     DO WHILE NOT EOF(SceneData.FileId)
     
         LINE INPUT #SceneData.FileId, row
-        row = LTRIM$(RTRIM$(row))
+        row = LTRIM(RTRIM(row))
         
-        SELECT CASE UCASE$(row)
+        SELECT CASE UCASE(row)
         CASE "NARRATOR", "LARRY", "STEVE", "BARNEY", "JANITOR", "TROOPER"
             SetSpeakerId row
         CASE "END"
@@ -87,7 +87,7 @@ FUNCTION SCENE.ReadLine%
         CLOSE SceneData.FileId
     END IF
     
-    SCENE.ReadLine% = found
+    return found
     
 END FUNCTION
 

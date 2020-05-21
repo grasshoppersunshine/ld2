@@ -1,4 +1,7 @@
-TYPE tPlayer    
+#pragma once
+#inclib "ld2e"
+
+TYPE tPlayer
   life AS INTEGER
   x AS DOUBLE
   y AS DOUBLE

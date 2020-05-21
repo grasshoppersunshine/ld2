@@ -48,6 +48,7 @@
   #include once "INC\KEYS.BI"
   #include once "INC\STATUS.BI"
   #include once "INC\SCENE.BI"
+  #include once "SDL2/SDL.bi"
   
   TYPE PoseType
 	id AS INTEGER
@@ -375,6 +376,8 @@ SUB Main
   dim KeyInput as string
   dim PlayerIsRunning as integer
   
+  dim event as SDL_Event
+  
   fm = 0
   
   '- Create random roof code
@@ -389,6 +392,13 @@ SUB Main
 		LD2_SetFlag FADEIN
 		LD2_ClearFlag MAPISLOADED
 	END IF
+    
+    while( SDL_PollEvent( @event ) )
+        select case event.type
+        case SDL_QUIT_
+            exit do
+        end select
+    wend
     
 	LD2_ProcessEntities
 	LD2_RenderFrame
@@ -1969,6 +1979,7 @@ SUB Start
     
     CLS
     PRINT "Larry the Dinosaur II v1.0.22"
+    
     WaitSeconds 0.5
     
     LD2_Init
@@ -2002,6 +2013,8 @@ SUB Start
         'TITLE.Ad
         'TITLE.AdTwo
     END IF
+    
+    IF LD2_isDebugMode() THEN LD2_Debug "Starting game..."
     
     CurrentRoom = 14
     LD2_SetRoom CurrentRoom

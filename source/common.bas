@@ -1,51 +1,31 @@
-REM $INCLUDE: 'INC\COMMON.BI'
+#include once "INC/COMMON.BI"
+#include once "SDL2/SDL.bi"
 
-'- try program with just keyboard() and setmem()
-DEFINT A-Z
-FUNCTION keyboard (T%)
-STATIC kbcontrol%(), kbmatrix%(), Firsttime, StatusFlag
-IF Firsttime = 0 THEN
- DIM kbcontrol%(128)
- DIM kbmatrix%(128)
- code$ = ""
- code$ = code$ + "E91D00E93C00000000000000000000000000000000000000000000000000"
- code$ = code$ + "00001E31C08ED8BE24000E07BF1400FCA5A58CC38EC0BF2400B85600FAAB"
- code$ = code$ + "89D8ABFB1FCB1E31C08EC0BF2400BE14000E1FFCFAA5A5FB1FCBFB9C5053"
- code$ = code$ + "51521E560657E460B401A8807404B400247FD0E088C3B700B0002E031E12"
- code$ = code$ + "002E8E1E100086E08907E4610C82E661247FE661B020E6205F075E1F5A59"
- code$ = code$ + "5B589DCF"
- DEF SEG = VARSEG(kbcontrol%(0))
- FOR i% = 0 TO 155
- d% = VAL("&h" + MID$(code$, i% * 2 + 1, 2))
- POKE VARPTR(kbcontrol%(0)) + i%, d%
- NEXT i%
- i& = 16
- n& = VARSEG(kbmatrix%(0)): l& = n& AND 255: h& = ((n& AND &HFF00) \ 256): POKE i&, l&: POKE i& + 1, h&: i& = i& + 2
- n& = VARPTR(kbmatrix%(0)): l& = n& AND 255: h& = ((n& AND &HFF00) \ 256): POKE i&, l&: POKE i& + 1, h&: i& = i& + 2
- DEF SEG
- Firsttime = 1
-END IF
-SELECT CASE T
- CASE 1 TO 128
- keyboard = kbmatrix%(T)
- CASE -1
- IF StatusFlag = 0 THEN
- DEF SEG = VARSEG(kbcontrol%(0))
- CALL ABSOLUTE(0)
- DEF SEG
- StatusFlag = 1
- END IF
- CASE -2
- IF StatusFlag = 1 THEN
- DEF SEG = VARSEG(kbcontrol%(0))
- CALL ABSOLUTE(3)
- DEF SEG
- StatusFlag = 0
- END IF
- CASE ELSE
- keyboard = 0
-END SELECT
-END FUNCTION
+dim shared EventQuit as integer
+
+function keyboard(code as integer) as integer
+    
+    dim keys as const ubyte ptr
+    
+    keys = SDL_GetKeyboardState(0)
+    
+    select case code
+        case &h08: code = SDL_SCANCODE_TAB
+        case &h13: code = SDL_SCANCODE_RETURN
+        'case &h13: code = SDL_SCANCODE_KP_ENTER
+        case &h27: code = SDL_SCANCODE_ESCAPE
+        case &h39: code = SDL_SCANCODE_SPACE
+        case &h02: code = SDL_SCANCODE_1
+        case &h03: code = SDL_SCANCODE_2
+        case &h04: code = SDL_SCANCODE_3
+        case &h4f: code = SDL_SCANCODE_KP_1
+        case &h50: code = SDL_SCANCODE_KP_2
+        case &h51: code = SDL_SCANCODE_KP_3
+    end select
+    
+    return keys[code]
+    
+end function
 
 SUB logdebug(message AS STRING)
     
@@ -56,24 +36,24 @@ SUB logdebug(message AS STRING)
     
     '- check if file exists first !!!
     IF message = "!debugstart!" THEN
-        message  = DATE$+" "+TIME$+" START DEBUG SESSION"
+        message  = DATE+" "+TIME+" START DEBUG SESSION"
         lastTime = TIMER
         
         logFile = FREEFILE
         OPEN "debug.log" FOR APPEND AS logFile
-            WRITE #logFile, STRING$(72, "=")
-            WRITE #logFile, "= "+SPACE$(70)
+            WRITE #logFile, STRING(72, "=")
+            WRITE #logFile, "= "+SPACE(70)
             WRITE #logFile, "= "+message
-            WRITE #logFile, "= "+SPACE$(70)
-            WRITE #logFile, STRING$(72, "=")
+            WRITE #logFile, "= "+SPACE(70)
+            WRITE #logFile, STRING(72, "=")
         CLOSE logFile
     ELSE
-        timeStr  = STR$(TIMER-lastTime)
+        timeStr  = left(STR(TIMER-lastTime), 8)
         lastTime = TIMER
-        IF LEFT$(timeStr, 1) = "." THEN
+        IF LEFT(timeStr, 1) = "." THEN
             timeStr = "0"+timeStr
         END IF
-        message  = timeStr+SPACE$(15-LEN(timeStr))+message
+        message  = timeStr+SPACE(12-LEN(timeStr))+message
         
         logFile = FREEFILE
         OPEN "debug.log" FOR APPEND AS logFile
@@ -86,27 +66,54 @@ END SUB
 SUB WaitSeconds (seconds AS DOUBLE)
     
     DIM endtime AS DOUBLE
+    dim event as SDL_Event
     
     endtime = TIMER + seconds
     
-    WHILE TIMER < endtime: WEND
+    WHILE TIMER < endtime
+        while( SDL_PollEvent( @event ) )
+            select case event.type
+            case SDL_QUIT_
+                exit while
+            end select
+        wend
+    WEND
     
 END SUB
 
-FUNCTION WaitSecondsUntilKey% (seconds AS DOUBLE)
+FUNCTION WaitSecondsUntilKey (seconds AS DOUBLE) as integer
     
     DIM endtime AS DOUBLE
+    dim event as SDL_Event
     
     endtime = TIMER + seconds
     
     DO WHILE TIMER < endtime
+        while( SDL_PollEvent( @event ) )
+            select case event.type
+            case SDL_QUIT_
+                exit do
+            end select
+        wend
         IF keyboard(&h39) THEN
-            WaitSecondsUntilKey% = 1
+            return 1
             EXIT FUNCTION
         END IF
     LOOP
     
-    WaitSecondsUntilKey% = 0
+    return 0
     
 END FUNCTION
 
+sub PullEvents()
+    
+    dim event as SDL_Event
+    
+    while( SDL_PollEvent( @event ) )
+        select case event.type
+        case SDL_QUIT_
+            EventQuit = 1
+        end select
+    wend
+
+end sub

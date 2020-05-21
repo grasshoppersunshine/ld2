@@ -1,14 +1,14 @@
 '- Intro Title and options screen
 '--------------------------------
 
-REM $INCLUDE: 'INC\COMMON.BI'
-REM $INCLUDE: 'INC\LD2GFX.BI'
-REM $INCLUDE: 'INC\LD2SND.BI'
-REM $INCLUDE: 'INC\LD2E.BI'
-REM $INCLUDE: 'INC\LD2.BI'
-REM $INCLUDE: 'INC\TITLE.BI'
+#include once "INC\COMMON.BI"
+#include once "INC\LD2GFX.BI"
+#include once "INC\LD2SND.BI"
+#include once "INC\LD2E.BI"
+#include once "INC\LD2.BI"
+#include once "INC\TITLE.BI"
 
-'inc\ld2.bi -- only needed for music ids
+'inc\LD2_bi -- only needed for music ids
 'inc\ld2e.bi -- only needed for text put (and setflag)
 TYPE TextType
     text AS STRING*40
@@ -19,7 +19,7 @@ TYPE TextType
     doFadeOut AS INTEGER
 END TYPE
 
-SUB TITLE.EndDemo
+SUB TITLE_EndDemo
 
 '  DIM Message(10) AS STRING
 '
@@ -31,111 +31,121 @@ SUB TITLE.EndDemo
 '
 '  DO: LOOP WHILE keyboard(&H39)
 '  
-'  LD2.PopText "End of Demo"
-'  LD2.PopText "Thanks for playing"
+'  LD2_PopText "End of Demo"
+'  LD2_PopText "Thanks for playing"
 '
-'  LD2.ShutDown
+'  LD2_ShutDown
 
 END SUB
 
-SUB TITLE.Opening
+SUB TITLE_Opening
+    
+    IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Opening"
     
     DIM msg AS STRING
     
-    CLS
+    LD2_cls
     
-    LD2.LoadBitmap "gfx\warning.bmp", 1, -1
-    LD2.ZeroPalette
-    LD2.RefreshScreen
-    LD2.FadeIn 2
-    IF WaitSecondsUntilKey%(4.0) THEN
-        LD2.FadeOut 3, -1
+    LD2_LoadBitmap "gfx\warning.bmp", 1, -1
+    LD2_ZeroPalette
+    LD2_RefreshScreen
+    LD2_FadeIn 2
+    IF WaitSecondsUntilKey(4.0) THEN
+        LD2_FadeOut 3, -1
     ELSE
-        LD2.FadeOut 2, -1
+        LD2_FadeOut 2, -1
     END IF
     
-    CLS
+    LD2_cls
     
-    IF WaitSecondsUntilKey%(1.0) THEN
+    IF WaitSecondsUntilKey(1.0) THEN
       EXIT SUB
     END IF
     
-    LD2.CLS 1, 0
-    LD2.LoadPalette "gfx\gradient.pal"
+    LD2_CLS 1, 0
+    LD2_LoadPalette "gfx\gradient.pal"
     msg = "D E L T A   C O D E   P R E S E N T S"
-    LD2.PutTextCol ((320 - LEN(msg) * 6) / 2), 60, msg, 31, 1
-    LD2.ZeroPalette
-    LD2.RefreshScreen
-    LD2.FadeIn 1
-    IF WaitSecondsUntilKey%(1.5) THEN
-        LD2.FadeOut 3, 0
+    LD2_PutTextCol ((320 - LEN(msg) * 6) / 2), 60, msg, 31, 1
+    LD2_ZeroPalette
+    LD2_RefreshScreen
+    LD2_FadeIn 1
+    IF WaitSecondsUntilKey(1.5) THEN
+        LD2_FadeOut 3, 0
     ELSE
-        LD2.FadeOut 1, 0
+        LD2_FadeOut 1, 0
     END IF
     
-    CLS
+    LD2_cls
     
 END SUB
 
-SUB TITLE.Menu
+SUB TITLE_Menu
     
-    CLS
-    'LD2.PlayMusic mscMARCHoftheUHOH
+    IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Menu"
+    
+    LD2_cls
+    'LD2_PlayMusic mscMARCHoftheUHOH
     'i% = WaitSecondsUntilKey%(1.0)
     
-    LD2.LoadBitmap "gfx\title.bmp", 1, -1
-    LD2.ZeroPalette
-    LD2.RefreshScreen
-    LD2.FadeIn 3
+    LD2_LoadBitmap "gfx\title.bmp", 1, -1
+    'LD2_ZeroPalette
+    LD2_RefreshScreen
+    'LD2_FadeIn 3
     
-    'LD2.PlayMusic mscTHEME
+    'LD2_PlayMusic mscTHEME
     
     DO
+        PullEvents
         IF keyboard(&H2) OR keyboard(&H4F) THEN
           '- shatter glass
-          '- LD2.PlayMusic mscTHEME
+          '- LD2_PlayMusic mscTHEME
           EXIT DO
         END IF
         IF keyboard(&H3) OR keyboard(&H50) THEN
-          LD2.PlaySound sfxSELECT
+          LD2_PlaySound sfxSELECT
           WaitSeconds 0.3333
-          LD2.FadeOut 3, -1
-          TITLE.ShowCredits
-          CLS
-          LD2.LoadBitmap "gfx\title.bmp", 1, -1
-          LD2.ZeroPalette
-          LD2.RefreshScreen
-          LD2.FadeIn 3
+          LD2_FadeOut 3, -1
+          TITLE_ShowCredits
+          LD2_cls
+          LD2_LoadBitmap "gfx\title.bmp", 1, -1
+          LD2_ZeroPalette
+          LD2_RefreshScreen
+          LD2_FadeIn 3
         END IF
         IF keyboard(&H4) OR keyboard(&H51) THEN
-          LD2.SetFlag EXITGAME
+          LD2_SetFlag EXITGAME
           EXIT DO
         END IF
     LOOP
-    LD2.PlaySound sfxSELECT
+    LD2_PlaySound sfxSELECT
     WaitSeconds 0.3333
-    LD2.FadeOut 3, -1
-    CLS
-    LD2.StopMusic
+    LD2_FadeOut 3, -1
+    LD2_cls
+    LD2_StopMusic
     
-    IF LD2.HasFlag%(EXITGAME) THEN
-        TITLE.Goodbye
+    IF LD2_HasFlag(EXITGAME) THEN
+        TITLE_Goodbye
     END IF
     
 END SUB
 
-SUB TITLE.Intro
+SUB TITLE_Intro
+  
+  IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Intro"
   
   DIM File AS INTEGER
   DIM text AS STRING
+  dim x as integer
+  dim y as integer
+  dim n as integer
   
-  LD2.CLS 0, 16
+  LD2_CLS 0, 16
   
-  LD2.LoadPalette "gfx\gradient.pal"
+  LD2_LoadPalette "gfx\gradient.pal"
   
-  LD2.PlayMusic mscINTRO
-  IF WaitSecondsUntilKey%(1.5) THEN
-    LD2.FadeOutMusic
+  LD2_PlayMusic mscINTRO
+  IF WaitSecondsUntilKey(1.5) THEN
+    LD2_FadeOutMusic
     EXIT SUB
   END IF
   
@@ -146,101 +156,103 @@ SUB TITLE.Intro
     
     LINE INPUT #File, text
     
-    LD2.CLS 1, 16
-    FOR y% = 1 TO 8
+    LD2_CLS 1, 16
+    FOR y = 1 TO 8
  
-      LD2.PutText ((320 - LEN(text) * 6) / 2), 60, text, 1
+      LD2_PutText ((320 - LEN(text) * 6) / 2), 60, text, 1
 
-      FOR n% = 1 TO 9 - y%
-        FOR x% = 1 TO 20
-          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
-          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
-        NEXT x%
-      NEXT n%
+      FOR n = 1 TO 9 - y
+        FOR x = 1 TO 20
+          LD2_put (x * 16 - 16), 60, 1, idLIGHT, 0
+          LD2_put (x * 16 - 16), 60, 1, idLIGHT, 0
+        NEXT x
+      NEXT n
 
-      LD2.RefreshScreen
-      IF WaitSecondsUntilKey%(0.3333) THEN EXIT DO
+      LD2_RefreshScreen
+      IF WaitSecondsUntilKey(0.3333) THEN EXIT DO
 
-    NEXT y%
+    NEXT y
  
-    IF WaitSecondsUntilKey%(3.3333) THEN EXIT DO
+    IF WaitSecondsUntilKey(3.3333) THEN EXIT DO
 
-    FOR y% = 1 TO 8
+    FOR y = 1 TO 8
 
-      LD2.PutText ((320 - LEN(text) * 6) / 2), 60, text, 1
+      LD2_PutText ((320 - LEN(text) * 6) / 2), 60, text, 1
 
-      FOR n% = 1 TO y%
-        FOR x% = 1 TO 20
-          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
-          LD2.put (x% * 16 - 16), 60, 1, idLIGHT, 0
-        NEXT x%
-      NEXT n%
+      FOR n = 1 TO y
+        FOR x = 1 TO 20
+          LD2_put (x * 16 - 16), 60, 1, idLIGHT, 0
+          LD2_put (x * 16 - 16), 60, 1, idLIGHT, 0
+        NEXT x
+      NEXT n
 
-      LD2.RefreshScreen
-      IF WaitSecondsUntilKey%(0.3333) THEN EXIT DO
+      LD2_RefreshScreen
+      IF WaitSecondsUntilKey(0.3333) THEN EXIT DO
      
-    NEXT y%
-
-    i% = i% + 1
+    NEXT y
 
   LOOP
   
   CLOSE File
   
-  LD2.FadeOutMusic
+  LD2_FadeOutMusic
 
 END SUB
 
-SUB TITLE.ShowCredits
+SUB TITLE_ShowCredits
+  
+  IF LD2_isDebugMode() THEN LD2_Debug "TITLE_ShowCredits"
   
   DIM File AS INTEGER
   DIM text AS STRING
   DIM y AS INTEGER
  
-  CLS
-  LD2.CLS 1, 0
-  LD2.LoadPalette "gfx\gradient.pal"
+  LD2_cls
+  LD2_CLS 1, 0
+  LD2_LoadPalette "gfx\gradient.pal"
 
   text = "Larry The Dinosaur II - October, 2002 - Delta Code"
-  LD2.PutText ((320 - LEN(text) * 6) / 2), 4, text, 1
+  LD2_PutText ((320 - LEN(text) * 6) / 2), 4, text, 1
 
   y = 30
   File = FREEFILE
   OPEN "tables/credits.txt" FOR INPUT AS File
   DO WHILE NOT EOF(File)
     LINE INPUT #File, text
-    LD2.PutText 40, y, text, 1
+    LD2_PutText 40, y, text, 1
     y = y + 10
   LOOP
   CLOSE File
   
   text = "Press Space To Continue"
-  LD2.PutText ((320 - LEN(text) * 6) / 2), 144, text, 1
+  LD2_PutText ((320 - LEN(text) * 6) / 2), 144, text, 1
   
-  LD2.ZeroPalette
-  LD2.RefreshScreen
-  LD2.FadeIn 3
+  LD2_ZeroPalette
+  LD2_RefreshScreen
+  LD2_FadeIn 3
  
   DO: LOOP UNTIL keyboard(&H39)
   
-  LD2.PlaySound sfxSELECT
+  LD2_PlaySound sfxSELECT
   WaitSeconds 0.3333
-  LD2.FadeOut 3, 0
+  LD2_FadeOut 3, 0
 
 END SUB
 
-SUB TITLE.Ad
+SUB TITLE_Ad
  
   DIM Message(10) AS STRING
   DIM textColor AS INTEGER
   DIM backColor AS INTEGER
+  dim i as integer
+  dim n as integer
   
   textColor = 57
   backColor = 48
   
-  LD2.CLS 0, backColor
-  LD2.LoadPalette "gfx\gradient.pal"
-  LD2.FadeOut 1, backColor
+  LD2_CLS 0, backColor
+  LD2_LoadPalette "gfx\gradient.pal"
+  LD2_FadeOut 1, backColor
   
   Message(1) = "This Fall"
   Message(2) = "Stay away from the vending machines" '- longer time
@@ -253,95 +265,104 @@ SUB TITLE.Ad
   Message(9) = ""
   Message(10) = "Smell ya later"
   
-  LD2.PlayMusic mscWANDERING
-  IF WaitSecondsUntilKey%(5.5) = 0 THEN
-      FOR i% = 1 TO 11
+  LD2_PlayMusic mscWANDERING
+  IF WaitSecondsUntilKey(5.5) = 0 THEN
+      FOR i = 1 TO 11
 
-        LD2.cls 1, backColor
+        LD2_cls 1, backColor
         
-        IF (i% < 6) OR (i% > 7) THEN
-          LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), textColor, 1
+        IF (i < 6) OR (i > 7) THEN
+          LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 60, Message(i), textColor, 1
         END IF
-        IF i% = 6 THEN
-          LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), textColor, 1
+        IF i = 6 THEN
+          LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 60, Message(i), textColor, 1
         END IF
-        IF i% = 7 THEN
-          LD2.PutTextCol ((320 - LEN(Message(i%-1)) * 6) / 2), 60, Message(i%-1), textColor, 1
-          FOR n% = 32 TO 40
-            LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 76, Message(i%), n%, 1
-            LD2.RefreshScreen
+        IF i = 7 THEN
+          LD2_PutTextCol ((320 - LEN(Message(i-1)) * 6) / 2), 60, Message(i-1), textColor, 1
+          FOR n = 32 TO 40
+            LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 76, Message(i), n, 1
+            LD2_RefreshScreen
             WaitSeconds 0.10
-          NEXT n%
+          NEXT n
         END IF
         
-        LD2.RefreshScreen
-        IF i% <> 7 THEN
-            LD2.FadeIn 1
+        LD2_RefreshScreen
+        IF i <> 7 THEN
+            LD2_FadeIn 1
         END IF
         
-        IF WaitSecondsUntilKey%(4.0) THEN EXIT SUB
+        IF WaitSecondsUntilKey(4.0) THEN EXIT SUB
         
-        IF i% <> 6 THEN
-            LD2.FadeOut 1, backColor
+        IF i <> 6 THEN
+            LD2_FadeOut 1, backColor
         END IF
         
         IF WaitSecondsUntilKey(1.5) THEN EXIT SUB
         
-    NEXT i%
+    NEXT i
   END IF
   
-  LD2.FadeOutMusic
-  LD2.CLS 0, backColor
-  LD2.RestorePalette
+  LD2_FadeOutMusic
+  LD2_CLS 0, backColor
+  LD2_RestorePalette
   
 END SUB
 
-SUB TITLE.TheEnd
+SUB TITLE_TheEnd
     
-    LD2.PlayMusic mscENDING
-    LD2.PopText "THE END"
-    TITLE.ShowCredits
+    IF LD2_isDebugMode() THEN LD2_Debug "TITLE_TheEnd"
+    
+    LD2_PlayMusic mscENDING
+    LD2_PopText "THE END"
+    TITLE_ShowCredits
     
 END SUB
 
-SUB TITLE.Goodbye
+SUB TITLE_Goodbye
+    
+    IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Goodbye"
     
     DIM msg AS STRING
+    dim i as integer
     
-    CLS
-    i% = WaitSecondsUntilKey%(0.1)
+    LD2_cls
+    i = WaitSecondsUntilKey(0.1)
     
-    LD2.CLS 1, 0
-    LD2.LoadPalette "gfx\gradient.pal"
+    LD2_CLS 1, 0
+    LD2_LoadPalette "gfx\gradient.pal"
     msg = "G O O D   B Y E"
-    LD2.PutTextCol ((320 - LEN(msg) * 6) / 2), 60, msg, 31, 1
-    LD2.ZeroPalette
-    LD2.RefreshScreen
-    LD2.FadeIn 3
-    IF WaitSecondsUntilKey%(0.25) THEN
-        LD2.FadeOut 3, 0
+    LD2_PutTextCol ((320 - LEN(msg) * 6) / 2), 60, msg, 31, 1
+    LD2_ZeroPalette
+    LD2_RefreshScreen
+    LD2_FadeIn 3
+    IF WaitSecondsUntilKey(0.25) THEN
+        LD2_FadeOut 3, 0
     ELSE
-        LD2.FadeOut 3, 0
+        LD2_FadeOut 3, 0
     END IF
     
-    CLS
+    LD2_cls
     
-    i% = WaitSecondsUntilKey%(0.1)
+    i = WaitSecondsUntilKey(0.1)
     
 END SUB
 
-SUB TITLE.AdTwo
+SUB TITLE_AdTwo
     
   DIM Message(5) AS STRING
   DIM textColor AS INTEGER
   DIM backColor AS INTEGER
+  dim x as single
+  dim a as single
+  dim i as integer
+  dim n as integer
   
   textColor = 40
   backColor = 32
   
-  LD2.CLS 0, backColor
-  LD2.LoadPalette "gfx\gradient.pal"
-  LD2.FadeOut 1, backColor
+  LD2_CLS 0, backColor
+  LD2_LoadPalette "gfx\gradient.pal"
+  LD2_FadeOut 1, backColor
   
   Message(1) = "Horrible things will happen"
   Message(2) = "L A R R Y   T H E   D I N O S A U R   I I"
@@ -349,103 +370,103 @@ SUB TITLE.AdTwo
   Message(4) = ""
   Message(5) = "I'll tell you what's mad..."
   
-  LD2.PlayMusic mscWANDERING
-  IF WaitSecondsUntilKey%(5.5) = 0 THEN
+  LD2_PlayMusic mscWANDERING
+  IF WaitSecondsUntilKey(5.5) = 0 THEN
       
-      a! = 0
-      FOR x! = 70 TO 120 STEP 1
-        LD2.cls 1, backColor
-        LD2.Put INT(x!), 90, (7+(INT(a!) AND 1)), idScene, 0
-        LD2.RefreshScreen
+      a = 0
+      FOR x = 70 TO 120 STEP 1
+        LD2_cls 1, backColor
+        LD2_Put INT(x), 90, (7+(INT(a) AND 1)), idScene, 0
+        LD2_RefreshScreen
         WaitSeconds 0.10
-        a! = a! + .2
-        IF x! = 70 THEN
-          LD2.FadeIn 1
+        a = a + .2
+        IF x = 70 THEN
+          LD2_FadeIn 1
         END IF
-      NEXT x!
+      NEXT x
       
-      'LD2.FadeOut 1, backColor
+      'LD2_FadeOut 1, backColor
       
-      a! = 0
-      FOR x! = 120 TO 170 STEP 1
-        LD2.cls 1, backColor
-        LD2.Put INT(x!), 90, (9+(INT(a!) AND 1)), idScene, 0
-        LD2.RefreshScreen
+      a = 0
+      FOR x = 120 TO 170 STEP 1
+        LD2_cls 1, backColor
+        LD2_Put INT(x), 90, (9+(INT(a) AND 1)), idScene, 0
+        LD2_RefreshScreen
         WaitSeconds 0.10
-        a! = a! + .2
-        IF x! = 120 THEN
-          LD2.FadeIn 1
+        a = a + .2
+        IF x = 120 THEN
+          LD2_FadeIn 1
         END IF
-      NEXT x!
+      NEXT x
       
-      LD2.FadeOut 1, backColor
+      LD2_FadeOut 1, backColor
       
       'a! = 0
       'FOR x! = 120 TO 170 STEP 1
-      '  LD2.cls 1, backColor
-      '  LD2.Put 100, 90, (34+(INT(a!) AND 1)), idScene, 0
-      '  LD2.RefreshScreen
+      '  LD2_cls 1, backColor
+      '  LD2_Put 100, 90, (34+(INT(a!) AND 1)), idScene, 0
+      '  LD2_RefreshScreen
       '  WaitSeconds 0.10
       '  a! = a! + .2
       '  IF x! = 120 THEN
-      '    LD2.FadeIn 1
+      '    LD2_FadeIn 1
       '  END IF
       'NEXT x!
       '
-      'LD2.FadeOut 1, backColor
+      'LD2_FadeOut 1, backColor
       '
       'a! = 0
       'FOR x! = 150 TO 100 STEP -1
-      '  LD2.cls 1, backColor
-      '  LD2.Put INT(x!), 90, (46+(INT(a!) AND 1)), idScene, 0
-      '  LD2.RefreshScreen
+      '  LD2_cls 1, backColor
+      '  LD2_Put INT(x!), 90, (46+(INT(a!) AND 1)), idScene, 0
+      '  LD2_RefreshScreen
       '  WaitSeconds 0.10
       '  a! = a! + .2
       '  IF x! = 150 THEN
-      '    LD2.FadeIn 1
+      '    LD2_FadeIn 1
       '  END IF
       'NEXT x!
       '
-      'LD2.FadeOut 1, backColor
+      'LD2_FadeOut 1, backColor
       
-      FOR i% = 1 TO 5
+      FOR i = 1 TO 5
 
-        LD2.cls 1, backColor
+        LD2_cls 1, backColor
         
-        IF (i% < 2) OR (i% > 3) THEN
-          LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), textColor, 1
+        IF (i < 2) OR (i > 3) THEN
+          LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 60, Message(i), textColor, 1
         END IF
-        IF i% = 2 THEN
-          LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 60, Message(i%), 57, 1
+        IF i = 2 THEN
+          LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 60, Message(i), 57, 1
         END IF
-        IF i% = 3 THEN
-          LD2.PutTextCol ((320 - LEN(Message(i%-1)) * 6) / 2), 60, Message(i%-1), 57, 1
-          FOR n% = 32 TO 40
-            LD2.PutTextCol ((320 - LEN(Message(i%)) * 6) / 2), 76, Message(i%), n%, 1
-            LD2.RefreshScreen
+        IF i = 3 THEN
+          LD2_PutTextCol ((320 - LEN(Message(i-1)) * 6) / 2), 60, Message(i-1), 57, 1
+          FOR n = 32 TO 40
+            LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 76, Message(i), n, 1
+            LD2_RefreshScreen
             WaitSeconds 0.10
-          NEXT n%
+          NEXT n
         END IF
         
-        LD2.RefreshScreen
-        IF i% <> 3 THEN
-            LD2.FadeIn 1
+        LD2_RefreshScreen
+        IF i <> 3 THEN
+            LD2_FadeIn 1
         END IF
         
-        IF WaitSecondsUntilKey%(4.0) THEN EXIT SUB
+        IF WaitSecondsUntilKey(4.0) THEN EXIT SUB
         
-        IF i% <> 2 THEN
-            LD2.FadeOut 1, backColor
+        IF i <> 2 THEN
+            LD2_FadeOut 1, backColor
         END IF
         
         IF WaitSecondsUntilKey(1.5) THEN EXIT SUB
         
-    NEXT i%
+    NEXT i
   END IF
   
-  LD2.FadeOutMusic
-  LD2.CLS 0, backColor
-  LD2.RestorePalette
+  LD2_FadeOutMusic
+  LD2_CLS 0, backColor
+  LD2_RestorePalette
     
 END SUB
 

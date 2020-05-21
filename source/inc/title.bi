@@ -1,3 +1,6 @@
+#pragma once
+#inclib "title"
+
 DECLARE SUB TITLE_EndDemo ()
 DECLARE SUB TITLE_GoodBye ()
 DECLARE SUB TITLE_Intro ()

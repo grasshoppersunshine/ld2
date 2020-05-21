@@ -1,3 +1,6 @@
+#pragma once
+#inclib "inventry"
+
 TYPE InventoryType
   id AS INTEGER
   qty AS INTEGER
