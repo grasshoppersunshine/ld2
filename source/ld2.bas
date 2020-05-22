@@ -145,7 +145,21 @@
   Start
   END
 
-'REM $STATIC
+sub GlobalControls()
+    
+    if keyboard(KEY_ESCAPE) then
+    end if
+    
+    if keyboard(KEY_M) and keyboard(KEY_RSHIFT) then
+        if LD2_GetMusicVolume > 0 then
+            LD2_FadeOutMusic 5
+        else
+            LD2_FadeInMusic 5
+        end if
+    end if
+    
+end sub
+
 SUB AddPose (pose AS PoseType)
     
     dim n as integer
@@ -224,16 +238,17 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING) as integer
 		LD2_RefreshScreen
 		
         IF keyboard(&H39) THEN EXIT FOR
-		IF keyboard(1) THEN escapeFlag = 1: EXIT FOR
+		IF keyboard(KEY_ESCAPE) THEN escapeFlag = 1: EXIT FOR
 		RetraceDelay 1
         
 	NEXT n
 
 	DO
-		IF keyboard(1) THEN escapeFlag = 1: EXIT DO
+        PullEvents
+		IF keyboard(KEY_ESCAPE) THEN escapeFlag = 1: EXIT DO
 	LOOP UNTIL keyboard(&H39)
 
-	DO: LOOP WHILE keyboard(1)
+	WaitForKeyup(KEY_ESCAPE)
     
     renderPose.isSpeaking = 0: UpdatePose renderPose, renderPose
     CharacterSpeak = escapeFlag
@@ -376,8 +391,6 @@ SUB Main
   dim KeyInput as string
   dim PlayerIsRunning as integer
   
-  dim event as SDL_Event
-  
   fm = 0
   
   '- Create random roof code
@@ -386,6 +399,7 @@ SUB Main
 	RoofCode = RoofCode + STR(n)
   NEXT i
   'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
+  
   DO
     
     IF LD2_HasFlag(MAPISLOADED) THEN
@@ -393,12 +407,7 @@ SUB Main
 		LD2_ClearFlag MAPISLOADED
 	END IF
     
-    while( SDL_PollEvent( @event ) )
-        select case event.type
-        case SDL_QUIT_
-            exit do
-        end select
-    wend
+    PullEvents
     
 	LD2_ProcessEntities
 	LD2_RenderFrame
@@ -534,48 +543,40 @@ SUB Main
 	LD2_CountFrame
    
 	PlayerIsRunning = 0
-	IF keyboard(1) THEN LD2_SetFlag EXITGAME '- go to pause menu
-	IF keyboard(&H4D) THEN LD2_MovePlayer 1: PlayerIsRunning = 1
-	IF keyboard(&H4B) THEN LD2_MovePlayer -1: PlayerIsRunning = 1
-	IF keyboard(&H38) OR keyboard(&H48) THEN LD2_JumpPlayer 1.5
-	IF keyboard(&H1D) OR keyboard(&H10) THEN LD2_Shoot
-	IF keyboard(&H2) THEN LD2_SetWeapon 1
-	IF keyboard(&H3) THEN LD2_SetWeapon 3
-	'IF keyboard(&H3D) THEN LD2_SetWeapon 3
-	IF keyboard(&H19) OR keyboard(&H50) THEN LD2_PickUpItem
-	IF keyboard(&H26) THEN
+	IF keyboard(KEY_ESCAPE) THEN LD2_SetFlag EXITGAME '- go to pause menu
+	IF keyboard(KEY_RIGHT) THEN LD2_MovePlayer  1: PlayerIsRunning = 1
+	IF keyboard(KEY_LEFT ) THEN LD2_MovePlayer -1: PlayerIsRunning = 1
+	IF keyboard(KEY_UP   ) OR keyboard(KEY_ALT) THEN LD2_JumpPlayer 1.5
+    IF keyboard(KEY_DOWN ) OR keyboard(KEY_P  ) THEN LD2_PickUpItem
+	IF keyboard(KEY_CTRL ) OR keyboard(KEY_Q  ) THEN LD2_Shoot
+	IF keyboard(KEY_1) THEN LD2_SetWeapon 1
+	IF keyboard(KEY_2) THEN LD2_SetWeapon 3
+    
+	IF keyboard(KEY_L) THEN
 	  LD2_SwapLighting
-	  DO: LOOP WHILE keyboard(&H26)
+	  WaitForKeyup(KEY_L)
 	END IF
-	'IF keyboard(&H2F) THEN
-	'  IF Retrace = 1 THEN
-	'	Retrace = 0
-	'  ELSE
-	'	Retrace = 1
-	'  END IF
-	'  DO: LOOP WHILE keyboard(&H2F)
-	'END IF
 
-	IF keyboard(&HF) AND LD2_AtElevator = 0 THEN StatusScreen
-	IF keyboard(&HF) AND LD2_AtElevator = 1 THEN EStatusScreen CurrentRoom
+	IF keyboard(KEY_TAB) AND LD2_AtElevator = 0 THEN StatusScreen
+	IF keyboard(KEY_TAB) AND LD2_AtElevator = 1 THEN EStatusScreen CurrentRoom
 
 	IF EnteringCode AND KeyCount < 4 THEN
-	  IF keyboard(&H2) THEN KeyInput = KeyInput + " 1": DO: LOOP WHILE keyboard(&H2): KeyCount = KeyCount + 1
-	  IF keyboard(&H3) THEN KeyInput = KeyInput + " 2": DO: LOOP WHILE keyboard(&H3): KeyCount = KeyCount + 1
-	  IF keyboard(&H4) THEN KeyInput = KeyInput + " 3": DO: LOOP WHILE keyboard(&H4): KeyCount = KeyCount + 1
-	  IF keyboard(&H5) THEN KeyInput = KeyInput + " 4": DO: LOOP WHILE keyboard(&H5): KeyCount = KeyCount + 1
-	  IF keyboard(&H6) THEN KeyInput = KeyInput + " 5": DO: LOOP WHILE keyboard(&H6): KeyCount = KeyCount + 1
-	  IF keyboard(&H7) THEN KeyInput = KeyInput + " 6": DO: LOOP WHILE keyboard(&H7): KeyCount = KeyCount + 1
-	  IF keyboard(&H8) THEN KeyInput = KeyInput + " 7": DO: LOOP WHILE keyboard(&H8): KeyCount = KeyCount + 1
-	  IF keyboard(&H9) THEN KeyInput = KeyInput + " 8": DO: LOOP WHILE keyboard(&H9): KeyCount = KeyCount + 1
-	  IF keyboard(&HA) THEN KeyInput = KeyInput + " 9": DO: LOOP WHILE keyboard(&HA): KeyCount = KeyCount + 1
-	  IF keyboard(&HB) THEN KeyInput = KeyInput + " 0": DO: LOOP WHILE keyboard(&HB): KeyCount = KeyCount + 1
+	  IF keyboard(KEY_1) THEN KeyInput = KeyInput + " 1": WaitForKeyup(KEY_1): KeyCount = KeyCount + 1
+	  IF keyboard(KEY_2) THEN KeyInput = KeyInput + " 2": WaitForKeyup(KEY_2): KeyCount = KeyCount + 1
+	  IF keyboard(KEY_3) THEN KeyInput = KeyInput + " 3": WaitForKeyup(KEY_3): KeyCount = KeyCount + 1
+	  IF keyboard(KEY_4) THEN KeyInput = KeyInput + " 4": WaitForKeyup(KEY_4): KeyCount = KeyCount + 1
+	  IF keyboard(KEY_5) THEN KeyInput = KeyInput + " 5": WaitForKeyup(KEY_5): KeyCount = KeyCount + 1
+	  IF keyboard(KEY_6) THEN KeyInput = KeyInput + " 6": WaitForKeyup(KEY_6): KeyCount = KeyCount + 1
+	  IF keyboard(KEY_7) THEN KeyInput = KeyInput + " 7": WaitForKeyup(KEY_7): KeyCount = KeyCount + 1
+	  IF keyboard(KEY_8) THEN KeyInput = KeyInput + " 8": WaitForKeyup(KEY_8): KeyCount = KeyCount + 1
+	  IF keyboard(KEY_9) THEN KeyInput = KeyInput + " 9": WaitForKeyup(KEY_9): KeyCount = KeyCount + 1
+	  IF keyboard(KEY_0) THEN KeyInput = KeyInput + " 0": WaitForKeyup(KEY_0): KeyCount = KeyCount + 1
 	  IF KeyCount >= 4 THEN
 		KeyCount = 200
 	  END IF
 	END IF
 
-	IF PlayerIsRunning = 0 THEN LD2_SetPlayerlAni 21 '- legs still/standing/not-moving
+	if PlayerIsRunning = 0 then LD2_SetPlayerlAni 21 '- legs still/standing/not-moving
 
 	IF LD2_HasFlag(BOSSKILLED) THEN
 		IF CurrentRoom = ROOFTOP AND RoofScene = 0 THEN
@@ -651,10 +652,7 @@ END SUB
 
 SUB RetraceDelay (qty AS INTEGER)
 	
-	DIM n AS INTEGER
-	FOR n = 0 TO qty - 1
-		WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-	NEXT n
+	WaitSeconds qty/60
 	
 END SUB
 
@@ -697,152 +695,156 @@ SUB Scene1 (skip AS INTEGER)
 	LD2_RefreshScreen
 
 	IF LD2_isDebugMode() THEN LD2_Debug "LD2_PlayMusic"
-	LD2_PlayMusic mscWANDERING
+    LD2_SetMusic mscWANDERING
+	LD2_FadeInMusic 5.0
 	
     dim escaped as integer
     dim x as integer
 
     DO
 
-	IF skip THEN EXIT DO
-    
-    WaitSeconds 3.0
+        IF skip THEN EXIT DO
+        
+        WaitSeconds 3.0
 
-    IF SCENE_Init("SCENE-1A") THEN
-        DO WHILE SCENE_ReadLine()
-            escaped = DoDialogue(): IF escaped THEN EXIT DO
-        LOOP
-    END IF
-	LD2_WriteText ""
+        IF SCENE_Init("SCENE-1A") THEN
+            DO WHILE SCENE_ReadLine()
+                escaped = DoDialogue(): IF escaped THEN EXIT DO
+            LOOP
+        END IF
+        LD2_WriteText ""
 
-    '- Steve walks to soda machine
-    FOR x = 124 TO 152
-        LD2_RenderFrame
-        LD2_put x, StevePose.y, 12, idSCENE, 0
-        LD2_put x, StevePose.y, 14 + (x MOD 6), idSCENE, 0
+        '- Steve walks to soda machine
+        FOR x = 124 TO 152
+            LD2_RenderFrame
+            LD2_put x, StevePose.y, 12, idSCENE, 0
+            LD2_put x, StevePose.y, 14 + (x MOD 6), idSCENE, 0
 
-        LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
-        LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
+            LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
+            LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
 
-        RetraceDelay 3
+            RetraceDelay 3
 
-        LD2_RefreshScreen
+            LD2_RefreshScreen
 
-        IF keyboard(1) THEN ExitScene = 1: EXIT FOR
-    NEXT x
+            PullEvents
+            IF keyboard(KEY_ESCAPE) THEN ExitScene = 1: EXIT FOR
+        NEXT x
 
-    IF ExitScene THEN DO: LOOP WHILE keyboard(1): EXIT DO
+        IF ExitScene THEN WaitForKeyup(KEY_ESCAPE): EXIT DO
 
-    StevePose.x = 152
+        StevePose.x = 152
 
-    RetraceDelay 40
+        RetraceDelay 40
 
-    IF SCENE_Init("SCENE-1B") THEN
-        DO WHILE SCENE_ReadLine()
-            escaped = DoDialogue(): IF escaped THEN EXIT DO
-        LOOP
-    END IF
-    LD2_WriteText ""
+        IF SCENE_Init("SCENE-1B") THEN
+            DO WHILE SCENE_ReadLine()
+                escaped = DoDialogue(): IF escaped THEN EXIT DO
+            LOOP
+        END IF
+        LD2_WriteText ""
 
-    '- Steve kicks the soda machine
-    FOR x = 19 TO 22
+        '- Steve kicks the soda machine
+        FOR x = 19 TO 22
+            LD2_RenderFrame
+            LD2_put StevePose.x, StevePose.y, 12, idSCENE, 1
+            LD2_put StevePose.x, StevePose.y, x, idSCENE, 1
+
+            LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
+            LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
+
+            RetraceDelay 19
+
+            LD2_RefreshScreen
+
+            PullEvents
+            IF keyboard(KEY_ESCAPE) THEN ExitScene = 1: EXIT FOR
+        NEXT x
+
+        IF ExitScene THEN WaitForKeyup(KEY_ESCAPE): EXIT DO
+
+        '- Steve bends down and gets a soda
+        FOR x = 23 TO 24
+            LD2_RenderFrame
+            LD2_put StevePose.x, StevePose.y + 3, 12, idSCENE, 1
+            LD2_put StevePose.x, StevePose.y, x, idSCENE, 1
+
+            LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
+            LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
+
+            RetraceDelay 19
+
+            LD2_RefreshScreen
+
+            PullEvents
+            IF keyboard(KEY_ESCAPE) THEN ExitScene = 1: EXIT FOR
+        NEXT x
+
+        IF ExitScene THEN WaitForKeyup(KEY_ESCAPE): EXIT DO
+
         LD2_RenderFrame
         LD2_put StevePose.x, StevePose.y, 12, idSCENE, 1
-        LD2_put StevePose.x, StevePose.y, x, idSCENE, 1
+        LD2_put StevePose.x, StevePose.y, 25, idSCENE, 1
 
         LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
         LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
 
-        RetraceDelay 19
-
         LD2_RefreshScreen
 
-        IF keyboard(1) THEN ExitScene = 1: EXIT FOR
-    NEXT x
+        RetraceDelay 20
 
-	IF ExitScene THEN DO: LOOP WHILE keyboard(1): EXIT DO
+        IF SCENE_Init("SCENE-1C") THEN
+            DO WHILE SCENE_ReadLine()
+                escaped = DoDialogue(): IF escaped THEN EXIT DO
+            LOOP
+        END IF
 
-    '- Steve bends down and gets a soda
-    FOR x = 23 TO 24
+        StevePose.x = 174
+
         LD2_RenderFrame
-        LD2_put StevePose.x, StevePose.y + 3, 12, idSCENE, 1
-        LD2_put StevePose.x, StevePose.y, x, idSCENE, 1
+        LD2_put StevePose.x - 2, StevePose.y + 2, 12, idSCENE, 1
+        LD2_put StevePose.x, StevePose.y, 26, idSCENE, 1
 
-        LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
+        LD2_put LarryPose.x, LarryPose.y, 1, idSCENE, 0
         LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
-
-        RetraceDelay 19
 
         LD2_RefreshScreen
 
-        IF keyboard(1) THEN ExitScene = 1: EXIT FOR
-    NEXT x
+        RetraceDelay 80
 
-	IF ExitScene THEN DO: LOOP WHILE keyboard(1): EXIT DO
+        IF SCENE_Init("SCENE-1D") THEN
+            DO WHILE SCENE_ReadLine()
+                escaped = DoDialogue(): IF escaped THEN EXIT DO
+            LOOP
+        END IF
+        LD2_WriteText ""
 
-	LD2_RenderFrame
-	LD2_put StevePose.x, StevePose.y, 12, idSCENE, 1
-	LD2_put StevePose.x, StevePose.y, 25, idSCENE, 1
+        LD2_RenderFrame
+        LD2_put StevePose.x, StevePose.y, 27, idSCENE, 1
 
-	LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
-	LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
+        LD2_put LarryPose.x, LarryPose.y, 1, idSCENE, 0
+        LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
 
-	LD2_RefreshScreen
+        LD2_RefreshScreen
 
-	RetraceDelay 20
+        RetraceDelay 80
 
-    IF SCENE_Init("SCENE-1C") THEN
-        DO WHILE SCENE_ReadLine()
-            escaped = DoDialogue(): IF escaped THEN EXIT DO
-        LOOP
-    END IF
+        IF SCENE_Init("SCENE-1E") THEN
+            DO WHILE SCENE_ReadLine()
+                escaped = DoDialogue(): IF escaped THEN EXIT DO
+            LOOP
+        END IF
+        LD2_WriteText ""
+        WaitForKeyup(&H39) '- change to waitsecondsuntilkey
 
-	StevePose.x = 174
+        'The Journey Begins...Again!!
+        'IF SCENE_Init("SCENE-1F") THEN
+        '    DO WHILE SCENE_ReadLine()
+        '        escaped = DoDialogue(): IF escaped THEN EXIT DO
+        '    LOOP
+        'END IF
 
-	LD2_RenderFrame
-	LD2_put StevePose.x - 2, StevePose.y + 2, 12, idSCENE, 1
-	LD2_put StevePose.x, StevePose.y, 26, idSCENE, 1
-
-	LD2_put LarryPose.x, LarryPose.y, 1, idSCENE, 0
-	LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
-
-	LD2_RefreshScreen
-
-	RetraceDelay 80
-
-    IF SCENE_Init("SCENE-1D") THEN
-        DO WHILE SCENE_ReadLine()
-            escaped = DoDialogue(): IF escaped THEN EXIT DO
-        LOOP
-    END IF
-	LD2_WriteText ""
-
-	LD2_RenderFrame
-	LD2_put StevePose.x, StevePose.y, 27, idSCENE, 1
-
-	LD2_put LarryPose.x, LarryPose.y, 1, idSCENE, 0
-	LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
-
-	LD2_RefreshScreen
-
-	RetraceDelay 80
-
-    IF SCENE_Init("SCENE-1E") THEN
-        DO WHILE SCENE_ReadLine()
-            escaped = DoDialogue(): IF escaped THEN EXIT DO
-        LOOP
-    END IF
-	LD2_WriteText ""
-	DO: LOOP WHILE keyboard(&H39) '- change to waitsecondsuntilkey
-
-    'The Journey Begins...Again!!
-    'IF SCENE_Init("SCENE-1F") THEN
-    '    DO WHILE SCENE_ReadLine()
-    '        escaped = DoDialogue(): IF escaped THEN EXIT DO
-    '    LOOP
-    'END IF
-
-	EXIT DO
+        EXIT DO
 
 	LOOP WHILE 0
 

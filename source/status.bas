@@ -114,6 +114,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		LD2_CopyBuffer 2, 1
 		LD2_fillm lft, 0, 156, 200, 66, 1
 		LD2_RefreshScreen
+        PullEvents
 	LOOP WHILE e < 1
 	
 	DO
@@ -165,6 +166,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		NEXT i
 		
 		LD2_RefreshScreen
+        PullEvents
 		
 		IF canExit = 0 THEN
 			IF keyboard(&HF) = 0 THEN
@@ -229,7 +231,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		
 	LOOP
 	
-	DO: LOOP WHILE keyboard(&HF)
+	WaitForKeyup(&hf) 'DO: LOOP WHILE keyboard(&HF)
 	
 	easeTimer = TIMER
 	e = 0
@@ -244,6 +246,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		LD2_CopyBuffer 2, 1
 		LD2_fillm lft, 0, 156, 200, 66, 1
 		LD2_RefreshScreen
+        PullEvents
 	LOOP WHILE e < 1
 	LD2_RestoreBuffer 2
 	
@@ -264,7 +267,7 @@ SUB Look (item AS InventoryType)
 
 	DIM desc AS STRING
 	DIM chunk AS STRING
-	DIM word AS STRING
+	DIM theword AS STRING
 	DIM char AS STRING
     dim n as integer
     dim canExit as integer
@@ -298,13 +301,13 @@ SUB Look (item AS InventoryType)
 				FOR n = LEN(chunk) TO 1 STEP -1
 					char = MID(chunk, n, 1)
 					IF char <> " " THEN
-						word = char + word
+						theword = char + theword
 					ELSE
 						EXIT FOR
 					END IF
 				NEXT n
-				desc = word + desc
-				chunk = LEFT(chunk, LEN(chunk) - LEN(word))
+				desc = theword + desc
+				chunk = LEFT(chunk, LEN(chunk) - LEN(theword))
 				chunk = RTRIM(chunk)
 			END IF
 			
@@ -316,6 +319,7 @@ SUB Look (item AS InventoryType)
 	LD2_RefreshScreen
 	
 	DO
+        PullEvents
 		IF canExit = 0 THEN
 			IF keyboard(&H1C) = 0 THEN
 				canExit = 1
@@ -409,6 +413,7 @@ SUB StatusScreen
 		LD2_CopyBuffer 2, 1
 		LD2_fillm 0, top, 320, 96, 66, 1
 		LD2_RefreshScreen
+        PullEvents
 	LOOP WHILE e < 1
     
     DIM player AS tPlayer
@@ -531,6 +536,7 @@ SUB StatusScreen
 		END IF
 		
 		LD2_RefreshScreen
+        PullEvents
 
 		IF canExit = 0 THEN
 			IF keyboard(&HF) = 0 THEN
@@ -649,6 +655,7 @@ SUB StatusScreen
 		LD2_CopyBuffer 2, 1
 		LD2_fillm 0, top, 320, 96, 66, 1
 		LD2_RefreshScreen
+        PullEvents
 	LOOP WHILE e < 1
 	LD2_RestoreBuffer 2
 	
@@ -778,6 +785,7 @@ SUB ShowResponse (response AS STRING)
         LD2_fillm lft, top, 320-(w*21), h + 1, 66, 1
         LD2_PutTextCol lft+1, top+1, text, 15, 1
         LD2_RefreshScreen
+        PullEvents
         IF canExit = 0 THEN
             IF keyboard(&H1C) = 0 THEN
                 canExit = 1

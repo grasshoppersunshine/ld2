@@ -11,23 +11,24 @@ args(1)  = "mobs.bas       -lib -x lib/libmobs.a"
 args(2)  = "inventry.bas   -lib -x lib/libinventry.a"
 args(3)  = "sdlgfx.bas     -lib -x lib/libsdlgfx.a"
 args(4)  = "ld2gfx.bas     -lib -x lib/libld2gfx.a"
-args(5)  = "ld2snd.bas     -lib -x lib/libld2snd.a"
+args(5)  = "sdlsnd.bas     -lib -x lib/libsdlsnd.a"
+args(6)  = "ld2snd.bas     -lib -x lib/libld2snd.a"
 
 print "Building independent modules..."
 dim i as integer
 dim percent as double
 dim s as string
-for i = 0 to 5
+for i = 0 to 6
     if shell(pathToFbc+" "+args(i)) = -1 then
         print "ERROR while running fbc with: "+args(i)
     else
-        percent = (i/5)
+        percent = (i/6)
         s = "["
         s += string(int(percent*25), "=")
         s += string(25-int(percent*25), " ")
         s += "] "
-        s += str(int(percent*100))+"%"
-        print s+chr(13);
+        s += str(int(percent*100))+"% "
+        print s+left(args(i), 12)+chr(13);
     end if
 next i
 

@@ -10,6 +10,7 @@
   #include once "INC\TITLE.BI"
   #include once "INC\MOBS.BI"
   #include once "inc/sdlgfx.bi" '- TODO -- get rid of this
+  #include once "inc/keys.bi"
   
   TYPE tGuts
     x AS SINGLE
@@ -130,11 +131,10 @@
   DECLARE SUB LoadSprites (filename AS STRING, BufferNum AS INTEGER)
   DECLARE SUB DeleteMob (mob AS Mobile)
   DECLARE SUB MakeSparks (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTEGER)
-  DECLARE SUB MixTiles (spriteSeg AS INTEGER, lightSeg AS INTEGER, tileMapSeg AS INTEGER, mixMapSeg AS INTEGER, lightMapSeg1 AS INTEGER, lightMapSeg2 AS INTEGER)
+  DECLARE SUB MixTiles ()
   DECLARE SUB OpenDoor (id AS INTEGER)
   DECLARE SUB ProcessDoors ()
   DECLARE SUB RefreshPlayerAccess ()
-  DECLARE SUB RotatePalette ()
   DECLARE SUB SaveItems (filename AS STRING)
   DECLARE SUB SetFloor (x AS INTEGER, y AS INTEGER, blocked AS INTEGER)
   DECLARE SUB SetPlayerState (state AS INTEGER)
@@ -192,6 +192,7 @@
     dim shared PaletteFile as string
     PaletteFile = "gfx\gradient.pal"
     
+    dim shared LightPalette as Palette256
     
   
   REDIM SHARED TileMap  (0,0) AS INTEGER
@@ -318,6 +319,15 @@ SUB LD2_SetLives (Amount AS INTEGER)
   NumLives = Amount
   
 END SUB
+
+SUB AddSound (id AS INTEGER, filepath AS STRING, loopsound AS INTEGER = 0)
+    
+    IF LD2_isDebugMode() THEN LD2_Debug "AddCount ("+STR(id)+", "+filepath+","+STR(loopsound)+" )"
+    
+    LD2_AddSound id, filepath, loopsound
+    
+END SUB
+
 
 SUB AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
     
@@ -793,11 +803,22 @@ SUB LD2_Init
 
     LD2_InitSound 1
     
-    AddMusic mscTHEME, "sound\theme.gdm", 0
-    AddMusic mscWANDERING, "sound\wander.gdm", 1
-    AddMusic mscINTRO, "sound\intro.gdm", 1
+    AddMusic mscTITLE, "sound\title.ogg", 1
+    AddMusic mscTHEME, "sound\theme.ogg", 0
+    AddMusic mscWANDERING, "sound\creepy.ogg", 1
+    AddMusic mscINTRO, "sound\intro.ogg", 0
     AddMusic mscUHOH, "sound\uhoh.gdm", 0
     AddMusic mscMARCHoftheUHOH, "sound\scent.gdm", 0
+    
+    AddSound sfxSELECT, "sound/select.wav"
+    AddSound sfxGLASS, "sound/glassbreak.wav"
+    AddSound sfxAHHHH, "sound/scream.wav"
+    AddSound sfxEQUIP, "sound/equip.wav"
+    AddSound sfxSLURP, "sound/slurp.wav"
+    
+    AddSound sfxPUNCH, "sound/punch.wav"
+    AddSound sfxJUMP , "sound/jump.wav"
+    AddSound sfxSTEP , "sound/step.wav"
     
   ELSE
     
@@ -809,11 +830,15 @@ SUB LD2_Init
   LD2_InitVideo 1, "Larry the Dinosaur 2"
   LD2_LoadPalette PaletteFile
   
+  for i = 0 to 11
+    LightPalette.setRGBA(i, 0, 0, 0, iif(i*54 < 255, i*54, 255))
+  next i
+  
   PRINT "Loading sprites..."
   WaitSeconds 0.3333
   
   LoadSprites LarryFile  , idLARRY  
-  'LoadSprites TilesFile  , idTILE
+  LoadSprites TilesFile  , idTILE
   LoadSprites LightFile  , idLIGHT
   LoadSprites EnemiesFile, idENEMY
   LoadSprites GutsFile   , idGUTS
@@ -923,6 +948,7 @@ SUB LD2_JumpPlayer (Amount AS SINGLE)
   IF CheckPlayerFloorHit() AND Player.velocity >= 0 THEN
     Player.velocity = -Amount
     Player.y = Player.y + Player.velocity*DELAYMOD
+    LD2_PlaySound sfxJUMP
   END IF
   
   SetPlayerState( JUMPING )
@@ -999,7 +1025,7 @@ SUB LD2_LoadMap (Filename AS STRING)
   IF LD2_isDebugMode() THEN LD2_Debug "LD2_LoadMap ( "+filename+" )"
   
   DIM Message AS STRING
-  DIM bufferSeg AS INTEGER
+  'DIM bufferSeg AS INTEGER
   DIM loadedSprites(120) AS INTEGER
   DIM numLoadedSprites AS INTEGER
   dim did as integer
@@ -1135,25 +1161,26 @@ SUB LD2_LoadMap (Filename AS STRING)
         FOR x = 0 TO 200
           GET #MapFile, c, _byte: c = c + 1
           IF x < MAPW THEN
-            found = 0
-            FOR n = 0 TO numLoadedSprites-1
-                IF loadedSprites(n) = ASC(_byte) THEN
-                    'DEF SEG = VARSEG(TileMap(0))
-                    'POKE (x + y * MAPW), n
-                    'DEF SEG
-                    TileMap(x, y) = n
-                    found = 1
-                    EXIT FOR
-                END IF
-            NEXT n
-            IF found = 0 THEN
-                loadedSprites(numLoadedSprites) = ASC(_byte)
-                'DEF SEG = VARSEG(TileMap(0))
-                'POKE (x + y * MAPW), numLoadedSprites
-                'DEF SEG
-                TileMap(x, y) = numLoadedSprites
-                numLoadedSprites = numLoadedSprites + 1
-            END IF
+            TileMap(x, y) = asc(_byte) 'int(rnd(1)*20) 'asc(_byte)
+            'found = 0
+            'FOR n = 0 TO numLoadedSprites-1
+            '    IF loadedSprites(n) = ASC(_byte) THEN
+            '        'DEF SEG = VARSEG(TileMap(0))
+            '        'POKE (x + y * MAPW), n
+            '        'DEF SEG
+            '        TileMap(x, y) = n
+            '        found = 1
+            '        EXIT FOR
+            '    END IF
+            'NEXT n
+            'IF found = 0 THEN
+            '    loadedSprites(numLoadedSprites) = ASC(_byte)
+            '    'DEF SEG = VARSEG(TileMap(0))
+            '    'POKE (x + y * MAPW), numLoadedSprites
+            '    'DEF SEG
+            '    TileMap(x, y) = numLoadedSprites
+            '    numLoadedSprites = numLoadedSprites + 1
+            'END IF
           END IF
           IF ASC(_byte) = 14 THEN
             Player.y = y * 16: XShift = x * 16 - (16 * 8)
@@ -1296,37 +1323,38 @@ SUB LD2_LoadMap (Filename AS STRING)
   NEXT i
   
   dim p as integer
+  dim u as ushort
   
   IF LD2_isDebugMode() THEN LD2_Debug "Loading Loaded Sprites"
   DIM FileNo AS INTEGER
   FileNo = FREEFILE
   LD2_Debug "Floor "+Filename+" has"+STR(numLoadedSprites)+" unique tile sprites"
-  REDIM sTile ( (numLoadedSprites+80)*EPS ) AS INTEGER
-  DIM BPS AS INTEGER
-  BPS = 16*16+4
-  OPEN TilesFile FOR BINARY AS FileNo
-  FOR n = 0 TO numLoadedSprites-1
-    TransparentSprites(n) = 0
-    SEEK #FileNo, 8+BPS*loadedSprites(n)
-    p = EPS*n
-    FOR t = 0 TO EPS-1
-      GET #FileNo, , i
-      IF (t > 1) AND (((i AND &hFF) = 0) OR ((i \ &h100) = 0)) THEN
-        TransparentSprites(n) = 1
-      END IF
-      sTile(p+t) = i
-    NEXT t
-  NEXT n
-  CLOSE FileNo
+  'REDIM sTile ( (numLoadedSprites+80)*EPS ) AS INTEGER
+  'DIM BPS AS INTEGER
+  'BPS = 16*16+4
+  'OPEN TilesFile FOR BINARY AS FileNo
+  'FOR n = 0 TO numLoadedSprites-1
+  '  TransparentSprites(n) = 0
+  '  SEEK #FileNo, 8+BPS*loadedSprites(n)
+  '  p = EPS*n
+  '  FOR t = 0 TO EPS-1
+  '    GET #FileNo, , u
+  '    IF (t > 1) AND (((u AND &hFF) = 0) OR ((u \ &h100) = 0)) THEN
+  '      TransparentSprites(n) = 1
+  '    END IF
+  '    'sTile(p+t) = i
+  '  NEXT t
+  'NEXT n
+  'CLOSE FileNo
   IF LD2_isDebugMode() THEN LD2_Debug "Loading Loaded Sprites Done"
   
   NumLoadedTiles = numLoadedSprites
   
-  IF LD2_NotFlag(NOMIX) THEN
-    IF LD2_isDebugMode() THEN LD2_Debug "Mix Tiles Start"
-    'MixTiles VARSEG(sTile(0)), VARSEG(sLight(0)), VARSEG(TileMap(0)), VARSEG(MixMap(0)), VARSEG(LightMap1(0)), VARSEG(LightMap2(0))
-    IF LD2_isDebugMode() THEN LD2_Debug "Mix Tiles Done"
-  ENDIF
+  'IF LD2_NotFlag(NOMIX) THEN
+  '  IF LD2_isDebugMode() THEN LD2_Debug "Mix Tiles Start"
+  '  MixTiles
+  '  IF LD2_isDebugMode() THEN LD2_Debug "Mix Tiles Done"
+  'ENDIF
   
   LD2_SetFlag MAPISLOADED
   
@@ -1343,67 +1371,37 @@ SUB LoadSprites (Filename AS STRING, BufferNum AS INTEGER)
 
     CASE idTILE
 
-      'DEF SEG = VARSEG(sTile(0))
-      '  BLOAD Filename, VARPTR(sTile(0))
-      'DEF SEG
-      SpritesTile.loadPalette(PaletteFile)
-      SpritesTile.load(filename)
+      LD2_InitSprites filename, @SpritesTile, SPRITE_W, SPRITE_H
 
     CASE idENEMY
 
-      'DEF SEG = VARSEG(sEnemy(0))
-      '  BLOAD Filename, VARPTR(sEnemy(0))
-      'DEF SEG
-      SpritesEnemy.loadPalette(PaletteFile)
-      SpritesEnemy.load(filename)
+      LD2_InitSprites filename, @SpritesEnemy, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
 
     CASE idLARRY
 
-      'DEF SEG = VARSEG(sLarry(0))
-      '  BLOAD Filename, VARPTR(sLarry(0))
-      'DEF SEG
-      SpritesLarry.loadPalette(PaletteFile)
-      SpritesLarry.load(filename)
+      LD2_InitSprites filename, @SpritesLarry, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
 
     CASE idGUTS
 
-      'DEF SEG = VARSEG(sGuts(0))
-      '  BLOAD Filename, VARPTR(sGuts(0))
-      'DEF SEG
-      SpritesGuts.loadPalette(PaletteFile)
-      SpritesGuts.load(filename)
+      LD2_InitSprites filename, @SpritesGuts, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
 
     CASE idLIGHT
-
-      'DEF SEG = VARSEG(sLight(0))
-      '  BLOAD Filename, VARPTR(sLight(0))
-      'DEF SEG
-      SpritesLight.loadPalette(PaletteFile)
+    
+      LD2_InitSprites filename, @SpritesLight, SPRITE_W, SPRITE_H
+      SpritesLight.setPalette(@LightPalette)
       SpritesLight.load(filename)
    
     CASE idFONT
 
-      'DEF SEG = VARSEG(sFont(0))
-      '  BLOAD Filename, VARPTR(sFont(0))
-      'DEF SEG
-      SpritesFont.loadPalette(PaletteFile)
-      SpritesFont.load(filename)
+      LD2_InitSprites filename, @SpritesFont, FONT_W, FONT_H, SpriteFlags.Transparent
    
     CASE idSCENE
 
-      'DEF SEG = VARSEG(sScene(0))
-      '  BLOAD Filename, VARPTR(sScene(0))
-      'DEF SEG
-      SpritesScene.loadPalette(PaletteFile)
-      SpritesScene.load(filename)
+      LD2_InitSprites filename, @SpritesScene, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
 
     CASE idOBJECT
 
-      'DEF SEG = VARSEG(sObject(0))
-      '  BLOAD Filename, VARPTR(sObject(0))
-      'DEF SEG
-      SpritesObject.loadPalette(PaletteFile)
-      SpritesObject.load(filename)
+      LD2_InitSprites filename, @SpritesObject, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
  
   END SELECT
 
@@ -1487,6 +1485,8 @@ SUB LD2_MovePlayer (dx AS DOUBLE)
   DIM ex AS DOUBLE
   dim f as double
 
+  static footstep as integer = 0
+
   f = DELAYMOD
   dx = f*dx
   ex = dx*1.0625
@@ -1497,9 +1497,19 @@ SUB LD2_MovePlayer (dx AS DOUBLE)
   IF Player.weapon = FIST THEN
     Player.x    = Player.x + ex
     Player.lAni = Player.lAni + ABS(ex / 7.5)
+    select case footstep
+        case 0
+            if player.lani >= 37 then LD2_PlaySound sfxSTEP: footstep += 1
+        case 1
+            if player.lani >= 41 then LD2_PlaySound sfxSTEP: footstep += 1
+    end select
   ELSE
     Player.x    = Player.x + dx
     Player.lAni = Player.lAni + ABS(dx / 7.5)
+    select case footstep
+        case 0
+            if player.lani >= 23 then LD2_PlaySound sfxSTEP: footstep += 1
+    end select
   END IF
   
   IF CheckPlayerWallHit() THEN
@@ -1546,10 +1556,16 @@ SUB LD2_MovePlayer (dx AS DOUBLE)
     END IF
   
     IF Player.weapon = FIST THEN
-      IF Player.lAni > 21 AND Player.lAni < 36 THEN Player.lAni = 36
-      IF Player.lAni >= 44 THEN Player.lAni = 36
+        IF Player.lAni > 21 AND Player.lAni < 36 THEN Player.lAni = 36
+        if Player.lAni >= 44 then
+            Player.lAni = 36
+            footstep = 0
+        end if
     ELSE
-      IF Player.lAni >= 26 THEN Player.lAni = 22
+        if Player.lAni >= 26 then
+            Player.lAni = 22
+            footstep = 0
+        end if
     END IF
   END IF
   
@@ -1641,12 +1657,14 @@ SUB LD2_PopText (Message AS STRING)
 
     LD2_cls
    
-    DO: LOOP WHILE keyboard(&H39)
+    WaitForKeyup(KEY_SPACE)
 
     LD2_PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
+    
+    LD2_UpdateScreen
    
-    DO: LOOP UNTIL keyboard(&H39)
-    DO: LOOP WHILE keyboard(&H39)
+    WaitForKeydown(KEY_SPACE)
+    WaitForKeyup(KEY_SPACE)
 
 END SUB
 
@@ -2394,85 +2412,77 @@ END SUB
 
 SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, _flip AS INTEGER)
   
-  DIM bufferSeg AS INTEGER
-  
-  'bufferSeg = GetBufferSeg%(1)
+  LD2_SetTargetBuffer 1
   
   SELECT CASE id
 
     CASE idTILE
 
-      'LD2put x - XShift, y, VARSEG(sTile(0)), VARPTR(sTile(EPS * NumSprite)), bufferSeg, _flip
       SpritesTile.putToScreenEx(x - XShift, y, NumSprite, _flip)
 
     CASE idENEMY
 
-      'LD2put x - XShift, y, VARSEG(sEnemy(0)), VARPTR(sEnemy(EPS * NumSprite)), bufferSeg, _flip
       SpritesEnemy.putToScreenEx(x - XShift, y, NumSprite, _flip)
 
     CASE idLARRY
 
-      'LD2put x - XShift, y, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * NumSprite)), bufferSeg, _flip
       SpritesLarry.putToScreenEx(x - XShift, y, NumSprite, _flip)
 
     CASE idGUTS
 
-      'LD2put x - XShift, y, VARSEG(sGuts(0)), VARPTR(sGuts(EPS * NumSprite)), bufferSeg, _flip
       SpritesGuts.putToScreenEx(x - XShift, y, NumSprite, _flip)
 
     CASE idLIGHT
 
-      'LD2putl x - XShift, y, VARSEG(sLight(0)), VARPTR(sLight(EPS * NumSprite)), bufferSeg
       SpritesLight.putToScreenEx(x - XShift, y, NumSprite, _flip)
    
     CASE idFONT
 
-      'LD2putl x - XShift, y, VARSEG(sFont(0)), VARPTR(sFont(17 * NumSprite)), bufferSeg
       SpritesFont.putToScreenEx(x - XShift, y, NumSprite, _flip)
 
     CASE idSCENE
 
-      'LD2put x - XShift, y, VARSEG(sScene(0)), VARPTR(sScene(EPS * NumSprite)), bufferSeg, flip
       SpritesScene.putToScreenEx(x - XShift, y, NumSprite, _flip)
 
     CASE idOBJECT
 
-      'LD2put x - XShift, y, VARSEG(sObject(0)), VARPTR(sObject(EPS * NumSprite)), bufferSeg, flip
       SpritesObject.putToScreenEx(x - XShift, y, NumSprite, _flip)
 
   END SELECT
 
 END SUB
 
-SUB LD2_PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, bufferNum AS INTEGER)
+SUB LD2_putText (x AS INTEGER, y AS INTEGER, Text AS STRING, bufferNum AS INTEGER)
 
   dim n as integer
+  
+  LD2_SetTargetBuffer bufferNum
   
   Text = UCASE(Text)
 
   FOR n = 1 TO LEN(Text)
     IF MID(Text, n, 1) <> " " THEN
-      'LD2_put65c ((n * 6 - 6) + x), y, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Text, n, 1)) - 32))), bufferNum
       SpritesFont.putToScreen((n * 6 - 6) + x, y, ASC(MID(Text, n, 1)) - 32)
     END IF
   NEXT n
 
 END SUB
 
-SUB LD2_PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, bufferNum AS INTEGER)
+sub LD2_putTextCol (x as integer, y as integer, text as string, col as integer, bufferNum as integer)
 
   dim n as integer
   
-  Text = UCASE(Text)
+  LD2_SetTargetBuffer bufferNum
+  
+  text = ucase(text)
+  
+  for n = 1 to len(text)
+    if mid(text, n, 1) <> " " then
+      SpritesFont.putToScreen((n * 6 - 6) + x, y, ASC(MID(text, n, 1)) - 32)
+    end if
+  next n
 
-  FOR n = 1 TO LEN(Text)
-    IF MID(Text, n, 1) <> " " THEN
-      'LD2_putCol65c ((n% * 6 - 6) + x), y, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(Text, n%, 1)) - 32))), col, bufferNum
-      SpritesFont.putToScreen((n * 6 - 6) + x, y, ASC(MID(Text, n, 1)) - 32)
-    END IF
-  NEXT n
-
-END SUB
+end sub
 
 SUB LD2_PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
 
@@ -2514,9 +2524,9 @@ SUB LD2_RenderFrame
 
   'IF LD2_isDebugMode() THEN LD2_Debug "LD2_RenderFrame"
 
-  DIM spriteIdx    AS INTEGER
-  DIM lightIdx     AS INTEGER
-  DIM tempIdx      AS INTEGER
+  'DIM spriteIdx    AS INTEGER
+  'DIM lightIdx     AS INTEGER
+  'DIM tempIdx      AS INTEGER
   'DIM segAniMap    AS INTEGER
   'DIM segTileMap   AS INTEGER
   'DIM segMixMap    AS INTEGER
@@ -2563,45 +2573,45 @@ SUB LD2_RenderFrame
   'DIM skipLight(20) AS INTEGER '// 20 = (24*13)/16(bits) (24bits to hold 20w -- leaving 4bits unused)
   '
   'SetBitmap VARSEG(skipLight(0)), VARPTR(skipLight(0)), 20
-  dim skipLight(20, 13) as integer
+  'dim skipLight(20, 13) as integer
   
   'IF LD2_isDebugMode() THEN LD2_Debug "LD2_RenderFrame -- hole punching for dynamic light"
   
-  DIM mob AS Mobile
-  dim lft as integer
-  dim rgt as integer
-  dim ex as integer
-  dim ey as integer
-  lft = 0
-  rgt = 19
-  Mobs.resetNext
-  DO WHILE Mobs.canGetNext()
-    Mobs.getNext mob
-    ex = INT(mob.x - XShift + (INT(XShift) AND 15)) \ 16
-    ey = INT(mob.y)\16
-    IF (ex >= lft) AND (ex <= rgt) THEN
-      'PokeBitmap (ex%+0), (ey%+0), 1
-      'PokeBitmap (ex%+1), (ey%+0), 1
-      'PokeBitmap (ex%+0), (ey%+1), 1
-      'PokeBitmap (ex%+1), (ey%+1), 1
-      skipLight(ex+0, ey+0) = 1
-      skipLight(ex+1, ey+0) = 1
-      skipLight(ex+0, ey+1) = 1
-      skipLight(ex+1, ey+1) = 1
-    END IF
-  LOOP
-  ex = INT(Player.x + (INT(XShift) AND 15)) \ 16
-  ey = INT(Player.y)\16
-  IF (ex >= lft) AND (ex <= rgt) THEN
-    'PokeBitmap (ex%+0), (ey%+0), 1
-    'PokeBitmap (ex%+1), (ey%+0), 1
-    'PokeBitmap (ex%+0), (ey%+1), 1
-    'PokeBitmap (ex%+1), (ey%+1), 1
-    skipLight(ex+0, ey+0) = 1
-    skipLight(ex+1, ey+0) = 1
-    skipLight(ex+0, ey+1) = 1
-    skipLight(ex+1, ey+1) = 1
-  END IF
+  'DIM mob AS Mobile
+  'dim lft as integer
+  'dim rgt as integer
+  'dim ex as integer
+  'dim ey as integer
+  'lft = 0
+  'rgt = 19
+  'Mobs.resetNext
+  'DO WHILE Mobs.canGetNext()
+  '  Mobs.getNext mob
+  '  ex = INT(mob.x - XShift + (INT(XShift) AND 15)) \ 16
+  '  ey = INT(mob.y)\16
+  '  IF (ex >= lft) AND (ex <= rgt) THEN
+  '    'PokeBitmap (ex%+0), (ey%+0), 1
+  '    'PokeBitmap (ex%+1), (ey%+0), 1
+  '    'PokeBitmap (ex%+0), (ey%+1), 1
+  '    'PokeBitmap (ex%+1), (ey%+1), 1
+  '    skipLight(ex+0, ey+0) = 1
+  '    skipLight(ex+1, ey+0) = 1
+  '    skipLight(ex+0, ey+1) = 1
+  '    skipLight(ex+1, ey+1) = 1
+  '  END IF
+  'LOOP
+  'ex = INT(Player.x + (INT(XShift) AND 15)) \ 16
+  'ey = INT(Player.y)\16
+  'IF (ex >= lft) AND (ex <= rgt) THEN
+  '  'PokeBitmap (ex%+0), (ey%+0), 1
+  '  'PokeBitmap (ex%+1), (ey%+0), 1
+  '  'PokeBitmap (ex%+0), (ey%+1), 1
+  '  'PokeBitmap (ex%+1), (ey%+1), 1
+  '  skipLight(ex+0, ey+0) = 1
+  '  skipLight(ex+1, ey+0) = 1
+  '  skipLight(ex+0, ey+1) = 1
+  '  skipLight(ex+1, ey+1) = 1
+  'END IF
   
   'IF LD2_isDebugMode() THEN LD2_Debug "LD2_RenderFrame -- draw tile map and light map 2"
 
@@ -2628,24 +2638,24 @@ SUB LD2_RenderFrame
       FOR x = 0 TO 20 '// yes, 21 (+1 for hangover when scrolling)
         '// draw mixed/shaded tile or standard tile (that will be shaded later -- because and entity is in its space -- dynamically shade the entity with it later)
         'skipStaticLighting% = PeekBitmap%(x%, y%)
-        skipStaticLighting = skipLight(x, y)
-        IF skipStaticLighting THEN
-          'DEF SEG = segTileMap: m% = PEEK(mt%): DEF SEG
+        'skipStaticLighting = skipLight(x, y)
+        'IF skipStaticLighting THEN
+        '  DEF SEG = segTileMap: m% = PEEK(mt%): DEF SEG
           m = TileMap(mapX, mapY)
-        ELSE
-          'DEF SEG = segMixMap : m% = PEEK(mx%): DEF SEG
-         m = MixMap(mapX, mapY)
-        END IF
-        IF TransparentSprites(m) = 0 THEN
+        'ELSE
+        '  DEF SEG = segMixMap : m% = PEEK(mx%): DEF SEG
+        '  m = MixMap(mapX, mapY)
+        'END IF
+        IF 0 then 'TransparentSprites(m) = 0 THEN
           ''DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
-          a = 0
+          a = (Animation mod (AniMap(mapX, mapY)+1))
           'LD2putf xp, yp, segTile, VARPTR(sTile(EPS * (m + a))), segBuffer1
           SpritesTile.putToScreen(xp, yp, m+a)
         ELSE
           'DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
-          a = 0
+          a = (Animation mod (AniMap(mapX, mapY)+1))
           'LD2put xp%-1, yp%-1, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1, 0
-          SpritesTile.putToScreen(xp-1, yp-1, m+a)
+          SpritesTile.putToScreen(xp, yp, m+a)
           '// background lighting (mostly for windows)
           'DEF SEG = segLightMap2: l% = PEEK(ml%): DEF SEG
           l = LightMap2(mapX, mapY)
@@ -2654,14 +2664,15 @@ SUB LD2_RenderFrame
             SpritesLight.putToScreen(xp, yp, l)
           END IF
         END IF
+        mapX += 1
         xp = xp + 16
         'mt% = mt% + 1
         'mx% = mx% + 1
         'ma% = ma% + 1
         'ml% = ml% + 1
-      NEXT
+      NEXT x
       yp = yp + 16
-    NEXT
+    NEXT y
     'DEF SEG
   ELSE
     yp = 0
@@ -2676,17 +2687,18 @@ SUB LD2_RenderFrame
       FOR x = 0 TO 20
         '// draw mixed/shaded tile or standard tile (that will be shaded later -- because and entity is in its space -- dynamically shade the entity with it later)
         'skipStaticLighting% = PeekBitmap%(x%, y%)
-        skipStaticLighting = skipLight(x, y)
-        IF skipStaticLighting THEN
-          'DEF SEG = segTileMap: m% = PEEK(mt%): DEF SEG
+        'skipStaticLighting = skipLight(x, y)
+        'IF skipStaticLighting THEN
+        '  DEF SEG = segTileMap: m% = PEEK(mt%): DEF SEG
           m = TileMap(mapX, mapY)
-        ELSE
-          'DEF SEG = segMixMap : m% = PEEK(mx%): DEF SEG
-          m = MixMap(mapX, mapY)
-        END IF
+        'ELSE
+        '  DEF SEG = segMixMap : m% = PEEK(mx%): DEF SEG
+        '  m = MixMap(mapX, mapY)
+        '  m = TileMap(mapX, mapY)
+        'END IF
         IF m THEN
           ''DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
-          a = 0
+          a = (Animation mod (AniMap(mapX, mapY)+1))
           ''IF TransparentSprites(m%) THEN
           ''  LD2put xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1, 0
           ''ELSE
@@ -2694,19 +2706,21 @@ SUB LD2_RenderFrame
           SpritesTile.putToScreen(xp, yp, m+a)
           ''END IF
         END IF
+        mapX += 1
         xp = xp + 16
         'mt% = mt% + 1
         'mx% = mx% + 1
         'ma% = ma% + 1
-      NEXT
+      NEXT x
       yp = yp + 16
-    NEXT
+    NEXT y
   END IF
   
   'IF LD2_isDebugMode() THEN LD2_Debug "LD2_RenderFrame -- draw mobs"
  
   '- Draw the entities
   '-------------------
+  DIM mob AS Mobile
   Mobs.resetNext
   DO WHILE Mobs.canGetNext()
     '- TODO: only draw entities in frame
@@ -2822,7 +2836,7 @@ SUB LD2_RenderFrame
   '  NEXT y%
   '  DEF SEG
   'END IF
-  dim doDynamicLighting as integer
+  'dim doDynamicLighting as integer
   IF Lighting1 THEN '// dynamic lighting
     yp = 0
     FOR y = 0 TO 12
@@ -2833,20 +2847,21 @@ SUB LD2_RenderFrame
       'ml% = ptrLightMap + m%
       FOR x = 0 TO 20 '// yes, 21 (+1 for hangover when scrolling)
         'doDynamicLighting% = PeekBitmap%(x%, y%)
-        doDynamicLighting = skipLight(x, y)
-        IF doDynamicLighting THEN
-          'DEF SEG = segLightMap1: l% = PEEK(ml%): DEF SEG
+        'doDynamicLighting = skipLight(x, y)
+        'IF doDynamicLighting THEN
+        '  'DEF SEG = segLightMap1: l% = PEEK(ml%): DEF SEG
           l = LightMap1(mapx, mapY)
           IF l THEN
             'LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
             SpritesLight.putToScreen(xp, yp, l)
           END IF
-        END IF
+        'END IF
+        mapX += 1
         xp = xp + 16
         'ml% = ml% + 1
-      NEXT
+      NEXT x
       yp = yp + 16
-    NEXT
+    NEXT y
     'DEF SEG
   END IF
 
@@ -3445,7 +3460,7 @@ FUNCTION LD2_isDebugMode() as integer
     
 END FUNCTION
 
-SUB MixTiles(spriteSeg AS INTEGER, lightSeg AS INTEGER, tileMapSeg AS INTEGER, mixMapSeg AS INTEGER, lightMapSeg1 AS INTEGER, lightMapSeg2 AS INTEGER)
+SUB MixTiles()
 
     'DIM spritePtr AS INTEGER
     'DIM lightPtr1 AS INTEGER
@@ -3482,6 +3497,9 @@ SUB MixTiles(spriteSeg AS INTEGER, lightSeg AS INTEGER, tileMapSeg AS INTEGER, m
     skip(n) = DOORBACK: n = n + 1
     numSkip = n '- skip process / hole-punch
     
+    dim SpritesTemp as VideoSprites
+    LD2_InitSprites "", @SpritesTemp, SPRITE_W, SPRITE_H
+    
     dim t as integer
     dim l1 as integer
     dim l2 as integer
@@ -3509,49 +3527,55 @@ SUB MixTiles(spriteSeg AS INTEGER, lightSeg AS INTEGER, tileMapSeg AS INTEGER, m
                 END IF
             NEXT n
             IF ((l1 <> 0) OR (l2 <> 0)) AND (t > 0) THEN
-                'GOSUB MixTile
+                dim a as long, b as long, c as long
+                dim i as integer
+                a = t: b = l1: c = l2
+                hash = (a OR (b*&H100 OR c*&H10000))
+                found = -1
+                FOR i = 0 TO hashCount-1
+                    IF hash = hashes(i) THEN
+                        found = i
+                        EXIT FOR
+                    END IF
+                NEXT i
+                IF (found = -1) AND (hashCount < 80) THEN
+                    IF (l2 <> 0) THEN
+                        'LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr2, tempPtr
+                        SpritesTemp.setAsTarget()
+                        SpritesTile.putToScreen(0, 0, t)
+                        SpritesLight.putToScreen(0, 0, l2)
+                        IF (l1 <> 0) THEN
+                            'LD2mixwl lightSeg, tempPtr, lightSeg, lightPtr1, tempPtr
+                            SpritesLight.putToScreen(0, 0, l1)
+                        END IF
+                    ELSEIF (l1 <> 0) THEN
+                        'LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr1, tempPtr
+                        SpritesTemp.setAsTarget()
+                        SpritesTile.putToScreen(0, 0, t)
+                        SpritesLight.putToScreen(0, 0, l1)
+                    END IF
+                    'LD2copySprite lightSeg, tempPtr, spriteSeg, VARPTR(sTile(EPS * (NumLoadedTiles+hashCount)))
+                    SpritesTile.setAsTarget()
+                    SpritesTemp.putToScreen((NumLoadedTiles+hashCount)*SPRITE_W, 0, 0)
+                    'DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (NumLoadedTiles+hashCount): DEF SEG
+                    'TransparentSprites(NumLoadedTiles+hashCount) = TransparentSprites(t)
+                    hashes(hashCount) = hash
+                    hashCount = hashCount + 1
+                    IF hashCount >= 80 THEN LD2_Debug "TOO MANY HASHES"
+                ELSE
+                    'DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (NumLoadedTiles+found): DEF SEG
+                    MixMap(x, y) = (NumLoadedTiles+found)
+                END IF
             ELSE
                 'DEF SEG = mixMapSeg : POKE VARPTR(MixMap(0))+m, t%: DEF SEG
                 MixMap(x, y) = t
             END IF
             
             m = m + 1
-            RotatePalette
+            'RotatePalette
         NEXT x
     NEXT y
-
-    EXIT SUB
-
-MixTile:
-    dim a as long, b as long, c as long
-    dim i as integer
-    a = t: b = l1: c = l2
-    hash = (a OR (b*&H100 OR c*&H10000))
-    found = -1
-    FOR i = 0 TO hashCount-1
-        IF hash = hashes(i) THEN
-            found = i
-            EXIT FOR
-        END IF
-    NEXT i
-    IF (found = -1) AND (hashCount < 80) THEN
-        IF (l2 <> 0) THEN
-            'LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr2, tempPtr
-            IF (l1 <> 0) THEN
-                'LD2mixwl lightSeg, tempPtr, lightSeg, lightPtr1, tempPtr
-            END IF
-        ELSEIF (l1 <> 0) THEN
-            'LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr1, tempPtr
-        END IF
-        'LD2copySprite lightSeg, tempPtr, spriteSeg, VARPTR(sTile(EPS * (NumLoadedTiles+hashCount)))
-        'DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (NumLoadedTiles+hashCount): DEF SEG
-        'TransparentSprites(NumLoadedTiles+hashCount) = TransparentSprites(t%)
-        hashes(hashCount) = hash
-        hashCount = hashCount + 1
-        IF hashCount >= 80 THEN LD2_Debug "TOO MANY HASHES"
-    ELSE
-        'DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (NumLoadedTiles+found): DEF SEG
-    END IF
+    
 RETURN
 
   'DEF SEG = VARSEG(sTile(0))

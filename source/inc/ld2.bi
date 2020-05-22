@@ -79,70 +79,73 @@ CONST idBOSS2 = 409
 '======================
 '= MUSIC
 '======================
-CONST mscWANDERING = 900
-CONST mscINTRO = 901
-CONST mscBOSS = 902
-CONST mscTHEME = 903
-CONST mscENDING = 904
-CONST mscUHOH = 905
-CONST mscMARCHoftheUHOH = 906
+CONST mscWANDERING = 10
+CONST mscINTRO     = 11
+CONST mscBOSS      = 12
+CONST mscTHEME     = 13
+CONST mscENDING    = 14
+CONST mscUHOH      = 15
+CONST mscMARCHoftheUHOH = 16
+CONST mscTITLE     = 17
 
 '==============================================
 '= SFX
-'= These IDs map directly to the SFX channels
 '==============================================
-CONST sfxPUNCH = 10
-CONST sfxSHOTGUN = 11
-CONST sfxMACHINEGUN = 12
+CONST sfxPUNCH       = 10
+CONST sfxSHOTGUN     = 11
+CONST sfxMACHINEGUN  = 12
 CONST sfxMACHINEGUN2 = 13
-CONST sfxPISTOL = 13
-CONST sfxPISTOL2 = 13
+CONST sfxPISTOL      = 13
+CONST sfxPISTOL2     = 13
 CONST sfxDESERTEAGLE = 14
-CONST sfxGLASS = 15
-CONST sfxSLURP = 16
-CONST sfxAHHHH = 17
-CONST sfxSELECT = 18
-CONST sfxDENIED = 19
-CONST sfxSELECT2 = 20
-CONST sfxUSE = 21
-CONST sfxDROP = 22
-
-CONST sfxBLOOD1 = 11
-CONST sfxBLOOD2 = 12
-CONST sfxDOORDOWN = 13
-CONST sfxDOORUP = 14
-CONST sfxEQUIP = 18
-CONST sfxPICKUP = 19
-CONST sfxLAUGH = 20
+CONST sfxGLASS       = 15
+CONST sfxSLURP       = 16
+CONST sfxAHHHH       = 17
+CONST sfxSELECT      = 18
+CONST sfxDENIED      = 19
+CONST sfxSELECT2     = 20
+CONST sfxUSE         = 21
+CONST sfxDROP        = 22
+CONST sfxBLOOD1      = 23
+CONST sfxBLOOD2      = 24
+CONST sfxDOORDOWN    = 25
+CONST sfxDOORUP      = 26
+CONST sfxEQUIP       = 27
+CONST sfxPICKUP      = 28
+CONST sfxLAUGH       = 29
+const sfxJUMP        = 30
+const sfxSTEP        = 31
 
 '=======================
 '= ROOMS / FLOORS
 '=======================
-CONST ROOFTOP = 23
-CONST SKYROOM = 22
-CONST PORTALROOM = 21
-CONST UNKNOWN = 20
-CONST RESEARCHLAB = 19
-CONST DEBRIEFROOM = 18
-CONST UPPEROFFICE4 = 17
-CONST UPPEROFFICE3 = 16
-CONST UPPEROFFICE2 = 15
-CONST UPPEROFFICE1 = 14
-CONST LARRYOFFICE = 14
-CONST UPPERSTORAGE = 13
-CONST VENTCONTROL = 12
-CONST LOWEROFFICE4 = 11
-CONST LOWEROFFICE3 = 10
-CONST LOWEROFFICE2 = 9
-CONST LOWEROFFICE1 = 8
-CONST WEAPONSLOCKER = 7
-CONST LOWERSTORAGE = 6
-CONST MEETINGROOM = 5
-CONST RECROOM = 4
-CONST LUNCHROOM = 3
-CONST RESTROOMS = 2
-CONST LOBBY = 1
-CONST BASEMENT = 0
+enum Rooms
+    Rooftop       = 23
+    SkyRoom       = 22
+    PortalRoom    = 21
+    Unknown       = 20
+    ResearchLab   = 19
+    DebriefRoom   = 18
+    UpperOffice4  = 17
+    UpperOffice3  = 16
+    UpperOffice2  = 15
+    UpperOffice1  = 14
+    LarryOffice   = 14
+    UpperStorage  = 13
+    VentControl   = 12
+    LowerOffice4  = 11
+    LowerOffice3  = 10
+    LowerOffice2  = 9
+    LowerOffice1  = 8
+    WeaponsLocker = 7
+    LowerStorage  = 6
+    MeetingRoom   = 5
+    RecRoom       = 4
+    LunchRoom     = 3
+    RestRoom      = 2
+    Lobby         = 1
+    Basement      = 0
+end enum
 
 '======================
 '= GAME FLAGS

@@ -98,3 +98,7 @@ DECLARE SUB LD2_WriteText (Text AS STRING)
 
 DECLARE SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, flip AS INTEGER)
 
+const SPRITE_W = 16
+const SPRITE_H = 16
+const FONT_W = 6
+const FONT_h = 5

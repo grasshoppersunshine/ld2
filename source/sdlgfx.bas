@@ -1,9 +1,10 @@
 #include once "SDL2/SDL.bi"
 #include once "inc/sdlgfx.bi"
 
-#define rgb_r(c) (culng(c) and &hff0000) shr &h10
-#define rgb_b(c) (culng(c) and &h00ff00) shr &h8
-#define rgb_g(c) (culng(c) and &h0000ff)
+#define rgb_a(c) (culng(c) and &hff000000) shr 24
+#define rgb_r(c) (culng(c) and &h00ff0000) shr 16
+#define rgb_b(c) (culng(c) and &h0000ff00) shr  8
+#define rgb_g(c) (culng(c) and &h000000ff)
 
 '=======================================================================
 '
@@ -86,9 +87,6 @@ sub Video.update()
     
 end sub
 
-sub Video.fill(x as integer, y as integer, w as integer, h as integer, col as integer)
-end sub
-
 sub Video.clearScreen(col as integer)
     
     dim r as integer, g as integer, b as integer
@@ -117,6 +115,36 @@ sub Video.setAsTarget()
     
 end sub
 
+sub Video.fillScreen(col as integer, aph as integer = &hff)
+    
+    this.fill(0, 0, this._cols, this._rows, col, aph)
+    
+end sub
+
+sub Video.fill(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
+    
+    dim rect as SDL_Rect
+    dim r as integer, g as integer, b as integer
+
+    if this._palette <> 0 then
+        r = this._palette->red(col)
+        g = this._palette->grn(col)
+        b = this._palette->blu(col)
+    else
+        r = rgb_r(col)
+        g = rgb_g(col)
+        b = rgb_b(col)
+    end if
+    
+    rect.x = x: rect.y = y
+    rect.w = w: rect.h = h
+    
+    this.setAsTarget()
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, aph )
+	SDL_RenderFillRect( this._renderer, @rect )
+
+end sub
+
 '=======================================================================
 '
 ' VideoBuffer
@@ -129,6 +157,7 @@ sub VideoBuffer.init(v as Video ptr)
     this._w = v->getCols()
     this._h = v->getRows()
     this._data = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this._w, this._h)
+    SDL_SetTextureBlendMode( this._data, SDL_BLENDMODE_BLEND )
     
 end sub
 
@@ -179,7 +208,22 @@ end sub
 
 sub VideoBuffer.putPixel(x as integer, y as integer, col as integer)
     
-    '- TODO !!!
+    dim r as integer, g as integer, b as integer, a as integer
+    if this._palette <> 0 then
+        r = this._palette->red(col)
+        g = this._palette->grn(col)
+        b = this._palette->blu(col)
+        a = this._palette->getAlpha(col)
+    else
+        r = rgb_r(col)
+        g = rgb_g(col)
+        b = rgb_b(col)
+        a = 255
+    end if
+    
+    SDL_SetRenderTarget( this._renderer, this._data )
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, a )
+    SDL_RenderDrawPoint( this._renderer, x, y )
     
 end sub
 
@@ -199,17 +243,58 @@ sub VideoBuffer.loadBmp(filename as string)
     
 end sub
 
+sub VideoBuffer.fillScreen(col as integer, aph as integer = &hff)
+    
+    this.fill(0, 0, this._w, this._h, col, aph)
+    
+end sub
+
+sub VideoBuffer.fill(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
+    
+    dim rect as SDL_Rect
+    dim r as integer, g as integer, b as integer
+
+    if this._palette <> 0 then
+        r = this._palette->red(col)
+        g = this._palette->grn(col)
+        b = this._palette->blu(col)
+    else
+        r = rgb_r(col)
+        g = rgb_g(col)
+        b = rgb_b(col)
+    end if
+    
+    rect.x = x: rect.y = y
+    rect.w = w: rect.h = h
+    
+    this.setAsTarget()
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, aph )
+	SDL_RenderFillRect( this._renderer, @rect )
+
+end sub
 
 '=======================================================================
 '
 ' VideoSprites
 '
 '=======================================================================
-sub VideoSprites.init(renderer as SDL_Renderer ptr, w as integer, h as integer)
+sub VideoSprites.init(v as Video ptr, w as integer, h as integer)
     
-    this._renderer = renderer
+    this._renderer = v->getRenderer()
     this._w = w
     this._h = h
+    
+end sub
+
+sub VideoSprites.setPalette(p as Palette256 ptr)
+    
+    this._palette = p
+    
+end sub
+
+sub VideoSprites.setAsTarget()
+    
+    SDL_SetRenderTarget( this._renderer, this._data )
     
 end sub
 
@@ -225,23 +310,23 @@ sub VideoSprites.load(filename as string)
         g as ubyte
     end type
     
-    type SpriteType
-        w as ushort
-        h as ushort
-        pixels(255) as ubyte '- this._w * this._h - 1
-    end type
+    dim uw as ushort
+    dim uh as ushort
+    dim c as ubyte
+    
+    uw = this._w
+    uh = this._h
     
     dim header as HeaderType
-    dim sp as SpriteType
     dim filesize as integer
     dim numSprites as integer
     dim n as integer
-    dim c as integer
     dim ox as integer, oy as integer
     dim x as integer, y as integer
     dim r as ubyte
     dim g as ubyte
     dim b as ubyte
+    dim a as ubyte
     
     SDL_SetRenderTarget( this._renderer, this._data )
     
@@ -256,14 +341,16 @@ sub VideoSprites.load(filename as string)
         SDL_SetRenderTarget( this._renderer, this._data )
         get #1, , header
         while not eof(1)
-            get #1, , sp
+            get #1, , uw
+            get #1, , uh
             for y = 0 to this._h-1
                 for x = 0 to this._w-1
-                    c = sp.pixels(x+y*this._w)
-                    r = this._palette(c).r
-                    g = this._palette(c).g
-                    b = this._palette(c).b
-                    SDL_SetRenderDrawColor( this._renderer, r, g, b, 255 )
+                    get #1, , c
+                    r = this._palette->red(c)
+                    g = this._palette->grn(c)
+                    b = this._palette->blu(c)
+                    a = iif(c = this._transparentColor, 0, this._palette->getAlpha(c))
+                    SDL_SetRenderDrawColor( this._renderer, r, g, b, a )
                     SDL_RenderDrawPoint( this._renderer, ox+x, oy+y )
                 next x
             next y
@@ -276,32 +363,10 @@ sub VideoSprites.load(filename as string)
     
 end sub
 
-sub VideoSprites.loadPalette(filename as string)
+sub VideoSprites.setTransparentColor(c as integer)
     
-    dim loaded(255) as long
-    dim n as integer
-    dim c as long
-    dim r as ubyte
-    dim g as ubyte
-    dim b as ubyte
-
-    open filename for binary as #1
-    for n = 0 to 255
-        get #1, , c
-        loaded(n) = c
-    next n
-    close #1
-
-    for n = 0 to 255
-        c = loaded(n)
-        r = (c and &hFF)
-        g = (c \ &h100) and &hFF
-        b = (c \ &h10000)
-        this._palette(n).r = r shl 2
-        this._palette(n).g = g shl 2
-        this._palette(n).b = b shl 2
-    next n
-
+    this._transparentColor = c
+    
 end sub
 
 sub VideoSprites.putToScreen(x as integer, y as integer, spriteNum as integer)
@@ -319,7 +384,7 @@ sub VideoSprites.putToScreen(x as integer, y as integer, spriteNum as integer)
     
 end sub
 
-sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer, flp as integer = 0)
+sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer, flipHorizontal as integer = 0, rotateAngle as double = 0)
     
     dim src as SDL_RECT
     dim dst as SDL_RECT
@@ -329,11 +394,10 @@ sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer,
 
 	dst.x = x: dst.y = y
 	dst.w = this._w: dst.h = this._h
-
-    SDL_RenderCopy( this._renderer, this._data, @src, @dst)
+    
+    SDL_RenderCopyEx( this._renderer, this._data, @src, @dst, rotateAngle, NULL, iif(flipHorizontal, SDL_FLIP_HORIZONTAL, 0))
     
 end sub
-
 
 
 '=======================================================================
@@ -341,6 +405,15 @@ end sub
 ' Palette256
 '
 '=======================================================================
+
+sub Palette256.setRGBA(idx as integer, r as integer, g as integer, b as integer, a as integer = 255)
+    
+    this._palette(idx).r = r
+    this._palette(idx).g = g
+    this._palette(idx).b = b
+    this._palette(idx).a = a
+    
+end sub
 
 sub Palette256.loadPalette(filename as string)
     
@@ -366,17 +439,18 @@ sub Palette256.loadPalette(filename as string)
         this._palette(n).r = r shl 2
         this._palette(n).g = g shl 2
         this._palette(n).b = b shl 2
+        this._palette(n).a = 255
     next n
 
 end sub
 
-function Palette256.rgbval(idx as integer) as integer
+function Palette256.getColor(idx as integer) as integer
     
     dim v as RGB8
     
     v = this._palette(idx)
     
-    return rgb(v.r, v.g, v.b)
+    return rgba(v.r, v.g, v.b, v.a)
     
 end function
 
@@ -395,6 +469,12 @@ end function
 function Palette256.blu(idx as integer) as integer
     
     return this._palette(idx).b
+    
+end function
+
+function Palette256.getAlpha(idx as integer) as integer
+    
+    return this._palette(idx).a
     
 end function
 
