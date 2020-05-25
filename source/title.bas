@@ -150,6 +150,7 @@ SUB TITLE_Intro
   LD2_SetMusic mscINTRO
   LD2_FadeInMusic 9.0
   IF WaitSecondsUntilKey(4.0) THEN
+    LD2_FadeOut 2
     LD2_FadeOutMusic
     EXIT SUB
   END IF
@@ -164,7 +165,7 @@ SUB TITLE_Intro
     
     LINE INPUT #File, text
     
-    if text = "..." then
+    if lcase(left(text, 21)) = "larry the dinosaur ii" then
         LD2_FadeOutMusic
     end if
     
@@ -174,25 +175,22 @@ SUB TITLE_Intro
     end if
     if state = 1 then LD2_CLS 1, 0
     
-    FOR y = 1 TO 8
+    FOR y = 0 TO 7
  
       LD2_PutText ((320 - LEN(text) * 6) / 2), 60, text, 1
 
-      FOR n = 1 TO 9 - y
-        FOR x = 1 TO 20
-          LD2_put (x * 16 - 16), 47, 1, idLIGHT, 0: LD2_put (x * 16 - 16), 47, 1, idLIGHT, 0
-          LD2_put (x * 16 - 16), 63, 1, idLIGHT, 0: LD2_put (x * 16 - 16), 63, 1, idLIGHT, 0
-        NEXT x
-      NEXT n
+      LD2_fillm 0, 47, 320, 32, 0, 1, (8-y)*32-1
 
       LD2_RefreshScreen
       IF WaitSecondsUntilKey(0.25) THEN EXIT DO
 
     NEXT y
- 
+    
+    LD2_PutText ((320 - LEN(text) * 6) / 2), 60, text, 1
+    LD2_RefreshScreen
     IF WaitSecondsUntilKey(3.0) THEN EXIT DO
 
-    FOR y = 1 TO 8
+    FOR y = 0 TO 7
       
       if lcase(left(text, 10)) = "all thanks" then
         LD2_FadeOut 2
@@ -202,12 +200,7 @@ SUB TITLE_Intro
 
       LD2_PutText ((320 - LEN(text) * 6) / 2), 60, text, 1
 
-      FOR n = 1 TO y
-        FOR x = 1 TO 20
-          LD2_put (x * 16 - 16), 47, 1, idLIGHT, 0: LD2_put (x * 16 - 16), 47, 1, idLIGHT, 0
-          LD2_put (x * 16 - 16), 63, 1, idLIGHT, 0: LD2_put (x * 16 - 16), 63, 1, idLIGHT, 0
-        NEXT x
-      NEXT n
+      LD2_fillm 0, 47, 320, 32, 0, 1, (y+1)*32-1
 
       LD2_RefreshScreen
       IF WaitSecondsUntilKey(0.25) THEN EXIT DO
@@ -220,6 +213,7 @@ SUB TITLE_Intro
   
   CLOSE File
   
+  LD2_FadeOut 2
   LD2_FadeOutMusic
 
 END SUB

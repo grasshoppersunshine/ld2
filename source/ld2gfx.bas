@@ -90,20 +90,25 @@ SUB LD2_fill (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INT
     
 END SUB
 
-SUB LD2_fillm (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
+SUB LD2_fillm (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER, aph as integer = &h7f)
     
     if bufferNum = 0 then
-        VideoHandle.fill x, y, w, h, col, &h7f
+        VideoHandle.fill x, y, w, h, col, aph
     else
-        VideoBuffers(bufferNum-1).fill x, y, w, h, col, &h7f
+        VideoBuffers(bufferNum-1).fill x, y, w, h, col, aph
     end if
     
 END SUB
 
 SUB LD2_CopyBuffer (buffer1 AS INTEGER, buffer2 AS INTEGER)
     
+    dim texture as SDL_Texture ptr
+    
     if buffer1 = 0 then
-        
+        VideoBuffers(buffer2-1).setAsTarget()
+        texture = VideoHandle.getData()
+        SDL_RenderCopy( VideoHandle.getRenderer(), texture, NULL, NULL )
+        SDL_DestroyTexture( texture )
     elseif buffer2 = 0 then
         VideoBuffers(buffer2-1).putToScreen()
     else
@@ -150,23 +155,40 @@ SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)
     
 END SUB
 
+function LD2_FadeOutStep (speed AS INTEGER, col as integer = 0) as integer
+    
+    static a as integer = 255
+    
+    if a = 255 then a = 0
+    
+    speed *= 4
+    a += speed
+    
+    if a > 255 then a = 255
+    VideoBuffers(0).putToScreen()
+    VideoHandle.fillScreen(col, a)
+    
+    return (a < 255)
+    
+end function
+
 SUB LD2_SaveBuffer (bufferNum AS INTEGER)
     
-    'SetBufferSeg bufferNum
-    '
-    'DEF SEG = GFXBufferSeg
-    'BSAVE "gfx\tmp.bsv", 0, 64000
-    'DEF SEG
+    if bufferNum = 0 then
+        VideoHandle.saveBmp "gfx/tmp.bmp"
+    else
+        VideoBuffers(bufferNum-1).saveBmp "gfx/tmp.bmp"
+    end if
     
 END SUB
 
 SUB LD2_RestoreBuffer (bufferNum AS INTEGER)
     
-    'SetBufferSeg bufferNum
-    '
-    'DEF SEG = GFXBufferSeg
-    'BLOAD "gfx\tmp.bsv", 0
-    'DEF SEG
+    if bufferNum = 0 then
+        VideoHandle.loadBmp "gfx/tmp.bmp"
+    else
+        VideoBuffers(bufferNum-1).loadBmp "gfx/tmp.bmp"
+    end if
     
 END SUB
 

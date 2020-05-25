@@ -26,7 +26,7 @@ function keyboard(code as integer) as integer
         case &h0a: code = SDL_SCANCODE_9
         case &h0b: code = SDL_SCANCODE_0
         case &h4f: code = SDL_SCANCODE_KP_1
-        case &h50: code = SDL_SCANCODE_KP_2
+        'case &h50: code = SDL_SCANCODE_KP_2
         case &h51: code = SDL_SCANCODE_KP_3
         case &h4d: code = SDL_SCANCODE_RIGHT
         case &h4B: code = SDL_SCANCODE_LEFT
@@ -38,6 +38,7 @@ function keyboard(code as integer) as integer
         case &h19: code = SDL_SCANCODE_P
         case &h26: code = SDL_SCANCODE_L
         case &h2f: code = SDL_SCANCODE_V
+        case &h1c: code = SDL_SCANCODE_RETURN
     end select
     
     return keys[code]
@@ -100,7 +101,7 @@ FUNCTION WaitSecondsUntilKey (seconds AS DOUBLE) as integer
     endtime = TIMER + seconds
     
     DO WHILE TIMER < endtime
-        Pullevents
+        PullEvents
         IF keyboard(KEY_SPACE) or keyboard(KEY_ESCAPE) THEN
             return 1
         END IF

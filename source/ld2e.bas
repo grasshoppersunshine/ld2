@@ -183,6 +183,7 @@
 
     dim shared SpritesLarry as VideoSprites
     dim shared SpritesTile as VideoSprites
+    dim shared SpritesOpaqueTile as VideoSprites
     dim shared SpritesLight as VideoSprites
     dim shared SpritesEnemy as VideoSprites
     dim shared SpritesGuts as VideoSprites
@@ -811,10 +812,13 @@ SUB LD2_Init
     AddMusic mscMARCHoftheUHOH, "sound\scent.gdm", 0
     
     AddSound sfxSELECT, "sound/select.wav"
+    AddSound sfxDENIED, "sound/denied.wav"
     AddSound sfxGLASS, "sound/glassbreak.wav"
     AddSound sfxAHHHH, "sound/scream.wav"
     AddSound sfxEQUIP, "sound/equip.wav"
     AddSound sfxSLURP, "sound/slurp.wav"
+    AddSound sfxSELECT2, "sound/look.wav"
+    AddSound sfxDROP, "sound/drop.wav"
     
     AddSound sfxPUNCH, "sound/punch.wav"
     AddSound sfxJUMP , "sound/jump.wav"
@@ -831,7 +835,8 @@ SUB LD2_Init
   LD2_LoadPalette PaletteFile
   
   for i = 0 to 11
-    LightPalette.setRGBA(i, 0, 0, 0, iif(i*54 < 255, i*54, 255))
+    'LightPalette.setRGBA(i, 0, 0, 0, iif(i*54 < 255, i*54, 255))
+    LightPalette.setRGBA(i, 0, 0, 0, iif(i*28 < 255, i*28, 255))
   next i
   
   PRINT "Loading sprites..."
@@ -861,11 +866,28 @@ SUB LD2_Init
   'VideoBuffer2.clearScreen(66)
   'DIM i AS INTEGER
   
+  '- add method for LD2_addmobtype, move these to LD2_bas
+  Mobs.AddType ROCKMONSTER
+  Mobs.AddType TROOP1
+  Mobs.AddType TROOP2
+  Mobs.AddType BLOBMINE
+  Mobs.AddType JELLYBLOB
+  
+'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
+
+  IF LD2_isDebugMode() THEN LD2_Debug "LD2_Init SUCCESS"
+  
+END SUB
+
+SUB LD2_GenerateSky()
+    
   LD2_cls 2, 66
   
   DIM x AS INTEGER
   DIM y AS INTEGER
   DIM r AS INTEGER
+  DIM i AS INTEGER
+  
   FOR i = 0 TO 9999
     'DO
       x = 320*RND(1)
@@ -915,18 +937,7 @@ SUB LD2_Init
     END IF
     LD2_pset x, y, 72+r, 2
   NEXT i
-  
-  '- add method for LD2_addmobtype, move these to LD2_bas
-  Mobs.AddType ROCKMONSTER
-  Mobs.AddType TROOP1
-  Mobs.AddType TROOP2
-  Mobs.AddType BLOBMINE
-  Mobs.AddType JELLYBLOB
-  
-'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
 
-  IF LD2_isDebugMode() THEN LD2_Debug "LD2_Init SUCCESS"
-  
 END SUB
 
 SUB LD2_InitPlayer(p AS tPlayer)
@@ -1044,24 +1055,23 @@ SUB LD2_LoadMap (Filename AS STRING)
   
   '- Load the map
   '--------------
-  LD2_cls 0, 0
+  'LD2_cls 0, 0
   'LD2_RestorePalette
   
-  'bufferSeg = GetBufferSeg%(1)
   dim x as integer, y as integer
   dim n as integer
-  Message = "..Loading..."
-  LD2_cls 1, 0
-  LD2_PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 1
-  FOR y = 80 TO 85
-    FOR x = 0 TO 15
-      FOR n = 0 TO 7
-        'LD2pset 126+x*4+n, y, bufferSeg, 112+x
-        LD2_pset 126+x*4+n, y, 112+x, 1
-      NEXT n
-    NEXT x
-  NEXT y
-  LD2_RefreshScreen
+  'Message = "..Loading..."
+  'LD2_cls 1, 0
+  'LD2_PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 1
+  'FOR y = 80 TO 85
+  '  FOR x = 0 TO 15
+  '    FOR n = 0 TO 7
+  '      'LD2pset 126+x*4+n, y, bufferSeg, 112+x
+  '      LD2_pset 126+x*4+n, y, 112+x, 1
+  '    NEXT n
+  '  NEXT x
+  'NEXT y
+  'LD2_RefreshScreen
   
   NumDoors = 0
   Inventory(TEMPAUTH) = 0
@@ -1371,7 +1381,8 @@ SUB LoadSprites (Filename AS STRING, BufferNum AS INTEGER)
 
     CASE idTILE
 
-      LD2_InitSprites filename, @SpritesTile, SPRITE_W, SPRITE_H
+      LD2_InitSprites filename, @SpritesTile, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
+      LD2_InitSprites filename, @SpritesOpaqueTile, SPRITE_W, SPRITE_H
 
     CASE idENEMY
 
@@ -2522,7 +2533,7 @@ END SUB
 
 SUB LD2_RenderFrame
 
-  'IF LD2_isDebugMode() THEN LD2_Debug "LD2_RenderFrame"
+  IF LD2_isDebugMode() THEN LD2_Debug "LD2_RenderFrame"
 
   'DIM spriteIdx    AS INTEGER
   'DIM lightIdx     AS INTEGER
@@ -2982,17 +2993,17 @@ SUB LD2_RenderFrame
   END IF
 
   '- Switch to letter box mode if in scene mode
-  IF SceneMode = 1 THEN
+  IF SceneMode = LETTERBOX THEN
     FOR y = 1 TO 2
       FOR x = 1 TO 40
         'LD2putf x% * 16 - 16, y% * 16 - 16, VARSEG(sTile(0)), VARPTR(sTile(0)), segBuffer1
-        SpritesTile.putToScreen(x * 16 - 16, y * 16 - 16, 0)
+        SpritesOpaqueTile.putToScreen(x * 16 - 16, y * 16 - 16, 0)
       NEXT x
     NEXT y
     FOR y = 12 TO 13
       FOR x = 1 TO 40
         'LD2putf x% * 16 - 16, y% * 16 - 16, VARSEG(sTile(0)), VARPTR(sTile(0)), segBuffer1
-        SpritesTile.putToScreen(x * 16 - 16, y * 16 - 16, 0)
+        SpritesOpaqueTile.putToScreen(x * 16 - 16, y * 16 - 16, 0)
       NEXT x
     NEXT y
   END IF

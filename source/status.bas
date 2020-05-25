@@ -100,7 +100,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 	DIM lft AS INTEGER
 	
 	LD2_SaveBuffer 2
-	LD2_CopyBuffer 0, 2
+	LD2_CopyBuffer 1, 2
 	
 	easeTimer = TIMER
 	DO
@@ -169,17 +169,17 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
         PullEvents
 		
 		IF canExit = 0 THEN
-			IF keyboard(&HF) = 0 THEN
+			IF keyboard(KEY_TAB) = 0 THEN
 			  canExit = 1
 			END IF
 		ELSE
-			IF keyboard(&HF) THEN
+			IF keyboard(KEY_TAB) THEN
 				EXIT DO
 			END IF
 			
 			'- TODO: hold down for one second, then scroll down with delay
 			keyOn = 0
-			IF keyboard(&H48) THEN
+			IF keyboard(KEY_UP) THEN
 				keyOn = 1
 				IF keyOff THEN
 					selectedRoom = selectedRoom + 1
@@ -194,7 +194,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 					END IF
 				END IF
 			END IF
-			IF keyboard(&H50) THEN
+			IF keyboard(KEY_DOWN) THEN
 				keyOn = 1
 				IF keyOff THEN
 					selectedRoom = selectedRoom - 1
@@ -209,7 +209,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 					END IF
 				END IF
 			END IF
-			IF keyboard(&H1C) THEN
+			IF keyboard(KEY_ENTER) or keyboard(KEY_SPACE) THEN
 				keyOn = 1
 				IF keyOff THEN
 					LD2_PlaySound sfxSELECT
@@ -231,7 +231,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		
 	LOOP
 	
-	WaitForKeyup(&hf) 'DO: LOOP WHILE keyboard(&HF)
+	WaitForKeyup(KEY_TAB) 'DO: LOOP WHILE keyboard(&HF)
 	
 	easeTimer = TIMER
 	e = 0
@@ -399,7 +399,7 @@ SUB StatusScreen
     dim keyOff as integer
 	
 	LD2_SaveBuffer 2
-	LD2_CopyBuffer 0, 2
+	LD2_CopyBuffer 1, 2
 	
 	easeTimer = TIMER
 	DO
@@ -539,11 +539,11 @@ SUB StatusScreen
         PullEvents
 
 		IF canExit = 0 THEN
-			IF keyboard(&HF) = 0 THEN
+			IF keyboard(KEY_TAB) = 0 THEN
 				canExit = 1
 			END IF
 		ELSE
-			IF keyboard(&HF) THEN
+			IF keyboard(KEY_TAB) THEN
 				IF action > -1 THEN
 					action = -1
 				ELSE
@@ -553,7 +553,7 @@ SUB StatusScreen
 				
 			'- TODO: hold down for one second, then scroll down with delay
 			keyOn = 0
-			IF keyboard(&H48) THEN
+			IF keyboard(KEY_UP) THEN
 				keyOn = 1
 				IF keyOff THEN
 					selectedInventorySlot = selectedInventorySlot - 1
@@ -566,7 +566,7 @@ SUB StatusScreen
 					END IF
 				END IF
 			END IF
-			IF keyboard(&H50) THEN
+			IF keyboard(KEY_DOWN) THEN
 				keyOn = 1
 				IF keyOff THEN
 					selectedInventorySlot = selectedInventorySlot + 1
@@ -579,7 +579,7 @@ SUB StatusScreen
 					END IF
 				END IF
 			END IF
-			IF keyboard(&H4B) THEN
+			IF keyboard(KEY_LEFT) THEN
 				keyOn = 1
 				IF keyOff THEN
 					action = action - 1
@@ -591,7 +591,7 @@ SUB StatusScreen
 					END IF
 				END IF
 			END IF
-			IF keyboard(&H4D) THEN
+			IF keyboard(KEY_RIGHT) THEN
 				keyOn = 1
 				IF keyOff THEN
 					action = action + 1
@@ -603,7 +603,7 @@ SUB StatusScreen
 					END IF
 				END IF
 			END IF
-			IF keyboard(&H1C) THEN
+			IF keyboard(KEY_ENTER) or keyboard(KEY_SPACE) THEN
 				keyOn = 1
 				IF keyOff THEN
                     IF mixMode THEN
@@ -640,7 +640,7 @@ SUB StatusScreen
 		END IF
 	LOOP
 	
-	DO: LOOP WHILE keyboard(KEYTAB)
+	WaitForKeyup(KEY_TAB) 'DO: LOOP WHILE keyboard(KEYTAB)
 	
 	easeTimer = TIMER
 	e = 0

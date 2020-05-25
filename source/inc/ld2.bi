@@ -184,6 +184,7 @@ CONST enBATHER = 8
 CONST enSECRETARY = 9 '- chatting at front desk on phone
 CONST enSUICIDAL = 10
 CONST enSURVIVOR = 11 '- hiding in basement/somewhere; using radio/walkie-talkie to reach out for help
+CONST enNARRATOR = 12
 
 '======================
 '= POSE IDS SCENES

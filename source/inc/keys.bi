@@ -55,3 +55,5 @@ const KEY_UP     = &h48
 const KEY_DOWN   = &h50
 const KEY_LSHIFT = &h2A
 const KEY_RSHIFT = &h38
+const KEY_ENTER  = &h1c
+

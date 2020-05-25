@@ -39,6 +39,7 @@ DECLARE SUB LD2_CreateItem (x AS INTEGER, y AS INTEGER, item AS INTEGER, EntityN
 DECLARE SUB LD2_Debug (Message AS STRING)
 DECLARE SUB LD2_Drop (item as integer)
 DECLARE SUB LD2_GetPlayer (p AS tPlayer)
+DECLARE SUB LD2_GenerateSky ()
 DECLARE FUNCTION LD2_GetStatusAmount (slot AS INTEGER) as integer
 DECLARE FUNCTION LD2_GetStatusItem (slot AS INTEGER) as integer
 DECLARE SUB LD2_Init ()

@@ -6,29 +6,32 @@ if dir("lib", fbDirectory) <> "lib" then
     mkdir "lib"
 end if
 
-args(0)  = "common.bas     -lib -x lib/libcommon.a"
-args(1)  = "mobs.bas       -lib -x lib/libmobs.a"
-args(2)  = "inventry.bas   -lib -x lib/libinventry.a"
-args(3)  = "sdlgfx.bas     -lib -x lib/libsdlgfx.a"
-args(4)  = "ld2gfx.bas     -lib -x lib/libld2gfx.a"
-args(5)  = "sdlsnd.bas     -lib -x lib/libsdlsnd.a"
-args(6)  = "ld2snd.bas     -lib -x lib/libld2snd.a"
+args(0)  = "common.bas       -lib -x lib/libcommon.a"
+args(1)  = "mobs.bas         -lib -x lib/libmobs.a"
+args(2)  = "inventry.bas     -lib -x lib/libinventry.a"
+args(3)  = "palette256.bas   -lib -x lib/libpalette256.a"
+args(4)  = "video.bas        -lib -x lib/libvideo.a"
+args(5)  = "videobuffer.bas  -lib -x lib/libvideobuffer.a"
+args(6)  = "videosprites.bas -lib -x lib/libvideosprites.a"
+args(7)  = "ld2gfx.bas       -lib -x lib/libld2gfx.a"
+args(8)  = "sdlsnd.bas       -lib -x lib/libsdlsnd.a"
+args(9)  = "ld2snd.bas       -lib -x lib/libld2snd.a"
 
 print "Building independent modules..."
 dim i as integer
 dim percent as double
 dim s as string
-for i = 0 to 6
+for i = 0 to 9
     if shell(pathToFbc+" "+args(i)) = -1 then
         print "ERROR while running fbc with: "+args(i)
     else
-        percent = (i/6)
+        percent = (i/9)
         s = "["
         s += string(int(percent*25), "=")
         s += string(25-int(percent*25), " ")
         s += "] "
         s += str(int(percent*100))+"% "
-        print s+left(args(i), 12)+chr(13);
+        print s+left(args(i), 16)+chr(13);
     end if
 next i
 

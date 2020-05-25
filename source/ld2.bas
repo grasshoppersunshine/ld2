@@ -66,6 +66,7 @@
   DECLARE FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING) as integer
   DECLARE FUNCTION DoDialogue () as integer
   DECLARE SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGER)
+  declare sub CharacterDoCommands(characterId AS INTEGER)
   DECLARE SUB InitPlayer ()
   DECLARE SUB Main ()
   DECLARE SUB SetAllowedEntities (codeString AS STRING)
@@ -197,6 +198,8 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING) as integer
 	DIM cursor AS INTEGER
 	DIM words AS INTEGER
 	DIM n AS INTEGER
+    
+    if caption = "" then return 0
 	
 	GetPose renderPose, characterId
     renderPose.isSpeaking = 1: UpdatePose renderPose, renderPose
@@ -248,6 +251,7 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING) as integer
 		IF keyboard(KEY_ESCAPE) THEN escapeFlag = 1: EXIT DO
 	LOOP UNTIL keyboard(&H39)
 
+    WaitForKeyup(KEY_SPACE)
 	WaitForKeyup(KEY_ESCAPE)
     
     renderPose.isSpeaking = 0: UpdatePose renderPose, renderPose
@@ -264,6 +268,50 @@ SUB ClearPoses
 	
 END SUB
 
+sub CharacterDoCommands(characterId AS INTEGER)
+    
+    if LD2_isDebugMode() then LD2_debug "DoCommands()"
+    
+    dim comm as string
+    dim param as string
+    
+    DIM pose AS PoseType
+    GetPose pose, characterId
+    
+    while SCENE_GetCommand() <> ""
+        comm = lcase(SCENE_GetCommand())
+        param = lcase(SCENE_GetParam())
+        select case comm
+            case "x"
+                pose.x = val(param)
+                UpdatePose pose, pose
+            case "y"
+                pose.y = val(param)
+                UpdatePose pose, pose
+            case "face"
+                if param = "left" then pose.flipped = 1
+                if param = "right" then pose.flipped = 0
+                UpdatePose pose, pose
+            case "walkto"
+                pose.x = val(param)
+                UpdatePose pose, pose
+                LD2_RenderFrame
+                RenderPoses
+                LD2_RefreshScreen
+            case "wait"
+                WaitSeconds(val(param))
+            case "kick"
+            case "crouch"
+            case "stand"
+            case "sick"
+            case else
+        end select
+        PullEvents
+        SCENE_NextCommand()
+    wend
+    
+end sub
+
 FUNCTION DoDialogue() as integer
 	
 	DIM escaped AS INTEGER
@@ -274,19 +322,25 @@ FUNCTION DoDialogue() as integer
 	
 	sid = UCASE(LTRIM(RTRIM(SCENE_GetSpeakerId())))
 	dialogue = LTRIM(RTRIM(SCENE_GetSpeakerDialogue()))
-
-	SELECT CASE sid
+    
+    SELECT CASE sid
 	CASE "NARRATOR"
+        CharacterDoCommands(enNARRATOR)
 		LD2_PopText dialogue
 	CASE "LARRY"
+        CharacterDoCommands(enLARRY)
 		escaped = CharacterSpeak(enLARRY, dialogue)
 	CASE "STEVE"
+        CharacterDoCommands(enSTEVE)
 		escaped = CharacterSpeak(enSTEVE, dialogue)
 	CASE "BARNEY"
+        CharacterDoCommands(enBARNEY)
 		escaped = CharacterSpeak(enBARNEY, dialogue)
 	CASE "JANITOR"
+        CharacterDoCommands(enJANITOR)
 		escaped = CharacterSpeak(enJANITOR, dialogue)
 	CASE "TROOPER"
+        CharacterDoCommands(enTROOPER)
 		escaped = CharacterSpeak(enTROOPER, dialogue)
 	END SELECT
 	
@@ -692,7 +746,8 @@ SUB Scene1 (skip AS INTEGER)
 
 	LD2_RenderFrame
 	RenderPoses
-	LD2_RefreshScreen
+	'LD2_RefreshScreen
+    LD2_FadeIn 2
 
 	IF LD2_isDebugMode() THEN LD2_Debug "LD2_PlayMusic"
     LD2_SetMusic mscWANDERING
@@ -1980,7 +2035,7 @@ SUB Start
     END IF
     
     CLS
-    PRINT "Larry the Dinosaur II v1.0.22"
+    PRINT "Larry the Dinosaur II v1.0.33"
     
     WaitSeconds 0.5
     
@@ -2018,6 +2073,8 @@ SUB Start
     
     IF LD2_isDebugMode() THEN LD2_Debug "Starting game..."
     
+    'LD2_GenerateSky 
+    LD2_LoadBitmap "gfx/origback.bmp", 2, 0
     CurrentRoom = 14
     LD2_SetRoom CurrentRoom
     LD2_LoadMap "14th.ld2"
