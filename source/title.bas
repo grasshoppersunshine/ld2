@@ -19,6 +19,8 @@ TYPE TextType
     doFadeOut AS INTEGER
 END TYPE
 
+const DATA_DIR = "data/"
+
 SUB TITLE_EndDemo
 
 '  DIM Message(10) AS STRING
@@ -46,7 +48,7 @@ SUB TITLE_Opening
     
     LD2_cls
     
-    LD2_LoadBitmap "gfx\warning.bmp", 1, -1
+    LD2_LoadBitmap DATA_DIR+"gfx/warning.bmp", 1, -1
     LD2_FadeIn 2
     IF WaitSecondsUntilKey(4.0) THEN
         LD2_FadeOut 3
@@ -85,7 +87,7 @@ SUB TITLE_Menu
     'LD2_PlayMusic mscMARCHoftheUHOH
     'i% = WaitSecondsUntilKey%(0.5)
     
-    LD2_LoadBitmap "gfx\title.bmp", 1, -1
+    LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
     LD2_FadeIn 3, 15
     
     LD2_PlaySound sfxEQUIP
@@ -110,7 +112,7 @@ SUB TITLE_Menu
           LD2_FadeOut 3
           TITLE_ShowCredits
           LD2_cls
-          LD2_LoadBitmap "gfx\title.bmp", 1, -1
+          LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
           LD2_FadeIn 3
         END IF
         IF keyboard(&H4) OR keyboard(&H51) THEN
@@ -144,7 +146,7 @@ SUB TITLE_Intro
   
   WaitSeconds(2.0)
   
-  LD2_LoadBitmap "gfx/back.bmp", 2, 0
+  LD2_LoadBitmap DATA_DIR+"gfx/back.bmp", 2, 0
   LD2_CopyBuffer 2, 1
   LD2_FadeIn 1
   LD2_SetMusic mscINTRO
@@ -159,7 +161,7 @@ SUB TITLE_Intro
   state = 0
   
   File = FREEFILE
-  OPEN "tables/intro.txt" FOR INPUT AS File
+  OPEN DATA_DIR+"tables/intro.txt" FOR INPUT AS File
   
   DO WHILE NOT EOF(File)
     
@@ -234,7 +236,7 @@ SUB TITLE_ShowCredits
 
   y = 30
   File = FREEFILE
-  OPEN "tables/credits.txt" FOR INPUT AS File
+  OPEN DATA_DIR+"tables/credits.txt" FOR INPUT AS File
   DO WHILE NOT EOF(File)
     LINE INPUT #File, text
     LD2_PutText 40, y, text, 1

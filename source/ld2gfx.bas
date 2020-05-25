@@ -5,6 +5,8 @@ dim shared VideoHandle as Video
 dim shared VideoBuffers(1) as VideoBuffer
 dim shared RGBpal as Palette256
 
+const DATA_DIR = "data/"
+
 sub LD2_InitVideo(fullscreen as integer, title as string)
     
     'VideoHandle.init 352, 198, fullscreen, title
@@ -175,9 +177,9 @@ end function
 SUB LD2_SaveBuffer (bufferNum AS INTEGER)
     
     if bufferNum = 0 then
-        VideoHandle.saveBmp "gfx/tmp.bmp"
+        VideoHandle.saveBmp DATA_DIR+"gfx/tmp.bmp"
     else
-        VideoBuffers(bufferNum-1).saveBmp "gfx/tmp.bmp"
+        VideoBuffers(bufferNum-1).saveBmp DATA_DIR+"gfx/tmp.bmp"
     end if
     
 END SUB
@@ -185,9 +187,9 @@ END SUB
 SUB LD2_RestoreBuffer (bufferNum AS INTEGER)
     
     if bufferNum = 0 then
-        VideoHandle.loadBmp "gfx/tmp.bmp"
+        VideoHandle.loadBmp DATA_DIR+"gfx/tmp.bmp"
     else
-        VideoBuffers(bufferNum-1).loadBmp "gfx/tmp.bmp"
+        VideoBuffers(bufferNum-1).loadBmp DATA_DIR+"gfx/tmp.bmp"
     end if
     
 END SUB

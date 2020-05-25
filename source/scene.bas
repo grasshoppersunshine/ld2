@@ -17,6 +17,8 @@ DIM SHARED SceneData AS SceneType
 dim shared SceneCommands(31) as string
 dim shared SceneParams(31) as string
 dim shared SceneNumCommands as integer
+
+const DATA_DIR = "data/"
 '======================
 '= END PRIVATE MEMBERS
 '======================
@@ -39,7 +41,7 @@ FUNCTION SCENE_Init (label AS STRING) as integer
     DIM row AS STRING
     
     SceneData.FileId = FREEFILE
-    OPEN "tables/scenes.txt" FOR INPUT AS SceneData.FileId
+    OPEN DATA_DIR+"tables/scenes.txt" FOR INPUT AS SceneData.FileId
     
     DO WHILE NOT EOF(SceneData.FileId)
         

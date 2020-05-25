@@ -8,6 +8,8 @@ REDIM SHARED InventoryItems(0) AS InventoryType
 REDIM SHARED ItemSids(0) AS STRING
 DIM SHARED InventorySize AS INTEGER
 
+const DATA_DIR = "data/"
+
 FUNCTION Inventory_Add (id AS INTEGER, qty AS INTEGER) as integer
     
     DIM i AS INTEGER
@@ -135,7 +137,7 @@ FUNCTION Inventory_LoadDescription (itemId AS INTEGER) as string
     DIM i AS INTEGER
     
     ItemsFile = FREEFILE
-    OPEN "tables/descs.txt" FOR INPUT AS ItemsFile
+    OPEN DATA_DIR+"tables/descs.txt" FOR INPUT AS ItemsFile
     found = 0
     DO WHILE NOT EOF(ItemsFile)
         INPUT #ItemsFile, sid: IF EOF(ItemsFile) THEN EXIT DO
@@ -169,7 +171,7 @@ SUB Inventory_RefreshNames
     DIM longName AS STRING
     
     ItemsFile = FREEFILE
-    OPEN "tables/names.txt" FOR INPUT AS ItemsFile
+    OPEN DATA_DIR+"tables/names.txt" FOR INPUT AS ItemsFile
     FOR i = 0 TO InventorySize - 1
         item = InventoryItems(i).id
         found = 0
@@ -245,7 +247,7 @@ SUB LoadSids (filename AS STRING)
     maxid = 0
     
     File = FREEFILE
-    OPEN filename FOR INPUT AS File
+    OPEN DATA_DIR+filename FOR INPUT AS File
     DO WHILE NOT EOF(File)
         INPUT #File, id, sid
         IF id > maxid THEN
@@ -291,7 +293,7 @@ FUNCTION Inventory_GetUseMsg (itemId AS INTEGER, success AS INTEGER) as string
     dim n as integer
     
     ItemsFile = FREEFILE
-    OPEN "tables/uses.txt" FOR INPUT AS ItemsFile
+    OPEN DATA_DIR+"tables/uses.txt" FOR INPUT AS ItemsFile
     found = 0
     DO WHILE NOT EOF(ItemsFile)
         LINE INPUT #ItemsFile, row
@@ -359,7 +361,7 @@ FUNCTION Inventory_Mix(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS S
     dim n as integer
     
     MixesFile = FREEFILE
-    OPEN "tables/mixes.txt" FOR INPUT AS MixesFile
+    OPEN DATA_DIR+"tables/mixes.txt" FOR INPUT AS MixesFile
     found = 0
     DO WHILE NOT EOF(MixesFile)
         LINE INPUT #MixesFile, row

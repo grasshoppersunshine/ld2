@@ -2073,8 +2073,8 @@ SUB Start
     
     IF LD2_isDebugMode() THEN LD2_Debug "Starting game..."
     
-    'LD2_GenerateSky 
-    LD2_LoadBitmap "gfx/origback.bmp", 2, 0
+    LD2_GenerateSky 
+    'LD2_LoadBitmap DATA_DIR+"gfx/origback.bmp", 2, 0
     CurrentRoom = 14
     LD2_SetRoom CurrentRoom
     LD2_LoadMap "14th.ld2"

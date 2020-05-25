@@ -190,9 +190,8 @@
     dim shared SpritesScene as VideoSprites
     dim shared SpritesObject as VideoSprites
     dim shared SpritesFont as VideoSprites
-    dim shared PaletteFile as string
-    PaletteFile = "gfx\gradient.pal"
     
+    dim shared PaletteFile as string
     dim shared LightPalette as Palette256
     
   
@@ -261,6 +260,9 @@
   DIM SHARED BitmapPitch AS INTEGER
   
   dim shared Mobs as MobileCollection
+  
+  const DATA_DIR = "data/"
+  PaletteFile = DATA_DIR+"gfx/gradient.pal"
 
 
 FUNCTION File_getSize (filename AS STRING) as long
@@ -718,15 +720,15 @@ SUB LD2_Init
   
   '- Init SHAREDs
   '--------------------------------------------
-  LarryFile   = "gfx\larry2.put"
-  TilesFile   = "gfx\ld2tiles.put"
-  LightFile   = "gfx\ld2light.put"
-  EnemiesFile = "gfx\enemies.put"
-  GutsFile    = "gfx\ld2guts.put"
-  SceneFile   = "gfx\ld2scene.put"
-  ObjectsFile = "gfx\objects.put"
-  BossFile    = "gfx\boss1.put"
-  FontFile    = "gfx\font1.put"
+  LarryFile   = DATA_DIR+"gfx/larry2.put"
+  TilesFile   = DATA_DIR+"gfx/ld2tiles.put"
+  LightFile   = DATA_DIR+"gfx/ld2light.put"
+  EnemiesFile = DATA_DIR+"gfx/enemies.put"
+  GutsFile    = DATA_DIR+"gfx/ld2guts.put"
+  SceneFile   = DATA_DIR+"gfx/ld2scene.put"
+  ObjectsFile = DATA_DIR+"gfx/objects.put"
+  BossFile    = DATA_DIR+"gfx/boss1.put"
+  FontFile    = DATA_DIR+"gfx/font1.put"
   Animation   = 1
   NumLives    = 1
   Lighting1   = 1
@@ -735,36 +737,6 @@ SUB LD2_Init
   XShift      = 0
   '--------------------------------------------
   
-  '--------------------------------------------
-  'IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY:"+STR(FRE(-1))
-  '--------------------------------------------
-  'REDIM sLarry ( File_getAllocSize( LarryFile   )) AS INTEGER
-  'REDIM sTile  ( 0 ) AS INTEGER 'File.getAllocSize&( TilesFile   )+(80*130) ) AS INTEGER
-  'REDIM sTile  ( EPS*(64+80) ) AS INTEGER '- make sure we have enough memory for max possible
-  'REDIM sLight ( File_getAllocSize( LightFile   )+( 1*130) ) AS INTEGER
-  'REDIM sEnemy ( File_getAllocSize( EnemiesFile )) AS INTEGER
-  'REDIM sGuts  ( File_getAllocSize( GutsFile    )) AS INTEGER
-  'REDIM sScene ( File_getAllocSize( SceneFile   )) AS INTEGER '- only load scene sprites during scene / free after
-  'REDIM sObject( File_getAllocSize( ObjectsFile )) AS INTEGER
-  'REDIM sFont  ( File_getAllocSize( FontFile    )) AS INTEGER
-
-  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+LarryFile
-  'SpritesLarry.load( LarryFile )
-  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+TilesFile
-  'SpritesTile.load( TilesFile )
-  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+LightFile
-  'SpritesLight.load( LightFile )
-  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+EnemiesFile
-  'SpritesEnemy.load( EnemiesFile )
-  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+GutsFile
-  'SpritesGuts.load( GutsFile )
-  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+SceneFile
-  'SpritesScene.load( SceneFile )
-  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+ObjectsFile
-  'SpritesObject.load( ObjectsFile )
-  'IF LD2_isDebugMode() THEN LD2_Debug "Loading "+FontFile
-  'SpritesFont.load( FontFile )
-
   REDIM TransparentSprites (255) AS INTEGER
   '--------------------------------------------
   'IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY ( post sprites alloc ):"+STR(FRE(-1))
@@ -804,25 +776,25 @@ SUB LD2_Init
 
     LD2_InitSound 1
     
-    AddMusic mscTITLE, "sound\title.ogg", 1
-    AddMusic mscTHEME, "sound\theme.ogg", 0
-    AddMusic mscWANDERING, "sound\creepy.ogg", 1
-    AddMusic mscINTRO, "sound\intro.ogg", 0
-    AddMusic mscUHOH, "sound\uhoh.gdm", 0
-    AddMusic mscMARCHoftheUHOH, "sound\scent.gdm", 0
+    AddMusic mscTITLE    , DATA_DIR+"sound/title.ogg", 1
+    AddMusic mscTHEME    , DATA_DIR+"sound/theme.ogg", 0
+    AddMusic mscWANDERING, DATA_DIR+"sound/creepy.ogg", 1
+    AddMusic mscINTRO    , DATA_DIR+"sound/bak/intro.ogg", 0
+    AddMusic mscUHOH     , DATA_DIR+"sound/bak/uhoh.gdm", 0
+    AddMusic mscMARCHoftheUHOH, DATA_DIR+"sound/bak/scent.gdm", 0
     
-    AddSound sfxSELECT, "sound/select.wav"
-    AddSound sfxDENIED, "sound/denied.wav"
-    AddSound sfxGLASS, "sound/glassbreak.wav"
-    AddSound sfxAHHHH, "sound/scream.wav"
-    AddSound sfxEQUIP, "sound/equip.wav"
-    AddSound sfxSLURP, "sound/slurp.wav"
-    AddSound sfxSELECT2, "sound/look.wav"
-    AddSound sfxDROP, "sound/drop.wav"
+    AddSound sfxSELECT , DATA_DIR+"sound/select.wav"
+    AddSound sfxDENIED , DATA_DIR+"sound/denied.wav"
+    AddSound sfxGLASS  , DATA_DIR+"sound/glassbreak.wav"
+    AddSound sfxAHHHH  , DATA_DIR+"sound/scream.wav"
+    AddSound sfxEQUIP  , DATA_DIR+"sound/equip.wav"
+    AddSound sfxSLURP  , DATA_DIR+"sound/slurp.wav"
+    AddSound sfxSELECT2, DATA_DIR+"sound/look.wav"
+    AddSound sfxDROP   , DATA_DIR+"sound/drop.wav"
     
-    AddSound sfxPUNCH, "sound/punch.wav"
-    AddSound sfxJUMP , "sound/jump.wav"
-    AddSound sfxSTEP , "sound/step.wav"
+    AddSound sfxPUNCH  , DATA_DIR+"sound/punch.wav"
+    AddSound sfxJUMP   , DATA_DIR+"sound/jump.wav"
+    AddSound sfxSTEP   , DATA_DIR+"sound/step.wav"
     
   ELSE
     
@@ -850,21 +822,11 @@ SUB LD2_Init
   LoadSprites SceneFile  , idSCENE
   LoadSprites ObjectsFile, idOBJECT
   LoadSprites BossFile   , idBOSS
-  LoadSprites FontFile, idFONT
+  LoadSprites FontFile   , idFONT
   
   Mobs.Init
   
   LD2_cls
-  
-  'SCREEN 13
-  'CLS
-  'LD2_LoadPalette "gfx\gradient.pal"
-  'VideoBuffer1.loadPalette(PaletteFile)
-  'VideoBuffer2.loadPalette(PaletteFile)
-  'LD2_LoadBitmap  "gfx\back.bmp", 2, 1
-  'LD2_CLS 2, 66
-  'VideoBuffer2.clearScreen(66)
-  'DIM i AS INTEGER
   
   '- add method for LD2_addmobtype, move these to LD2_bas
   Mobs.AddType ROCKMONSTER
@@ -977,7 +939,7 @@ SUB SaveItems (filename AS STRING)
     DIM i AS INTEGER
     
     DIM tmpFile AS STRING
-    tmpFile = "save/items.tmp"
+    tmpFile = DATA_DIR+"save/items.tmp"
     
     InFile = FREEFILE: OutFile = FREEFILE
     OPEN filename FOR BINARY AS InFile
@@ -1051,7 +1013,7 @@ SUB LD2_LoadMap (Filename AS STRING)
 
   WentToRoom(CurrentRoom) = 1
   
-  'SaveItems "save/items"+LTRIM$(STR(CurrentRoom))+".bin"
+  'SaveItems DATA_DIR+"save/items"+LTRIM$(STR(CurrentRoom))+".bin"
   
   '- Load the map
   '--------------
@@ -1089,7 +1051,7 @@ SUB LD2_LoadMap (Filename AS STRING)
   dim dt as string
   dim info as string
 
-  OPEN "rooms\" + Filename FOR BINARY AS MapFile
+  OPEN DATA_DIR+"rooms/" + Filename FOR BINARY AS MapFile
 
     c = 1
 

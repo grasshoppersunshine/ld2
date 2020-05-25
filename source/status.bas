@@ -16,6 +16,8 @@ DECLARE SUB UseItem (item AS InventoryType)
 
 DIM SHARED selectedInventorySlot AS INTEGER
 
+const DATA_DIR = "data/"
+
 SUB DrawStatusScreen (heading AS STRING)
 	
 	DIM w AS INTEGER
@@ -80,7 +82,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 	btmFloor = 0
 	
 	ElevatorFile = FREEFILE
-	OPEN "tables/rooms.txt" FOR INPUT AS ElevatorFile
+	OPEN DATA_DIR+"tables/rooms.txt" FOR INPUT AS ElevatorFile
 	DO WHILE NOT EOF(ElevatorFile)
 		INPUT #ElevatorFile, floorNo: IF EOF(ElevatorFile) THEN EXIT DO
 		INPUT #ElevatorFile, filename: IF EOF(ElevatorFile) THEN EXIT DO
