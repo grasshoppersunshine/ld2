@@ -97,7 +97,8 @@ DECLARE FUNCTION LD2_GetFlagData () as integer
 DECLARE SUB LD2_PopText (Message AS STRING)
 DECLARE SUB LD2_WriteText (Text AS STRING)
 
-DECLARE SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, flip AS INTEGER)
+DECLARE SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, _flip AS INTEGER, isFixed as integer = 0)
+declare sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
 
 const SPRITE_W = 16
 const SPRITE_H = 16

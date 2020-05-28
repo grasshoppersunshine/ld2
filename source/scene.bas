@@ -167,7 +167,7 @@ FUNCTION SCENE_ReadLine() as integer
         end if
         
         SELECT CASE UCASE(row)
-            CASE "NARRATOR", "LARRY", "STEVE", "BARNEY", "JANITOR", "TROOPER"
+            CASE "NARRATOR", "LARRY", "STEVE", "STEVESICK", "BARNEY", "JANITOR", "TROOPER"
                 SetSpeakerId row
             case ""
                 '- do nothing -- read next line

@@ -87,34 +87,63 @@ CONST mscENDING    = 14
 CONST mscUHOH      = 15
 CONST mscMARCHoftheUHOH = 16
 CONST mscTITLE     = 17
+const mscOPENING   = 18
 
 '==============================================
 '= SFX
 '==============================================
-CONST sfxPUNCH       = 10
-CONST sfxSHOTGUN     = 11
-CONST sfxMACHINEGUN  = 12
-CONST sfxMACHINEGUN2 = 13
-CONST sfxPISTOL      = 13
-CONST sfxPISTOL2     = 13
-CONST sfxDESERTEAGLE = 14
-CONST sfxGLASS       = 15
-CONST sfxSLURP       = 16
-CONST sfxAHHHH       = 17
-CONST sfxSELECT      = 18
-CONST sfxDENIED      = 19
-CONST sfxSELECT2     = 20
-CONST sfxUSE         = 21
-CONST sfxDROP        = 22
-CONST sfxBLOOD1      = 23
-CONST sfxBLOOD2      = 24
-CONST sfxDOORDOWN    = 25
-CONST sfxDOORUP      = 26
-CONST sfxEQUIP       = 27
-CONST sfxPICKUP      = 28
-CONST sfxLAUGH       = 29
-const sfxJUMP        = 30
-const sfxSTEP        = 31
+enum Sounds
+    footstep = 1
+    jump
+    kick
+    punch
+    '// weapons
+    shotgun
+    machinegun
+    pistol
+    deserteagle
+    '// doors
+    doorup
+    doordown
+    '// menus
+    status
+    select1
+    denied
+    pickup
+    look
+    use
+    drop
+    equip
+    '// title
+    startgame
+    revealtitle
+    '// scenes
+    dialog
+    '// blood
+    blood1
+    blood2
+    '// enemies
+    laugh
+    machinegun2
+    pistol2
+    '// scene 1
+    kickvending
+    sodacanopen
+    sodacandrop
+    '// scene 3
+    chew1
+    chew2
+    growl
+    scare
+    crack
+    glass
+    shatter
+    slurp
+    scream
+    '// scene 5
+    splatter
+    snarl
+end enum
 
 '=======================
 '= ROOMS / FLOORS
@@ -173,18 +202,30 @@ CONST BARNEYEXITELEVATOR = 50
 '======================
 '= CHARACTER IDS SCENES
 '======================
-CONST enLARRY = 1
-CONST enSTEVE = 2
-CONST enBARNEY = 3
-CONST enJANITOR = 4
-CONST enTROOPER = 5
-CONST enMANAGER = 6
-CONST enLADYSPY = 7
-CONST enBATHER = 8
-CONST enSECRETARY = 9 '- chatting at front desk on phone
-CONST enSUICIDAL = 10
-CONST enSURVIVOR = 11 '- hiding in basement/somewhere; using radio/walkie-talkie to reach out for help
-CONST enNARRATOR = 12
+'CONST enLARRY = 1
+'CONST enSTEVE = 2
+'CONST enBARNEY = 3
+'CONST enJANITOR = 4
+'CONST enTROOPER = 5
+'CONST enMANAGER = 6
+'CONST enLADYSPY = 7
+'CONST enBATHER = 8
+'CONST enSECRETARY = 9 '- chatting at front desk on phone
+'CONST enSUICIDAL = 10
+'CONST enSURVIVOR = 11 '- hiding in basement/somewhere; using radio/walkie-talkie to reach out for help
+'CONST enNARRATOR = 12
+'const enSTEVESICK = 13
+'const enROCKMONSTER = 14
+
+enum CharacterIds
+    Barney = 1
+    Janitor
+    Larry
+    Rockmonster
+    Steve
+    Stevesick
+    Trooper
+end enum
 
 '======================
 '= POSE IDS SCENES
@@ -200,9 +241,16 @@ CONST POSEANGRY = 8
 CONST POSEPOINTFINGER = 9 '- with mouthopen+mouthclosed
 CONST POSELAUGHING = 10
 CONST POSEFACEPALM = 11
+const POSEWALKING = 12
+const POSEKICKING = 13
+const POSEGETSODA = 14
+const POSECRASHING = 15
+const POSETONGUE = 16
+const POSECHEWING = 17
 
 CONST LARRYCHATBOX = 37
 CONST STEVECHATBOX = 39
+CONST STEVESICKCHATBOX = 115
 CONST BARNEYCHATBOX = 43
 CONST JANITORCHATBOX = 41
 CONST TROOPERCHATBOX = 74

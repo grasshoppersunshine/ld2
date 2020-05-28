@@ -80,6 +80,8 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 	selectedRoom = currentRoomId
 	topFloor = 0
 	btmFloor = 0
+    
+    LD2_PlaySound Sounds.status
 	
 	ElevatorFile = FREEFILE
 	OPEN DATA_DIR+"tables/rooms.txt" FOR INPUT AS ElevatorFile
@@ -190,9 +192,9 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 					END IF
 					IF selectedRoom > numFloors - 1 THEN
 						selectedRoom = numFloors - 1
-						LD2_PlaySound sfxDENIED
+						LD2_PlaySound Sounds.denied
 					ELSE
-						LD2_PlaySound sfxSELECT
+						LD2_PlaySound Sounds.select1
 					END IF
 				END IF
 			END IF
@@ -205,16 +207,16 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 					END IF
 					IF selectedRoom < 0 THEN
 						selectedRoom = 0
-						LD2_PlaySound sfxDENIED
+						LD2_PlaySound Sounds.denied
 					ELSE
-						LD2_PlaySound sfxSELECT
+						LD2_PlaySound Sounds.select1
 					END IF
 				END IF
 			END IF
 			IF keyboard(KEY_ENTER) or keyboard(KEY_SPACE) THEN
 				keyOn = 1
 				IF keyOff THEN
-					LD2_PlaySound sfxSELECT
+					LD2_PlaySound Sounds.select1
 					LD2_SetRoom selectedRoom
 					currentRoomId = selectedRoom
                     'LD2_SetAllowedEntities floors(selectedRoom).allowed
@@ -234,6 +236,8 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 	LOOP
 	
 	WaitForKeyup(KEY_TAB) 'DO: LOOP WHILE keyboard(&HF)
+    
+    LD2_PlaySound Sounds.status
 	
 	easeTimer = TIMER
 	e = 0
@@ -399,6 +403,8 @@ SUB StatusScreen
     dim canExit as integer
     dim keyOn as integer
     dim keyOff as integer
+    
+    LD2_PlaySound Sounds.status
 	
 	LD2_SaveBuffer 2
 	LD2_CopyBuffer 1, 2
@@ -561,10 +567,10 @@ SUB StatusScreen
 					selectedInventorySlot = selectedInventorySlot - 1
 					IF selectedInventorySlot < 0 THEN
 						selectedInventorySlot = 0
-						LD2_PlaySound sfxDENIED
+						LD2_PlaySound Sounds.denied
 					ELSE
 						'action = -1
-						LD2_PlaySound sfxSELECT
+						LD2_PlaySound Sounds.select1
 					END IF
 				END IF
 			END IF
@@ -574,10 +580,10 @@ SUB StatusScreen
 					selectedInventorySlot = selectedInventorySlot + 1
 					IF selectedInventorySlot > 7 THEN
 						selectedInventorySlot = 7
-						LD2_PlaySound sfxDENIED
+						LD2_PlaySound Sounds.denied
 					ELSE
 						'action = -1
-						LD2_PlaySound sfxSELECT
+						LD2_PlaySound Sounds.select1
 					END IF
 				END IF
 			END IF
@@ -587,9 +593,9 @@ SUB StatusScreen
 					action = action - 1
 					IF action < 0 THEN
 						action = 0
-						LD2_PlaySound sfxDENIED
+						LD2_PlaySound Sounds.denied
 					ELSE
-						LD2_PlaySound sfxSELECT
+						LD2_PlaySound Sounds.select1
 					END IF
 				END IF
 			END IF
@@ -599,9 +605,9 @@ SUB StatusScreen
 					action = action + 1
 					IF action > 3 THEN
 						action = 3
-						LD2_PlaySound sfxDENIED
+						LD2_PlaySound Sounds.denied
 					ELSE
-						LD2_PlaySound sfxSELECT
+						LD2_PlaySound Sounds.select1
 					END IF
 				END IF
 			END IF
@@ -616,13 +622,13 @@ SUB StatusScreen
 						CASE 0  '- USE
 							UseItem selected
 						CASE 1  '- LOOK
-							LD2_PlaySound sfxSELECT2
+							LD2_PlaySound Sounds.look
 							Look selected
 						CASE 2  '- MIX
                             mixMode = 1
                             mixItem = selected
 						CASE 3  '- Drop
-							LD2_PlaySound sfxDROP
+							LD2_PlaySound Sounds.drop
 							Drop selected
 							LD2_RenderFrame
 							LD2_CopyBuffer 0, 2
@@ -643,6 +649,8 @@ SUB StatusScreen
 	LOOP
 	
 	WaitForKeyup(KEY_TAB) 'DO: LOOP WHILE keyboard(KEYTAB)
+    
+    LD2_PlaySound Sounds.status
 	
 	easeTimer = TIMER
 	e = 0
@@ -670,7 +678,7 @@ SUB UseItem (item AS InventoryType)
     SELECT CASE item.id
     CASE NOTHING
         msg = Inventory_GetFailMsg(item.id)
-        LD2_PlaySound sfxDenied
+        LD2_PlaySound Sounds.denied
     CASE MEDIKIT50
         'IF LD2_LifeAtMax% THEN
         '    msg = Inventory_GetFailMsg$(item.id)
@@ -703,16 +711,16 @@ SUB UseItem (item AS InventoryType)
         msg = Inventory_GetSuccessMsg(item.id)
     CASE GREENCARD
         msg = Inventory_GetFailMsg(item.id)
-        LD2_PlaySound sfxDenied
+        LD2_PlaySound Sounds.denied
     CASE BLUECARD
         msg = Inventory_GetFailMsg(item.id)
-        LD2_PlaySound sfxDenied
+        LD2_PlaySound Sounds.denied
     CASE YELLOWCARD
         msg = Inventory_GetFailMsg(item.id)
-        LD2_PlaySound sfxDenied
+        LD2_PlaySound Sounds.denied
     CASE REDCARD
         msg = Inventory_GetFailMsg(item.id)
-        LD2_PlaySound sfxDenied
+        LD2_PlaySound Sounds.denied
     CASE SHOTGUN
         LD2_SetWeapon1(SHOTGUN)
         LD2_SetWeapon 1

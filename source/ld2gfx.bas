@@ -23,6 +23,13 @@ sub LD2_LoadPalette (filename as string)
     VideoBuffers(0).setPalette(@RGBPal)
     VideoBuffers(1).setPalette(@RGBPal)
     
+    dim n as integer
+    dim i as integer
+    for n = 0 to 15
+        i = n * 16 + 7
+        RGBPal.setRGBA(240+n, i, i, i)
+    next n
+    
 end sub
 
 sub LD2_SetTargetBuffer(bufferNum as integer)

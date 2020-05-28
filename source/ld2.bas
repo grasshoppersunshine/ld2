@@ -54,8 +54,14 @@
 	id AS INTEGER
 	x AS INTEGER
 	y AS INTEGER
-	top AS INTEGER
+    top AS INTEGER
 	btm AS INTEGER
+    topMod as integer
+    btmMod as integer
+    topXmod as integer
+    topYmod as integer
+    btmXmod as integer
+    btmYmod as integer
 	flipped AS INTEGER
 	chatBox AS INTEGER
     isSpeaking AS INTEGER
@@ -71,6 +77,11 @@
   DECLARE SUB Main ()
   DECLARE SUB SetAllowedEntities (codeString AS STRING)
   DECLARE SUB Start ()
+  declare sub UpdateLarryPos ()
+  declare sub DoScene (sceneId as string)
+  declare sub RenderScene ()
+  declare sub AddSound (id as integer, filepath as string, loops as integer = 0)
+  declare sub LoadSounds ()
   
 '======================
 '= SCENE-RELATED
@@ -99,7 +110,7 @@
 '======================
 '= POSES MODULE
 '======================
-  DECLARE SUB AddPose (pose AS PoseType)
+  DECLARE SUB AddPose (pose AS PoseType ptr)
   DECLARE SUB ClearPoses ()
   DECLARE SUB GetPose (pose AS PoseType, poseId AS INTEGER)
   DECLARE SUB RenderPoses ()
@@ -121,7 +132,7 @@
   
   'REM $DYNAMIC
 
-  REDIM SHARED Poses(0) AS PoseType
+  REDIM SHARED Poses(0) AS PoseType ptr
   DIM SHARED NumPoses AS INTEGER '- POSES module
   
   DIM SHARED SceneNo as integer
@@ -143,6 +154,8 @@
   DIM SHARED JanitorIsThere as integer: DIM SHARED JanitorPoint as integer: DIM SHARED JanitorTalking as integer: DIM SHARED JanitorPos as integer
   DIM SHARED TrooperIsThere as integer: DIM SHARED TrooperPoint as integer: DIM SHARED TrooperTalking as integer: DIM SHARED TrooperPos as integer
   
+  const DATA_DIR = "data/"
+  
   Start
   END
 
@@ -161,37 +174,42 @@ sub GlobalControls()
     
 end sub
 
-SUB AddPose (pose AS PoseType)
-    
-    dim n as integer
+SUB AddPose (pose AS PoseType ptr)
     
     IF LD2_isDebugMode() THEN LD2_Debug "AddPose ( pose )"
     
-    DIM copyPoses(NumPoses) AS PoseType
-    
-    FOR n = 0 TO NumPoses - 1
-        copyPoses(n) = Poses(n)
-    NEXT n
-    
-    REDIM Poses(NumPoses) AS PoseType
-    
-    FOR n = 0 TO NumPoses - 1
-        Poses(n) = copyPoses(n)
-    NEXT n
-    
-    Poses(NumPoses) = pose
-    
     NumPoses = NumPoses + 1
     
+    redim preserve Poses(NumPoses-1) AS PoseType ptr
+    
+    Poses(NumPoses-1) = pose
+    
 END SUB
+
+sub RemovePose (pose as PoseType ptr)
+    
+    dim n as integer
+    dim i as integer
+    
+    for n = 0 to NumPoses-1
+        if Poses(n)->id = pose->id then
+            for i = n to NumPoses-2
+                Poses(i) = Poses(i+1)
+            next i
+            n -= 1
+        end if
+    next n
+    
+    NumPoses -= 1
+    redim preserve Poses(NumPoses) as PoseType ptr
+    
+end sub
 
 FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING) as integer
     
     IF LD2_isDebugMode() THEN LD2_Debug "CharacterSpeak% ("+STR(characterId)+", "+caption+" )"
 	
-	'- if pose doesn't exist yet, create it an copy x/y from player
-	
-	DIM escapeFlag AS INTEGER '- when esc is pressed
+	DIM escapeFlag AS INTEGER
 	DIM renderPose AS PoseType
 	DIM mouthClose AS PoseType
 	DIM mouthOpen AS PoseType
@@ -239,6 +257,8 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING) as integer
 		
         RetraceDelay 3
 		LD2_RefreshScreen
+        
+        LD2_PlaySound Sounds.dialog
 		
         IF keyboard(&H39) THEN EXIT FOR
 		IF keyboard(KEY_ESCAPE) THEN escapeFlag = 1: EXIT FOR
@@ -281,29 +301,36 @@ sub CharacterDoCommands(characterId AS INTEGER)
     while SCENE_GetCommand() <> ""
         comm = lcase(SCENE_GetCommand())
         param = lcase(SCENE_GetParam())
+        if characterId then
+            select case comm
+                case "x"
+                    pose.x = val(param)
+                    UpdatePose pose, pose
+                case "y"
+                    pose.y = val(param)
+                    UpdatePose pose, pose
+                case "face"
+                    if param = "left" then pose.flipped = 1
+                    if param = "right" then pose.flipped = 0
+                    UpdatePose pose, pose
+                case "walkto"
+                    pose.x = val(param)
+                    UpdatePose pose, pose
+                    LD2_RenderFrame
+                    RenderPoses
+                    LD2_RefreshScreen
+                case "wait"
+                    WaitSeconds(val(param))
+                case "kick"
+                case "crouch"
+                case "stand"
+                case "sick"
+                case else
+            end select
+        end if
         select case comm
-            case "x"
-                pose.x = val(param)
-                UpdatePose pose, pose
-            case "y"
-                pose.y = val(param)
-                UpdatePose pose, pose
-            case "face"
-                if param = "left" then pose.flipped = 1
-                if param = "right" then pose.flipped = 0
-                UpdatePose pose, pose
-            case "walkto"
-                pose.x = val(param)
-                UpdatePose pose, pose
-                LD2_RenderFrame
-                RenderPoses
-                LD2_RefreshScreen
             case "wait"
                 WaitSeconds(val(param))
-            case "kick"
-            case "crouch"
-            case "stand"
-            case "sick"
             case else
         end select
         PullEvents
@@ -317,32 +344,36 @@ FUNCTION DoDialogue() as integer
 	DIM escaped AS INTEGER
 	DIM dialogue AS STRING
 	DIM sid AS STRING
+    dim characterId as integer
 	
 	IF LD2_isDebugMode() THEN LD2_Debug "DoDialogue()"
 	
 	sid = UCASE(LTRIM(RTRIM(SCENE_GetSpeakerId())))
 	dialogue = LTRIM(RTRIM(SCENE_GetSpeakerDialogue()))
     
+    characterId = 0
     SELECT CASE sid
-	CASE "NARRATOR"
-        CharacterDoCommands(enNARRATOR)
-		LD2_PopText dialogue
+    CASE "NARRATOR"
+        CharacterDoCommands( 0 )
+        LD2_PopText dialogue
 	CASE "LARRY"
-        CharacterDoCommands(enLARRY)
-		escaped = CharacterSpeak(enLARRY, dialogue)
+        characterId = CharacterIds.Larry
 	CASE "STEVE"
-        CharacterDoCommands(enSTEVE)
-		escaped = CharacterSpeak(enSTEVE, dialogue)
+        characterId = CharacterIds.Steve
+    CASE "STEVESICK"
+        characterId = CharacterIds.Stevesick
 	CASE "BARNEY"
-        CharacterDoCommands(enBARNEY)
-		escaped = CharacterSpeak(enBARNEY, dialogue)
+        characterId = CharacterIds.Barney
 	CASE "JANITOR"
-        CharacterDoCommands(enJANITOR)
-		escaped = CharacterSpeak(enJANITOR, dialogue)
+        characterId = CharacterIds.Janitor
 	CASE "TROOPER"
-        CharacterDoCommands(enTROOPER)
-		escaped = CharacterSpeak(enTROOPER, dialogue)
+        characterId = CharacterIds.Trooper
 	END SELECT
+    
+    if characterId then
+        CharacterDoCommands( characterId )
+		escaped = CharacterSpeak( characterId, dialogue )
+    end if
 	
 	DoDialogue = escaped
 	
@@ -352,9 +383,18 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 	
     IF LD2_isDebugMode() THEN LD2_Debug "GetCharacterPose ( pose,"+STR(characterId)+","+STR(poseId)+" )"
     
+    pose.id = characterId
+    pose.chatBox = 0
+    pose.topMod = 0
+    pose.btmMod = 0
+    pose.topXmod = 0
+    pose.topYmod = 0
+    pose.btmXmod = 0
+    pose.btmYmod = 0
+    
     SELECT CASE characterId
-	CASE enLARRY
-		SELECT CASE poseId
+	CASE CharacterIds.Larry
+        SELECT CASE poseId
 		CASE POSEMOUTHCLOSE
 			pose.chatBox = LARRYCHATBOX '- 37 (68 walky)
 			pose.top = 0
@@ -363,8 +403,12 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 			pose.chatBox = LARRYCHATBOX + 1
 			pose.top = 1
 			pose.btm = 3
+        CASE POSESURPRISE
+            pose.top = 2
+            pose.btm = 3
+            pose.topYmod = -2
 		END SELECT
-	CASE enSTEVE
+	CASE CharacterIds.Steve
 		SELECT CASE poseId
 		CASE POSEMOUTHCLOSE
 			pose.chatBox = STEVECHATBOX '- 39
@@ -374,8 +418,32 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 			pose.chatBox = STEVECHATBOX + 1
 			pose.top = 13
 			pose.btm = 14
+        CASE POSEWALKING
+            pose.top = 12
+			pose.btm = 14
+        CASE POSEKICKING
+            pose.top = 12
+            pose.btm = 19
+        CASE POSEGETSODA
+            pose.top = 12
+            pose.btm = 23
+            pose.topYmod = 3
+        CASE POSEPASSEDOUT
+            pose.top = 27
+            pose.btm = 0
 		END SELECT
-	CASE enBARNEY
+    CASE CharacterIds.SteveSICK
+    	SELECT CASE poseId
+		CASE POSEMOUTHCLOSE
+			pose.chatBox = STEVESICKCHATBOX
+			pose.top = 117
+			pose.btm = 26
+		CASE POSEMOUTHOPEN
+			pose.chatBox = STEVESICKCHATBOX + 1
+			pose.top = 118
+			pose.btm = 26
+        END SELECT
+	CASE CharacterIds.Barney
 		SELECT CASE poseId
 		CASE POSEMOUTHCLOSE
 			pose.chatBox = BARNEYCHATBOX '- 43 (70 walky)
@@ -389,7 +457,7 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 			'pose.chatBox = adfadsf
 			'post.top = 33
 		END SELECT
-	CASE enJANITOR
+	CASE CharacterIds.Janitor
 		SELECT CASE poseId
 		CASE POSEMOUTHCLOSE
 			pose.chatBox = JANITORCHATBOX '- 41
@@ -399,8 +467,11 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 			pose.chatBox = JANITORCHATBOX + 1
 			pose.top = 29
 			pose.btm = 0
+        case POSETONGUE
+            pose.top = 33
+			pose.btm = 0
 		END SELECT
-	CASE enTROOPER
+	CASE CharacterIds.Trooper
 		SELECT CASE poseId
 		CASE POSEMOUTHCLOSE
 			pose.chatBox = TROOPERCHATBOX
@@ -411,6 +482,21 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 			pose.top = 1
 			pose.btm = 3
 		END SELECT
+    case CharacterIds.Rockmonster
+        select case poseId
+        case POSECRASHING
+            pose.top = 30
+			pose.btm = 0
+        case POSEMOUTHOPEN
+            pose.top = 31
+			pose.btm = 0
+        case POSETONGUE
+            pose.top = 32
+			pose.btm = 0
+        case POSECHEWING
+            pose.top = 34
+			pose.btm = 0
+        end select
 	END SELECT
 	
 END SUB
@@ -422,13 +508,62 @@ SUB GetPose (pose AS PoseType, poseId AS INTEGER)
 	DIM n AS INTEGER
 	
 	FOR n = 0 TO NumPoses - 1
-		IF Poses(n).id = poseId THEN
-			pose = Poses(n)
+		IF Poses(n)->id = poseId THEN
+			pose = *Poses(n)
 			EXIT FOR
 		END IF
 	NEXT n
 	
 END SUB
+
+sub UpdateLarryPos ()
+    
+    dim player as tPlayer
+    
+    LD2_GetPlayer player
+    
+    Larry.x = player.x
+    Larry.y = player.y
+    
+end sub
+
+sub AddSound (id as integer, filepath as string, loops as integer = 0)
+    
+    if LD2_isDebugMode() then LD2_Debug "AddSound ("+str(id)+", "+filepath+","+str(loops)+" )"
+    
+    LD2_AddSound id, DATA_DIR+"sound/"+filepath, loops
+    
+end sub
+
+sub LoadSounds ()
+    
+    AddSound Sounds.dialog , "dialog.wav"
+    AddSound Sounds.status , "status.wav"
+    AddSound Sounds.select1, "select.wav"
+    AddSound Sounds.denied , "denied.wav"
+    AddSound Sounds.pickup , "pickup.wav"
+    AddSound Sounds.look   , "look.wav"
+    AddSound Sounds.drop   , "drop.wav"
+    AddSound Sounds.equip  , "orig/equip.wav"
+    
+    AddSound Sounds.doorup     , "orig/doorup.ogg"
+    AddSound Sounds.doordown   , "orig/downdown.ogg"
+    
+    AddSound Sounds.shotgun    , "shotgun.wav"
+    AddSound Sounds.pistol     , "pistol.wav"
+    AddSound Sounds.machinegun , "machinegun.wav"
+    AddSound Sounds.deserteagle, "deagle.wav"
+    
+    AddSound Sounds.laugh       , "splice/laugh.wav"
+    AddSound Sounds.machinegun2 , "machinegun.wav"
+    AddSound Sounds.pistol2     , "pistol.wav"
+    
+    AddSound Sounds.footstep, "splice/footstep.wav"
+    AddSound Sounds.kick   , "kick.wav"
+    AddSound Sounds.jump   , "jump.wav"
+    AddSound Sounds.punch  , "punch.wav"
+    
+end sub
 
 SUB Main
   
@@ -444,6 +579,7 @@ SUB Main
   dim escaped as integer
   dim KeyInput as string
   dim PlayerIsRunning as integer
+  dim player as tPlayer
   
   fm = 0
   
@@ -465,27 +601,30 @@ SUB Main
     
 	LD2_ProcessEntities
 	LD2_RenderFrame
+    
+    LD2_GetPlayer player
   
 	SELECT CASE SceneNo
 	  CASE 2
 		LD2_put 1196, 144, POSEJANITOR, idSCENE, 0
 		LD2_put 170, 144, STEVEPASSEDOUT, idSCENE, 1
-		IF Larry.x >= 1160 THEN Scene3 '- larry meets janitor / rockmonster eats janitor
+		IF player.x >= 1160 THEN Scene3 '- larry meets janitor / rockmonster eats janitor (set larry-x)
 	  CASE 4
 		LD2_put 170, 144, STEVEPASSEDOUT, idSCENE, 1
-		IF Larry.x >= 1500 THEN Scene5 '- larry at elevator
+		IF player.x >= 1500 THEN Scene5 '- larry at elevator
 	  CASE 6 '- barney/larry exit at weapons locker
 		LD2_put 368, 144, BARNEYEXITELEVATOR, idSCENE, 0
 		LD2_put 368, 144, BARNEYBOX, idSCENE, 0
-		IF CurrentRoom = 7 AND Larry.x <= 400 THEN Scene7
+		IF CurrentRoom = 7 AND player.x <= 400 THEN Scene7
 	  CASE 7 '- long exposition from barney in weapons locker
 		LD2_put 368, 144, BARNEYEXITELEVATOR, idSCENE, 0
 		LD2_put 368, 144, BARNEYBOX, idSCENE, 0
 		IF CurrentRoom <> 7 THEN SceneNo = 0
 	END SELECT
 	
-	IF CurrentRoom = 1 AND Larry.x <= 1400 AND PortalScene = 0 THEN
+	IF CurrentRoom = 1 AND player.x <= 1400 AND PortalScene = 0 THEN
 	  LD2_SetSceneMode LETTERBOX
+      UpdateLarryPos
 	  LarryIsThere = 1
 	  SteveIsThere = 0
 	  LarryPoint = 1
@@ -494,8 +633,8 @@ SUB Main
 
 	  SceneNo = 0
 
-	  escaped = CharacterSpeak(enLARRY, "Hmmm...")
-	  escaped = CharacterSpeak(enLARRY, "I better find steve before I leave...")
+	  escaped = CharacterSpeak(CharacterIds.Larry, "Hmmm...")
+	  escaped = CharacterSpeak(CharacterIds.Larry, "I better find steve before I leave...")
 	  LD2_WriteText ""
 
 	  LD2_PopText "Larry Heads Back To The Weapons Locker"
@@ -506,13 +645,13 @@ SUB Main
 	  LD2_SetSceneMode MODEOFF
 	  LarryIsThere = 0
 	END IF
-	IF CurrentRoom = 1 AND Larry.x >= 1600 THEN
+	IF CurrentRoom = 1 AND player.x >= 1600 THEN
 	  SceneLobby
 	END IF
 
-	IF SceneVent = 0 AND CurrentRoom = VENTCONTROL AND Larry.x <= 754 THEN SceneVent1
+	IF SceneVent = 0 AND CurrentRoom = VENTCONTROL AND player.x <= 754 THEN SceneVent1
 	EnteringCode = 0
-	IF CurrentRoom = 23 AND Larry.x >= 1377 AND Larry.x <= 1407 THEN
+	IF CurrentRoom = 23 AND player.x >= 1377 AND player.x <= 1407 THEN
 	  EnteringCode = 1
 	  IF KeyCount < 4 THEN
 		LD2_WriteText "Enter in the 4-digit Code:" + KeyInput
@@ -537,7 +676,7 @@ SUB Main
 	  KeyInput = ""
 	END IF
 
-	IF PortalScene = 0 AND CurrentRoom = 21 AND Larry.x <= 300 THEN
+	IF PortalScene = 0 AND CurrentRoom = 21 AND player.x <= 300 THEN
 	  PortalScene = 1
 	  ScenePortal
 	ELSEIF CurrentRoom = 21 AND PortalScene = 0 THEN
@@ -548,7 +687,7 @@ SUB Main
 	  LD2_put 200, 144, 72, idSCENE, 0
 	END IF
    
-	IF FlashLightScene = 1 AND Larry.x >= 1240 THEN
+	IF FlashLightScene = 1 AND player.x >= 1240 THEN
 	  SceneFlashlight2
 	  LD2_SetPlayerXY 20, 144
 	  LD2_SetXShift 1400
@@ -567,11 +706,11 @@ SUB Main
 
 
 	IF RoofScene = 0 AND CurrentRoom = 23 THEN
-	  IF Larry.x <= 700 AND FirstBoss = 0 THEN
+	  IF player.x <= 700 AND FirstBoss = 0 THEN
 		LD2_CreateMob 500, 144, BOSS1
 		LD2_SetBossBar BOSS1
 		FirstBoss = 1
-	  ELSEIF Larry.x <= 1300 AND fm = 0 THEN
+	  ELSEIF player.x <= 1300 AND fm = 0 THEN
 		fm = 1
 		LD2_PlayMusic mscBOSS
 	  END IF
@@ -579,16 +718,16 @@ SUB Main
 	IF RoofScene = 2 AND CurrentRoom = 7 THEN
 	  LD2_put 388, 144, 50, idSCENE, 0
 	  LD2_put 388, 144, 45, idSCENE, 0
-	  IF Larry.x <= 420 THEN SceneWeaponRoom
+	  IF player.x <= 420 THEN SceneWeaponRoom
 	END IF
 	IF RoofScene = 3 AND CurrentRoom = 7 THEN
 	  LD2_put 48, 144, 50, idSCENE, 0
 	  LD2_put 48, 144, 45, idSCENE, 0
-	  IF Larry.x <= 80 THEN SceneWeaponRoom2
+	  IF player.x <= 80 THEN SceneWeaponRoom2
 	END IF
 
 	IF SteveGoneScene = 0 AND SceneNo <> 2 AND SceneNo <> 4 THEN
-	  IF CurrentRoom = 14 AND Larry.x <= 300 THEN
+	  IF CurrentRoom = 14 AND player.x <= 300 THEN
 		SceneSteveGone
 	  END IF
 	END IF
@@ -686,20 +825,20 @@ SUB PutRestOfSceners
 
 END SUB
 
-SUB RenderPoses
+SUB RenderPoses ()
 	
     IF LD2_isDebugMode() THEN LD2_Debug "RenderPoses ()"
     
-	DIM pose AS PoseType
+	DIM pose AS PoseType ptr
 	DIM n AS INTEGER
 	
 	FOR n = 0 TO NumPoses - 1
 		pose = Poses(n)
-        IF pose.isSpeaking THEN
-            LD2_put ShiftX, 180, pose.chatBox, idSCENE, 0
+        IF pose->isSpeaking THEN
+            LD2_putFixed 0, 180, pose->chatBox, idSCENE, pose->flipped
         END IF
-		LD2_put ShiftX+pose.x, pose.y, pose.btm, idSCENE, pose.flipped
-		LD2_put ShiftX+pose.x, pose.y, pose.top, idSCENE, pose.flipped
+		LD2_put pose->x+pose->btmXmod, pose->y+pose->btmYmod, pose->btm+pose->btmMod, idSCENE, pose->flipped
+		LD2_put pose->x+pose->topXmod, pose->y+pose->topYmod, pose->top+pose->topMod, idSCENE, pose->flipped
 	NEXT n
 	
 END SUB
@@ -710,30 +849,46 @@ SUB RetraceDelay (qty AS INTEGER)
 	
 END SUB
 
+sub DoScene (sceneId as string)
+    
+    dim escaped as integer
+    
+    if SCENE_Init(sceneId) then
+        do while SCENE_ReadLine()
+            escaped = DoDialogue(): if escaped then exit do
+        loop
+    end if
+    
+    LD2_WriteText ""
+    
+end sub
+
+sub RenderScene ()
+    
+    LD2_ProcessGuts
+    LD2_RenderFrame
+    RenderPoses
+    LD2_RefreshScreen
+    
+end sub
+
 SUB Scene1 (skip AS INTEGER)
 
 	IF LD2_isDebugMode() THEN LD2_Debug "Scene1(" + STR(skip) + " )"
 
+    SceneNo = 1
 	LD2_SetSceneMode LETTERBOX
 	LD2_ClearMobs
-	
-	SceneNo = 1
-	LarryIsThere = 1
-	SteveIsThere = 1
-	LarryPoint = 0
-	StevePoint = 1
-	LarryPos = 0
-	StevePos = 0
     
-    dim ExitScene as integer
-
-	ExitScene = 0
-
+    AddSound Sounds.kickvending, "kick.wav"
+    AddSound Sounds.sodacanopen, "splice/sodacanopen.wav"
+    AddSound Sounds.sodacandrop, "splice/sodacandrop.wav"
+	
 	DIM LarryPose AS PoseType
 	DIM StevePose AS PoseType
 
-	GetCharacterPose LarryPose, enLARRY, POSEMOUTHCLOSE
-	GetCharacterPose StevePose, enSTEVE, POSEMOUTHCLOSE
+	GetCharacterPose LarryPose, CharacterIds.Larry, POSEMOUTHCLOSE
+	GetCharacterPose StevePose, CharacterIds.Steve, POSEMOUTHCLOSE
 	LarryPose.flipped = 0
 	StevePose.flipped = 1
 
@@ -741,12 +896,11 @@ SUB Scene1 (skip AS INTEGER)
 	StevePose.x = 124: StevePose.y = 144
 	
 	ClearPoses
-	LarryPose.id = enLARRY: AddPose LarryPose
-	StevePose.id = enSTEVE: AddPose StevePose
+	AddPose @LarryPose
+	AddPose @StevePose
 
 	LD2_RenderFrame
 	RenderPoses
-	'LD2_RefreshScreen
     LD2_FadeIn 2
 
 	IF LD2_isDebugMode() THEN LD2_Debug "LD2_PlayMusic"
@@ -755,359 +909,264 @@ SUB Scene1 (skip AS INTEGER)
 	
     dim escaped as integer
     dim x as integer
+    dim i as integer
 
-    DO
+    do
 
-        IF skip THEN EXIT DO
+        if skip then exit do
         
         WaitSeconds 3.0
 
-        IF SCENE_Init("SCENE-1A") THEN
-            DO WHILE SCENE_ReadLine()
-                escaped = DoDialogue(): IF escaped THEN EXIT DO
-            LOOP
-        END IF
-        LD2_WriteText ""
+        DoScene "SCENE-1A" '// Well Steve, that was a good game of chess
 
         '- Steve walks to soda machine
-        FOR x = 124 TO 152
-            LD2_RenderFrame
-            LD2_put x, StevePose.y, 12, idSCENE, 0
-            LD2_put x, StevePose.y, 14 + (x MOD 6), idSCENE, 0
-
-            LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
-            LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
-
+        GetCharacterPose StevePose, CharacterIds.Steve, POSEWALKING
+        StevePose.flipped = 0
+        for x = 124 to 152
+            StevePose.x = x
+            StevePose.btmMod = int(x mod 6)
+            RenderScene
             RetraceDelay 3
-
-            LD2_RefreshScreen
-
             PullEvents
-            IF keyboard(KEY_ESCAPE) THEN ExitScene = 1: EXIT FOR
-        NEXT x
-
-        IF ExitScene THEN WaitForKeyup(KEY_ESCAPE): EXIT DO
+            if keyboard(KEY_ESCAPE) then exit do
+        next x
 
         StevePose.x = 152
-
+        StevePose.btmMod = 0
+        RenderScene
         RetraceDelay 40
 
-        IF SCENE_Init("SCENE-1B") THEN
-            DO WHILE SCENE_ReadLine()
-                escaped = DoDialogue(): IF escaped THEN EXIT DO
-            LOOP
-        END IF
-        LD2_WriteText ""
+        DoScene "SCENE-1B" '// Hey, you got a quarter?
 
         '- Steve kicks the soda machine
-        FOR x = 19 TO 22
-            LD2_RenderFrame
-            LD2_put StevePose.x, StevePose.y, 12, idSCENE, 1
-            LD2_put StevePose.x, StevePose.y, x, idSCENE, 1
-
-            LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
-            LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
-
-            RetraceDelay 19
-
-            LD2_RefreshScreen
-
+        GetCharacterPose StevePose, CharacterIds.Steve, POSEKICKING
+        StevePose.flipped = 1 '- can DoScene update the flipped value from script file?
+        for i = 0 to 3
+            StevePose.btmMod = i
+            RenderScene
+            if i = 3 then
+                RetraceDelay 10
+                LD2_PlaySound Sounds.kickvending
+            else
+                RetraceDelay 19
+            end if
             PullEvents
-            IF keyboard(KEY_ESCAPE) THEN ExitScene = 1: EXIT FOR
-        NEXT x
-
-        IF ExitScene THEN WaitForKeyup(KEY_ESCAPE): EXIT DO
+            if keyboard(KEY_ESCAPE) then exit do
+        next i
+        
+        WaitSeconds 0.5
 
         '- Steve bends down and gets a soda
-        FOR x = 23 TO 24
-            LD2_RenderFrame
-            LD2_put StevePose.x, StevePose.y + 3, 12, idSCENE, 1
-            LD2_put StevePose.x, StevePose.y, x, idSCENE, 1
-
-            LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
-            LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
-
-            RetraceDelay 19
-
-            LD2_RefreshScreen
-
+        GetCharacterPose StevePose, CharacterIds.Steve, POSEGETSODA
+        for i = 0 to 1
+            StevePose.btmMod = i
+            RenderScene
+            RetraceDelay 29
             PullEvents
-            IF keyboard(KEY_ESCAPE) THEN ExitScene = 1: EXIT FOR
-        NEXT x
-
-        IF ExitScene THEN WaitForKeyup(KEY_ESCAPE): EXIT DO
-
-        LD2_RenderFrame
-        LD2_put StevePose.x, StevePose.y, 12, idSCENE, 1
-        LD2_put StevePose.x, StevePose.y, 25, idSCENE, 1
-
-        LD2_put LarryPose.x, LarryPose.y, 0, idSCENE, 0
-        LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
-
-        LD2_RefreshScreen
-
-        RetraceDelay 20
-
-        IF SCENE_Init("SCENE-1C") THEN
-            DO WHILE SCENE_ReadLine()
-                escaped = DoDialogue(): IF escaped THEN EXIT DO
-            LOOP
-        END IF
-
-        StevePose.x = 174
-
-        LD2_RenderFrame
-        LD2_put StevePose.x - 2, StevePose.y + 2, 12, idSCENE, 1
-        LD2_put StevePose.x, StevePose.y, 26, idSCENE, 1
-
-        LD2_put LarryPose.x, LarryPose.y, 1, idSCENE, 0
-        LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
-
-        LD2_RefreshScreen
+            if keyboard(KEY_ESCAPE) then exit do
+        next i
+        
+        StevePose.btmMod = 2
+        StevePose.topYmod = 0
+        RenderScene
+        
+        WaitSeconds 0.5
+        LD2_PlaySound Sounds.sodacanopen
+        
+        DoScene "SCENE-1C" '// Steve drinks the cola!
+        
+        '// Steve looks ill
+        GetCharacterPose LarryPose, CharacterIds.Larry, POSESURPRISE
+        GetCharacterPose StevePose, CharacterIds.SteveSICK, POSEMOUTHCLOSE
+        StevePose.x = 152
+        RenderScene
 
         RetraceDelay 80
 
-        IF SCENE_Init("SCENE-1D") THEN
-            DO WHILE SCENE_ReadLine()
-                escaped = DoDialogue(): IF escaped THEN EXIT DO
-            LOOP
-        END IF
-        LD2_WriteText ""
-
-        LD2_RenderFrame
-        LD2_put StevePose.x, StevePose.y, 27, idSCENE, 1
-
-        LD2_put LarryPose.x, LarryPose.y, 1, idSCENE, 0
-        LD2_put LarryPose.x, LarryPose.y, 3, idSCENE, 0
-
-        LD2_RefreshScreen
+        DoScene "SCENE-1D" '// Larry, I don't feel so good
+        
+        GetCharacterPose StevePose, CharacterIds.Steve, POSEPASSEDOUT
+        RenderScene
+        
+        LD2_PlaySound Sounds.sodacandrop
 
         RetraceDelay 80
 
-        IF SCENE_Init("SCENE-1E") THEN
-            DO WHILE SCENE_ReadLine()
-                escaped = DoDialogue(): IF escaped THEN EXIT DO
-            LOOP
-        END IF
-        LD2_WriteText ""
-        WaitForKeyup(&H39) '- change to waitsecondsuntilkey
+        DoScene "SCENE-1E" '// Steve! I gotta get help1
+        DoScene "SCENE-1F" '// The Journey Begins...Again!!
 
-        'The Journey Begins...Again!!
-        'IF SCENE_Init("SCENE-1F") THEN
-        '    DO WHILE SCENE_ReadLine()
-        '        escaped = DoDialogue(): IF escaped THEN EXIT DO
-        '    LOOP
-        'END IF
+        exit do
 
-        EXIT DO
-
-	LOOP WHILE 0
-
-	LD2_WriteText " "
-
+	loop while 0
+    
+    WaitForKeyup(KEY_ESCAPE)
+    WaitForKeyup(KEY_SPACE)
+    
+    '- END conditions
 	Steve.x = 174
 	SceneNo = 2
-	SteveIsThere = 0
 	LD2_SetSceneMode MODEOFF
-	LarryIsThere = 0
-	SteveIsThere = 0
 
 END SUB
 
 SUB Scene3
 
-  '- Process scene 3(actually, the second scene)
-  '---------------------------------------------
+    '- Process scene 3(actually, the second scene)
+    '---------------------------------------------
+    dim LarryPose as PoseType
+    dim JanitorPose as PoseType
+    dim StevePose as PoseType
+    dim RockmonsterPose as PoseType
+    dim escaped as integer
+    
+    SceneNo = 3
+    LD2_SetSceneMode LETTERBOX
+    UpdateLarryPos
 
-  SceneNo = 3
-  LD2_SetSceneMode LETTERBOX
-  LarryIsThere = 1
-  JanitorIsThere = 1
-  LarryPoint = 0
-  JanitorPoint = 1
-  LarryPos = 0
-  JanitorPos = 0
+    AddSound Sounds.growl, "splice/growl2.wav"
+    AddSound Sounds.chew1, "splice/chew0.wav"
+    AddSound Sounds.chew2, "splice/chew1.wav"
+    'AddSound Sounds.scare, "splice/scare0.ogg"
+    AddSound Sounds.crack  , "splice/crack.wav"
+    AddSound Sounds.glass  , "splice/glass.wav"
+    AddSound Sounds.shatter, "splice/glassbreak.wav"
+    AddSound Sounds.slurp  , "slurp.wav"
+    AddSound Sounds.scream , "scream.wav"
+    
+    GetCharacterPose LarryPose, CharacterIds.Larry, POSEMOUTHCLOSE
+    GetCharacterPose JanitorPose, CharacterIds.Janitor, POSEMOUTHCLOSE
+    LarryPose.flipped = 0
+    JanitorPose.flipped = 1
+    
+    LarryPose.x = Larry.x: LarryPose.y = 144
+    JanitorPose.x = 1196: JanitorPose.y = 144
+    
+    ClearPoses
+    AddPose @LarryPose
+    AddPose @JanitorPose
+    
+    LD2_SetPlayerXY LarryPose.x, LarryPose.y
+    
+    RenderScene
 
-  LD2_RenderFrame
-  LD2_put Larry.x, 144, 0, idSCENE, 0
-  LD2_put Larry.x, 144, 3, idSCENE, 0
+    RetraceDelay 40
 
-  LD2_put 1196, 144, 28, idSCENE, 0
- 
-  LD2_RefreshScreen
+    LD2_FadeOutMusic
 
-  RetraceDelay 40
+    DoScene "SCENE-3A" '// Hey, you a doctor?
+    DoScene "SCENE-3B" '// Yes, I use this mop to
+    LD2_PlaySound Sounds.scare
+    DoScene "SCENE-3C" '// They rush to Steve!
 
+    JanitorPose.x = 224: JanitorPose.y = 144
+    LarryPose.x = 240: LarryPose.y = 144
+    JanitorPose.flipped = 1
+    LarryPose.flipped = 1
+    
+    LD2_SetPlayerXY LarryPose.x, LarryPose.y
+    LD2_SetPlayerFlip LarryPose.flipped
+    LD2_SetXShift 0
+    ShiftX = 0
+    
+    GetCharacterPose StevePose, CharacterIds.Steve, POSEPASSEDOUT
+    StevePose.x = 170: StevePose.y = 144: StevePose.flipped = 1
+    AddPose @StevePose
+    
+    RenderScene
 
-  Janitor.x = 1196: Janitor.y = 144
-  Larry.y = 144
+    SceneNo = 4
 
-  LD2_FadeOutMusic
+    DoScene "SCENE-3D" '// Let's see what I can do with him
+    
+    LD2_PlaySound Sounds.crack
+    WaitSeconds 1.5
+    LD2_PlaySound Sounds.glass
+    WaitSeconds 2.0
 
-  dim escaped as integer
-  IF SCENE_Init("SCENE-3A") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-  
- 
-  '- Larry smiles
-  '--------------
-  'LD2_RenderFrame
-  'LD2_put Larry.x, Larry.y, 2, idSCENE, 0
-  'LD2_put Larry.x, Larry.y, 3, idSCENE, 0
-  '
-  'LD2_put Janitor.x, Janitor.y, 28, idSCENE, 0
-  '
-  'LD2_RefreshScreen
-  '
-  'FOR i% = 1 TO 200
-  '  WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-  'NEXT i%
-  
-  IF SCENE_Init("SCENE-3B") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
- 
-  DO: LOOP WHILE keyboard(&H39)
-  
-  IF SCENE_Init("SCENE-3C") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
- 
-  LD2_SetXShift 0
-  ShiftX = 0
+    LD2_PlaySound Sounds.shatter
+    LD2_ShatterGlass 208, 136, 2, -1
+    LD2_ShatterGlass 224, 136, 2, 1
 
-  Janitor.x = 224: Janitor.y = 144
-  Larry.x = 240: Larry.y = 144
-  JanitorPoint = 0
-  LarryPoint = 1
-  JanitorPoint = 1
+    '- Rockmonster busts through window and eats the janitor/doctor
+    '--------------------------------------------------------------
+    LD2_PutTile 13, 8, 19, 3
+    
+    GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, POSECRASHING
+    RockmonsterPose.x = 208
+    AddPose @RockmonsterPose
 
-  SceneNo = 4
+    dim mobY as single
+    dim startedMusic as integer
+    startedMusic = 0
+    for mobY = 128 to 144 step .37
+        RockmonsterPose.y = int(mobY)
+        RenderScene
+        RetraceDelay 1
+        if (startedMusic = 0) and (mobY >= 133) then
+            LD2_PlayMusic mscUHOH
+            startedMusic = 1
+        end if
+    next mobY
+    
+    RockmonsterPose.y = 144
+    WaitSeconds 0.1
+    
+    dim i as integer
+    for i = 1 to 20
+        RenderScene
+        RetraceDelay 1
+    next i
+    GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, POSEMOUTHOPEN
+    for i = 1 to 60 '// keep rendering scene during wait-time so guts are animated
+        RenderScene
+        RetraceDelay 1
+    next i
 
-  IF SCENE_Init("SCENE-3D") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-  'LD2_WriteText ""
+    GetCharacterPose JanitorPose, CharacterIds.Janitor, POSETONGUE
+    GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, POSETONGUE
+    JanitorPose.flipped = 0
+    RenderScene
+    LD2_PlaySound Sounds.slurp
+    RetraceDelay 85
+    LD2_PlaySound Sounds.scream
 
-  LD2_PlayMusic mscUHOH
-  LD2_PlaySound sfxGLASS
-  LD2_ShatterGlass 208, 136, 2, -1
-  LD2_ShatterGlass 224, 136, 2, 1
- 
-  '- Rockmonster busts through window and eats the janitor/doctor
-  '--------------------------------------------------------------
-  LD2_PutTile 13, 8, 19, 3
+    dim x as integer
+    for x = JanitorPose.x to 210 step -1
+        JanitorPose.x = int(x)
+        RenderScene
+        RetraceDelay 1
+    next x
 
-  dim y as single
-  FOR y = 128 TO 144 STEP .37
-	LD2_ProcessGuts
-	LD2_RenderFrame
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-
-	LD2_put Janitor.x, Janitor.y, 29, idSCENE, 1
-	LD2_put 170, 144, 27, idSCENE, 1
-
-	LD2_put 208, INT(y), 30, idSCENE, 0
-
-	LD2_RefreshScreen
-
-	RetraceDelay 1
- 
-  NEXT y
-  
-  dim i as integer
-  FOR i = 1 TO 20
-	LD2_ProcessGuts
-	LD2_RenderFrame
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-	LD2_put Janitor.x, Janitor.y, 29, idSCENE, 1
-	LD2_put 170, 144, 27, idSCENE, 1
-	LD2_put 208, 144, 30, idSCENE, 0
-	LD2_RefreshScreen
-	RetraceDelay 1
-  NEXT i
-  FOR i = 1 TO 40
-	LD2_ProcessGuts
-	LD2_RenderFrame
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-	LD2_put Janitor.x, Janitor.y, 29, idSCENE, 1
-	LD2_put 170, 144, 27, idSCENE, 1
-	LD2_put 208, 144, 31, idSCENE, 0
-	LD2_RefreshScreen
-	RetraceDelay 1
-  NEXT i
-  
-  LD2_PlaySound sfxSLURP
-  
-  dim x as integer
-  FOR x = Janitor.x TO 210 STEP -1
-	LD2_ProcessGuts
-	LD2_RenderFrame
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-
-	LD2_put x, Janitor.y, 33, idSCENE, 0
-	LD2_put 170, 144, 27, idSCENE, 1
-
-	LD2_put 208, 144, 32, idSCENE, 0
-
-	LD2_RefreshScreen
-
-	RetraceDelay 1
-	IF x = Janitor.x THEN
-	  RetraceDelay 80
-	END IF
-  NEXT x
-  
-  LD2_PlaySound sfxAHHHH
+    LD2_PlaySound Sounds.chew1
 
 
-  '- rockmonster chews the janitor/doctor to death
-  '-----------------------------------------------
-  FOR x = 1 TO 20
-	LD2_ProcessGuts
-	LD2_RenderFrame
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
+    '- rockmonster chews the janitor/doctor to death
+    '-----------------------------------------------
+    RemovePose @JanitorPose
+    GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, POSECHEWING
+    for i = 1 to 20
+        RockmonsterPose.topMod = (i and 1)
+        RenderScene
+        RetraceDelay 9
+        if i = 6 then LD2_PlaySound Sounds.chew2
+    next i
+    
+    GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, POSEMOUTHOPEN
+    RenderScene
+    WaitSeconds 0.4
+    LD2_PlaySound Sounds.growl
+    WaitSeconds 2.0
 
-	LD2_put 170, 144, 27, idSCENE, 1
+    '- END conditions
+    LD2_CreateMob 208, 144, ROCKMONSTER
+    LD2_SetPlayerXY LarryPose.x, LarryPose.y
+    LD2_SetPlayerFlip 1
 
-	LD2_put 208, 144, 34 + (x AND 1), idSCENE, 0
+    LD2_SetSceneMode MODEOFF
+    SceneNo = 4
+    LD2_LockElevator
 
-	LD2_RefreshScreen
-	 
-	RetraceDelay 9
-
-	'sd% = INT(RND * (900)) + 40
-	'SOUND sd%, 3
- 
-  NEXT x
-
-  '- END conditions
-  LD2_CreateMob 208, 144, ROCKMONSTER
-  LD2_SetPlayerXY Larry.x, Larry.y
-  LD2_SetPlayerFlip 1
-
-  LD2_WriteText ""
-  LD2_SetSceneMode MODEOFF
-  LarryIsThere = 0
-  JanitorIsThere = 0
-  SceneNo = 4
-  LD2_LockElevator
-  
-  LD2_PlayMusic mscMARCHoftheUHOH
+    LD2_PlayMusic mscMARCHoftheUHOH
 
 END SUB
 
@@ -1115,6 +1174,7 @@ SUB Scene5
 
   '- Process Scene 5
   '-----------------
+  UpdateLarryPos
 
   SceneNo = 5
   LD2_SetSceneMode LETTERBOX
@@ -1122,6 +1182,9 @@ SUB Scene5
   LarryPoint = 0
   LarryPos = 0
   BarneyPos = 0
+  
+  AddSound Sounds.splatter, "splice/bloodexplode.wav"
+  AddSound Sounds.snarl   , "splice/snarl.wav"
 
   LD2_RenderFrame
   Barney.x = 1480: Barney.y = 112
@@ -1237,6 +1300,8 @@ SUB Scene5
 	rx = rx - .4
    
 	LD2_RefreshScreen
+    
+    LD2_PlaySound Sounds.machinegun
  
   NEXT n
   
@@ -1244,6 +1309,9 @@ SUB Scene5
 
   LD2_MakeGuts rx + 8, 120, 8, 1
   LD2_MakeGuts rx + 8, 120, 8, -1
+  
+  LD2_PlaySound Sounds.snarl
+  LD2_PlaySound Sounds.splatter
  
   FOR n = 1 TO 140
   
@@ -1352,6 +1420,7 @@ SUB Scene7
 
   '- Process Scene 7
   '-----------------
+  UpdateLarryPos
 
   LD2_SetSceneMode LETTERBOX
   LarryIsThere = 1
@@ -1504,6 +1573,8 @@ END SUB
 SUB SceneLobby
 
   LD2_SetSceneMode LETTERBOX
+  
+  UpdateLarryPos
 
   Larry.y = 144
 
@@ -1511,18 +1582,18 @@ SUB SceneLobby
   LarryPoint = 0
   LarryPos = 0
  
-  'escaped = CharacterSpeak%(enLARRY, "hmm...")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "hmm...")
   LD2_FadeOutMusic
-  'escaped = CharacterSpeak%(enLARRY, "It sure is nice to have some fresh air again.")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "It sure is nice to have some fresh air again.")
   LarryPoint = 1
-  'escaped = CharacterSpeak%(enLARRY, "...")
-  'escaped = CharacterSpeak%(enLARRY, "Poor Steve...")
-  'escaped = CharacterSpeak%(enLARRY, "...sigh...")
-  'escaped = CharacterSpeak%(enLARRY, "...he's in a better place now...")
-  'escaped = CharacterSpeak%(enLARRY, "...probably with his friend, matt...")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "...")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "Poor Steve...")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "...sigh...")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "...he's in a better place now...")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "...probably with his friend, matt...")
   LarryPoint = 0
-  'escaped = CharacterSpeak%(enLARRY, "many stories ended tonight...")
-  'escaped = CharacterSpeak%(enLARRY, "...but mine lives on...")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "many stories ended tonight...")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "...but mine lives on...")
 
   LD2_WriteText ""
 
@@ -1793,6 +1864,8 @@ END SUB
 SUB SceneRoofTop
 
   LD2_SetSceneMode LETTERBOX
+  
+  UpdateLarryPos
 
   RoofScene = 1
  
@@ -1807,12 +1880,12 @@ SUB SceneRoofTop
   Barney.x = 0
   Barney.y = 144
 
-  'escaped = CharacterSpeak%(enLARRY, "Barney, come in.")
-  'escaped = CharacterSpeak%(enBARNEY, "Yea, Larry, I'm here, over.")
-  'escaped = CharacterSpeak%(enLARRY, "I've found a code-yellow access card.")
-  'escaped = CharacterSpeak%(enBARNEY, "Great!")
-  'escaped = CharacterSpeak%(enBARNEY, "Okay, meet me in the weapon's locker, over.")
-  'escaped = CharacterSpeak%(enLARRY, "I copy that.")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "Barney, come in.")
+  'escaped = CharacterSpeak%(CharacterIds.Barney, "Yea, Larry, I'm here, over.")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "I've found a code-yellow access card.")
+  'escaped = CharacterSpeak%(CharacterIds.Barney, "Great!")
+  'escaped = CharacterSpeak%(CharacterIds.Barney, "Okay, meet me in the weapon's locker, over.")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "I copy that.")
   LD2_SetAccessLevel 3
 
   RoofScene = 2
@@ -1827,6 +1900,7 @@ END SUB
 SUB SceneSteveGone
 
   LD2_SetSceneMode LETTERBOX
+  UpdateLarryPos
   LarryIsThere = 1
   LarryPoint = 1
   LarryPos = 0
@@ -1851,16 +1925,17 @@ END SUB
 SUB SceneVent1
 
   LD2_SetSceneMode LETTERBOX
+  UpdateLarryPos
   LarryIsThere = 1
   LarryPoint = 1
 
   SceneNo = 0
   Larry.y = 144
 
-  'escaped = CharacterSpeak%(enLARRY, "Woah!")
-  'escaped = CharacterSpeak%(enLARRY, "Some type of crystalized alien goo is in the way.")
-  'escaped = CharacterSpeak%(enLARRY, "I'll need to find some type of chemical to...")
-  'escaped = CharacterSpeak%(enLARRY, "break down this goo.")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "Woah!")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "Some type of crystalized alien goo is in the way.")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "I'll need to find some type of chemical to...")
+  'escaped = CharacterSpeak%(CharacterIds.Larry, "break down this goo.")
   LD2_WriteText ""
 
   SceneVent = 1 '- LD2_CreateItem SCENECOMPLETE, 0, 0, 0
@@ -1872,6 +1947,7 @@ END SUB
 SUB SceneWeaponRoom
 
   LD2_SetSceneMode LETTERBOX
+  UpdateLarryPos
 
   SceneNo = 0
   Larry.y = 144
@@ -1921,6 +1997,7 @@ END SUB
 SUB SceneWeaponRoom2
 
   LD2_SetSceneMode LETTERBOX
+  UpdateLarryPos
 
   SceneNo = 0
   Larry.y = 144
@@ -2040,6 +2117,7 @@ SUB Start
     WaitSeconds 0.5
     
     LD2_Init
+    LoadSounds
     
     'Mobs.AddType ROCKMONSTER
     'Mobs.AddType TROOP1
@@ -2049,7 +2127,7 @@ SUB Start
     
     IF (LD2_NotFlag(TESTMODE)) AND (LD2_NotFlag(SKIPOPENING)) THEN '(LD2_isDebugMode% = 0) AND
       IF firstLoop THEN
-        LD2_PlayMusic mscWANDERING
+        LD2_PlayMusic mscOPENING
         i = WaitSecondsUntilKey(2.0)
         TITLE_Opening
       END IF
@@ -2147,9 +2225,9 @@ SUB UpdatePose (target AS PoseType, pose AS PoseType)
 	DIM n AS INTEGER
 	
 	FOR n = 0 TO NumPoses - 1
-		IF Poses(n).id = target.id THEN
-			Poses(n) = pose
-			Poses(n).id = target.id
+		IF Poses(n)->id = target.id THEN
+			*Poses(n) = pose
+			Poses(n)->id = target.id
 			EXIT FOR
 		END IF
 	NEXT n

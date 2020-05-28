@@ -3,7 +3,7 @@
 
 TYPE LD2musicData
 	id AS INTEGER
-	filepath AS STRING * 16
+	filepath AS STRING
 	loopmusic AS INTEGER
 END TYPE
 

@@ -307,7 +307,7 @@ SUB LD2_AddAmmo (Kind AS INTEGER, Amount AS INTEGER)
   IF Inventory(BULLETS) > MAXBULLETS THEN Inventory(BULLETS) = MAXBULLETS
   IF Inventory(DEAGLES) > MAXDEAGLES THEN Inventory(DEAGLES) = MAXDEAGLES
 
-  LD2_PlaySound sfxEQUIP
+  LD2_PlaySound Sounds.equip
 
 END SUB
 
@@ -322,15 +322,6 @@ SUB LD2_SetLives (Amount AS INTEGER)
   NumLives = Amount
   
 END SUB
-
-SUB AddSound (id AS INTEGER, filepath AS STRING, loopsound AS INTEGER = 0)
-    
-    IF LD2_isDebugMode() THEN LD2_Debug "AddCount ("+STR(id)+", "+filepath+","+STR(loopsound)+" )"
-    
-    LD2_AddSound id, filepath, loopsound
-    
-END SUB
-
 
 SUB AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
     
@@ -433,6 +424,7 @@ END FUNCTION
 SUB LD2_GetPlayer (p AS tPlayer)
     
     p = Player
+    p.x += XShift
     
 END SUB
 
@@ -778,23 +770,22 @@ SUB LD2_Init
     
     AddMusic mscTITLE    , DATA_DIR+"sound/title.ogg", 1
     AddMusic mscTHEME    , DATA_DIR+"sound/theme.ogg", 0
-    AddMusic mscWANDERING, DATA_DIR+"sound/creepy.ogg", 1
-    AddMusic mscINTRO    , DATA_DIR+"sound/bak/intro.ogg", 0
-    AddMusic mscUHOH     , DATA_DIR+"sound/bak/uhoh.gdm", 0
-    AddMusic mscMARCHoftheUHOH, DATA_DIR+"sound/bak/scent.gdm", 0
+    AddMusic mscWANDERING, DATA_DIR+"sound/room4.ogg", 1
+    AddMusic mscOPENING  , DATA_DIR+"sound/orig/creepy.ogg", 1
+    AddMusic mscINTRO    , DATA_DIR+"sound/orig/intro.ogg", 0
+    AddMusic mscUHOH     , DATA_DIR+"sound/uhoh.ogg", 0
+    AddMusic mscMARCHoftheUHOH, DATA_DIR+"sound/march.ogg", 1
     
-    AddSound sfxSELECT , DATA_DIR+"sound/select.wav"
-    AddSound sfxDENIED , DATA_DIR+"sound/denied.wav"
-    AddSound sfxGLASS  , DATA_DIR+"sound/glassbreak.wav"
-    AddSound sfxAHHHH  , DATA_DIR+"sound/scream.wav"
-    AddSound sfxEQUIP  , DATA_DIR+"sound/equip.wav"
-    AddSound sfxSLURP  , DATA_DIR+"sound/slurp.wav"
-    AddSound sfxSELECT2, DATA_DIR+"sound/look.wav"
-    AddSound sfxDROP   , DATA_DIR+"sound/drop.wav"
     
-    AddSound sfxPUNCH  , DATA_DIR+"sound/punch.wav"
-    AddSound sfxJUMP   , DATA_DIR+"sound/jump.wav"
-    AddSound sfxSTEP   , DATA_DIR+"sound/step.wav"
+    
+    'AddSound sfxGROWL  , DATA_DIR+"sound/splice/growl2.ogg"
+    'AddSound sfxSCARE  , DATA_DIR+"sound/splice/scare0.ogg"
+    'AddSound sfxAMBIENT, DATA_DIR+"sound/splice/ambient0.ogg"
+    'AddSound sfxCHEW1  , DATA_DIR+"sound/splice/chew0.ogg"
+    'AddSound sfxCHEW2  , DATA_DIR+"sound/splice/chew1.ogg"
+    'AddSound sfxSODAOPEN, DATA_DIR+"sound/splice/sodacanopen.ogg"
+    'AddSound sfxSODADROP, DATA_DIR+"sound/splice/sodacandrop.ogg"
+    'AddSound sfxMENU    , DATA_DIR+"sound/orig/equip.wav"
     
   ELSE
     
@@ -921,7 +912,7 @@ SUB LD2_JumpPlayer (Amount AS SINGLE)
   IF CheckPlayerFloorHit() AND Player.velocity >= 0 THEN
     Player.velocity = -Amount
     Player.y = Player.y + Player.velocity*DELAYMOD
-    LD2_PlaySound sfxJUMP
+    LD2_PlaySound Sounds.jump
   END IF
   
   SetPlayerState( JUMPING )
@@ -1462,7 +1453,8 @@ SUB LD2_MovePlayer (dx AS DOUBLE)
 
   f = DELAYMOD
   dx = f*dx
-  ex = dx*1.0625
+  'ex = dx*1.0625
+  ex = dx*1.2
   
   prevx    = Player.x
   prvxs    = XShift
@@ -1472,16 +1464,16 @@ SUB LD2_MovePlayer (dx AS DOUBLE)
     Player.lAni = Player.lAni + ABS(ex / 7.5)
     select case footstep
         case 0
-            if player.lani >= 37 then LD2_PlaySound sfxSTEP: footstep += 1
+            if player.lani >= 37 then LD2_PlaySound Sounds.footstep: footstep += 1
         case 1
-            if player.lani >= 41 then LD2_PlaySound sfxSTEP: footstep += 1
+            if player.lani >= 41 then LD2_PlaySound Sounds.footstep: footstep += 1
     end select
   ELSE
     Player.x    = Player.x + dx
     Player.lAni = Player.lAni + ABS(dx / 7.5)
     select case footstep
         case 0
-            if player.lani >= 23 then LD2_PlaySound sfxSTEP: footstep += 1
+            if player.lani >= 23 then LD2_PlaySound Sounds.footstep: footstep += 1
     end select
   END IF
   
@@ -1564,7 +1556,7 @@ SUB LD2_PickUpItem
       IF n = 0 THEN
         LD2_SetFlag GOTITEM
         LD2_SetFlagData Items(i).item
-        LD2_PlaySound sfxPICKUP
+        LD2_PlaySound Sounds.pickup
         IF i = NumItems THEN
           Items(i).item = 0
         ELSE
@@ -1722,8 +1714,7 @@ SUB LD2_ProcessEntities
     SELECT CASE Player.weapon
       CASE FIST
         Player.uAni = Player.uAni + .15
-        IF Player.lAni = 39 THEN Player.lAni = 26
-        Player.uAni = 26: Player.shooting = 0
+        IF Player.uAni >= 28 THEN Player.lAni = 26: Player.shooting = 0
         Player.stillani = 26
       CASE SHOTGUN
         Player.uAni = Player.uAni + .15
@@ -1802,7 +1793,7 @@ SUB LD2_ProcessEntities
             IF mob.x + 7 >= Player.x + XShift AND mob.x + 7 <= Player.x + XShift + 15 THEN
                 IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
                     IF INT(10 * RND(1)) + 1 = 1 THEN
-                        LD2_PlaySound sfxBLOOD2
+                        LD2_PlaySound Sounds.blood2
                     END IF
                     Player.life = Player.life - 1
                     LD2_MakeGuts mob.x + 7, mob.y + 8, -1, 1
@@ -1901,11 +1892,11 @@ SUB LD2_ProcessEntities
             
             IF mob.shooting > 0 THEN
                 IF INT(30 * RND(1)) + 1 = 1 THEN
-                    LD2_PlaySound sfxLAUGH
+                    LD2_PlaySound Sounds.laugh
                 END IF
                 '- Make entity shoot
                 IF (mob.shooting AND 7) = 0 THEN
-                    LD2_PlaySound sfxMACHINEGUN2
+                    LD2_PlaySound Sounds.machinegun2
                         IF mob.flip = 0 THEN
                         'DEF SEG = VARSEG(TileMap(0))
                         FOR i = mob.x + 15 TO mob.x + 320 STEP 8
@@ -1986,7 +1977,7 @@ SUB LD2_ProcessEntities
                 IF mob.shooting > 0 THEN
                     '- Make entity shoot
                     IF (mob.shooting AND 15) = 0 THEN
-                        LD2_PlaySound sfxPISTOL2
+                        LD2_PlaySound Sounds.pistol2
                         IF mob.flip = 0 THEN
                             'DEF SEG = VARSEG(TileMap(0))
                             FOR i = mob.x + 15 TO mob.x + 320 STEP 8
@@ -2056,7 +2047,7 @@ SUB LD2_ProcessEntities
             IF mob.x + 7 >= Player.x + XShift AND mob.x + 7 <= Player.x + XShift + 15 THEN
                 IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
                     IF INT(10 * RND(1)) + 1 = 1 THEN
-                        LD2_PlaySound sfxBLOOD1
+                        LD2_PlaySound Sounds.blood1
                     END IF
                     Player.life = Player.life - 1
                     LD2_MakeGuts mob.x + 7, mob.y + 8, -1, 1
@@ -2094,7 +2085,7 @@ SUB LD2_ProcessEntities
         IF mob.x + 7 >= Player.x + XShift AND mob.x + 7 <= Player.x + XShift + 15 THEN
           IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
             IF INT(10 * RND(1)) + 1 = 1 THEN
-              LD2_PlaySound sfxBLOOD2
+              LD2_PlaySound Sounds.blood2
             END IF
             Player.life = Player.life - 1
             LD2_MakeGuts mob.x + 7, mob.y + 8, -1, 1
@@ -2215,7 +2206,7 @@ SUB OpenDoor (id AS INTEGER)
     doorIsClosed   = (Doors(id).ani = 0)
     
     IF doorIsClosed THEN
-        LD2_PlaySound sfxDOORUP
+        LD2_PlaySound Sounds.doorup
         Inventory(TEMPAUTH) = 0
     END IF
     
@@ -2230,7 +2221,7 @@ SUB CloseDoor (id AS INTEGER)
     doorIsOpen     = (Doors(id).ani = 4)
     
     IF doorIsOpen THEN
-        LD2_PlaySound sfxDOORDOWN
+        LD2_PlaySound Sounds.doordown
     END IF
     
     Doors(id).anicount = DOORCLOSESPEED
@@ -2383,43 +2374,52 @@ SUB LD2_ProcessGuts
 
 END SUB
 
-SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, _flip AS INTEGER)
+sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
+    
+    LD2_put x, y, numSprite, id, _flip, 1
+    
+end sub
+
+SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, _flip AS INTEGER, isFixed as integer = 0)
   
   LD2_SetTargetBuffer 1
+  
+  dim px as integer
+  px = iif(isFixed, x, int(x - XShift))
   
   SELECT CASE id
 
     CASE idTILE
 
-      SpritesTile.putToScreenEx(x - XShift, y, NumSprite, _flip)
+      SpritesTile.putToScreenEx(px, y, NumSprite, _flip)
 
     CASE idENEMY
 
-      SpritesEnemy.putToScreenEx(x - XShift, y, NumSprite, _flip)
+      SpritesEnemy.putToScreenEx(px, y, NumSprite, _flip)
 
     CASE idLARRY
 
-      SpritesLarry.putToScreenEx(x - XShift, y, NumSprite, _flip)
+      SpritesLarry.putToScreenEx(px, y, NumSprite, _flip)
 
     CASE idGUTS
 
-      SpritesGuts.putToScreenEx(x - XShift, y, NumSprite, _flip)
+      SpritesGuts.putToScreenEx(px, y, NumSprite, _flip)
 
     CASE idLIGHT
 
-      SpritesLight.putToScreenEx(x - XShift, y, NumSprite, _flip)
+      SpritesLight.putToScreenEx(px, y, NumSprite, _flip)
    
     CASE idFONT
 
-      SpritesFont.putToScreenEx(x - XShift, y, NumSprite, _flip)
+      SpritesFont.putToScreenEx(px, y, NumSprite, _flip)
 
     CASE idSCENE
 
-      SpritesScene.putToScreenEx(x - XShift, y, NumSprite, _flip)
+      SpritesScene.putToScreenEx(px, y, NumSprite, _flip)
 
     CASE idOBJECT
 
-      SpritesObject.putToScreenEx(x - XShift, y, NumSprite, _flip)
+      SpritesObject.putToScreenEx(px, y, NumSprite, _flip)
 
   END SELECT
 
@@ -3142,7 +3142,7 @@ SUB LD2_SetWeapon1 (WeaponNum AS INTEGER)
   '- Set the primary weapon for the player
   '---------------------------------------
 
-  LD2_PlaySound sfxEQUIP
+  LD2_PlaySound Sounds.equip
 
   Player.weapon1 = WeaponNum
  
@@ -3177,6 +3177,8 @@ SUB LD2_Shoot
   dim ht as integer
   dim dist as integer
   
+  if Player.shooting then exit sub
+  
   IF Player.weapon = SHOTGUN AND Inventory(SHELLS) = 0 THEN EXIT SUB
   IF (Player.weapon = PISTOL OR Player.weapon = MACHINEGUN) AND Inventory(BULLETS) = 0 THEN EXIT SUB
   IF Player.weapon = DESERTEAGLE AND Inventory(DEAGLES) = 0 THEN EXIT SUB
@@ -3193,13 +3195,13 @@ SUB LD2_Shoot
 
     SELECT CASE Player.weapon
       CASE SHOTGUN
-	LD2_PlaySound sfxSHOTGUN
+	LD2_PlaySound Sounds.shotgun
       CASE MACHINEGUN
-	LD2_PlaySound sfxMACHINEGUN
+	LD2_PlaySound Sounds.machinegun
       CASE PISTOL
-	LD2_PlaySound sfxPISTOL
+	LD2_PlaySound Sounds.pistol
       CASE DESERTEAGLE
-	LD2_PlaySound sfxDESERTEAGLE
+	LD2_PlaySound Sounds.deserteagle
     END SELECT
 
     IF Player.flip = 0 THEN
@@ -3315,8 +3317,10 @@ SUB LD2_Shoot
   END IF
   ELSEIF Player.uAni = Player.stillani THEN
 
-    LD2_PlaySound sfxPUNCH
-   
+    LD2_PlaySound Sounds.punch
+    
+    Player.uAni = Player.uAni + 1
+    
     Mobs.resetNext
     DO WHILE Mobs.canGetNext()
       Mobs.getNext mob
@@ -3325,7 +3329,7 @@ SUB LD2_Shoot
         mob.hit = 1
         mob.life = mob.life - 1
         IF mob.life <= 0 THEN DeleteMob mob ELSE Mobs.update mob
-        LD2_PlaySound sfxBLOOD2
+        LD2_PlaySound Sounds.blood2
         LD2_MakeGuts Player.x + 14 + XShift, INT(Player.y + 8), -1, 1
         FOR i = 0 TO 4
           MakeSparks mob.x + 7, mob.y + 8,  1, -RND(1)*5
@@ -3338,7 +3342,7 @@ SUB LD2_Shoot
         mob.hit = 1
         mob.life = mob.life - 1
         IF mob.life <= 0 THEN DeleteMob mob ELSE Mobs.update mob
-        LD2_PlaySound sfxBLOOD2
+        LD2_PlaySound Sounds.blood2
         LD2_MakeGuts Player.x + 1 + XShift, INT(Player.y + 8), -1, -1
         FOR i = 0 TO 4
           MakeSparks mob.x + 7, mob.y + 8,  1, -RND(1)*5

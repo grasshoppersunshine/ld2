@@ -43,7 +43,7 @@ END
 
 SCENE-1B
     
-    STEVE [ FACE RIGHT, WALKTO 154, WAIT 0.3333, FACE LEFT ]
+    STEVE [ FACE RIGHT, WALKTO 152, WAIT 0.3333, FACE LEFT ]
     Hey, you got a quarter?
 
     LARRY
@@ -52,7 +52,6 @@ SCENE-1B
 
     STEVE
     Well, I couldn't agree more.
-    [ KICK, CROUCH, WAIT 0.3333, STAND, WAIT 0.3333 ]
     
 END
 
@@ -66,13 +65,11 @@ END
 
 SCENE-1D
     
-    STEVE [ SICK, WAIT 1.3333 ]
+    STEVESICK [ SICK ]
     Larry...
     I don't feel so good.
     There's something in the cola...
     ow...
-    [ PASSEDOUT   ]
-    [ WAIT 1.3333 ]
     
 END
 
@@ -170,7 +167,7 @@ SCENE-5A
 
 END
 
-SCENE 5-B
+SCENE-5B
     
     LARRY
     Barney!

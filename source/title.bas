@@ -83,6 +83,9 @@ SUB TITLE_Menu
     
     IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Menu"
     
+    LD2_AddSound Sounds.revealtitle, DATA_DIR+"sound/orig/equip.wav", 0
+    LD2_AddSound Sounds.startgame, DATA_DIR+"sound/start.wav", 0
+    
     'LD2_cls
     'LD2_PlayMusic mscMARCHoftheUHOH
     'i% = WaitSecondsUntilKey%(0.5)
@@ -90,7 +93,7 @@ SUB TITLE_Menu
     LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
     LD2_FadeIn 3, 15
     
-    LD2_PlaySound sfxEQUIP
+    LD2_PlaySound Sounds.revealtitle
     
     'WaitSeconds(0.25)
     'LD2_PlayMusic mscTHEME
@@ -100,14 +103,14 @@ SUB TITLE_Menu
         IF keyboard(&H2) OR keyboard(&H4F) THEN
           '- shatter glass
           LD2_StopMusic
-          LD2_PlaySound sfxGLASS
+          LD2_PlaySound Sounds.startgame
           LD2_FadeIn 8, 12
           LD2_FadeIn 4, 15
           WaitSeconds 1.0
           EXIT DO
         END IF
         IF keyboard(&H3) OR keyboard(&H50) THEN
-          LD2_PlaySound sfxSELECT
+          LD2_PlaySound Sounds.select1
           WaitSeconds 0.15
           LD2_FadeOut 3
           TITLE_ShowCredits
@@ -117,7 +120,7 @@ SUB TITLE_Menu
         END IF
         IF keyboard(&H4) OR keyboard(&H51) THEN
           LD2_SetFlag EXITGAME
-          LD2_PlaySound sfxSELECT
+          LD2_PlaySound Sounds.select1
           EXIT DO
         END IF
     LOOP
@@ -251,7 +254,7 @@ SUB TITLE_ShowCredits
  
   DO: PullEvents: LOOP UNTIL keyboard(&H39)
   
-  LD2_PlaySound sfxSELECT
+  LD2_PlaySound Sounds.select1
   WaitSeconds 0.3333
   LD2_FadeOut 3
 
