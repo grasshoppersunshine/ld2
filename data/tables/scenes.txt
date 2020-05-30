@@ -4,7 +4,7 @@ SCENE-1A
 
     STEVE [ X 124, Y 144, FACE LEFT  ]
     
-    MUSIC WANDERING
+    [ MUSIC WANDERING ]
     
     LARRY
     Well Steve, that was a good game of chess.

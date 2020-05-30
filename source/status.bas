@@ -15,8 +15,16 @@ DECLARE SUB ShowResponse (response AS STRING)
 DECLARE SUB UseItem (item AS InventoryType)
 
 DIM SHARED selectedInventorySlot AS INTEGER
+dim shared UseItemCallback as sub(id as integer, qty as integer)
 
 const DATA_DIR = "data/"
+const STATUS_TRANSPARENCY = 215
+
+sub STATUS_SetUseItemCallback(callback as sub(id as integer, qty as integer))
+    
+    UseItemCallback = callback
+    
+end sub
 
 SUB DrawStatusScreen (heading AS STRING)
 	
@@ -28,7 +36,7 @@ SUB DrawStatusScreen (heading AS STRING)
 	top = 0
 	
 	LD2_CopyBuffer 2, 1
-	LD2_fillm 0, top, 320, 96, 66, 1
+	LD2_fillm 0, top, 320, 96, 66, 1, STATUS_TRANSPARENCY
 	
 	LD2_PutText w, top + h * 1, heading, 1
 	LD2_PutText w, top + h * 2, STRING(LEN(heading), "="), 1
@@ -116,14 +124,14 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		END IF
 		lft = -INT((1 - e) * (1 - e) * (1 - e) * 156)
 		LD2_CopyBuffer 2, 1
-		LD2_fillm lft, 0, 156, 200, 66, 1
+		LD2_fillm lft, 0, 156, 200, 66, 1, STATUS_TRANSPARENCY
 		LD2_RefreshScreen
         PullEvents
 	LOOP WHILE e < 1
 	
 	DO
 		LD2_CopyBuffer 2, 1
-		LD2_fillm 0, 0, 156, 200, 66, 1
+		LD2_fillm 0, 0, 156, 200, 66, 1, STATUS_TRANSPARENCY
 		
 		LD2_PutText w, h * 1, "Please Select a Floor", 1
 		LD2_PutText w, h * 2, "======================", 1
@@ -148,13 +156,13 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 			IF LEN(floorStr) = 1 THEN floorStr = " " + floorStr
 			IF (numFloors - i - 1) = selectedRoom THEN 'floorNo = selectedRoom THEN
 				'LD2_PutTextCol w, top, floorStr+" "+label, 112, 1
-				LD2_fillm w - 1, top - 1, w * 2 + 2, h + 1, 17, 1
-				LD2_fillm w * 3 + 1, top - 1, w * 21 - 3, h + 1, 70, 1
+				LD2_fillm w - 1, top - 1, w * 2 + 2, h + 1, 17, 1, STATUS_TRANSPARENCY
+				LD2_fillm w * 3 + 1, top - 1, w * 21 - 3, h + 1, 70, 1, STATUS_TRANSPARENCY
 				LD2_PutTextCol w, top, floorStr, 61, 1
 				LD2_PutTextCol w * 4, top, label, 15, 1
 				selectedFilename = filename
 			ELSE
-				LD2_fillm w - 1, top - 1, w * 2 + 2, h + 1, 48, 1'- 208, 160, 48
+				LD2_fillm w - 1, top - 1, w * 2 + 2, h + 1, 48, 1, STATUS_TRANSPARENCY'- 208, 160, 48
 				IF LTRIM(filename) <> "" THEN
 					'LD2_PutText w, top, floorStr + " " + label, 1
 					LD2_PutTextCol w, top, floorStr, 54, 1
@@ -250,7 +258,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		END IF
 		lft = -INT(e * e * e * 156)
 		LD2_CopyBuffer 2, 1
-		LD2_fillm lft, 0, 156, 200, 66, 1
+		LD2_fillm lft, 0, 156, 200, 66, 1, STATUS_TRANSPARENCY
 		LD2_RefreshScreen
         PullEvents
 	LOOP WHILE e < 1
@@ -419,7 +427,7 @@ SUB StatusScreen
 		END IF
 		top = -INT((1 - e) * (1 - e) * (1 - e) * 96)
 		LD2_CopyBuffer 2, 1
-		LD2_fillm 0, top, 320, 96, 66, 1
+		LD2_fillm 0, top, 320, 96, 66, 1, STATUS_TRANSPARENCY
 		LD2_RefreshScreen
         PullEvents
 	LOOP WHILE e < 1
@@ -430,7 +438,7 @@ SUB StatusScreen
 		top = 0
 		LD2_CopyBuffer 2, 1
         
-        LD2_fillm 0, top, 320, 96, 66, 1
+        LD2_fillm 0, top, 320, 96, 66, 1, STATUS_TRANSPARENCY
 
 		LD2_PutText w, top + h * 1, "LARRY", 1
 		LD2_PutText w, top + h * 2, "=============", 1
@@ -507,7 +515,7 @@ SUB StatusScreen
 			itemStr = "( " + item.shortName + " )"
 			
 			IF i = selectedInventorySlot THEN
-				LD2_fillm w * 33, top - 1, w * 19.5, h + 1, 70, 1
+				LD2_fillm w * 33, top - 1, w * 19.5, h + 1, 70, 1, STATUS_TRANSPARENCY
 				LD2_PutTextCol 200, top, itemStr, 15, 1
 				selected = item
 			ELSE
@@ -534,7 +542,7 @@ SUB StatusScreen
 			FOR i = 0 TO 3
 				IF i = action THEN
 					actionStr = "( " + actions(i) + " )"
-					LD2_fillm w * (21 + i * 8), top + h * 13 - 1, w * 8, h + 1, 70, 1
+					LD2_fillm w * (21 + i * 8), top + h * 13 - 1, w * 8, h + 1, 70, 1, STATUS_TRANSPARENCY
 					LD2_PutTextCol w * (21 + i * 8), top + h * 13, actionStr, 15, 1
 				ELSE
 					actionStr = "  " + actions(i) + "  "
@@ -663,7 +671,7 @@ SUB StatusScreen
 		END IF
 		top = -INT(e * e * e * 96)
 		LD2_CopyBuffer 2, 1
-		LD2_fillm 0, top, 320, 96, 66, 1
+		LD2_fillm 0, top, 320, 96, 66, 1, STATUS_TRANSPARENCY
 		LD2_RefreshScreen
         PullEvents
 	LOOP WHILE e < 1
@@ -673,77 +681,26 @@ END SUB
 
 SUB UseItem (item AS InventoryType)
 
-    DIM msg AS STRING
-
-    SELECT CASE item.id
-    CASE NOTHING
-        msg = Inventory_GetFailMsg(item.id)
-        LD2_PlaySound Sounds.denied
-    CASE MEDIKIT50
-        'IF LD2_LifeAtMax% THEN
-        '    msg = Inventory_GetFailMsg$(item.id)
-        '    LD2_PlaySound sfxDenied
-        'ELSE
-        '    LD2_AddAmmo -1, 50
-        '    msg = Inventory_GetSuccessMsg$(item.id)
-        'END IF
-    CASE MEDIKIT100
-        'IF LD2_LifeAtMax% THEN
-        '    msg = Inventory_GetFailMsg$(item.id)
-        '    LD2_PlaySound sfxDenied
-        'ELSE
-        '    LD2_AddAmmo -1, 100 '- change to LD2_AddLife MEDIKIT100AMT
-        '    msg = Inventory_GetSuccessMsg$(item.id)
-        'END IF
-        'msg = Inventory_GetSuccessMsg$(item.id)
-    CASE GRENADE
-    CASE SHELLS
-        'IF LD2_AmmoAtMax%(SHOTGUN) THEN
-        '    msg = Inventory_GetSuccessMsg$(item.id)
-        '    LD2_PlaySound sfxDenied
-        'ELSE
-        '    LD2_AddAmmo SHOTGUN, 4 '- change to LD2_AddAmmo SHOTGUN, SHELLSQTY
-            msg = Inventory_GetSuccessMsg(item.id)
-        'END IF
-    CASE BULLETS
-        msg = Inventory_GetSuccessMsg(item.id)
-    CASE DEAGLES
-        msg = Inventory_GetSuccessMsg(item.id)
-    CASE GREENCARD
-        msg = Inventory_GetFailMsg(item.id)
-        LD2_PlaySound Sounds.denied
-    CASE BLUECARD
-        msg = Inventory_GetFailMsg(item.id)
-        LD2_PlaySound Sounds.denied
-    CASE YELLOWCARD
-        msg = Inventory_GetFailMsg(item.id)
-        LD2_PlaySound Sounds.denied
-    CASE REDCARD
-        msg = Inventory_GetFailMsg(item.id)
-        LD2_PlaySound Sounds.denied
-    CASE SHOTGUN
-        LD2_SetWeapon1(SHOTGUN)
-        LD2_SetWeapon 1
-        msg = Inventory_GetSuccessMsg(item.id)
-    CASE MACHINEGUN
-        LD2_SetWeapon1(MACHINEGUN)
-        LD2_SetWeapon 1
-        msg = Inventory_GetSuccessMsg(item.id)
-    CASE PISTOL
-        LD2_SetWeapon1(PISTOL)
-        LD2_SetWeapon 1
-        msg = Inventory_GetSuccessMsg(item.id)
-    CASE DESERTEAGLE
-        LD2_SetWeapon1(DESERTEAGLE)
-        LD2_SetWeapon 1
-        msg = Inventory_GetSuccessMsg(item.id)
-    CASE EXTRALIFE
-        LD2_AddLives 1
-        'LD2_PlaySound sfxPowerUp
-        msg = Inventory_GetSuccessMsg(item.id)
-	END SELECT
+    dim id as integer
+    dim qty as integer
+    dim message as string
+    dim success as integer
     
-    ShowResponse msg
+    success = Inventory_Use(item.id)
+    message = Inventory_GetUseMessage()
+    if success then
+        id  = Inventory_GetUseItem()
+        qty = Inventory_GetUseQty()
+        if UseItemCallback <> 0 then
+            UseItemCallback(id, qty)
+        else
+            message = "ERROR - No callback for UseItem"
+        end if
+    else
+        LD2_PlaySound Sounds.denied
+    end if
+    
+    ShowResponse message
 	
 END SUB
 
@@ -780,7 +737,7 @@ SUB ShowResponse (response AS STRING)
     top = h * 13 - 1
 
     FOR i = 1 TO LEN(response)
-        LD2_fillm lft, top, 320-(w*21), h + 1, 66, 1
+        LD2_fillm lft, top, 320-(w*21), h + 1, 66, 1, STATUS_TRANSPARENCY
         LD2_PutTextCol lft+1, top+1, LEFT(response, i), 15, 1
         LD2_RefreshScreen
         'WaitSeconds 0.05
@@ -792,7 +749,7 @@ SUB ShowResponse (response AS STRING)
         ELSE
             text = response + "_"
         END IF
-        LD2_fillm lft, top, 320-(w*21), h + 1, 66, 1
+        LD2_fillm lft, top, 320-(w*21), h + 1, 66, 1, STATUS_TRANSPARENCY
         LD2_PutTextCol lft+1, top+1, text, 15, 1
         LD2_RefreshScreen
         PullEvents

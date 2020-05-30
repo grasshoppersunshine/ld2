@@ -21,8 +21,11 @@ DECLARE FUNCTION Inventory_Mix(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMix
 DECLARE SUB Inventory_RefreshNames ()
 DECLARE SUB Inventory_RemoveItem (item AS InventoryType)
 DECLARE FUNCTION Inventory_SidToItemId (sid AS STRING) as integer
-DECLARE FUNCTION Inventory_GetSuccessMsg (itemId AS INTEGER) as string
-DECLARE FUNCTION Inventory_GetFailMsg (itemId AS INTEGER) as string
+
+declare function Inventory_Use (itemId as integer) as integer
+declare function Inventory_GetUseItem() as integer
+declare function Inventory_GetUseQty() as integer
+declare function Inventory_GetUseMessage() as string
 
 CONST INVENTORYMAXSIZE = 99
 CONST InventoryErr_OUTOFBOUNDS = -101

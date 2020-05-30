@@ -11,3 +11,4 @@ END TYPE
 
 DECLARE SUB EStatusScreen (currentRoomId AS INTEGER)
 DECLARE SUB StatusScreen ()
+declare sub STATUS_SetUseItemCallback(callback as sub(id as integer, qty as integer))

@@ -1,6 +1,8 @@
 #pragma once
 #inclib "ld2e"
 
+const MAX_ACTION_ITEMS = 4
+
 TYPE tPlayer
   life AS INTEGER
   x AS DOUBLE
@@ -15,8 +17,6 @@ TYPE tPlayer
   stillani AS INTEGER
   flip AS INTEGER
   weapon AS INTEGER
-  weapon1 AS INTEGER
-  weapon2 AS INTEGER
 END TYPE
 
 'shells AS INTEGER
@@ -27,7 +27,7 @@ END TYPE
 'code AS INTEGER '- door access level (make sure white is not too high)
 'tempcode AS INTEGER '- temp door access level
 
-DECLARE SUB LD2_AddAmmo (Kind AS INTEGER, Amount AS INTEGER)
+DECLARE function LD2_AddAmmo (Kind AS INTEGER, Amount AS INTEGER) as integer
 DECLARE SUB LD2_AddLives (Amount AS INTEGER)
 DECLARE FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
 DECLARE FUNCTION LD2_AtElevator () as integer
@@ -46,12 +46,12 @@ DECLARE SUB LD2_Init ()
 DECLARE SUB LD2_InitPlayer (p AS tPlayer)
 DECLARE FUNCTION LD2_isTestMode () as integer
 DECLARE FUNCTION LD2_isDebugMode () as integer
-DECLARE SUB LD2_JumpPlayer (Amount AS SINGLE)
+DECLARE function LD2_JumpPlayer (Amount AS SINGLE) as integer
 DECLARE SUB LD2_LoadMap (filename AS STRING)
 DECLARE SUB LD2_LockElevator ()
 DECLARE SUB LD2_MakeGuts (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTEGER)
-DECLARE SUB LD2_MovePlayer (XAmount AS DOUBLE)
-DECLARE SUB LD2_PickUpItem ()
+DECLARE function LD2_MovePlayer (XAmount AS DOUBLE) as integer
+DECLARE function LD2_PickUpItem () as integer
 DECLARE SUB LD2_ProcessEntities ()
 DECLARE SUB LD2_ProcessGuts ()
 DECLARE SUB LD2_PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
@@ -68,13 +68,11 @@ DECLARE SUB LD2_SetRoom (Room AS INTEGER)
 DECLARE SUB LD2_SetSceneMode (OnOff AS INTEGER)
 DECLARE SUB LD2_SetSceneNo (Num AS INTEGER)
 DECLARE SUB LD2_SetTempAccess (accessLevel AS INTEGER)
-DECLARE SUB LD2_SetWeapon1 (WeaponNum AS INTEGER)
-DECLARE SUB LD2_SetWeapon2 (WeaponNum AS INTEGER)
 DECLARE SUB LD2_ShatterGlass (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTEGER)
 DECLARE SUB LD2_ShutDown ()
-DECLARE SUB LD2_Shoot ()
+DECLARE function LD2_Shoot () as integer
 DECLARE SUB LD2_SetBossBar (mobId AS INTEGER)
-DECLARE SUB LD2_SetWeapon (NumWeapon AS INTEGER)
+declare function LD2_SetWeapon (itemId as integer) as integer
 DECLARE SUB LD2_SetXShift (ShiftX AS INTEGER)
 DECLARE SUB LD2_SwapLighting ()
 DECLARE SUB LD2_UnlockElevator ()

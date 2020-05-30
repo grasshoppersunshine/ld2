@@ -2,11 +2,22 @@
 #include once "INC\LD2E.BI"
 
 DECLARE SUB LoadSids (filename AS STRING)
-DECLARE FUNCTION Inventory_GetUseMsg (itemId AS INTEGER, success AS INTEGER) as string
+
+type UseType
+    dim toUse as string
+    dim useCommand as string
+    dim item as string
+    dim itemQty as string
+    dim message as string
+end type
 
 REDIM SHARED InventoryItems(0) AS InventoryType
 REDIM SHARED ItemSids(0) AS STRING
 DIM SHARED InventorySize AS INTEGER
+
+dim shared UseItemId as integer
+dim shared UseItemQty as integer
+dim shared UseItemMessage as string
 
 const DATA_DIR = "data/"
 
@@ -264,84 +275,86 @@ SUB LoadSids (filename AS STRING)
     
 END SUB
 
-FUNCTION Inventory_GetSuccessMsg (itemId AS INTEGER) as string
-    
-    return Inventory_GetUseMsg(itemId, 1)
-    
-END FUNCTION
+function Inventory_Use (itemId as integer) as integer
 
-FUNCTION Inventory_GetFailMsg (itemId AS INTEGER) as string
+    dim _data as UseType
+    dim ItemsFile as integer
+    dim toUseId as integer
+    dim itemTotest as integer
+    dim qtyToTest as integer
+    dim item as InventoryType
     
-    return Inventory_GetUseMsg(itemId, 0)
+    UseItemId = 0
+    UseItemQty = 0
+    UseItemMessage = ""
+        
+    ItemsFile = freefile
+    open DATA_DIR+"tables/uses.txt" for input as ItemsFile
+        
+        while not eof(ItemsFile)
+            
+            input #ItemsFile, _data.toUse, _data.useCommand, _data.item, _data.itemQty, _data.message
+            
+            _data.toUse      = trim(_data.toUse)
+            _data.useCommand = trim(_data.useCommand)
+            _data.item       = trim(_data.item)
+            _data.itemQty    = trim(_data.itemQty)
+            _data.message    = trim(_data.message)
+            
+            if left(_data.toUse, 1) = "#" then continue while
+            
+            toUseId = Inventory_SidToItemId(_data.toUse)
+            
+            if toUseId = itemId then
+                select case ucase(_data.useCommand)
+                case "ADD"
+                    UseItemId = Inventory_SidToItemId(_data.item)
+                    UseItemQty = val(_data.itemQty)
+                    UseItemMessage = _data.message
+                    return 1
+                case "EQ"
+                    itemToTest = Inventory_SidToItemId(_data.item)
+                    qtyToTest  = val(_data.itemQty)
+                    Inventory_GetItem item, itemToTest
+                    if item.qty = qtyToTest then
+                        UseItemMessage = _data.message
+                        return 0
+                    end if
+                case "NEQ"
+                    itemToTest = Inventory_SidToItemId(_data.item)
+                    qtyToTest  = val(_data.itemQty)
+                    Inventory_GetItem item, itemToTest
+                    if item.qty <> qtyToTest then
+                        UseItemMessage = _data.message
+                        return 0
+                    end if
+                end select
+            end if
+        wend
+        
+    close ItemsFile
     
-END FUNCTION
+    return -1
 
-FUNCTION Inventory_GetUseMsg (itemId AS INTEGER, success AS INTEGER) as string
-    
-    DIM ItemsFile AS INTEGER
-    DIM found AS INTEGER
-    DIM id AS INTEGER
-    
-    DIM sid AS STRING
-    DIM successMsg AS STRING
-    DIM failMsg AS STRING
-    
-    DIM char AS STRING * 1
-    DIM col  AS STRING
-    DIM row  AS STRING
-    
-    dim n as integer
-    
-    ItemsFile = FREEFILE
-    OPEN DATA_DIR+"tables/uses.txt" FOR INPUT AS ItemsFile
-    found = 0
-    DO WHILE NOT EOF(ItemsFile)
-        LINE INPUT #ItemsFile, row
-        sid = ""
-        successMsg = ""
-        failMsg = ""
-        col = ""
-        FOR n = 1 TO LEN(row)
-            char = MID(row, n, 1)
-            IF (char = ",") OR (n = LEN(row)) THEN
-                col = LTRIM(RTRIM(col))
-                IF LEFT(col, 1) = CHR(34) THEN
-                    col = RIGHT(col, LEN(col)-1)
-                END IF
-                IF RIGHT(col, 1) = CHR(34) THEN
-                    col = LEFT(col, LEN(col)-1)
-                END IF
-                IF sid = "" THEN
-                    sid = col
-                ELSEIF successMsg = "" THEN
-                    successMsg = col
-                ELSEIF failMsg = "" THEN
-                    failMsg = col
-                END IF
-                col = ""
-            ELSE
-                col = col + char
-            END IF
-        NEXT n
-        id = Inventory_SidToItemId(sid)
-        IF itemId = id THEN
-            found = 1
-            EXIT DO
-        END IF
-    LOOP
-    CLOSE ItemsFile
+end function
 
-    IF found THEN
-        IF success THEN
-            return successMsg
-        ELSE
-            return failMsg
-        END IF
-    ELSE
-        return "No use message found for item id:"+STR(itemId)
-    END IF
+function Inventory_GetUseItem() as integer
     
-END FUNCTION
+    return UseItemId
+    
+end function
+
+function Inventory_GetUseQty() as integer
+    
+    return UseItemQty
+    
+end function
+
+function Inventory_GetUseMessage() as string
+    
+    return UseItemMessage
+    
+end function
 
 FUNCTION Inventory_Mix(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS STRING) as integer
     

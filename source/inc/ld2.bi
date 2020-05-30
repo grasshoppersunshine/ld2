@@ -2,6 +2,38 @@
 '= ITEMS (SPRITE IDs AND INVENTORY IDs)
 '= ids correspond to location in OBJECTS.PUT
 '===========================================
+enum ItemIds
+    Nothing         = 0
+    Fist            = 0
+    Medikit50       = 1
+    Medikit100      = 2
+    Grenade         = 3
+    Shells          = 4
+    Bullets         = 5
+    MagRounds       = 6
+    WhiteCard       = 7
+    WhiteCard1      = 8
+    WhiteCard2      = 9
+    FlashlightNoBat = 10
+    MysteryMeat     = 11
+    Chemical409     = 12
+    Chemical410     = 13
+    JanitorNote     = 14
+    Batteries       = 15
+    Flashlight      = 16
+    GreenCard       = 17
+    BlueCard        = 18
+    YellowCard      = 19
+    RedCard         = 20
+    Shotgun         = 21
+    Rifle           = 22
+    Pistol          = 23
+    Revolver        = 24
+    WalkieTalkie    = 25
+    RifleAmmo       = 26
+    ExtraLife       = 27
+    HP              = 28
+end enum
 CONST FIST = 0
 CONST NOTHING = 0
 CONST MEDIKIT50 = 1
@@ -38,6 +70,21 @@ CONST TEMPAUTH = 51
 
 'CONST WALKYTALKY      = 99
 
+type ActionItem
+    itemId as integer
+    actionId as integer
+end type
+enum ActionIds
+    Crouch = 1
+    DropItem
+    Equip
+    Jump
+    PickUpItem
+    RunLeft
+    RunRight
+    Shoot
+    UseItem
+end enum
 '======================
 '= DOOR ACCESS LEVELS
 '= High access needs to be higher numbers
@@ -230,23 +277,41 @@ end enum
 '======================
 '= POSE IDS SCENES
 '======================
-CONST POSEMOUTHOPEN = 1
-CONST POSEMOUTHCLOSE = 2
-CONST POSESURPRISE = 3
-CONST POSECYNICAL = 4 '- or POSEASSERTIVE ???
-CONST POSESMILE = 5
-CONST POSEPASSEDOUT = 6
-CONST POSEDYING = 7
-CONST POSEANGRY = 8
-CONST POSEPOINTFINGER = 9 '- with mouthopen+mouthclosed
-CONST POSELAUGHING = 10
-CONST POSEFACEPALM = 11
-const POSEWALKING = 12
-const POSEKICKING = 13
-const POSEGETSODA = 14
-const POSECRASHING = 15
-const POSETONGUE = 16
-const POSECHEWING = 17
+'CONST POSEMOUTHOPEN = 1
+'CONST POSEMOUTHCLOSE = 2
+'CONST POSESURPRISE = 3
+'CONST POSECYNICAL = 4 '- or POSEASSERTIVE ???
+'CONST POSESMILE = 5
+'CONST POSEPASSEDOUT = 6
+'CONST POSEDYING = 7
+'CONST POSEANGRY = 8
+'CONST POSEPOINTFINGER = 9 '- with mouthopen+mouthclosed
+'CONST POSELAUGHING = 10
+'CONST POSEFACEPALM = 11
+'const POSEWALKING = 12
+'const POSEKICKING = 13
+'const POSEGETSODA = 14
+'const POSECRASHING = 15
+'const POSETONGUE = 16
+'const POSECHEWING = 17
+
+enum PoseIds
+    Charging = 1
+    Chewing
+    Crashing
+    FacingScreen
+    GettingShot
+    GettingSoda
+    Jumping
+    Kicking
+    PassedOut
+    Shooting
+    Still
+    Surprised
+    Talking
+    Tongue
+    Walking
+end enum
 
 CONST LARRYCHATBOX = 37
 CONST STEVECHATBOX = 39
@@ -260,3 +325,5 @@ CONST TROOPERCHATBOX = 74
 '======================
 CONST MODEOFF = 0
 CONST LETTERBOX = 1
+
+declare sub LD2_UseItem (id as integer, qty as integer)
