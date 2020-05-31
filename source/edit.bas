@@ -127,10 +127,17 @@
     showLayer2  = 1
     showLayer3  = 1
     showLayer4  = 1
+    
+    dim res_x as integer, res_y as integer
+    screeninfo res_x, res_y
+    
+    dim mx as integer, my as integer
+    dim mx_prev as integer, my_prev as integer
+    dim mw as integer
+    dim mw_prev as integer
 
   DO
 
-    'LD2copyfull VARSEG(Buffer1(0)), &HA000
     if activeLayer = 1 then activeLayerString = "TILE"
     if activeLayer = 2 then activeLayerString = "LIGHT BG"
     if activeLayer = 3 then activeLayerString = "LIGHT FG"
@@ -138,7 +145,7 @@
     
     LD2_outline Cursor.x, Cursor.y, 16, 16, 15, 1
     putText mapFilename, 320-len(mapFilename)*FONT_W-1, 2
-    putText "Active Layer "+activeLayerString, 2, FONT_H*36.5
+    putText "Layer "+str(activeLayer)+" ["+activeLayerString+"]", 2, FONT_H*36.5
     putText "Animations "+iif(Animation, "ON", "OFF"), 2, FONT_H*38.5
     LD2_RefreshScreen
     LD2_CopyBuffer 2, 1
@@ -164,7 +171,17 @@
     'DO
     '  key$ = INKEY$
     'LOOP WHILE key$ = "" AND Animation% = 0
-    PullEvents 
+    PullEvents
+    
+    mx_prev = mx: my_prev = my
+    mx = int(mouseX()*(320/res_x))
+    my = int(mouseY()*(200/res_Y))
+    mw_prev = mw
+    mw = mouseWheelY()
+    
+    if (mx <> mx_prev) or (my <> my_prev) then
+        Cursor.x = int(mx/16)*16: Cursor.y = int(my/16)*16
+    end if
 
     if keyboard(KEY_ESCAPE) then exit do
     
@@ -185,14 +202,14 @@
     if keyboard(KEY_UP  ) then Cursor.y = Cursor.y - 16: wkeyup = KEY_UP
     if keyboard(KEY_W   ) then Cursor.y = Cursor.y - 16: wkeyup = KEY_W
 
-    if keyboard(KEY_RBRACKET) then
+    if keyboard(KEY_RBRACKET) or ((mw-mw_prev) > 0) then
         if activeLayer = 1 then CurrentTile = CurrentTile + 1
         if activeLayer = 2 then CurrentTileL = CurrentTileL + 1
         if activeLayer = 3 then CurrentTileL = CurrentTileL + 1
         if activeLayer = 4 then CurrentTileO = CurrentTileO + 1
         wkeyup = KEY_RBRACKET
     end if
-    if keyboard(KEY_LBRACKET) then
+    if keyboard(KEY_LBRACKET) or ((mw-mw_prev) < 0) then
         if activeLayer = 1 then CurrentTile = CurrentTile - 1
         if activeLayer = 2 then CurrentTileL = CurrentTileL - 1
         if activeLayer = 3 then CurrentTileL = CurrentTileL - 1
@@ -229,7 +246,7 @@
         if keyboard(KEY_4) then activeLayer = 4
     end if
     
-    if keyboard(KEY_SPACE) or keyboard(KEY_V) then
+    if keyboard(KEY_SPACE) or keyboard(KEY_V) or mouseLB() then
         if activeLayer = 1 then EditMap(mapX, mapY) = CurrentTile
         if activeLayer = 2 then LightMap2(mapX, mapY) = CurrentTileL
         if activeLayer = 3 then LightMap1(mapX, mapY) = CurrentTileL
@@ -243,7 +260,7 @@
         if activeLayer = 4 then RemoveItem mapX, mapY
     end if
     
-    if keyboard(KEY_TAB) or keyboard(KEY_C) then
+    if keyboard(KEY_TAB) or keyboard(KEY_C) or mouseRB() then
         if activeLayer = 1 then CurrentTile = EditMap(mapX, mapY)
         if activeLayer = 2 then CurrentTileL = LightMap1(mapX, mapY)
         if activeLayer = 3 then CurrentTileL = LightMap2(mapX, mapY)
@@ -377,11 +394,14 @@ SUB LoadMap (filename as string)
     dim info as string
     
     if FileExists(filename) = 0 then
-        Notice !"Load Map \""+filename+!"\"$$$ERROR: File not found"
+        Notice !"ERROR!$$ * File not found"
         return
     end if
 
-  OPEN Filename FOR BINARY AS #1
+    if OPEN(Filename FOR BINARY AS #1) <> 0 then
+        Notice !"ERROR!$$ * Error Opening File"
+        return
+    end if
 
     NumItems = 0
     c = 1
@@ -399,7 +419,7 @@ SUB LoadMap (filename as string)
       GET #1, c, _byte: c = c + 1
      
       IF ft <> "[LD2L-V0.45]" THEN
-        Notice !"Save Map \""+filename+!"\"$$$ERROR: Invalid File Tag"
+        Notice !"ERROR!$$ * Invalid File Tag"
         return
       END IF
 
@@ -532,8 +552,6 @@ SUB LoadMap (filename as string)
 
     WaitForKeyup(KEY_ENTER)
     WaitForKeydown(KEY_ENTER)
-  'DO
-  'LOOP UNTIL INKEY$ = ""
 
 END SUB
 
@@ -603,13 +621,11 @@ SUB SaveMap (filename as string)
     if i then
         shortFilename = right(filename, len(filename)-i)
     end if
-    
-    if FileExists(filename) = 0 then
-        Notice !"Save Map \""+filename+!"\"$$$ERROR: File not found"
+
+    if OPEN(Filename FOR BINARY AS #1) <> 0 then
+        Notice !"ERROR!$$ * Error Opening File"
         return
     end if
-
-  OPEN Filename FOR BINARY AS #1
 
     ft = "[LD2L-V0.45]"
     nm = shortFilename
@@ -763,8 +779,8 @@ function inputText(text as string, currentVal as string = "") as string
 	dim strval as string = currentVal
 	dim cursor_x as integer = len(text+strval)
 	dim x as integer
-	
-	SDL_StartTextInput
+    
+    SDL_StartTextInput
 	do
 		while( SDL_PollEvent( @event ) )
 			select case event.type
@@ -807,9 +823,12 @@ function inputText(text as string, currentVal as string = "") as string
 			end select
 		wend
 		
-		LD2_Fill 2, 2, 320, FONT_H, 0, 1
-		putText( text+strval, 2, 2 )
-		putText( space(cursor_x)+"_"+space(len(text+strval)-cursor_x), 2, 2)
+		'LD2_Fill 2, 2, 320, FONT_H, 0, 1
+        LD2_CopyBuffer 2, 1
+        LD2_outline 0, 0, 320, FONT_H*5, 15, 1
+        LD2_fillm 1, 1, 318, FONT_H*5-2, 17, 1, 200
+		putText( text+strval, 4, 4 )
+		putText( space(cursor_x)+"_"+space(len(text+strval)-cursor_x), 4, 4)
 		LD2_RefreshScreen
 		
 	loop
@@ -872,7 +891,7 @@ sub showHelp ()
     w = 320-padding*2
     h = 200-padding*2
     LD2_outline padding, padding, w, h, 15, 1
-    LD2_fillm padding+1, padding+1, w-2, h-2, 66, 1, 200
+    LD2_fillm padding+1, padding+1, w-2, h-2, 17, 1, 200
 
     dim top as integer
     dim lft as integer
@@ -939,14 +958,22 @@ sub Notice(message as string)
     dim top as integer
     dim lft as integer
     dim lineHeight as integer
-    dim i as integer
+    dim padding as integer
     dim text as string
+    dim w as integer
+    dim h as integer
+    dim i as integer
     
+    padding = SPRITE_W*2-1
+    w = 320-padding*2
+    h = 200-padding*2
+    
+    top = padding+FONT_H
+    lft = padding+FONT_W
     lineHeight = FONT_H*2
-    top = FONT_H*1.5
-    lft = 2
     
-    LD2_cls 1, 0
+    LD2_outline padding, padding, w, h, 15, 1
+    LD2_fillm padding+1, padding+1, w-2, h-2, 17, 1, 200
     do
         i = instr(message, "$")
         if i then
@@ -958,7 +985,7 @@ sub Notice(message as string)
         putText text, lft, top
         top += lineHeight
     loop while i
-    putText "Press ENTER to continue", 0, 200-lineHeight-FONT_H*1.5
+    putText "Press ENTER to return", lft, 200-padding-FONT_H*2
     LD2_RefreshScreen
     WaitForKeyup(KEY_ENTER)
     WaitForKeydown(KEY_ENTER)

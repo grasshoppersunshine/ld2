@@ -4,6 +4,13 @@
 #include once "inc/keys.bi"
 
 dim shared EventQuit as integer
+dim shared EventKeyDown as integer
+dim shared EventMouseWheelY as integer
+dim shared EventMouseState as long
+dim shared EventMouseX as long
+dim shared EventMouseY as integer
+dim shared EventMouseLB as integer
+dim shared EventMouseRB as integer
 
 function keyboard(code as integer) as integer
     
@@ -122,9 +129,47 @@ sub PullEvents()
         select case event.type
         case SDL_QUIT_
             EventQuit = 1
+        case SDL_KEYDOWN
+            EventKeydown = event.key.keysym.sym
+        case SDL_MOUSEWHEEL
+            EventMouseWheelY += event.wheel.y
         end select
     wend
+    
+    EventMouseState = SDL_GetMouseState(@EventMouseX, @EventMouseY)
+    EventMouseLB    = EventMouseState and SDL_BUTTON(SDL_BUTTON_LEFT)
+    EventMouseRB    = EventMouseState and SDL_BUTTON(SDL_BUTTON_RIGHT)
     
     LD2_Sound_Update
 
 end sub
+
+function mouseX() as integer
+    
+    return EventMouseX
+    
+end function
+
+function mouseY() as integer
+    
+    return EventMouseY
+    
+end function
+
+function mouseLB() as integer
+    
+    return EventMouseLB
+    
+end function
+
+function mouseRB() as integer
+    
+    return EventMouseRB
+    
+end function
+
+function mouseWheelY() as integer
+    
+    return EventMouseWheelY
+
+end function
