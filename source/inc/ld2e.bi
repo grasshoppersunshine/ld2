@@ -49,6 +49,7 @@ DECLARE FUNCTION LD2_isDebugMode () as integer
 DECLARE function LD2_JumpPlayer (Amount AS SINGLE) as integer
 DECLARE SUB LD2_LoadMap (filename AS STRING)
 DECLARE SUB LD2_LockElevator ()
+declare function LD2_LookUp () as integer
 DECLARE SUB LD2_MakeGuts (x AS INTEGER, y AS INTEGER, Amount AS INTEGER, Dir AS INTEGER)
 DECLARE function LD2_MovePlayer (XAmount AS DOUBLE) as integer
 DECLARE function LD2_PickUpItem () as integer

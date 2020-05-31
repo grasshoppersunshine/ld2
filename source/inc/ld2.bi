@@ -79,6 +79,7 @@ enum ActionIds
     DropItem
     Equip
     Jump
+    LookUp
     PickUpItem
     RunLeft
     RunRight

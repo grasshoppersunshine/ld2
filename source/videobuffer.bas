@@ -113,7 +113,6 @@ sub VideoBuffer.loadBmp(filename as string)
     
 end sub
 
-
 sub VideoBuffer.saveBmp(filename as string)
     
     dim surface as SDL_Surface ptr
@@ -151,5 +150,29 @@ sub VideoBuffer.fill(x as integer, y as integer, w as integer, h as integer, col
     this.setAsTarget()
     SDL_SetRenderDrawColor( this._renderer, r, g, b, aph )
 	SDL_RenderFillRect( this._renderer, @rect )
+
+end sub
+
+sub VideoBuffer.outline(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
+    
+    dim rect as SDL_Rect
+    dim r as integer, g as integer, b as integer
+
+    if this._palette <> 0 then
+        r = this._palette->red(col)
+        g = this._palette->grn(col)
+        b = this._palette->blu(col)
+    else
+        r = rgb_r(col)
+        g = rgb_g(col)
+        b = rgb_b(col)
+    end if
+    
+    rect.x = x: rect.y = y
+    rect.w = w: rect.h = h
+    
+    this.setAsTarget()
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, aph )
+	SDL_RenderDrawRect( this._renderer, @rect )
 
 end sub

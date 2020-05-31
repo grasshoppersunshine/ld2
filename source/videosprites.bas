@@ -118,6 +118,13 @@ sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer,
 	dst.x = x: dst.y = y
 	dst.w = this._w: dst.h = this._h
     
-    SDL_RenderCopyEx( this._renderer, this._data, @src, @dst, rotateAngle, NULL, iif(flipHorizontal, SDL_FLIP_HORIZONTAL, 0))
+    dim center as SDL_POINT
+    if rotateAngle = 0 then
+        center.x = 0: center.y = 0
+    else
+        center.x = 7: center.y = 7
+    end if
+    
+    SDL_RenderCopyEx( this._renderer, this._data, @src, @dst, rotateAngle, @center, iif(flipHorizontal, SDL_FLIP_HORIZONTAL, 0))
     
 end sub

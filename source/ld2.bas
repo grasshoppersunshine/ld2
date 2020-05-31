@@ -656,7 +656,10 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
             pose.addSprite 24: pose.addSprite 12, 0, 3: pose.takeSnapshot
             pose.addSprite 25: pose.addSprite 12, 0, 0: pose.takeSnapshot
         CASE PoseIds.PassedOut
-            pose.addSprite 27: pose.takeSnapshot
+            'pose.addSprite 27: pose.takeSnapshot
+            pose.addSprite 121, -8, 0
+            pose.addSprite 120,  8, 0
+            pose.takeSnapshot
 		END SELECT
     CASE CharacterIds.SteveSICK
         'pose.chatBox = STEVESICKCHATBOX
@@ -803,6 +806,10 @@ sub DoAction(actionId as integer, itemId as integer = 0)
         end if
     case ActionIds.Jump
         if LD2_JumpPlayer(1.5) then
+            LD2_PlaySound Sounds.jump
+        end if
+    case ActionIds.LookUp
+        if LD2_LookUp() then
         end if
     case ActionIds.PickUpItem
         if LD2_PickUpItem() then
@@ -889,13 +896,15 @@ SUB Main
 	SELECT CASE SceneNo
 	  CASE 2
 		LD2_put 1196, 144, POSEJANITOR, idSCENE, 0
-		LD2_put 170, 144, STEVEPASSEDOUT, idSCENE, 1
+		LD2_put 162, 144, 121, idSCENE, 1
+        LD2_put 178, 144, 120, idSCENE, 1
 		IF player.x >= 1160 THEN
             Scene3 '- larry meets janitor
             Scene4 '- rockmonster eats janitor
         end if
 	  CASE 4
-		LD2_put 170, 144, STEVEPASSEDOUT, idSCENE, 1
+		LD2_put 162, 144, 121, idSCENE, 1
+        LD2_put 178, 144, 120, idSCENE, 1
 		IF player.x >= 1500 THEN Scene5 '- larry at elevator
 	  CASE 6 '- barney/larry exit at weapons locker
 		LD2_put 368, 144, BARNEYEXITELEVATOR, idSCENE, 0
@@ -1308,7 +1317,7 @@ function Scene1Go () as integer
     '// Steve looks ill
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Surprised
     GetCharacterPose StevePose, CharacterIds.SteveSICK, PoseIds.Talking
-    StevePose.setX 152
+    StevePose.setX 170
     RenderScene
 
     RetraceDelay 80

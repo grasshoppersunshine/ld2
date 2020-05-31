@@ -86,6 +86,7 @@
   CONST RUNNING = 2
   CONST JUMPING = 3
   CONST CROUCHING = 4
+  CONST LOOKINGUP = 5
   
   '= ENEMY/ENTITY STATES
   '========================
@@ -940,24 +941,37 @@ SUB LD2_InitPlayer(p AS tPlayer)
 END SUB
 
 function LD2_JumpPlayer (Amount AS SINGLE) as integer
-  
-  IF (TIMER - Player.landtime) < 0.15 THEN
-    return 0
-  END IF
-  
-  IF Player.weapon = FIST THEN
-    Amount = Amount * 1.1
-  END IF
+    
+    dim success as integer
+    IF (TIMER - Player.landtime) < 0.15 THEN
+        return 0
+    END IF
 
-  IF CheckPlayerFloorHit() AND Player.velocity >= 0 THEN
-    Player.velocity = -Amount
-    Player.y = Player.y + Player.velocity*DELAYMOD
-  END IF
-  
-  SetPlayerState( JUMPING )
-  
-  return 1
-  
+    IF Player.weapon = FIST THEN
+        Amount = Amount * 1.1
+    END IF
+
+    IF CheckPlayerFloorHit() AND Player.velocity >= 0 THEN
+        Player.velocity = -Amount
+        Player.y = Player.y + Player.velocity*DELAYMOD
+        success = 1
+    END IF
+
+    SetPlayerState( JUMPING )
+
+    return success
+    
+end function
+
+function LD2_LookUp () as integer
+    
+    if Player.state = JUMPING then
+        return 0
+    else
+        SetPlayerState( LOOKINGUP )
+        return 1
+    end if
+    
 end function
 
 SUB SaveItems (filename AS STRING)
@@ -1366,6 +1380,27 @@ SUB LD2_LoadMap (Filename AS STRING)
   'ENDIF
   
   LD2_SetFlag MAPISLOADED
+
+    for y = 1 to 11
+        for x = 1 to 199
+            if TileMap(x, y) = 81 and TileMap(x, y+1) = 1 and TileMap(x-1, y+1) = 81 then
+                TileMap(x, y) = 120
+                TileMap(x, y+1) = 122
+                TileMap(x-1, y+1) = 124
+                continue for
+            end if
+            if TileMap(x, y) = 81 and TileMap(x, y+1) = 1 then
+                TileMap(x, y) = 120
+                TileMap(x, y+1) = 121
+                continue for
+            end if
+            if TileMap(x, y) = 81 and TileMap(x+1, y) = 1 then
+                TileMap(x, y) = 124
+                TileMap(x+1, y) = 123
+                continue for    
+            end if
+        next x
+    next y
   
 END SUB
 
@@ -1487,6 +1522,9 @@ function LD2_MovePlayer (dx AS DOUBLE) as integer
   IF Player.state = CROUCHING THEN
     return 0
   END IF
+  IF Player.state = LOOKINGUP THEN
+    return 0
+  END IF
   
   DIM moved AS DOUBLE
   DIM prevx AS DOUBLE
@@ -1503,8 +1541,8 @@ function LD2_MovePlayer (dx AS DOUBLE) as integer
   f = DELAYMOD
   dx = f*dx
   'ex = dx*1.0625
-  ex = dx*1.2
-  dx *= 1.1
+  ex = dx*1.25
+  dx *= 1.15
   
   prevx    = Player.x
   prvxs    = XShift
@@ -1730,7 +1768,7 @@ SUB LD2_ProcessEntities
   IF CheckPlayerFloorHit() = 0 THEN
     falling = 1
     IF Player.weapon = FIST THEN
-        Player.lAni = 39
+        Player.lAni = iif(Player.velocity < -0.5, 48, 49) '- or 30
     ELSE
         Player.lAni = 25
     END IF
@@ -1794,7 +1832,7 @@ SUB LD2_ProcessEntities
             Player.state = 0
             Player.landTime = TIMER
         END IF
-    CASE CROUCHING
+    CASE CROUCHING, LOOKINGUP
         IF (TIMER - player.stateTimestamp) > 0.07 THEN
             Player.state = 0
         END IF
@@ -2586,6 +2624,10 @@ SUB LD2_RenderFrame
   Animation = Animation + .2
   IF Animation > 9 THEN Animation = 1
 
+  static rotation as double
+  rotation += 6
+  if rotation >= 360 then rotation = 0
+
   ''LD2Scroll VARSEG(Buffer2(0))
   'LD2copyFull segBuffer2, segBuffer1
   LD2_CopyBuffer 2, 1
@@ -2669,13 +2711,19 @@ SUB LD2_RenderFrame
         IF 0 then 'TransparentSprites(m) = 0 THEN
           ''DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
           a = (Animation mod (AniMap(mapX, mapY)+1))
+            
           'LD2putf xp, yp, segTile, VARPTR(sTile(EPS * (m + a))), segBuffer1
           SpritesTile.putToScreen(xp, yp, m+a)
         ELSE
           'DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
           a = (Animation mod (AniMap(mapX, mapY)+1))
           'LD2put xp%-1, yp%-1, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1, 0
-          SpritesTile.putToScreen(xp, yp, m+a)
+            if m = 3 then
+                SpritesTile.putToScreen(xp, yp, 1)
+                SpritesTile.putToScreenEx(xp, yp, 128+a, 0, int(rotation))
+            else
+                SpritesTile.putToScreen(xp, yp, m+a)
+            end if
           '// background lighting (mostly for windows)
           'DEF SEG = segLightMap2: l% = PEEK(ml%): DEF SEG
           l = LightMap2(mapX, mapY)
@@ -2802,8 +2850,11 @@ SUB LD2_RenderFrame
     CASE CROUCHING
         'LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * LARRYCROUCH)), segBuffer1, Player.flip
         SpritesLarry.putToScreenEx(px, py, LARRYCROUCH, Player.flip)
+    CASE LOOKINGUP
+        'LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * LARRYCROUCH)), segBuffer1, Player.flip
+        SpritesLarry.putToScreenEx(px, py, 50, Player.flip)
     CASE ELSE 'STILL, RUNNING, JUMPING, ELSE
-        IF (Player.weapon = FIST) AND (lan >= 36) THEN
+        IF (Player.weapon = FIST) AND (lan >= 30) THEN
             'LD2put px%, py%, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * lan%)), segBuffer1, Player.flip
             SpritesLarry.putToScreenEx(px, py, lan, Player.flip)
         ELSE

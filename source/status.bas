@@ -18,7 +18,7 @@ DIM SHARED selectedInventorySlot AS INTEGER
 dim shared UseItemCallback as sub(id as integer, qty as integer)
 
 const DATA_DIR = "data/"
-const STATUS_TRANSPARENCY = 215
+const STATUS_TRANSPARENCY = 150
 
 sub STATUS_SetUseItemCallback(callback as sub(id as integer, qty as integer))
     

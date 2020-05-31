@@ -24,10 +24,14 @@ sub LD2_LoadPalette (filename as string)
     VideoBuffers(1).setPalette(@RGBPal)
     
     dim n as integer
-    dim i as integer
+    dim r as integer
+    dim g as integer
+    dim b as integer
     for n = 0 to 15
-        i = n * 16 + 7
-        RGBPal.setRGBA(240+n, i, i, i)
+        r = n * 16 + 7
+        g = n * 15 + 7
+        b = n * 14 + 7
+        RGBPal.setRGBA(240+n, r, g, b)
     next n
     
 end sub
@@ -88,6 +92,16 @@ sub LD2_InitSprites(filename as string, sprites as VideoSprites ptr, w as intege
     end if
     
 end sub
+
+SUB LD2_outline (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
+    
+    if bufferNum = 0 then
+        VideoHandle.outline x, y, w, h, col
+    else
+        VideoBuffers(bufferNum-1).outline x, y, w, h, col
+    end if
+    
+END SUB
 
 SUB LD2_fill (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
     

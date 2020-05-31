@@ -28,6 +28,7 @@ public:
     declare sub saveBmp(filename as string)
     declare sub putPixel(x as integer, y as integer, col as integer)
     declare sub fill(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
+    declare sub outline(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
     declare sub fillScreen(col as integer, aph as integer = &hff)
     declare sub setAsTarget()
     'declare sub copy(buffer as VideoBuffer ptr)
