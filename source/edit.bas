@@ -8,6 +8,7 @@
   #include once "inc/common.bi"
   #include once "inc/keys.bi"
   #include once "inc/ld2.bi"
+  #include once "file.bi"
 
   'DIM SHARED Buffer1(32000) AS INTEGER    '- Offscreen buffer
   'DIM SHARED Buffer2(32000) AS INTEGER    '- Offscreen buffer
@@ -29,6 +30,7 @@
     declare function GetItem(x as integer, y as integer) as integer
     declare sub showHelp ()
     declare sub GenerateSky()
+    declare sub Notice(message as string)
     
     dim shared SpritesLarry as VideoSprites
     dim shared SpritesTile as VideoSprites
@@ -55,8 +57,6 @@
   DIM SHARED NumItems AS INTEGER
 
   TYPE tCursor
-    ox AS INTEGER
-    oy AS INTEGER
     x AS INTEGER
     y AS INTEGER
   END TYPE: DIM Cursor AS tCursor
@@ -310,14 +310,9 @@
         NEXT y
     end if
 
-    mapX = Cursor.ox \ 16 + XScroll: mapY = Cursor.oy \ 16
-    SpritesOpaqueTile.putToScreen Cursor.ox, Cursor.oy, EditMap(mapX, mapY)
-    spritesLight.putToScreen Cursor.ox, Cursor.oy, LightMap2(mapX, mapY)
-    spritesLight.putToScreen Cursor.ox, Cursor.oy, LightMap1(mapX, mapY)
     SpritesOpaqueTile.putToScreen 303, 183, CurrentTile
     spritesOpaqueLight.putToScreen 286, 183, CurrentTileL
     SpritesOpaqueObject.putToScreen 269, 183, CurrentTileO
-    Cursor.ox = Cursor.x: Cursor.oy = Cursor.y
 
     if showLayer4 then
         for i = 1 to NumItems
@@ -380,6 +375,11 @@ SUB LoadMap (filename as string)
     dim cr as string
     dim dt as string
     dim info as string
+    
+    if FileExists(filename) = 0 then
+        Notice !"Load Map \""+filename+!"\"$$$ERROR: File not found"
+        return
+    end if
 
   OPEN Filename FOR BINARY AS #1
 
@@ -399,9 +399,8 @@ SUB LoadMap (filename as string)
       GET #1, c, _byte: c = c + 1
      
       IF ft <> "[LD2L-V0.45]" THEN
-        PRINT "ERROR: INVALID FILE"
-        SLEEP
-        EXIT SUB
+        Notice !"Save Map \""+filename+!"\"$$$ERROR: Invalid File Tag"
+        return
       END IF
 
     '- Get the Level Name
@@ -591,11 +590,29 @@ SUB SaveMap (filename as string)
     
     dim v as short
     dim _word as short
+    
+    dim shortFilename as string
+    
+    shortFilename = filename
+    
+    i = instrrev(filename, "/")
+    if i then
+        shortFilename = right(filename, len(filename)-i)
+    end if
+    i = instrrev(filename, "\")
+    if i then
+        shortFilename = right(filename, len(filename)-i)
+    end if
+    
+    if FileExists(filename) = 0 then
+        Notice !"Save Map \""+filename+!"\"$$$ERROR: File not found"
+        return
+    end if
 
   OPEN Filename FOR BINARY AS #1
 
     ft = "[LD2L-V0.45]"
-    nm = Filename
+    nm = shortFilename
     cr = "Joe King"
     dt = "10/31/02"
     info = ""
@@ -916,3 +933,35 @@ SUB GenerateSky()
   NEXT i
 
 END SUB
+
+sub Notice(message as string)
+    
+    dim top as integer
+    dim lft as integer
+    dim lineHeight as integer
+    dim i as integer
+    dim text as string
+    
+    lineHeight = FONT_H*2
+    top = FONT_H*1.5
+    lft = 2
+    
+    LD2_cls 1, 0
+    do
+        i = instr(message, "$")
+        if i then
+            text = left(message, i-1)
+            message = right(message, len(message)-i)
+        else
+            text = message
+        end if
+        putText text, lft, top
+        top += lineHeight
+    loop while i
+    putText "Press ENTER to continue", 0, 200-lineHeight-FONT_H*1.5
+    LD2_RefreshScreen
+    WaitForKeyup(KEY_ENTER)
+    WaitForKeydown(KEY_ENTER)
+    return
+    
+end sub
