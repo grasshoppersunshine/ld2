@@ -11,36 +11,6 @@ function keyboard(code as integer) as integer
     
     keys = SDL_GetKeyboardState(0)
     
-    select case code
-        case &h01: code = SDL_SCANCODE_ESCAPE
-        case &h0f: code = SDL_SCANCODE_TAB
-        case &h39: code = SDL_SCANCODE_SPACE
-        case &h02: code = SDL_SCANCODE_1
-        case &h03: code = SDL_SCANCODE_2
-        case &h04: code = SDL_SCANCODE_3
-        case &h05: code = SDL_SCANCODE_4
-        case &h06: code = SDL_SCANCODE_5
-        case &h07: code = SDL_SCANCODE_6
-        case &h08: code = SDL_SCANCODE_7
-        case &h09: code = SDL_SCANCODE_8
-        case &h0a: code = SDL_SCANCODE_9
-        case &h0b: code = SDL_SCANCODE_0
-        case &h4f: code = SDL_SCANCODE_KP_1
-        'case &h50: code = SDL_SCANCODE_KP_2
-        case &h51: code = SDL_SCANCODE_KP_3
-        case &h4d: code = SDL_SCANCODE_RIGHT
-        case &h4B: code = SDL_SCANCODE_LEFT
-        case &h48: code = SDL_SCANCODE_UP
-        case &h50: code = SDL_SCANCODE_DOWN
-        case &h38: code = SDL_SCANCODE_LALT
-        case &h1d: code = SDL_SCANCODE_LCTRL
-        case &h10: code = SDL_SCANCODE_Q
-        case &h19: code = SDL_SCANCODE_P
-        case &h26: code = SDL_SCANCODE_L
-        case &h2f: code = SDL_SCANCODE_V
-        case &h1c: code = SDL_SCANCODE_RETURN
-    end select
-    
     return keys[code]
     
 end function
@@ -103,6 +73,23 @@ FUNCTION WaitSecondsUntilKey (seconds AS DOUBLE) as integer
     DO WHILE TIMER < endtime
         PullEvents
         IF keyboard(KEY_SPACE) or keyboard(KEY_ESCAPE) THEN
+            return 1
+        END IF
+    LOOP
+    
+    return 0
+    
+END FUNCTION
+
+FUNCTION WaitSecondsUntilKeyup (seconds AS DOUBLE, keycode as integer) as integer
+    
+    DIM endtime AS DOUBLE
+    
+    endtime = TIMER + seconds
+    
+    DO WHILE TIMER < endtime
+        PullEvents
+        IF keyboard(keycode) = 0 THEN
             return 1
         END IF
     LOOP

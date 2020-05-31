@@ -243,7 +243,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		
 	LOOP
 	
-	WaitForKeyup(KEY_TAB) 'DO: LOOP WHILE keyboard(&HF)
+	WaitForKeyup(KEY_TAB)
     
     LD2_PlaySound Sounds.status
 	
@@ -335,11 +335,11 @@ SUB Look (item AS InventoryType)
 	DO
         PullEvents
 		IF canExit = 0 THEN
-			IF keyboard(&H1C) = 0 THEN
+			IF keyboard(KEY_ENTER) = 0 THEN
 				canExit = 1
 			END IF
 		ELSE
-			IF keyboard(&H1C) THEN
+			IF keyboard(KEY_ENTER) THEN
 				EXIT DO
 			END IF
 		END IF
@@ -754,11 +754,11 @@ SUB ShowResponse (response AS STRING)
         LD2_RefreshScreen
         PullEvents
         IF canExit = 0 THEN
-            IF keyboard(&H1C) = 0 THEN
+            IF keyboard(KEY_ENTER) = 0 THEN
                 canExit = 1
             END IF
         ELSE
-            IF keyboard(&H1C) THEN
+            IF keyboard(KEY_ENTER) THEN
                 EXIT DO
             END IF
         END IF

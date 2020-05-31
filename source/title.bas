@@ -7,6 +7,7 @@
 #include once "INC\LD2E.BI"
 #include once "INC\LD2.BI"
 #include once "INC\TITLE.BI"
+#include once "inc/keys.bi"
 
 'inc\LD2_bi -- only needed for music ids
 'inc\ld2e.bi -- only needed for text put (and setflag)
@@ -31,7 +32,7 @@ SUB TITLE_EndDemo
 '  Message(4) = "In October, 2002"
 '  Message(5) = "Thank You For Playing."
 '
-'  DO: LOOP WHILE keyboard(&H39)
+'  DO: LOOP WHILE keyboard(KEY_SPACE)
 '  
 '  LD2_PopText "End of Demo"
 '  LD2_PopText "Thanks for playing"
@@ -100,7 +101,7 @@ SUB TITLE_Menu
     
     DO
         PullEvents
-        IF keyboard(&H2) OR keyboard(&H4F) THEN
+        IF keyboard(KEY_1) OR keyboard(KEY_KP_1) THEN
           '- shatter glass
           LD2_StopMusic
           LD2_PlaySound Sounds.startgame
@@ -109,7 +110,7 @@ SUB TITLE_Menu
           WaitSeconds 1.0
           EXIT DO
         END IF
-        IF keyboard(&H3) OR keyboard(&H50) THEN
+        IF keyboard(KEY_2) OR keyboard(KEY_KP_2) THEN
           LD2_PlaySound Sounds.select1
           WaitSeconds 0.15
           LD2_FadeOut 3
@@ -118,7 +119,7 @@ SUB TITLE_Menu
           LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
           LD2_FadeIn 3
         END IF
-        IF keyboard(&H4) OR keyboard(&H51) THEN
+        IF keyboard(KEY_3) OR keyboard(KEY_KP_3) THEN
           LD2_SetFlag EXITGAME
           LD2_PlaySound Sounds.select1
           EXIT DO
@@ -252,7 +253,7 @@ SUB TITLE_ShowCredits
   
   LD2_FadeIn 3
  
-  DO: PullEvents: LOOP UNTIL keyboard(&H39)
+  DO: PullEvents: LOOP UNTIL keyboard(KEY_SPACE)
   
   LD2_PlaySound Sounds.select1
   WaitSeconds 0.3333

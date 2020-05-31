@@ -490,7 +490,7 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING) as integer
         
         LD2_PlaySound Sounds.dialog
 		
-        IF keyboard(&H39) THEN EXIT FOR
+        IF keyboard(KEY_SPACE) THEN EXIT FOR
 		IF keyboard(KEY_ENTER) THEN escapeFlag = 1: EXIT FOR
 		RetraceDelay 1
         
@@ -499,7 +499,7 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING) as integer
 	DO
         PullEvents
 		IF keyboard(KEY_ENTER) THEN escapeFlag = 1: EXIT DO
-	LOOP UNTIL keyboard(&H39)
+	LOOP UNTIL keyboard(KEY_SPACE)
 
     WaitForKeyup(KEY_SPACE)
 	WaitForKeyup(KEY_ENTER)
@@ -1024,7 +1024,8 @@ SUB Main
 	IF keyboard(KEY_ESCAPE) THEN LD2_SetFlag EXITGAME '- go to pause menu
 	IF keyboard(KEY_RIGHT) THEN doAction ActionIds.RunRight: PlayerIsRunning = 1 'LD2_MovePlayer  1: PlayerIsRunning = 1
 	IF keyboard(KEY_LEFT ) THEN doAction ActionIds.RunLeft : PlayerIsRunning = 1 'LD2_MovePlayer -1: PlayerIsRunning = 1
-	IF keyboard(KEY_UP   ) OR keyboard(KEY_ALT) THEN doAction ActionIds.Jump 'LD2_JumpPlayer 1.5
+	IF keyboard(KEY_ALT) THEN doAction ActionIds.Jump 'LD2_JumpPlayer 1.5
+    IF keyboard(KEY_UP ) THEN doAction ActionIds.LookUp
     IF keyboard(KEY_DOWN ) OR keyboard(KEY_P  ) THEN doAction ActionIds.PickUpItem 'LD2_PickUpItem
 	IF keyboard(KEY_CTRL ) OR keyboard(KEY_Q  ) THEN doAction ActionIds.Shoot 'LD2_Shoot
     
