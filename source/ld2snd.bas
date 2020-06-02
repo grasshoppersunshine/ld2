@@ -64,6 +64,12 @@ SUB SoundAdapter_StopMusic
     SOUND_StopMusic
 
 END SUB
+
+SUB SoundAdapter_PauseMusic
+
+    SOUND_PauseMusic
+
+END SUB
 '///====================================================================
 '/// SOUND ADAPTER end
 '///====================================================================
@@ -202,6 +208,22 @@ SUB LD2_StopMusic
 
     IF LD2soundEnabled THEN
         SoundAdapter_StopMusic
+    END IF
+
+END SUB
+
+SUB LD2_PauseMusic
+
+    IF LD2soundEnabled THEN
+        SoundAdapter_PauseMusic
+    END IF
+
+END SUB
+
+SUB LD2_ContinueMusic
+
+    IF LD2soundEnabled THEN
+        SoundAdapter_PlayMusic
     END IF
 
 END SUB

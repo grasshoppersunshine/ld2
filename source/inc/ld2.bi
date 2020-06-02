@@ -314,6 +314,11 @@ enum PoseIds
     Walking
 end enum
 
+enum Options
+    No = 0
+    Yes = 1
+end enum
+
 CONST LARRYCHATBOX = 37
 CONST STEVECHATBOX = 39
 CONST STEVESICKCHATBOX = 115

@@ -1030,7 +1030,15 @@ SUB Main
 	LD2_CountFrame
    
 	PlayerIsRunning = 0
-	IF keyboard(KEY_ESCAPE) THEN LD2_SetFlag EXITGAME '- go to pause menu
+	IF keyboard(KEY_ESCAPE) THEN
+        LD2_PauseMusic
+        if STATUS_DialogYesNo("Exit Game?") = Options.Yes then
+            LD2_SetFlag EXITGAME
+            exit do
+        else
+            LD2_ContinueMusic
+        end if
+    end if
 	IF keyboard(KEY_RIGHT) THEN doAction ActionIds.RunRight: PlayerIsRunning = 1 'LD2_MovePlayer  1: PlayerIsRunning = 1
 	IF keyboard(KEY_LEFT ) THEN doAction ActionIds.RunLeft : PlayerIsRunning = 1 'LD2_MovePlayer -1: PlayerIsRunning = 1
 	IF keyboard(KEY_ALT) THEN doAction ActionIds.Jump 'LD2_JumpPlayer 1.5
@@ -1242,14 +1250,16 @@ function Scene1Go () as integer
     LD2_FadeIn 2
 
 	IF LD2_isDebugMode() THEN LD2_Debug "LD2_PlayMusic"
-    LD2_SetMusic mscWANDERING
-	LD2_FadeInMusic 5.0
+    'LD2_SetMusic mscWANDERING
+    'LD2_FadeInMusic 5.0
+    LD2_PlayMusic mscWANDERING
 	
     dim escaped as integer
     dim x as integer
     dim i as integer
         
-    WaitSeconds 3.0
+    WaitSecondsUntilKey 3.0
+    if keyboard(KEY_ENTER) then return 1
 
     if DoScene("SCENE-1A") then return 1 '// Well Steve, that was a good game of chess
 
@@ -1363,6 +1373,7 @@ sub Scene3EndConditions()
     LD2_SetPlayerFlip 1
     LD2_SetXShift 0
     ShiftX = 0
+    '- reset music volume
     
 end sub
 
@@ -1406,9 +1417,8 @@ function Scene3Go () as integer
     LD2_FadeOutMusic
 
     if DoScene("SCENE-3A") then return 1 '// Hey, you a doctor?
-    if DoScene("SCENE-3B") then return 1 '// Yes, I use this mop to
     'LD2_PlaySound Sounds.scare
-    if DoScene("SCENE-3C") then return 1 '// They rush to Steve!
+    if DoScene("SCENE-3B") then return 1 '// They rush to Steve!
 
     JanitorPose.setX 224: JanitorPose.setY 144
     LarryPose.setX 240: LarryPose.setY 144
@@ -1428,7 +1438,7 @@ function Scene3Go () as integer
 
     SceneNo = 4
 
-    if DoScene("SCENE-3D") then return 1 '// Let's see what I can do with him
+    if DoScene("SCENE-3C") then return 1 '// Let's see what I can do with him
     
     LD2_PlaySound Sounds.crack
     WaitSeconds 1.5
@@ -2441,7 +2451,7 @@ SUB SceneWeaponRoom2
   
   '- Barney runs to the right off the screen
   BarneyTalking = 1
-  FOR x = Barney.x TO Barney.x + 320
+  FOR x = Barney.x TO Barney.x + SCREEN_W
 	LD2_RenderFrame
   
 	PutRestOfSceners
@@ -2529,7 +2539,7 @@ SUB Start
     END IF
     
     CLS
-    PRINT "Larry the Dinosaur II v1.0.44"
+    PRINT "Larry the Dinosaur II v1.1.53"
     
     WaitSeconds 0.5
     
@@ -2588,8 +2598,9 @@ SUB Start
     Main
     firstLoop = 0
     
-  LOOP
+  LOOP while (LD2_HasFlag(EXITGAME) = 0)
   
+  TITLE_Goodbye
   LD2_ShutDown
   
 END SUB

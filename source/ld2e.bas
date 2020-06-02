@@ -195,6 +195,9 @@
     dim shared PaletteFile as string
     dim shared LightPalette as Palette256
     
+    dim shared FontCharWidths(128) as integer
+    dim shared FontCharMargins(128) as integer
+    
   
   REDIM SHARED TileMap  (0,0) AS INTEGER
   REDIM SHARED MixMap   (0,0) AS INTEGER
@@ -761,7 +764,7 @@ SUB LD2_Init
   SceneFile   = DATA_DIR+"gfx/ld2scene.put"
   ObjectsFile = DATA_DIR+"gfx/objects.put"
   BossFile    = DATA_DIR+"gfx/boss1.put"
-  FontFile    = DATA_DIR+"gfx/font1.put"
+  FontFile    = DATA_DIR+"gfx/font.put"
   Animation   = 1
   NumLives    = 1
   Lighting1   = 1
@@ -835,7 +838,7 @@ SUB LD2_Init
   END IF
   
   PRINT "Intializing video..."
-  LD2_InitVideo 1, "Larry the Dinosaur 2"
+  LD2_InitVideo "Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL
   LD2_LoadPalette PaletteFile
   
   for i = 0 to 11
@@ -884,8 +887,8 @@ SUB LD2_GenerateSky()
   
   FOR i = 0 TO 9999
     'DO
-      x = 320*RND(1)
-      y = 200*RND(1)
+      x = SCREEN_W*RND(1)
+      y = SCREEN_H*RND(1)
       'IF (x > 150-y) AND (x < 350-y) THEN
       '  IF (x > 225-y) AND (x < 275-y) THEN
       '    EXIT DO
@@ -905,8 +908,8 @@ SUB LD2_GenerateSky()
   NEXT i
   FOR i = 0 TO 99
     'DO
-      x = 320*RND(1)
-      y = 200*RND(1)
+      x = SCREEN_W*RND(1)
+      y = SCREEN_H*RND(1)
       'IF (x > 150-y) AND (x < 350-y) THEN
       '  IF (x > 225-y) AND (x < 275-y) THEN
       '    EXIT DO
@@ -1070,7 +1073,7 @@ SUB LD2_LoadMap (Filename AS STRING)
   dim n as integer
   'Message = "..Loading..."
   'LD2_cls 1, 0
-  'LD2_PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 1
+  'LD2_PutText ((SCREEN_W - LEN(Message) * 6) / 2), 60, Message, 1
   'FOR y = 80 TO 85
   '  FOR x = 0 TO 15
   '    FOR n = 0 TO 7
@@ -1438,7 +1441,9 @@ SUB LoadSprites (Filename AS STRING, BufferNum AS INTEGER)
    
     CASE idFONT
 
-      LD2_InitSprites filename, @SpritesFont, FONT_W, FONT_H, SpriteFlags.Transparent
+      'LD2_InitSprites filename, @SpritesFont, FONT_W, FONT_H, SpriteFlags.Transparent
+      LD2_InitSprites filename, @SpritesFont, 6, 5, SpriteFlags.Transparent or SpriteFlags.UseWhitePalette
+      LD2_LoadFontMetrics filename
    
     CASE idSCENE
 
@@ -1550,19 +1555,23 @@ function LD2_MovePlayer (dx AS DOUBLE) as integer
   IF Player.weapon = FIST THEN
     Player.x    = Player.x + ex
     Player.lAni = Player.lAni + ABS(ex / 7.5)
-    select case footstep
-        case 0
-            if player.lani >= 37 then LD2_PlaySound Sounds.footstep: footstep += 1
-        case 1
-            if player.lani >= 41 then LD2_PlaySound Sounds.footstep: footstep += 1
-    end select
+    if Player.state <> JUMPING then
+        select case footstep
+            case 0
+                if player.lani >= 37 then LD2_PlaySound Sounds.footstep: footstep += 1
+            case 1
+                if player.lani >= 41 then LD2_PlaySound Sounds.footstep: footstep += 1
+        end select
+    end if
   ELSE
     Player.x    = Player.x + dx
     Player.lAni = Player.lAni + ABS(dx / 7.5)
-    select case footstep
-        case 0
-            if player.lani >= 23 then LD2_PlaySound Sounds.footstep: footstep += 1
-    end select
+    if Player.state <> JUMPING then
+        select case footstep
+            case 0
+                if player.lani >= 23 then LD2_PlaySound Sounds.footstep: footstep += 1
+        end select
+    end if
   END IF
   
   dim playerShiftX as double
@@ -1709,7 +1718,7 @@ SUB LD2_PopText (Message AS STRING)
    
     WaitForKeyup(KEY_SPACE)
 
-    LD2_PutText ((320 - LEN(Message) * 6) / 2), 60, Message, 0
+    LD2_PutText ((SCREEN_W - LEN(Message) * FONT_W) / 2), 60, Message, 0
     
     LD2_UpdateScreen
    
@@ -1984,7 +1993,7 @@ SUB LD2_ProcessEntities
                     LD2_PlaySound Sounds.machinegun2
                         IF mob.flip = 0 THEN
                         'DEF SEG = VARSEG(TileMap(0))
-                        FOR i = mob.x + 15 TO mob.x + 320 STEP 8
+                        FOR i = mob.x + 15 TO mob.x + SCREEN_W STEP 8
                             px = i \ 16: py = INT(mob.y + 10) \ 16
                             'p% = PEEK(px% + py% * MAPW)
                             p = TileMap(px, py)
@@ -1999,7 +2008,7 @@ SUB LD2_ProcessEntities
                         'DEF SEG
                     ELSE
                         'DEF SEG = VARSEG(TileMap(0))
-                        FOR i = mob.x TO mob.x - 320 STEP -8
+                        FOR i = mob.x TO mob.x - SCREEN_W STEP -8
                             px = i \ 16: py = INT(mob.y + 10) \ 16
                             'p% = PEEK(px% + py% * MAPW)
                             p = TileMap(px, py)
@@ -2065,7 +2074,7 @@ SUB LD2_ProcessEntities
                         LD2_PlaySound Sounds.pistol2
                         IF mob.flip = 0 THEN
                             'DEF SEG = VARSEG(TileMap(0))
-                            FOR i = mob.x + 15 TO mob.x + 320 STEP 8
+                            FOR i = mob.x + 15 TO mob.x + SCREEN_W STEP 8
                                 px = i \ 16: py = INT(mob.y + 10) \ 16
                                 'p% = PEEK(px% + py% * MAPW)
                                 p = TileMap(px, py)
@@ -2080,7 +2089,7 @@ SUB LD2_ProcessEntities
                             'DEF SEG
                         ELSE
                             'DEF SEG = VARSEG(TileMap(0))
-                            FOR i = mob.x TO mob.x - 320 STEP -8
+                            FOR i = mob.x TO mob.x - SCREEN_W STEP -8
                                 px = i \ 16: py = INT(mob.y + 10) \ 16
                                 'p% = PEEK(px% + py% * MAPW)
                                 p = TileMap(px, py)
@@ -2410,7 +2419,7 @@ SUB LD2_ProcessGuts
       Guts(i).y = Guts(i).y + Guts(i).velocity*f
       Guts(i).velocity = Guts(i).velocity + Gravity*f
    
-      IF Guts(i).y > 200 THEN
+      IF Guts(i).y > SCREEN_H THEN
         '- Delete gut
         FOR n = i TO NumGuts - 1
           Guts(n) = Guts(n + 1)
@@ -2426,7 +2435,7 @@ SUB LD2_ProcessGuts
         Guts(i).id = Guts(i).id + 1
       END IF
       
-      IF Guts(i).y > 200 OR Guts(i).id > 11 THEN
+      IF Guts(i).y > SCREEN_H OR Guts(i).id > 11 THEN
         '- Delete gut
         FOR n = i TO NumGuts - 1
           Guts(n) = Guts(n + 1)
@@ -2445,7 +2454,7 @@ SUB LD2_ProcessGuts
         Guts(i).id = Guts(i).id + 1
       END IF
       
-      IF Guts(i).y > 200 OR Guts(i).y < -15 OR Guts(i).id > 20 THEN
+      IF Guts(i).y > SCREEN_H OR Guts(i).y < -15 OR Guts(i).id > 20 THEN
         '- Delete gut
         FOR n = i TO NumGuts - 1
           Guts(n) = Guts(n + 1)
@@ -2520,7 +2529,7 @@ SUB LD2_putText (x AS INTEGER, y AS INTEGER, Text AS STRING, bufferNum AS INTEGE
 
   FOR n = 1 TO LEN(Text)
     IF MID(Text, n, 1) <> " " THEN
-      SpritesFont.putToScreen((n * 6 - 6) + x, y, ASC(MID(Text, n, 1)) - 32)
+      SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, ASC(MID(Text, n, 1)) - 32)
     END IF
   NEXT n
 
@@ -2536,7 +2545,7 @@ sub LD2_putTextCol (x as integer, y as integer, text as string, col as integer, 
   
   for n = 1 to len(text)
     if mid(text, n, 1) <> " " then
-      SpritesFont.putToScreen((n * 6 - 6) + x, y, ASC(MID(text, n, 1)) - 32)
+      SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, ASC(MID(text, n, 1)) - 32)
     end if
   next n
 
@@ -2938,7 +2947,7 @@ SUB LD2_RenderFrame
 
   'FOR x% = 1 TO 5
   '  LD2putl x% * 16 - 16, 0, segLight, VARPTR(sLight(EPS * 2)), segBuffer1
-  '  LD2putl 320 - x% * 16, 0, segLight, VARPTR(sLight(EPS * 2)), segBuffer1
+  '  LD2putl SCREEN_W - x% * 16, 0, segLight, VARPTR(sLight(EPS * 2)), segBuffer1
   'NEXT x%
   '
   'LD2_PutText 0, 0, "HEALTH:" + STR(Player.life), 1
@@ -2966,14 +2975,14 @@ SUB LD2_RenderFrame
     'LD2put pad, pad+12, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 45)), segBuffer1, 0
     SpritesLarry.putToScreen(pad, pad+12, 45)
   END SELECT
-  'LD2put 320-18-16-pad, pad, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 46)), segBuffer1, 0
+  'LD2put SCREEN_W-18-16-pad, pad, VARSEG(sLarry(0)), VARPTR(sLarry(EPS * 46)), segBuffer1, 0
   LD2_putTextCol pad+16, pad+3, STR(Player.life), 15, 1
   IF Player.weapon = SHOTGUN     THEN LD2_PutTextCol pad+16, pad+12+3, STR(Inventory(SHELLS)), 15, 1
   IF Player.weapon = MACHINEGUN  THEN LD2_PutTextCol pad+16, pad+12+3, STR(Inventory(BULLETS)), 15, 1
   IF Player.weapon = PISTOL      THEN LD2_PutTextCol pad+16, pad+12+3, STR(Inventory(BULLETS)), 15, 1
   IF Player.weapon = DESERTEAGLE THEN LD2_PutTextCol pad+16, pad+12+3, STR(Inventory(DEAGLES)), 15, 1
   IF Player.weapon = FIST        THEN LD2_PutTextCol pad+16, pad+12+3, " INF", 15, 1
-  'LD2_PutTextCol 320-18-pad, pad+3, STR(NumLives), 15, 1
+  'LD2_PutTextCol SCREEN_W-18-pad, pad+3, STR(NumLives), 15, 1
 
   IF ShowLife THEN
     FOR x = 1 TO 4
@@ -3002,9 +3011,9 @@ SUB LD2_RenderFrame
   revealText = ""' "The cola dispenser that poisoned Steve. Best I not get anything from it."
   IF LEN(revealText) THEN
       IF LEN(revealText) > 35 THEN
-        rtextLft = (320-35*6)\2
+        rtextLft = (SCREEN_W-35*6)\2
       ELSE
-        rtextLft = (320-LEN(revealText)*6)\2
+        rtextLft = (SCREEN_W-LEN(revealText)*6)\2
       END IF
       
       rticker = rticker + DELAYMOD*0.50
@@ -3070,22 +3079,25 @@ SUB LD2_RenderFrame
  
   '- Draw the text
   '-------------------
-  FOR n = 1 TO LEN(SceneCaption)
-    'IF MID$(SceneCaption, n%, 1) <> " " THEN LD2put65 ((n% * 6 - 6) + 20), 180, VARSEG(sFont(0)), VARPTR(sFont(17 * (ASC(MID$(SceneCaption, n%, 1)) - 32))), segBuffer1
-    IF MID(SceneCaption, n, 1) <> " " THEN
-        SpritesFont.putToScreen(((n * 6 - 6) + 20), 180, (ASC(MID(SceneCaption, n, 1)) - 32))
-    END IF
-  NEXT n
-  
+    dim e as ElementType
+    if len(SceneCaption) then
+        LD2_InitElement @e, SceneCaption, 31
+        e.x = 20
+        e.y = 180
+        e.w = 300
+        e.text_spacing = 1.4
+        LD2_RenderElement @e
+    end if
+    
   IF TIMER < GameNoticeExpire THEN
-    LD2_PutText 320-6-LEN(GameNoticeMsg)*6, 170, GameNoticeMsg, 1
+    LD2_PutText SCREEN_W-6-LEN(GameNoticeMsg)*6, 170, GameNoticeMsg, 1
   END IF
   
 END SUB
 
 FUNCTION LD2_HasFlag (flag AS INTEGER) as integer
     
-    return (GameFlags AND flag)
+    return ((GameFlags AND flag) > 0)
     
 END FUNCTION
 
@@ -3274,7 +3286,7 @@ function LD2_Shoot() as integer
     IF Player.flip = 0 THEN
    
       'DEF SEG = VARSEG(TileMap(0))
-      FOR i = Player.x + 15 TO Player.x + 320 STEP 8
+      FOR i = Player.x + 15 TO Player.x + SCREEN_W STEP 8
  
         px = i \ 16: py = INT(Player.y + 10) \ 16
         'p% = PEEK(px% + py% * MAPW)
@@ -3333,7 +3345,7 @@ function LD2_Shoot() as integer
     ELSE
    
       'DEF SEG = VARSEG(TileMap(0))
-      FOR i = Player.x TO Player.x - 320 STEP -8
+      FOR i = Player.x TO Player.x - SCREEN_W STEP -8
 
         px = i \ 16: py = INT(Player.y + 10) \ 16
         'p% = PEEK(px% + py% * MAPW)
@@ -3629,59 +3641,331 @@ RETURN
 
 END SUB
 
-'SUB SetBitmap(segment AS INTEGER, offset AS INTEGER, pitch AS INTEGER)
-'    
-'    BitmapSeg   = segment
-'    BitmapOff   = offsset
-'    IF ((pitch/8) - INT(pitch/8)) > 0 THEN
-'        BitmapPitch = (pitch\8)+1
-'    ELSE
-'        BitmapPitch = (pitch\8)
-'    END IF
-'    
-'END SUB
-
-'SUB PokeBitmap(x AS INTEGER, y AS INTEGER, value AS INTEGER)
-'    
-'    DIM bits AS INTEGER
-'    DIM bit  AS INTEGER
-'    DIM bx   AS INTEGER
-'    
-'    bit = 2^(x AND 7)
-'    bx  = x \ 8
-'    
-'    DEF SEG = BitmapSeg
-'    bits = PEEK (BitmapOff + (bx+y*BitmapPitch))
-'    IF value THEN
-'        POKE BitmapOff + (bx+y*BitmapPitch), (bits OR bit)
-'    ELSE
-'        POKE BitmapOff + (bx+y*BitmapPitch), (bits OR bit) XOR bit
-'    END IF
-'    DEF SEG
-'    
-'END SUB
-
-'FUNCTION PeekBitmap (x AS INTEGER, y AS INTEGER) as integer
-'    
-'    DIM bits AS INTEGER
-'    DIM bit  AS INTEGER
-'    DIM bx   AS INTEGER
-'    
-'    bx = x \ 8
-'    
-'    DEF SEG = BitmapSeg
-'    bits = PEEK (BitmapOff + (bx+y*BitmapPitch))
-'    DEF SEG
-'    
-'    bit = (bits AND (2^(x AND 7)))
-'    IF bit <> 0 THEN bit = 1
-'    
-'    PeekBitmap% = bit
-'    
-'END FUNCTION
-
 SUB LD2_Debug(message AS STRING)
     
     logdebug message
     
 END SUB
+
+sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
+    
+    e->x = 0
+    e->y = 0
+    e->w = -1
+    e->h = -1
+    e->padding_x = 0
+    e->padding_y = 0
+    e->border_width = 0
+    e->border_color = 15
+    e->text = text
+    e->text_color   = text_color
+    e->text_spacing = 1.2
+    e->text_height  = 1.4
+    e->text_is_centered = ((flags and ElementFlags.CenterText) > 0)
+    e->text_is_monospace = 0
+    e->background   = -1
+    e->background_alpha = 1.0
+    e->is_auto_width = 0
+    e->is_auto_height = 0
+    e->is_centered_x = ((flags and ElementFlags.CenterX) > 0)
+    e->is_centered_y = ((flags and ElementFlags.CenterY) > 0)
+    e->parent = 0
+    e->is_rendered = 0
+    
+end sub
+
+sub LD2_RenderElement(e as ElementType ptr)
+    
+    dim x as integer
+    dim y as integer
+    dim w as integer
+    dim h as integer
+    dim text as string
+    dim char as string * 1
+    dim ch as string * 1
+    dim fx as integer, fy as integer
+    dim n as integer
+    dim i as integer
+    
+    dim charMax as integer
+    dim lineBreaks(32) as integer
+    dim numLineBreaks as integer
+    dim newText as string
+    dim lineChars as integer
+    dim maxLineChars as integer
+    dim idx as integer
+    
+    dim backgroundAlpha as integer
+    
+    dim lft as integer, rgt as integer
+    dim top as integer, btm as integer
+    dim pixels as integer
+    
+    dim _word as string
+    dim printWord as integer
+    dim newLine as integer
+    dim doLTrim as integer
+    
+    dim textSpacing as integer
+    dim textHeight as integer
+    dim textWidth as integer
+    
+    dim d as double
+    
+    if e->parent = 0 then
+        if e->background = -1 then e->background = 0
+    end if
+    
+    text = ucase(e->text)
+    newText = ""
+    numLineBreaks = 0
+    maxLineChars = 0
+    lineChars = 0
+    for n = 1 to len(text)
+        char = mid(text, n, 1)
+        if (char = "\") then
+            if numLineBreaks < 32 then
+                lineBreaks(numLineBreaks) = n-numLineBreaks
+                numLineBreaks += 1
+                if lineChars > maxLineChars then
+                    maxLineChars = lineChars
+                    lineChars = 0
+                end if
+            end if
+        else
+            newText += char
+            lineChars += 1
+        end if
+    next n
+    text = newText
+    if numLineBreaks = 0 then
+        maxLineChars = len(newText)
+    end if
+    
+    d = (FONT_H*e->text_height): textHeight = int(d)
+    d = (FONT_W*e->text_spacing)-FONT_W: textSpacing = int(d)
+    
+    pixels = 0
+    for n = 1 to len(text)
+        char = mid(text, n, 1)
+        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32)) + iif(n < len(text), textSpacing, 0)
+    next n
+    textWidth = pixels
+    if e->w = -1 then e->is_auto_width = 1
+    if e->h = -1 then e->is_auto_height = 1
+    if e->is_auto_width  then e->w = textWidth
+    if e->is_auto_height then e->h = (numLineBreaks+1)*textHeight
+    
+    if e->is_centered_x then e->x = int((SCREEN_W-e->w)/2)
+    if e->is_centered_y then e->y = int((SCREEN_H-e->h)/2)
+    
+    if e->border_width > 0 then
+
+        lft = e->x-e->padding_x-e->border_width
+        top = e->y-e->padding_y-e->border_width
+        rgt = lft+e->w+e->padding_x*2+e->border_width
+        btm = top+e->h+e->padding_y*2+e->border_width
+        w = e->w+e->padding_x*2+e->border_width*2
+        h = e->h+e->padding_y*2+e->border_width*2
+        
+        LD2_fill lft, top, w, e->border_width, e->border_color, 1
+        LD2_fill lft, top, e->border_width, h, e->border_color, 1
+        LD2_fill rgt, top, e->border_width, h, e->border_color, 1
+        LD2_fill lft, btm, w, e->border_width, e->border_color, 1
+
+    end if
+
+    x = e->x-e->padding_x: y = e->y-e->padding_y
+    w = e->w+e->padding_x*2: h = e->h+e->padding_y*2
+    
+    if e->background >= 0 then
+        backgroundAlpha = e->background_alpha * 255
+        LD2_fillm x, y, w, h, e->background, 1, backgroundAlpha
+    end if
+    
+    x = e->x: y = e->y
+    if e->text_is_centered then x += int((e->w-textWidth)/2) '- center for each line break -- todo
+    fx = x: fy = y
+
+    idx = 0
+    pixels = 0
+    _word = ""
+    printWord = 0
+    newLine = 0
+    doLTrim = 0
+    
+    for n = 1 to len(text)
+        char = mid(text, n, 1)
+        if char = " " then
+            printWord = 1
+        end if
+        if numLineBreaks > 0 then
+            if n = lineBreaks(idx) then
+                idx += 1
+                printWord = 1
+                newLine = 1
+            end if
+        end if
+        if n = len(text) then
+            printWord = 1
+            _word += char
+            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32))+iif(n < len(text), textSpacing, 0)
+        end if
+        if printWord and (len(_word) > 0) then
+            if doLTrim then
+                _word = ltrim(_word)
+                doLtrim = 0
+            end if
+            if pixels > e->w then
+                fy += textHeight
+                fx = x
+                _word = ltrim(_word)
+            end if
+            for i = 1 to len(_word)
+                ch = mid(_word, i, 1)
+                SpritesFont.putToScreen(int(fx)-FontCharMargins(asc(ch)-32), fy, asc(ch) - 32)
+                fx += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(ch)-32))+textSpacing
+            next i
+            _word = ""
+            pixels = fx - x
+        end if
+        if newLine then
+            pixels = 0
+            fy += textHeight
+            fx = x
+            doLtrim =1
+        end if
+        _word += char
+        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32))+iif(n < len(text), textSpacing, 0)
+        newLine = 0
+        printWord = 0
+    next n
+    e->is_rendered = 1
+    
+end sub
+
+dim shared ElementCount as integer
+dim shared RenderElements(32) as ElementType ptr
+
+sub LD2_ClearElements()
+    
+    ElementCount = 0
+    
+end sub
+
+sub LD2_AddElement(e as ElementType ptr, parent as ElementType ptr = 0)
+    
+    if ElementCount < 32 then
+        RenderElements(ElementCount) = e
+        if (parent <> 0) then e->parent = parent
+        ElementCount += 1
+    end if
+    
+end sub
+
+sub LD2_RenderParent(e as ElementType ptr)
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        if parent->is_rendered = 0 then
+            LD2_RenderParent parent
+            LD2_RenderElement parent
+        end if
+    end if
+    
+end sub
+
+function LD2_GetParentBackround(e as ElementType ptr) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        if parent->background > 0 then
+            return parent->background
+        else
+            return LD2_GetParentBackround(parent)
+        end if
+    else
+        return 0
+    end if
+    
+end function
+
+sub LD2_RenderElements()
+    
+    dim n as integer
+    dim e as ElementType ptr
+    dim parent as ElementType ptr
+    
+    for n = 0 to ElementCount-1
+        RenderElements(n)->is_rendered = 0
+    next n
+    
+    for n = 0 to ElementCount-1
+        
+        e = RenderElements(n)
+        if e->is_rendered = 0 then
+            LD2_RenderParent e
+            LD2_RenderElement e
+        end if
+        
+    next n
+    
+end sub
+
+sub LD2_LoadFontMetrics(filename as string)
+    
+    type HeaderType
+        a as ubyte
+        b as ubyte
+        c as ubyte
+        d as ubyte
+        e as ubyte
+        f as ubyte
+        g as ubyte
+    end type
+    
+    dim header as HeaderType
+    dim x as integer, y as integer
+    dim n as integer
+    dim u as ushort
+    dim c as ubyte
+    
+    dim leftMost as integer
+    dim rightMost as integer
+    dim charWidth as integer
+    
+    n = 0
+    open filename for binary as #1
+        get #1, , header
+        while not eof(1)
+            get #1, , u '- sprite width
+            get #1, , u '- sprite height
+            leftMost = 5
+            rightMost = 0
+            for y = 0 to 4 '- FONT_H
+                for x = 0 to 5 '- FONT_W
+                    get #1, , c
+                    if (c > 0) and (x > rightMost) then
+                        rightMost = x
+                    end if
+                    if (c > 0) and (x < leftMost) then
+                        leftMost = x
+                    end if
+                next x
+            next y
+            if leftMost <= rightMost then
+                charWidth = (rightMost - leftMost) + 1
+            else
+                charWidth = FONT_W '- assume space
+            end if
+            FontCharWidths(n) = charWidth
+            FontCharMargins(n) = iif(leftMost <= rightMost, leftMost, 0)
+            n += 1
+        wend
+    close #1
+    
+end sub

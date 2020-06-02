@@ -3,11 +3,11 @@
 '======================
 '= PRIVATE MEMBERS
 '======================
-TYPE SceneType
-  speakerId AS STRING * 16
-  speakerDialogue AS STRING * 50
-  FileId AS INTEGER
-END TYPE
+type SceneType
+  speakerId as string
+  speakerDialogue as string
+  FileId as integer
+end type
 
 DECLARE SUB SetSpeakerDialogue (dialogue AS STRING)
 DECLARE SUB SetSpeakerId (id AS STRING)

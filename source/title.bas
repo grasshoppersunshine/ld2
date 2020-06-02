@@ -45,7 +45,7 @@ SUB TITLE_Opening
     
     IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Opening"
     
-    DIM text AS STRING
+    DIM e AS ElementType
     
     LD2_cls
     
@@ -67,8 +67,15 @@ SUB TITLE_Opening
     END IF
     
     LD2_CLS 1, 0
-    text = "D E L T A   C O D E   P R E S E N T S"
-    LD2_PutTextCol ((320 - LEN(text) * 6) / 2), 60, text, 31, 1
+    
+    LD2_InitElement(@e)
+    e.y = 60
+    e.is_centered_x = 1
+    e.text = "DELTA CODE PRESENTS"
+    e.text_spacing = 1.9
+    e.text_color = 31
+    LD2_RenderElement @e
+    
     LD2_FadeIn 1
     IF WaitSecondsUntilKey(1.5) THEN
         LD2_FadeOut 5, 15
@@ -130,10 +137,6 @@ SUB TITLE_Menu
     LD2_cls
     LD2_StopMusic
     
-    IF LD2_HasFlag(EXITGAME) THEN
-        TITLE_Goodbye
-    END IF
-    
 END SUB
 
 SUB TITLE_Intro
@@ -145,14 +148,19 @@ SUB TITLE_Intro
   dim x as integer
   dim y as integer
   dim n as integer
+    dim e as ElementType
   
   LD2_CLS 0, 0
   
-  WaitSeconds(2.0)
+  WaitSecondsUntilKey(2.0)
+  if keyboard(KEY_ENTER) then
+    LD2_FadeOut 2
+    LD2_FadeOutMusic
+  end if
   
   LD2_LoadBitmap DATA_DIR+"gfx/back.bmp", 2, 0
   LD2_CopyBuffer 2, 1
-  LD2_FadeIn 1
+  LD2_FadeInWhileNoKey 1
   LD2_SetMusic mscINTRO
   LD2_FadeInMusic 9.0
   IF WaitSecondsUntilKey(4.0) THEN
@@ -163,6 +171,9 @@ SUB TITLE_Intro
   
   dim state as integer
   state = 0
+    
+    LD2_InitElement @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.y = 60
   
   File = FREEFILE
   OPEN DATA_DIR+"tables/intro.txt" FOR INPUT AS File
@@ -177,22 +188,26 @@ SUB TITLE_Intro
     
     if state = 0 then
         LD2_CopyBuffer 2, 1
-        LD2_fillm 0, 35, 320, 56, 0, 1
+        LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
     end if
     if state = 1 then LD2_CLS 1, 0
     
+    e.text = ltrim(rtrim(text))
+    
     FOR y = 0 TO 7
  
-      LD2_PutText ((320 - LEN(text) * 6) / 2), 60, text, 1
+      'LD2_PutText ((SCREEN_W - LEN(text) * FONT_W) / 2), 60, text, 1
+        LD2_RenderElement @e
 
-      LD2_fillm 0, 47, 320, 32, 0, 1, (8-y)*32-1
+      LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, (8-y)*32-1
 
       LD2_RefreshScreen
-      IF WaitSecondsUntilKey(0.25) THEN EXIT DO
+      IF WaitSecondsUntilKey(0.2) THEN EXIT DO
 
     NEXT y
     
-    LD2_PutText ((320 - LEN(text) * 6) / 2), 60, text, 1
+    'LD2_PutText ((SCREEN_W - LEN(text) * FONT_W) / 2), 60, text, 1
+    LD2_RenderElement @e
     LD2_RefreshScreen
     IF WaitSecondsUntilKey(3.0) THEN EXIT DO
 
@@ -204,12 +219,13 @@ SUB TITLE_Intro
         exit for
       end if
 
-      LD2_PutText ((320 - LEN(text) * 6) / 2), 60, text, 1
+      'LD2_PutText ((SCREEN_W - LEN(text) * FONT_W) / 2), 60, text, 1
+        LD2_RenderElement @e
 
-      LD2_fillm 0, 47, 320, 32, 0, 1, (y+1)*32-1
+      LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, (y+1)*32-1
 
       LD2_RefreshScreen
-      IF WaitSecondsUntilKey(0.25) THEN EXIT DO
+      IF WaitSecondsUntilKey(0.2) THEN EXIT DO
      
     NEXT y
     
@@ -224,42 +240,49 @@ SUB TITLE_Intro
 
 END SUB
 
-SUB TITLE_ShowCredits
-  
-  IF LD2_isDebugMode() THEN LD2_Debug "TITLE_ShowCredits"
-  
-  DIM File AS INTEGER
-  DIM text AS STRING
-  DIM y AS INTEGER
- 
-  LD2_cls
-  LD2_CLS 1, 0
+sub TITLE_ShowCredits
+    
+    if LD2_isDebugMode() then LD2_Debug "TITLE_ShowCredits"
 
-  text = "Larry The Dinosaur II - October, 2002 - Delta Code"
-  LD2_PutText ((320 - LEN(text) * 6) / 2), 4, text, 1
+    dim e as ElementType
+    dim y as integer
+    dim text as string
 
-  y = 30
-  File = FREEFILE
-  OPEN DATA_DIR+"tables/credits.txt" FOR INPUT AS File
-  DO WHILE NOT EOF(File)
-    LINE INPUT #File, text
-    LD2_PutText 40, y, text, 1
-    y = y + 10
-  LOOP
-  CLOSE File
-  
-  text = "Press Space To Continue"
-  LD2_PutText ((320 - LEN(text) * 6) / 2), 144, text, 1
-  
-  LD2_FadeIn 3
- 
-  DO: PullEvents: LOOP UNTIL keyboard(KEY_SPACE)
-  
-  LD2_PlaySound Sounds.select1
-  WaitSeconds 0.3333
-  LD2_FadeOut 3
+    LD2_cls
+    LD2_CLS 1, 0
 
-END SUB
+    LD2_InitElement @e, "Larry The Dinosaur II - October, 2002 - Delta Code", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.y = 4
+    e.text_spacing = 1.25
+    LD2_RenderElement @e
+
+    LD2_InitElement @e, "", 31
+    open DATA_DIR+"tables/credits.txt" for input as #1
+        do while not eof(1)
+            line input #1, text
+            'e.x = 40: e.y = y: e.text = text
+            'LD2_RenderElement @e
+            'y += 10
+            e.text += text+"\"
+        loop
+    close #1
+    e.x = 40: e.y = 30
+    e.text_is_monospace = 1
+    LD2_RenderELement @e
+
+    LD2_InitElement @e, "Press Space To Continue", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.y = 144
+    LD2_RenderElement @e
+
+    LD2_FadeIn 3
+
+    WaitForKeydown(KEY_SPACE)
+
+    LD2_PlaySound Sounds.select1
+    WaitSeconds 0.3333
+    LD2_FadeOut 3
+
+end sub
 
 SUB TITLE_Ad
  
@@ -293,15 +316,15 @@ SUB TITLE_Ad
         LD2_cls 1, backColor
         
         IF (i < 6) OR (i > 7) THEN
-          LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 60, Message(i), textColor, 1
+          LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
         END IF
         IF i = 6 THEN
-          LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 60, Message(i), textColor, 1
+          LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
         END IF
         IF i = 7 THEN
-          LD2_PutTextCol ((320 - LEN(Message(i-1)) * 6) / 2), 60, Message(i-1), textColor, 1
+          LD2_PutTextCol ((SCREEN_W - LEN(Message(i-1)) * FONT_W) / 2), 60, Message(i-1), textColor, 1
           FOR n = 32 TO 40
-            LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 76, Message(i), n, 1
+            LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 76, Message(i), n, 1
             LD2_RefreshScreen
             WaitSeconds 0.10
           NEXT n
@@ -342,18 +365,36 @@ SUB TITLE_Goodbye
     
     IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Goodbye"
     
-    DIM text AS STRING
-    dim i as integer
+    dim e as ElementType
+    dim goodbyes(9) as string
+    
+    goodbyes(0) = "GOODBYE"
+    goodbyes(1) = "SMELL YA LATER"
+    goodbyes(2) = "GOODBYE"
+    goodbyes(3) = "GOODBYE"
+    goodbyes(4) = "MOTHER OF GOD!"
+    goodbyes(5) = "SAVE YOURSELF FROM HELL"
+    goodbyes(6) = "LIBERA TE TUTAMET EX INFERIS"
+    goodbyes(7) = "REALITY IS MUCH WORSE"
+    goodbyes(8) = "GOODBYE"
+    goodbyes(9) = "NOW SEE WHAT YOU CAN DO"
+    'goodbyes(3) = "CAN'T WIN THEM ALL" '- if died before exit?
     
     LD2_cls
-    i = WaitSecondsUntilKey(0.1)
+    WaitSecondsUntilKey(0.1)
     
     LD2_CLS 1, 0
-    'text = "G O O D   B Y E"
-    text = "S M E L L   Y A   L A T E R"
-    LD2_PutTextCol ((320 - LEN(text) * 6) / 2), 60, text, 31, 1
+    
+    LD2_InitElement(@e)
+    e.y = 60
+    e.is_centered_x = 1
+    e.text = goodbyes(int((ubound(goodbyes)+1)*rnd(1)))
+    e.text_spacing = 1.9
+    e.text_color = 31
+    LD2_RenderElement @e
+    
     LD2_FadeIn 4
-    IF WaitSecondsUntilKey(0.5) THEN
+    IF WaitSecondsUntilKey(0.25) THEN
         LD2_FadeOut 4
     ELSE
         LD2_FadeOut 4
@@ -361,7 +402,7 @@ SUB TITLE_Goodbye
     
     LD2_cls
     
-    i = WaitSecondsUntilKey(0.1)
+    WaitSecondsUntilKey(0.1)
     
 END SUB
 
@@ -451,15 +492,15 @@ SUB TITLE_AdTwo
         LD2_cls 1, backColor
         
         IF (i < 2) OR (i > 3) THEN
-          LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 60, Message(i), textColor, 1
+          LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
         END IF
         IF i = 2 THEN
-          LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 60, Message(i), 57, 1
+          LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), 57, 1
         END IF
         IF i = 3 THEN
-          LD2_PutTextCol ((320 - LEN(Message(i-1)) * 6) / 2), 60, Message(i-1), 57, 1
+          LD2_PutTextCol ((SCREEN_W - LEN(Message(i-1)) * FONT_W) / 2), 60, Message(i-1), 57, 1
           FOR n = 32 TO 40
-            LD2_PutTextCol ((320 - LEN(Message(i)) * 6) / 2), 76, Message(i), n, 1
+            LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 76, Message(i), n, 1
             LD2_RefreshScreen
             WaitSeconds 0.10
           NEXT n

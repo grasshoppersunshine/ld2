@@ -18,7 +18,8 @@ DIM SHARED selectedInventorySlot AS INTEGER
 dim shared UseItemCallback as sub(id as integer, qty as integer)
 
 const DATA_DIR = "data/"
-const STATUS_TRANSPARENCY = 150
+const STATUS_DIALOG_ALPHA = 150
+const STATUS_DIALOG_COLOR = 66
 
 sub STATUS_SetUseItemCallback(callback as sub(id as integer, qty as integer))
     
@@ -36,7 +37,7 @@ SUB DrawStatusScreen (heading AS STRING)
 	top = 0
 	
 	LD2_CopyBuffer 2, 1
-	LD2_fillm 0, top, 320, 96, 66, 1, STATUS_TRANSPARENCY
+	LD2_fillm 0, top, SCREEN_W, 96, 66, 1, STATUS_DIALOG_ALPHA
 	
 	LD2_PutText w, top + h * 1, heading, 1
 	LD2_PutText w, top + h * 2, STRING(LEN(heading), "="), 1
@@ -124,14 +125,14 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		END IF
 		lft = -INT((1 - e) * (1 - e) * (1 - e) * 156)
 		LD2_CopyBuffer 2, 1
-		LD2_fillm lft, 0, 156, 200, 66, 1, STATUS_TRANSPARENCY
+		LD2_fillm lft, 0, 156, SCREEN_H, 66, 1, STATUS_DIALOG_ALPHA
 		LD2_RefreshScreen
         PullEvents
 	LOOP WHILE e < 1
 	
 	DO
 		LD2_CopyBuffer 2, 1
-		LD2_fillm 0, 0, 156, 200, 66, 1, STATUS_TRANSPARENCY
+		LD2_fillm 0, 0, 156, SCREEN_H, 66, 1, STATUS_DIALOG_ALPHA
 		
 		LD2_PutText w, h * 1, "Please Select a Floor", 1
 		LD2_PutText w, h * 2, "======================", 1
@@ -156,13 +157,13 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 			IF LEN(floorStr) = 1 THEN floorStr = " " + floorStr
 			IF (numFloors - i - 1) = selectedRoom THEN 'floorNo = selectedRoom THEN
 				'LD2_PutTextCol w, top, floorStr+" "+label, 112, 1
-				LD2_fillm w - 1, top - 1, w * 2 + 2, h + 1, 17, 1, STATUS_TRANSPARENCY
-				LD2_fillm w * 3 + 1, top - 1, w * 21 - 3, h + 1, 70, 1, STATUS_TRANSPARENCY
+				LD2_fillm w - 1, top - 1, w * 2 + 2, h + 1, 17, 1, STATUS_DIALOG_ALPHA
+				LD2_fillm w * 3 + 1, top - 1, w * 21 - 3, h + 1, 70, 1, STATUS_DIALOG_ALPHA
 				LD2_PutTextCol w, top, floorStr, 61, 1
 				LD2_PutTextCol w * 4, top, label, 15, 1
 				selectedFilename = filename
 			ELSE
-				LD2_fillm w - 1, top - 1, w * 2 + 2, h + 1, 48, 1, STATUS_TRANSPARENCY'- 208, 160, 48
+				LD2_fillm w - 1, top - 1, w * 2 + 2, h + 1, 48, 1, STATUS_DIALOG_ALPHA'- 208, 160, 48
 				IF LTRIM(filename) <> "" THEN
 					'LD2_PutText w, top, floorStr + " " + label, 1
 					LD2_PutTextCol w, top, floorStr, 54, 1
@@ -258,7 +259,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		END IF
 		lft = -INT(e * e * e * 156)
 		LD2_CopyBuffer 2, 1
-		LD2_fillm lft, 0, 156, 200, 66, 1, STATUS_TRANSPARENCY
+		LD2_fillm lft, 0, 156, SCREEN_H, 66, 1, STATUS_DIALOG_ALPHA
 		LD2_RefreshScreen
         PullEvents
 	LOOP WHILE e < 1
@@ -290,7 +291,7 @@ SUB Look (item AS InventoryType)
 	top = h * 4
 	lft = w
 	pad = 0
-	maxlen = INT((320 - pad * 2 - lft) / w)
+	maxlen = INT((SCREEN_W - pad * 2 - lft) / w)
 	
 	desc = Inventory_LoadDescription(item.id)
 	IF desc = "" THEN
@@ -427,7 +428,7 @@ SUB StatusScreen
 		END IF
 		top = -INT((1 - e) * (1 - e) * (1 - e) * 96)
 		LD2_CopyBuffer 2, 1
-		LD2_fillm 0, top, 320, 96, 66, 1, STATUS_TRANSPARENCY
+		LD2_fillm 0, top, SCREEN_W, 96, 66, 1, STATUS_DIALOG_ALPHA
 		LD2_RefreshScreen
         PullEvents
 	LOOP WHILE e < 1
@@ -438,7 +439,7 @@ SUB StatusScreen
 		top = 0
 		LD2_CopyBuffer 2, 1
         
-        LD2_fillm 0, top, 320, 96, 66, 1, STATUS_TRANSPARENCY
+        LD2_fillm 0, top, SCREEN_W, 96, 66, 1, STATUS_DIALOG_ALPHA
 
 		LD2_PutText w, top + h * 1, "LARRY", 1
 		LD2_PutText w, top + h * 2, "=============", 1
@@ -515,7 +516,7 @@ SUB StatusScreen
 			itemStr = "( " + item.shortName + " )"
 			
 			IF i = selectedInventorySlot THEN
-				LD2_fillm w * 33, top - 1, w * 19.5, h + 1, 70, 1, STATUS_TRANSPARENCY
+				LD2_fillm w * 33, top - 1, w * 19.5, h + 1, 70, 1, STATUS_DIALOG_ALPHA
 				LD2_PutTextCol 200, top, itemStr, 15, 1
 				selected = item
 			ELSE
@@ -530,8 +531,8 @@ SUB StatusScreen
 		IF action = -1 THEN
 			'itemStr = LTRIM$(RTRIM$(item.shortName))
 			'itemStr = itemStr + SPC$(15-LEN(itemStr))
-			'LD2_fillm INT((320-(w*LEN(itemStr)))/2)-7, top+h*13-1, w*LEN(itemStr)+1+12, h+1, 130, 1
-			'LD2_PutTextCol INT((320-(w*LEN(itemStr)))/2), top + h * 13, itemStr, 15, 1
+			'LD2_fillm INT((SCREEN_W-(w*LEN(itemStr)))/2)-7, top+h*13-1, w*LEN(itemStr)+1+12, h+1, 130, 1
+			'LD2_PutTextCol INT((SCREEN_W-(w*LEN(itemStr)))/2), top + h * 13, itemStr, 15, 1
 		ELSEIF mixMode THEN
             shortName = LTRIM(RTRIM(mixItem.shortName))
             LD2_PutText w * 21, top + h * 13, "Mix "+SPACE(LEN(shortName))+" with ", 1
@@ -542,7 +543,7 @@ SUB StatusScreen
 			FOR i = 0 TO 3
 				IF i = action THEN
 					actionStr = "( " + actions(i) + " )"
-					LD2_fillm w * (21 + i * 8), top + h * 13 - 1, w * 8, h + 1, 70, 1, STATUS_TRANSPARENCY
+					LD2_fillm w * (21 + i * 8), top + h * 13 - 1, w * 8, h + 1, 70, 1, STATUS_DIALOG_ALPHA
 					LD2_PutTextCol w * (21 + i * 8), top + h * 13, actionStr, 15, 1
 				ELSE
 					actionStr = "  " + actions(i) + "  "
@@ -671,7 +672,7 @@ SUB StatusScreen
 		END IF
 		top = -INT(e * e * e * 96)
 		LD2_CopyBuffer 2, 1
-		LD2_fillm 0, top, 320, 96, 66, 1, STATUS_TRANSPARENCY
+		LD2_fillm 0, top, SCREEN_W, 96, 66, 1, STATUS_DIALOG_ALPHA
 		LD2_RefreshScreen
         PullEvents
 	LOOP WHILE e < 1
@@ -737,7 +738,7 @@ SUB ShowResponse (response AS STRING)
     top = h * 13 - 1
 
     FOR i = 1 TO LEN(response)
-        LD2_fillm lft, top, 320-(w*21), h + 1, 66, 1, STATUS_TRANSPARENCY
+        LD2_fillm lft, top, SCREEN_W-(w*21), h + 1, 66, 1, STATUS_DIALOG_ALPHA
         LD2_PutTextCol lft+1, top+1, LEFT(response, i), 15, 1
         LD2_RefreshScreen
         'WaitSeconds 0.05
@@ -749,7 +750,7 @@ SUB ShowResponse (response AS STRING)
         ELSE
             text = response + "_"
         END IF
-        LD2_fillm lft, top, 320-(w*21), h + 1, 66, 1, STATUS_TRANSPARENCY
+        LD2_fillm lft, top, SCREEN_W-(w*21), h + 1, 66, 1, STATUS_DIALOG_ALPHA
         LD2_PutTextCol lft+1, top+1, text, 15, 1
         LD2_RefreshScreen
         PullEvents
@@ -765,3 +766,184 @@ SUB ShowResponse (response AS STRING)
     LOOP
 
 END SUB
+
+function getEaseInInterval(doReset as integer = 0, speed as double = 1.0) as double
+    
+    static e as double
+    
+    if doReset then
+        e = 0
+    end if
+    
+    e += 0.0167 * speed
+    if e > 1 then
+        e = 1
+    end if
+    
+    return e * e * e
+    
+end function
+
+function getEaseOutInterval(doReset as integer = 0, speed as double = 1.0) as double
+    
+    static e as double
+    
+    if doReset then
+        e = 0
+    end if
+    
+    e += 0.0167 * speed
+    if e > 1 then
+        e = 1
+    end if
+    
+    return (1 - e) * (1 - e) * (1 - e)
+    
+end function
+
+function STATUS_DialogYesNo(message as string) as integer
+    
+    dim e as double
+    dim pixels as integer
+    dim halfX as integer
+    dim halfY as integer
+    dim x as integer
+    dim y as integer
+    dim w as integer
+    dim h as integer
+    
+    dim dialog as ElementType
+    dim title as ElementType
+    dim optionYes as ElementType
+    dim optionNo as ElementType
+    
+    dim selections(1) as integer
+    dim selection as integer
+    dim escapeSelection as integer
+    
+    LD2_InitElement @dialog
+    LD2_InitElement @title, message, 31
+    LD2_InitElement @optionYes, "YES", 31, ElementFlags.CenterX
+    LD2_InitElement @optionNo, "NO ", 31, ElementFlags.CenterX
+    
+    dialog.background = STATUS_DIALOG_COLOR
+    dialog.background_alpha = STATUS_DIALOG_ALPHA
+    dialog.border_width = 1
+    dialog.border_color = 15
+    
+    halfX = 160
+    halfY = 100
+    
+    LD2_PlaySound Sounds.status
+	
+	LD2_SaveBuffer 2
+	LD2_CopyBuffer 1, 2
+	
+    getEaseInInterval(1)
+	do
+        e = getEaseInInterval(0, 3)
+        pixels = int(e * 50)
+        LD2_CopyBuffer 2, 1
+        'if pixels >= 1 then
+            dialog.x = halfX - pixels * 1.6
+            dialog.y = halfY - pixels
+            dialog.w = pixels * 3.2
+            dialog.h = pixels * 2
+            LD2_RenderElement @dialog
+        'end if
+        LD2_RefreshScreen
+        PullEvents
+	loop while e < 1
+
+    pixels = 50
+    dialog.x = halfX - pixels * 1.6
+    dialog.y = halfY - pixels
+    dialog.w = pixels * 3.2
+    dialog.h = pixels * 2
+    title.x = dialog.x + FONT_W
+    title.y = dialog.y + FONT_H
+    optionYes.y = halfY-FONT_H*1.5
+    optionYes.padding_x = FONT_W: optionYes.padding_y = 2
+    optionYes.background = 68
+    optionYes.text_is_monospace = 1
+    optionNo.y  = halfY+FONT_W*0.5
+    optionNo.padding_x = FONT_W: optionNo.padding_y = 2
+    optionNo.text_is_monospace = 1
+    optionYes.background = 70
+    
+    LD2_ClearElements
+    LD2_AddElement @dialog
+    LD2_AddElement @title, @dialog
+    LD2_AddElement @optionYes, @dialog
+    LD2_AddElement @optionNo, @dialog
+    
+    selections(0) = Options.Yes
+    selections(1) = Options.No: selection = 1: escapeSelection = 1
+    
+    do
+        select case selections(selection)
+        case Options.Yes
+            optionYes.background = 70: optionYes.text_color = 31
+            optionNo.background = STATUS_DIALOG_COLOR
+            optionNo.text_color = 7
+        case Options.No
+            optionYes.background = STATUS_DIALOG_COLOR
+            optionYes.text_color = 7
+            optionNo.background = 70: optionNo.text_color = 31
+        end select
+        LD2_CopyBuffer 2, 1
+        LD2_RenderElements
+		LD2_RefreshScreen
+        PullEvents
+        if keyboard(KEY_ENTER) then
+            LD2_PlaySound Sounds.look
+            exit do
+        end if
+        if keyboard(KEY_DOWN) then
+            selection += 1
+            if selection > 1 then
+                selection = 1: LD2_PlaySound Sounds.denied
+            else
+                LD2_PlaySound Sounds.select1
+            end if
+        end if
+        if keyboard(KEY_UP) then
+            selection -= 1
+            if selection < 0 then
+                selection = 0: LD2_PlaySound Sounds.denied
+            else
+                LD2_PlaySound Sounds.select1
+            end if
+        end if
+        if keyboard(KEY_ESCAPE) then
+            selection = escapeSelection
+            LD2_PlaySound Sounds.status
+            exit do
+        end if
+    loop
+    
+    LD2_ClearElements
+    
+    getEaseOutInterval(1)
+	do
+        pixels = int(e * 50)
+        LD2_CopyBuffer 2, 1
+        'if pixels >= 1 then
+            dialog.x = halfX - pixels * 1.6
+            dialog.y = halfY - pixels
+            dialog.w = pixels * 3.2
+            dialog.h = pixels * 2
+            LD2_RenderElement @dialog
+        'end if
+        LD2_RefreshScreen
+        PullEvents
+        e = getEaseOutInterval(0, 3)
+	loop while e > 0
+    
+    LD2_CopyBuffer 2, 1
+    LD2_RefreshScreen
+    LD2_RestoreBuffer 2
+    
+    return selections(selection)
+    
+end function

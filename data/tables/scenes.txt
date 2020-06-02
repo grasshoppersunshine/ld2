@@ -18,7 +18,7 @@ SCENE-1A
 
     STEVE
     Uh...
-    No...infact I think you're the one who's jealous.
+    No...in fact I think you're the one who's jealous.
 
     LARRY
     But I'm the guy who won.
@@ -59,7 +59,7 @@ SCENE-1C
     
     NARRATOR
     Steve Drinks The Cola!
-    1 Minute Later
+    One Minute Later
     
 END
 
@@ -69,7 +69,7 @@ SCENE-1D
     Larry...
     I don't feel so good.
     There's something in the cola...
-    ow...
+    Oh...
     
 END
 
@@ -102,34 +102,42 @@ SCENE-3A
     
     JANITOR
     Why yes...
-
-END
-
-SCENE-3B
-    
-    JANITOR
     I use this mop to suck diseases out of people.
     
     LARRY
     This is NO time to be sarcastic!
-    My buddy got sick from something in the cola.
-    He needs help.
+    My friend is sick, passed out on the floor...
+    ...after drinking a cola from the vending machine.
+    He needs help!
     
     JANITOR
-    Well, I was only being sarcastic about the mop.
-    I am a doctor.
-    
-    LARRY
-    Seriously?
-    
-    JANITOR
-    Well...
+    The vending machine? That hasn't been maintained in ages!
+    In fact, those colas are...
+    ...
     
     LARRY
     ...
     
     JANITOR
-    I used to be one.
+    ...are brand new! I just changed them out today.
+    Yes, sir!
+    
+    LARRY
+    Mother of god!
+    
+    JANITOR
+    ...
+    Well...I was only being sarcastic about the mop.
+    I am a doctor.
+    
+    LARRY
+    Seriously?
+    What, now you'll tell me you completed your degree today as well?
+    
+    JANITOR
+    Heh...
+    ...well...
+    I used to be a doctor. Long story...
     
     LARRY
     Good enough.
@@ -138,25 +146,37 @@ SCENE-3B
 
 END
 
-SCENE-3C
+SCENE-3B
     
     NARRATOR
     They Rush To Steve!
 
 END
 
-SCENE-3D
+SCENE-3C
     
     JANITOR
     So...
-    Something in the cola eh?
+    Something in the cola, eh?
     
     LARRY
     Apparently.
     
     JANITOR
-    Ok, let's see what I can do with him.
+    Ok...
+    You go call for help.
+    I'll see what I can do.
 
+END
+
+SCENE-3D
+    
+    JANITOR
+    Ok...
+    Here...take my mop.
+    You go call for help.
+    I'll see what I can do.
+    
 END
 
 SCENE-5A
@@ -177,12 +197,11 @@ SCENE-5B
     
     LARRY
     Thanks man...
-    I owe you
+    I owe you.
     
     BARNEY
-    Actually, you do...
-    twenty bucks from losing that game of pool...
-    ...last night.
+    Actually, you do.
+    Twenty bucks from losing that game of pool last night.
     
     LARRY
     Oh yeah...
@@ -190,99 +209,96 @@ SCENE-5B
     ...but...
     
     BARNEY
-    Just forget about it.
-    If we get out of here alive...
-    then you owe me twenty.
+    Forget about it.
+    We have bigger problems to worry about...
+    ...like getting out of here alive.
     
     LARRY
-    What?
+    What?!
     Are there more?
     
     BARNEY
     Oh yeah.
-    The building's full of them.
+    The building's swarmed with aliens.
+    I'll explain more later, but we need to move fast!
+    Let's take the elevator to the weapons locker.
+    Come on!
+
+END
+
+SCENE-5B2
     
     LARRY
-    Why?
+    Oh yeah...
+    I was gonna get that to you...
+    ...but...
     
     BARNEY
-    I'll explain later.
-    We gotta get to the weapons locker.
-    Come on.
-
+    Is that a mop you're holding?
+    
+    LARRY
+    ...
+    Yes.
+    
 END
 
 SCENE-5C
     
     BARNEY
-    Here we are...
-    the weapons locker...
-    Oh, and here, take this.
-    That's a blue access card.
-    Come on Larry...
-    We gotta get you a weapon.
+    Here we are!
+    The weapons locker.
+    Now, follow me.
 
 END
 
 SCENE-7A
     
-    LARRY
-    Wow!
-    I feel like I'm in The Matrix.
-    
     BARNEY
-    OK, Larry, listen up...
+    OK, Larry, now listen up!
     This floor is where all the weapons are stored.
-    Grab whatever weapons you feel like.
-    Make sure you pack ammo too.
-    Be careful though...
-    You can only pack so much ammo...
-    So don't go trigger happy and lose all of it.
+    You've fought these creatures before...
+    ...so I think you know what you need.
     
     LARRY
-    OK, I gotcha.
+    I do.
+    I'll need everything I can take.
     
     BARNEY
-    OK...
+    Good!
     Now here's the problem...
-    All the phones are dead.
-    Something's disconnected the main phone line.
+    All forms of communication with the outside world have been sabotaged.
+    The land line is disconnected. Phones are dead.
+    And the satelitte systems are jammed.
     So we can't call for help.
     
     LARRY
-    Darn!
+    Damn!
     
     BARNEY
-    We can't access the lobby to get out of here...
-    Because the access level for that floor has...
-    been set to code-red.
-    And the maximum access I have is code-blue.
+    I can't get outside, because the doors to the lobby are locked.
+    The security system's been hacked, and my access card is now denied to that floor.
     
     LARRY
-    Darn!
+    So we're trapped inside this building?
     
     BARNEY
-    I just gave you an extra code-blue card.
-    That'll give you access to doors and rooms...
-    that require blue acess and anything lower...
-    which the only thing lower is green...
-    and everybody has access to green.
+    Unfortunately.
     
     LARRY
-    Cool!
+    Damn!
     
     BARNEY
-    Meanwhile, this weapons locker dosen't have much.
-    The room behind me has alot more...
-    but...
-    it requires code-yellow access...
+    Meanwhile, we won't survive for very long with what's in this room.
+    We have limited firepower.
+    We are low on ammunition. This room doesn't have much of that.
+    The room behind me has much more.
+    But...it requires a yellow access card to get inside.
     
     LARRY
-    Darn!
+    Damn!
     
     BARNEY
-    We need to split up and see if we can find...
-    a code-yellow access card.
+    We need to split up and find a yellow access card.
     
     LARRY
     Alright!
@@ -291,18 +307,17 @@ SCENE-7A
     Oh, and here's something else.
     
     LARRY
-    A walky-talky...
-    Cool!
+    A walky-talky?
     
     BARNEY
-    That's for us to keep in touch.
+    Yes, so we can keep in touch.
     
     LARRY
-    Well, duh.
+    Nice!
     
     BARNEY
     OK, Larry...
-    Let's move out.
+    Let's move out!
 
 END
 
@@ -833,100 +848,74 @@ SCENE-SURVIVOR-1A
     
 END
 
-SCENE-JANE-1A
+SCENE-DONUT-A
     
-    GUNSHOT
-    
-    JANE
-    Stand back!
-    If your next move isn't back toward the elevator,
-    I'll lock down this floor and flood it with...
-    nitrous oxide.
+    MARKUS
+    Take the doughnut, a simple, yet elegant design.
+    An adequately-sized package that delivers calories and nutrients.
+    Every part edible.
+    Nothing remaining after you eat it. Nothing to throw away.
     
     LARRY
-    ...
-    Nitrous oxide?
-    We'll both find it very funny as we're choking...
-    to death on the fumes.
+    Except maybe sticky fingers.
     
-    JANE
-    If I'm going to die, I'm taking you with me.
+    MARKUS
+    Right you are! I address that problem, however.
+    I'll come back around to the sticky-fingers issue shortly.
+    Now, back to the process...
     
-    LARRY
-    ...
-    Alright, have it your way...
-    to the elevator I go.
-    Smell ya later.
-    
-    JANE
-    ...
-    What?
-    Smell ya later?
-    That's...just terrible...
-    I mean that is the worst, most immature, charmless pun...
-    ...
-    Larry? Is that you?
+    MARKUS
+    I developed specialized eyewear...
+    ...it allows me to see the world at a molecular resolution.
+    It accentuates even the slightest impurities in anything I'm looking at.
+    It is such fine detail, beyond the resolution of the eye.
+    In fact, it can't use the eye. Our eyes are too low of a resolution.
+    Instead, it bypasses the retina and optic nerve...
+    ...and interfaces directly with the occipital lobe, the part of the brain that processes vision.
     
     LARRY
-    Guilty!
+    And you use this for...?
+    ...baking?
+    
+    MARKUS
+    Precisely!
+    
+    MARKUS
+    After frying, we use a proprietary method of refridgeration to cool the doughnut...
+    ...to maintain its structural integrity.
+    
+    MARKUS
+    I had a mechanic-friend help me design and develop a machine...
+    ...that injects the precise amount of jelly into the now-cooled doughnut.
+    It uses light beams and harmonic resonance to guide the jelly...
+    ...across a short space and safely into the doughnut.
+    
+    MARKUS
+    Then, finally, the doughnut is covered in a specialized resin.
+    This resin diminishes the stickiness...
+    ...but keeps the texture and taste of the glaze intact.
+    ...so...
+    No more sticky fingers!
     
 END
 
-SCENE-JANE-2A
-    
-    JANE
-    Larry, we have a problem.
+SCENE-DONUT-B
     
     LARRY
-    What's that?
+    So...
+    Can you help me analyze this can or not?
     
-    JANE
-    This medical kit isn't enough.
-    
-    LARRY
-    ...
-    
-    JANE
-    Survivors are pooling in...
-    but I don't have the resources to help.
-    I need medical supplies.
-    Lots of them.
-    Or the survivors will die from their wounds.
+    MARKUS [shrugs]
+    Whatever...
+    Over here, this way.
     
 END
 
-SCENE MANAGER-1A
+SCENE-DONUT-C
     
-    MANAGER
-    Huh?
-    (turns around)
-    Larry?!
-    
-    LARRY
-    Hey Jim.
-    
-    MANAGER
-    (face palm)
+    LARRY [takesbitofdoughnut]
     ...
-    Of course it's you!
-    ...
-    Of course everyone dies except the one imbecile...
-    in this corporation.
-    ...
-    I could've died with everyone else...
-    That would've been a better fate.
-    
-    LARRY
-    What's that?
-    
-    MANAGER
-    (face palm off)
-    Nothing!
-    Nevermind.
-    Good...to see you still alive.
-    
-    LARRY
-    I know you hate me Jim.
+    Damn! That is one good doughnut. [stickyfingerlightswitchresinthing]
     
 END
 

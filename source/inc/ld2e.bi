@@ -19,6 +19,31 @@ TYPE tPlayer
   weapon AS INTEGER
 END TYPE
 
+type ElementType
+    x as integer
+    y as integer
+    w as integer
+    h as integer
+    padding_x as integer
+    padding_y as integer
+    border_width as integer
+    border_color as integer
+    text as string
+    text_color as integer
+    text_spacing as double
+    text_height as double
+    text_is_centered as integer
+    text_is_monospace as integer
+    background as integer
+    background_alpha as double
+    is_auto_width as integer
+    is_auto_height as integer
+    is_centered_x as integer
+    is_centered_y as integer
+    parent as ElementType ptr
+    is_rendered as integer
+end type
+
 'shells AS INTEGER
 'bullets AS INTEGER
 'deagles AS INTEGER
@@ -99,6 +124,23 @@ DECLARE SUB LD2_WriteText (Text AS STRING)
 DECLARE SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, _flip AS INTEGER, isFixed as integer = 0)
 declare sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
 
+declare sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
+declare sub LD2_RenderElement(e as ElementType ptr)
+declare sub LD2_ClearElements()
+declare sub LD2_AddElement(e as ElementType ptr, parent as ElementType ptr = 0)
+declare sub LD2_RenderParent(e as ElementType ptr)
+declare sub LD2_RenderElements()
+enum ElementFlags
+    CenterX = &h01
+    CenterY = &h02
+    CenterText = &h04
+end enum
+
+declare sub LD2_LoadFontMetrics(filename as string)
+
+const SCREEN_FULL = 1
+const SCREEN_W = 320
+const SCREEN_H = 200
 const SPRITE_W = 16
 const SPRITE_H = 16
 const FONT_W = 6

@@ -2,27 +2,18 @@
 '- July, 2002 - Created by Joe King
 '====================================
 
-  ''$DYNAMIC
-  ''$INCLUDE: 'INC\LD2GFX.BI'
-  #include once "inc/ld2gfx.bi"
-  #include once "inc/common.bi"
-  #include once "inc/keys.bi"
-  #include once "inc/ld2.bi"
-  #include once "file.bi"
-
-  'DIM SHARED Buffer1(32000) AS INTEGER    '- Offscreen buffer
-  'DIM SHARED Buffer2(32000) AS INTEGER    '- Offscreen buffer
-
-  'DIM SHARED TILE(28800) AS INTEGER   '- GFX Tiles
-  'DIM SHARED ENEMY(5980) AS INTEGER   '- GFX Enemies
-  'DIM SHARED LARRY(4680) AS INTEGER   '- GFX Larry
-  'DIM SHARED sLight(5200) AS INTEGER  '- GFX Lighting
-  'DIM SHARED sObject(5200) AS INTEGER '- GFX Objects
+    #include once "inc/ld2gfx.bi"
+    #include once "inc/common.bi"
+    #include once "inc/keys.bi"
+    #include once "inc/ld2.bi"
+    #include once "file.bi"
     
     declare sub Init()
     declare sub LoadMap (filename as string)
     declare sub SaveMap (filename as string)
     declare sub LoadSprites (filename as string, spriteSetId as integer)
+    declare sub DoMapPostProcessing ()
+    declare sub postProcessTile(x as integer, y as integer)
     declare sub putText (text as string, x as integer, y  as integer)
     declare function inputText (text as string, currentVal as string = "") as string
     declare sub PlaceItem(x as integer, y as integer, id as integer)
@@ -43,10 +34,11 @@
     dim shared SpritesFont as VideoSprites
     
 
-  DIM SHARED EditMap(200, 12) AS INTEGER    '- Map Array
-  DIM SHARED LightMap1(200, 12) AS INTEGER   '- Light Map Array
-  DIM SHARED LightMap2(200, 12) AS INTEGER   '- Light Map Array
-  DIM SHARED AniMap(200, 12) AS INTEGER      '- Animation Map Array
+  DIM SHARED EditMap(200, 12) AS INTEGER
+  DIM SHARED LightMap1(200, 12) AS INTEGER
+  DIM SHARED LightMap2(200, 12) AS INTEGER
+  DIM SHARED AniMap(200, 12) AS INTEGER
+  dim shared NoSaveMap(200, 12) as integer
   
   TYPE tItem
     x AS short
@@ -70,15 +62,12 @@
   DIM L2TraceOn AS INTEGER: L2TraceOn = 0
   DIM L2TraceOff AS INTEGER: L2TraceOff = 1
 
-  'CONST EPS = 130
-  'CONST TILE = 0
-  'CONST ENEMY = 1
-  'CONST LARRY = 2
-  'CONST LIGHT = 3
-  'CONST OBJECT = 4
+    const SCREEN_FULL = 1
+    const SCREEN_W = 320
+    const SCREEN_H = 200
     const SPRITE_W = 16
     const SPRITE_H = 16
-    const FONT_W = 6
+    const FONT_W = 7
     const FONT_h = 5
 
     const DATA_DIR = "data/"
@@ -121,12 +110,14 @@
     dim showLayer2 as integer
     dim showLayer3 as integer
     dim showLayer4 as integer
+    dim showLayer5 as integer
     
     activeLayer = 1
     showLayer1  = 1
     showLayer2  = 1
     showLayer3  = 1
     showLayer4  = 1
+    showLayer5  = 1
     
     dim res_x as integer, res_y as integer
     screeninfo res_x, res_y
@@ -144,7 +135,8 @@
     if activeLayer = 4 then activeLayerString = "ITEM"
     
     LD2_outline Cursor.x, Cursor.y, 16, 16, 15, 1
-    putText mapFilename, 320-len(mapFilename)*FONT_W-1, 2
+    putText mapFilename, SCREEN_W-len(mapFilename)*FONT_W-1, 2
+    putText "Shift "+str(XScroll), 2, FONT_H*34.5
     putText "Layer "+str(activeLayer)+" ["+activeLayerString+"]", 2, FONT_H*36.5
     putText "Animations "+iif(Animation, "ON", "OFF"), 2, FONT_H*38.5
     LD2_RefreshScreen
@@ -174,8 +166,8 @@
     PullEvents
     
     mx_prev = mx: my_prev = my
-    mx = int(mouseX()*(320/res_x))
-    my = int(mouseY()*(200/res_Y))
+    mx = int(mouseX()*(SCREEN_W/res_x))
+    my = int(mouseY()*(SCREEN_H/res_Y))
     mw_prev = mw
     mw = mouseWheelY()
     
@@ -239,6 +231,7 @@
         if keyboard(KEY_2) then showLayer2 = iif(showLayer2, 0, 1): wkeyup = KEY_2
         if keyboard(KEY_3) then showLayer3 = iif(showLayer3, 0, 1): wkeyup = KEY_3
         if keyboard(KEY_4) then showLayer4 = iif(showLayer4, 0, 1): wkeyup = KEY_4
+        if keyboard(KEY_5) then showLayer5 = iif(showLayer5, 0, 1): wkeyup = KEY_5
     else
         if keyboard(KEY_1) then activeLayer = 1
         if keyboard(KEY_2) then activeLayer = 2
@@ -251,6 +244,7 @@
         if activeLayer = 2 then LightMap2(mapX, mapY) = CurrentTileL
         if activeLayer = 3 then LightMap1(mapX, mapY) = CurrentTileL
         if activeLayer = 4 then PlaceItem mapX, mapY, CurrentTileO
+        NoSaveMap(mapX, mapY) = 0
     end if
     
     if keyboard(KEY_DELETE) or keyboard(KEY_BACKSPACE) then
@@ -307,7 +301,7 @@
             FOR x = 0 TO 19
                 putX = x * SPRITE_W: putY = y * SPRITE_H
                 mapX = x + XScroll: mapY = y
-                if showLayer1 then SpritesTile.putToScreen putX, putY, EditMap(mapX, mapY)
+                if showLayer1 then SpritesTile.putToScreen putX, putY, iif(showLayer5 and (NoSaveMap(mapX, mapY) > 0), NoSaveMap(mapx, mapY), EditMap(mapX, mapY))
                 if showLayer2 then SpritesLight.putToScreen putX, putY, LightMap2(mapX, mapY)
                 if showLayer3 then SpritesLight.putToScreen putX, putY, LightMap1(mapX, mapY)
             NEXT x
@@ -320,7 +314,7 @@
             FOR x = 0 TO 19
                 putX = x * SPRITE_W: putY = y * SPRITE_H
                 mapX = x + XScroll: mapY = y
-                if showLayer1 then SpritesTile.putToScreen putX, putY, EditMap(mapX, mapY) + (Ani mod (AniMap(mapX, mapY) + 1))
+                if showLayer1 then SpritesTile.putToScreen putX, putY, iif(showLayer5 and (NoSaveMap(mapX, mapY) > 0), NoSaveMap(mapx, mapY), EditMap(mapX, mapY)) + (Ani mod (AniMap(mapX, mapY) + 1))
                 if showLayer2 then SpritesLight.putToScreen putX, putY, LightMap2(mapX, mapY)
                 if showLayer3 then SpritesLight.putToScreen putX, putY, LightMap1(mapX, mapY)
             NEXT x
@@ -355,7 +349,7 @@ SUB Init
     
     dim i as integer
     
-    LD2_InitVideo 1, "LD2 Editor"
+    LD2_InitVideo "LD2 Editor", SCREEN_W, SCREEN_H, SCREEN_FULL
     
     LD2_LoadPalette DATA_DIR+"gfx/gradient.pal"
   
@@ -368,7 +362,7 @@ SUB Init
     LoadSprites DATA_DIR+"gfx/enemies.put", idENEMY
     LoadSprites DATA_DIR+"gfx/larry2.put", idLARRY
     LoadSprites DATA_DIR+"gfx/objects.put", idOBJECT
-    LoadSprites DATA_DIR+"gfx/font1.put"   , idFONT
+    LoadSprites DATA_DIR+"gfx/font.put"   , idFONT
     
     GenerateSky
 
@@ -520,6 +514,8 @@ SUB LoadMap (filename as string)
       NEXT i
  
   CLOSE #1
+  
+  DoMapPostProcessing
 
   '- Display the map data
   '- and wait for keypress
@@ -555,6 +551,57 @@ SUB LoadMap (filename as string)
 
 END SUB
 
+sub DoMapPostProcessing ()
+    
+    dim x as integer
+    dim y as integer
+    
+    for y = 0 to 12
+        for x = 0 to 200
+            NoSaveMap(x, y) = EditMap(x, y)
+        next x
+    next y
+    
+    for y = 0 to 12
+        for x = 0 to 200
+            postProcessTile x, y
+        next x
+    next y
+    
+    for y = 0 to 12
+        for x = 0 to 200
+            if NoSaveMap(x, y) = EditMap(x, y) then
+                NoSaveMap(x, y) = 0
+            end if
+        next x
+    next y
+    
+end sub
+
+sub postProcessTile(x as integer, y as integer)
+    
+    if x < 1 or x > 199 then return
+    if y < 1 or y > 11 then return
+    
+    if NoSaveMap(x, y) = 81 and NoSaveMap(x, y+1) = 1 and NoSaveMap(x-1, y+1) = 81 then
+        NoSaveMap(x, y) = 120
+        NoSaveMap(x, y+1) = 122
+        NoSaveMap(x-1, y+1) = 124
+        return
+    end if
+    if NoSaveMap(x, y) = 81 and NoSaveMap(x, y+1) = 1 then
+        NoSaveMap(x, y) = 120
+        NoSaveMap(x, y+1) = 121
+        return
+    end if
+    if NoSaveMap(x, y) = 81 and NoSaveMap(x+1, y) = 1 then
+        NoSaveMap(x, y) = 124
+        NoSaveMap(x+1, y) = 123
+        return
+    end if
+
+end sub
+
 sub LoadSprites (filename as string, spriteSetId as integer)
   
   SELECT CASE spriteSetId
@@ -581,7 +628,8 @@ sub LoadSprites (filename as string, spriteSetId as integer)
    
     CASE idFONT
 
-      LD2_InitSprites filename, @SpritesFont, FONT_W, FONT_H, SpriteFlags.Transparent
+      'LD2_InitSprites filename, @SpritesFont, FONT_W, FONT_H, SpriteFlags.Transparent or SpriteFlags.UseWhitePalette
+      LD2_InitSprites filename, @SpritesFont, 6, 5, SpriteFlags.Transparent or SpriteFlags.UseWhitePalette
    
     CASE idOBJECT
 
@@ -766,7 +814,7 @@ sub putText (text as string, x as integer, y  as integer)
     
     for n = 1 to len(text)
         if mid(text, n, 1) <> " " then
-            SpritesFont.putToScreen((n * 6 - 6) + x, y, asc(mid(text, n, 1)) - 32)
+            SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, asc(mid(text, n, 1)) - 32)
         end if
     next n
     
@@ -823,10 +871,10 @@ function inputText(text as string, currentVal as string = "") as string
 			end select
 		wend
 		
-		'LD2_Fill 2, 2, 320, FONT_H, 0, 1
+		'LD2_Fill 2, 2, SCREEN_W, FONT_H, 0, 1
         LD2_CopyBuffer 2, 1
-        LD2_outline 0, 0, 320, FONT_H*5, 15, 1
-        LD2_fillm 1, 1, 318, FONT_H*5-2, 17, 1, 200
+        LD2_outline 0, 0, SCREEN_W, FONT_H*5, 15, 1
+        LD2_fillm 1, 1, 318, FONT_H*5-2, 17, 1, SCREEN_H
 		putText( text+strval, 4, 4 )
 		putText( space(cursor_x)+"_"+space(len(text+strval)-cursor_x), 4, 4)
 		LD2_RefreshScreen
@@ -888,10 +936,10 @@ sub showHelp ()
     dim h as integer
     
     padding = SPRITE_W*2-1
-    w = 320-padding*2
-    h = 200-padding*2
+    w = SCREEN_W-padding*2
+    h = SCREEN_H-padding*2
     LD2_outline padding, padding, w, h, 15, 1
-    LD2_fillm padding+1, padding+1, w-2, h-2, 17, 1, 200
+    LD2_fillm padding+1, padding+1, w-2, h-2, 17, 1, SCREEN_H
 
     dim top as integer
     dim lft as integer
@@ -913,7 +961,7 @@ sub showHelp ()
     putText "Preview Animation..Q (On / Off)", lft, top: top += lineHeight
     putText "Load / Save........L / F2", lft, top
     
-    putText "Press ENTER to return", lft, 200-padding-FONT_H*2
+    putText "Press ENTER to return", lft, SCREEN_H-padding-FONT_H*2
     
     LD2_RefreshScreen
     
@@ -932,14 +980,14 @@ SUB GenerateSky()
   DIM i AS INTEGER
   
   FOR i = 0 TO 9999
-      x = 320*RND(1)
-      y = 200*RND(1)
+      x = SCREEN_W*RND(1)
+      y = SCREEN_H*RND(1)
     r = 2*RND(1)
     LD2_pset x, y, 66+r, 2
   NEXT i
   FOR i = 0 TO 99
-      x = 320*RND(1)
-      y = 200*RND(1)
+      x = SCREEN_W*RND(1)
+      y = SCREEN_H*RND(1)
     r = 4*RND(1)
     IF INT(4*RND(1)) = 1 THEN
       IF INT(2*RND(1)) = 1 THEN
@@ -965,15 +1013,15 @@ sub Notice(message as string)
     dim i as integer
     
     padding = SPRITE_W*2-1
-    w = 320-padding*2
-    h = 200-padding*2
+    w = SCREEN_W-padding*2
+    h = SCREEN_H-padding*2
     
     top = padding+FONT_H
     lft = padding+FONT_W
     lineHeight = FONT_H*2
     
     LD2_outline padding, padding, w, h, 15, 1
-    LD2_fillm padding+1, padding+1, w-2, h-2, 17, 1, 200
+    LD2_fillm padding+1, padding+1, w-2, h-2, 17, 1, SCREEN_H
     do
         i = instr(message, "$")
         if i then
@@ -985,7 +1033,7 @@ sub Notice(message as string)
         putText text, lft, top
         top += lineHeight
     loop while i
-    putText "Press ENTER to return", lft, 200-padding-FONT_H*2
+    putText "Press ENTER to return", lft, SCREEN_H-padding-FONT_H*2
     LD2_RefreshScreen
     WaitForKeyup(KEY_ENTER)
     WaitForKeydown(KEY_ENTER)

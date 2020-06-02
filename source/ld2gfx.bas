@@ -1,18 +1,27 @@
 #include once "inc/ld2GFX.bi"
 #include once "inc/sdlgfx.bi"
+#include once "inc/common.bi"
+#include once "inc/keys.bi"
 
 dim shared VideoHandle as Video
 dim shared VideoBuffers(1) as VideoBuffer
 dim shared RGBpal as Palette256
+dim shared WhitePalette as Palette256
 
 const DATA_DIR = "data/"
 
-sub LD2_InitVideo(fullscreen as integer, title as string)
+sub LD2_InitVideo(title as string, screen_w as integer, screen_h as integer, fullscreen as integer = 0)
     
-    'VideoHandle.init 352, 198, fullscreen, title
-    VideoHandle.init 320, 200, fullscreen, title
+    VideoHandle.init screen_w, screen_h, fullscreen, title
     VideoBuffers(0).init( @VideoHandle )
     VideoBuffers(1).init( @VideoHandle )
+    
+    dim n as integer
+    for n = 1 to 255
+        WhitePalette.setRGBA(n, 208, 208, 208, 255)
+    next n
+    WhitePalette.setRGBA(0, 0, 0, 0, 255)
+    WhitePalette.setRGBA(7, 176, 176, 176, 255)
     
 end sub
 
@@ -83,7 +92,11 @@ end sub
 sub LD2_InitSprites(filename as string, sprites as VideoSprites ptr, w as integer, h as integer, flags as integer = 0)
     
     sprites->init( @VideoHandle, w, h )
-    sprites->setPalette(@RGBPal)
+    if (flags and SpriteFlags.UseWhitePalette) then
+        sprites->setPalette(@WhitePalette)
+    else
+        sprites->setPalette(@RGBPal)
+    end if
     if (flags and SpriteFlags.Transparent) then
         sprites->setTransparentColor(0)
     end if
@@ -160,6 +173,7 @@ SUB LD2_FadeOut (speed AS INTEGER, col as integer = 0)
         VideoBuffers(0).putToScreen()
         VideoHandle.fillScreen(col, a)
         VideoHandle.update()
+        PullEvents
     next a
     
 END SUB
@@ -174,6 +188,25 @@ SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)
         VideoBuffers(0).putToScreen()
         VideoHandle.fillScreen(col, a)
         VideoHandle.update()
+        PullEvents
+    next a
+    
+END SUB
+
+SUB LD2_FadeInWhileNoKey (speed AS INTEGER, col as integer = 0)
+    
+    dim a as integer
+    
+    speed *= 4
+    
+    for a = 255 to 0 step -speed
+        VideoBuffers(0).putToScreen()
+        VideoHandle.fillScreen(col, a)
+        VideoHandle.update()
+        PullEvents
+        if keyboard(KEY_SPACE) or keyboard(KEY_ESCAPE) or keyboard(KEY_ENTER) then
+            exit for
+        end if
     next a
     
 END SUB
@@ -212,27 +245,5 @@ SUB LD2_RestoreBuffer (bufferNum AS INTEGER)
     else
         VideoBuffers(bufferNum-1).loadBmp DATA_DIR+"gfx/tmp.bmp"
     end if
-    
-END SUB
-
-SUB WaitForRetrace
-    
-    'WAIT &H3DA, 8: WAIT &H3DA, 8, 8
-    
-END SUB
-
-SUB LD2_put65c (x AS INTEGER, y AS INTEGER, spriteSeg AS INTEGER, spritePtr AS INTEGER, bufferNum AS INTEGER)
-    
-    'SetBufferSeg bufferNum
-    '
-    'LD2put65c x, y, spriteSeg, spritePtr, GFXBufferSeg
-    
-END SUB
-
-SUB LD2_putCol65c (x AS INTEGER, y AS INTEGER, spriteSeg AS INTEGER, spritePtr AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
-    
-    'SetBufferSeg bufferNum
-    '
-    'LD2putCol65c x, y, spriteSeg, spritePtr, col, GFXBufferSeg
     
 END SUB

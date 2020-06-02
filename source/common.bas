@@ -79,7 +79,7 @@ FUNCTION WaitSecondsUntilKey (seconds AS DOUBLE) as integer
     
     DO WHILE TIMER < endtime
         PullEvents
-        IF keyboard(KEY_SPACE) or keyboard(KEY_ESCAPE) THEN
+        IF keyboard(KEY_SPACE) or keyboard(KEY_ESCAPE) or keyboard(KEY_ENTER) THEN
             return 1
         END IF
     LOOP
