@@ -1,6 +1,7 @@
 *.exe
 source/debug.log
 source/lib/
+source/var/
 
 data/sound/bak
 data/sound/maybe
