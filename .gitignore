@@ -1,7 +1,10 @@
+*.exe
 source/debug.log
 source/lib/
 
 data/sound/bak
+data/sound/maybe
+data/sound/recorded
 data/sound/splice
 data/sound/msplice
 
