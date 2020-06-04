@@ -104,8 +104,8 @@ type DateTimeType
     datetime as double
 end type
 
-declare sub doArgs(args as ArgsType, pathToFbc as string, title as string = "")
-sub doArgs(args as ArgsType, pathToFbc as string, title as string = "")
+declare function doArgs(args as ArgsType, pathToFbc as string, title as string = "", rebuildAll as integer = 0) as integer
+function doArgs(args as ArgsType, pathToFbc as string, title as string = "", rebuildAll as integer = 0) as integer
     
     redim datetimes(0) as DateTimeType
     dim numDateTimes as integer
@@ -114,6 +114,7 @@ sub doArgs(args as ArgsType, pathToFbc as string, title as string = "")
     dim datetime as double
     dim path as string
     dim fileChanged as integer
+    dim fileWasChanged as integer
     dim filename as string
     dim char as string * 1
     dim s as string
@@ -122,6 +123,8 @@ sub doArgs(args as ArgsType, pathToFbc as string, title as string = "")
     if dir("var", fbDirectory) <> "var" then
         mkdir "var"
     end if
+    
+    fileWasChanged = 0
     
     if title = "" then title = "lastbuild"
     filename = "var/"
@@ -151,13 +154,20 @@ sub doArgs(args as ArgsType, pathToFbc as string, title as string = "")
         if FileExists(path) then
             datetime = FileDateTime(path)
         end if
-        if FileExists(args.getOutputFile()) then
-            for n = 0 to numDateTimes-1
-                if datetimes(n).path = path then
-                    fileChanged = str(datetime) <> str(datetimes(n).datetime)
-                    exit for
-                end if
-            next n
+        if rebuildAll then
+            fileWasChanged = 1
+        else
+            if FileExists(args.getOutputFile()) then
+                for n = 0 to numDateTimes-1
+                    if datetimes(n).path = path then
+                        fileChanged = str(datetime) <> str(datetimes(n).datetime)
+                        exit for
+                    end if
+                next n
+            end if
+            if fileChanged then
+                fileWasChanged = 1
+            end if
         end if
         s = "["
         s += string(int(percent*0.25), "=")
@@ -175,7 +185,8 @@ sub doArgs(args as ArgsType, pathToFbc as string, title as string = "")
     wend
     close #1
     print title+" ["+string(25,"=")+"] 100% "+args.getPaddedPath()+chr(13)
-end sub
+    return fileWasChanged
+end function
 
 function CommandHasArgument(fieldName as string) as integer
     dim arg as string
@@ -239,6 +250,9 @@ if launchAfterBuild then print "Launching after build!"
 print "Building game..."
 print
 
+dim dependenciesUpdated as integer
+dim modulesUpdated as integer
+
 args.init
 args.add "modules/common.bas"      , "-lib -x lib/libcommon.a"      , "lib/libcommon.a"
 args.add "modules/mobs.bas"        , "-lib -x lib/libmobs.a"        , "lib/libmobs.a"
@@ -250,18 +264,18 @@ args.add "modules/videosprites.bas", "-lib -x lib/libvideosprites.a", "lib/libvi
 args.add "modules/ld2gfx.bas"      , "-lib -x lib/libld2gfx.a"      , "lib/libld2gfx.a"
 args.add "modules/sdlsnd.bas"      , "-lib -x lib/libsdlsnd.a"      , "lib/libsdlsnd.a"
 args.add "modules/ld2snd.bas"      , "-lib -x lib/libld2snd.a"      , "lib/libld2snd.a"
-doArgs args, pathToFbc, ucase("[1/3] dependencies")
+dependenciesUpdated = doArgs(args, pathToFbc, ucase("[1/3] dependencies"))
 
 args.init
 args.add "scene.bas" , "-lib -p lib/ -x lib/libscene.a" , "lib/libscene.a"
 args.add "status.bas", "-lib -p lib/ -x lib/libstatus.a", "lib/libstatus.a"
 args.add "title.bas" , "-lib -p lib/ -x lib/libtitle.a" , "lib/libtitle.a"
 args.add "ld2e.bas"  , "-lib -p lib/ -x lib/libld2e.a"  , "lib/libld2e.a"
-doArgs args, pathToFbc, ucase("[2/3] game modules")
+modulesUpdated = doArgs(args, pathToFbc, ucase("[2/3] game modules"), dependenciesUpdated)
 
 args.init
 args.add "ld2.bas", "-w all -p lib/ -exx", "ld2.exe"
-doArgs args, pathToFbc, ucase("[3/3] main program")
+doArgs args, pathToFbc, ucase("[3/3] main program"), (dependenciesUpdated or modulesUpdated)
 
 print
 print string(72, "-")
