@@ -51,6 +51,7 @@ enum SplatterTypes
     Glass
     Guts
     Sparks
+    Smoke
 end enum
 
 'shells AS INTEGER

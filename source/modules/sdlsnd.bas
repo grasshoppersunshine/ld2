@@ -22,7 +22,7 @@ dim shared GLOBAL_SoundChannels(GLOBAL_MaxChannels-1) as integer
 dim shared GLOBAL_NumSounds as integer
 dim shared GLOBAL_BackgroundMusic as Mix_Music ptr
 dim shared GLOBAL_SoundVolume as double = 1.0
-dim shared GLOBAL_MusicVolume as double = 0.75
+dim shared GLOBAL_MusicVolume as double = 1.0
 dim shared GLOBAL_MusicIsPlaying as integer = 0
 dim shared GLOBAL_SoundInitialized as integer = 0
 
@@ -188,16 +188,6 @@ function SOUND_AddSound (id as integer, filename as string, maxChannels as integ
         Mix_VolumeChunk(GLOBAL_Sounds(n).sfxId, int(GLOBAL_SoundVolume*GLOBAL_Sounds(n).volume))
         
         return 0
-    else
-        'dim stream as SDL_AudioStream ptr
-        'stream = SDL_NewAudioStream(AUDIO_S16SYS, 1, 22050, AUDIO_S16SYS, 1, 22050)
-        'if stream <> 0 then
-        '    dim i as integer
-        '    for i = 0 to 255
-        '        SDL_AudioStreamPut(stream, cast(byte, int(rnd(1)*255), 1)
-        '    next i
-        'end if
-        'return 1
     end if
 
 end function

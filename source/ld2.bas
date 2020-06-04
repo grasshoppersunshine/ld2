@@ -2614,6 +2614,8 @@ SUB Start
     WaitSeconds 0.5
     
     LD2_Init
+    LD2_SetMusicVolume 1.0
+    LD2_SetSoundVolume 1.0
     LoadSounds
     
     'Mobs.AddType ROCKMONSTER

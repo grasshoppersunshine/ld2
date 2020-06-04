@@ -11,15 +11,31 @@
     #include once "inc/ld2.bi"
     #include once "inc/title.bi"
   
-  type tGuts
-    id as integer
-    x as double
-    y as double
-    velocity as double
-    speed as double
-    count as integer
-    flip as integer
-  end type
+    type GutsIncorporated
+        id as integer
+        x as double
+        y as double
+        vx as double
+        vy as double
+        count as integer
+        facing as integer
+        declare property facingLeft() as integer
+        declare property facingLeft(isFacingLeft as integer)
+        declare property facingRight() as integer
+        declare property facingRight(isFacingRight as integer)
+    end type
+    property GutsIncorporated.facingLeft() as integer
+        return (this.facing = 0)
+    end property
+    property GutsIncorporated.facingLeft(isFacingLeft as integer)
+        this.facing = (isFacingLeft = 0)
+    end property
+    property GutsIncorporated.facingRight() as integer
+        return (this.facing <> 0)
+    end property
+    property GutsIncorporated.facingRight(isFacingRight as integer)
+        this.facing = (isFacingRight <> 0)
+    end property
 
   TYPE ElevatorType
     x as integer
@@ -219,7 +235,7 @@
   
   DIM SHARED Items      (MAXITEMS) AS tItem
   DIM SHARED Doors      (MAXDOORS) AS tDoor
-  DIM SHARED Guts       (MAXGUTS) AS tGuts
+  DIM SHARED Guts       (MAXGUTS) AS GutsIncorporated
   DIM SHARED Inventory  (MAXINVENTORY) AS INTEGER
   DIM SHARED InvSlots   (MAXINVSLOTS) AS INTEGER
   DIM SHARED WentToRoom (MAXFLOORS) AS INTEGER  
@@ -586,8 +602,8 @@ SUB DeleteMob (mob AS Mobile)
       Inventory(AUTH) = REDACCESS
   END SELECT
   
-  IF Player.flip = 0 THEN LD2_MakeGuts SplatterTypes.Guts, mob.x + 8, mob.y + 8, 1
-  IF Player.flip = 1 THEN LD2_MakeGuts SplatterTypes.Guts, mob.x + 8, mob.y + 8, 1
+  IF Player.flip = 0 THEN LD2_MakeGuts SplatterTypes.Guts, mob.x + 8, mob.y + 8, 3+int(4*rnd(1))
+  IF Player.flip = 1 THEN LD2_MakeGuts SplatterTypes.Guts, mob.x + 8, mob.y + 8, 3+int(4*rnd(1))
   FOR i = 0 TO 4
     LD2_MakeGuts SplatterTypes.Sparks, mob.x + 7, mob.y + 8,  1, -RND(1)*5
     LD2_MakeGuts SplatterTypes.Sparks, mob.x + 7, mob.y + 8,  1,  RND(1)*5
@@ -1558,24 +1574,34 @@ sub LD2_MakeGuts (splatterType as integer, x as integer, y as integer, qty as in
     case SplatterTypes.Blood
         id = 8
     case SplatterTypes.Guts
-        id = int(4 * rnd(1))
-        'id = int(8 * rnd(1)) + 1 '- where is this from?
+        
     case SplatterTypes.Glass
         id = 12 + int(4 * rnd(1))
-    case SplatterTypes.Sparks
+    case SplatterTypes.Sparks, SplatterTypes.Smoke
         id = 16 + int(4 * rnd(1))
         'direction = -rnd(1)*5
     end select
     
     for i = 0 to qty-1
         NumGuts += 1: n = NumGuts
+        if splatterType = SplatterTypes.Guts then
+            id = int(8 * rnd(1)) + 1
+            if id < 8 then direction = (2*rnd(1)+0)*iif(int(rnd(1)*2)=0, 1, -1)
+        end if
         Guts(n).count = 0
         Guts(n).x  = x + (-15 + int(10 * rnd(1)) + 1)
         Guts(n).y  = y + (-15 + int(10 * rnd(1)) + 1)
+        if splatterType = SplatterTypes.Smoke then
+            Guts(n).x = x
+            Guts(n).y = y + 3-6*rnd(1)
+        end if
         Guts(n).id = id
         if direction <> 0 then
-            Guts(n).velocity = -1 * rnd(1)
-            Guts(n).speed = direction * rnd(1) + .1 * direction
+            Guts(n).vy = -1 * rnd(1)
+            Guts(n).vx = direction * rnd(1) + .1 * direction
+        end if
+        if splatterType = SplatterTypes.Guts then
+            if id < 8 then Guts(n).vy = -3.5 * rnd(1)
         end if
         if NumGuts >= 100 then exit sub
     next i
@@ -1589,8 +1615,8 @@ sub LD2_MakeGuts (splatterType as integer, x as integer, y as integer, qty as in
             Guts(n).id = 38 + int(4 * rnd(1))
             direction = (4*rnd(1)+3)*iif(int(rnd(1)*2)=0, 1, -1)
             if direction <> 0 then
-                Guts(n).velocity = -1 * rnd(1)
-                Guts(n).speed = direction * rnd(1) + .1 * direction
+                Guts(n).vy = -1 * rnd(1)
+                Guts(n).vx = direction * rnd(1) + .1 * direction
             end if
             if NumGuts >= 100 then exit sub
         next i
@@ -1898,7 +1924,7 @@ SUB LD2_ProcessEntities
         IF Player.uAni >= 11 THEN Player.uAni = 8: Player.is_shooting = 0': SOUND 280, .2
         Player.stillani = 8
       CASE PISTOL
-        Player.uAni = Player.uAni + .15
+        Player.uAni = Player.uAni + .19
         IF Player.uAni >= 14 THEN Player.uAni = 11: Player.is_shooting = 0
         Player.stillani = 11
       CASE DESERTEAGLE
@@ -2318,7 +2344,7 @@ SUB LD2_ProcessEntities
        
     END SELECT
  
-    IF mob.hit > 0 THEN mob.hit = mob.hit - .1
+    IF mob.hit > 0 THEN mob.hit = 0
 
     IF CheckMobWallHit(mob) THEN
       mob.x = ox
@@ -2513,9 +2539,9 @@ SUB LD2_ProcessGuts
     SELECT CASE Guts(i).id
     CASE 1 TO 7, 12 TO 15
    
-      Guts(i).x = Guts(i).x + Guts(i).speed*f
-      Guts(i).y = Guts(i).y + Guts(i).velocity*f
-      Guts(i).velocity = Guts(i).velocity + Gravity*f
+      Guts(i).x = Guts(i).x + Guts(i).vx*f
+      Guts(i).y = Guts(i).y + Guts(i).vy*f
+      Guts(i).vy = Guts(i).vy + Gravity*f
    
       IF Guts(i).y > SCREEN_H THEN
         '- Delete gut
@@ -2523,6 +2549,7 @@ SUB LD2_ProcessGuts
           Guts(n) = Guts(n + 1)
         NEXT n
         NumGuts = NumGuts - 1
+        i -= 1
       END IF
 
     CASE 8 TO 11
@@ -2539,12 +2566,13 @@ SUB LD2_ProcessGuts
           Guts(n) = Guts(n + 1)
         NEXT n
         NumGuts = NumGuts - 1
+        i -= 1
       END IF
     
     CASE 16 TO 20
         
-      Guts(i).x = Guts(i).x + Guts(i).speed*f
-      Guts(i).y = Guts(i).y + Guts(i).velocity*f
+      Guts(i).x = Guts(i).x + Guts(i).vx*f
+      Guts(i).y = Guts(i).y + Guts(i).vy*f
         
       Guts(i).count = Guts(i).count + 1
       IF Guts(i).count >= 4 THEN
@@ -2558,12 +2586,13 @@ SUB LD2_ProcessGuts
           Guts(n) = Guts(n + 1)
         NEXT n
         NumGuts = NumGuts - 1
+        i -= 1
       END IF
     
     CASE is >= 38
         
-      Guts(i).x = Guts(i).x + Guts(i).speed*f
-      Guts(i).y = Guts(i).y + Guts(i).velocity*f
+      Guts(i).x = Guts(i).x + Guts(i).vx*f
+      Guts(i).y = Guts(i).y + Guts(i).vy*f
         
       Guts(i).count = Guts(i).count + 1
       
@@ -2573,9 +2602,14 @@ SUB LD2_ProcessGuts
           Guts(n) = Guts(n + 1)
         NEXT n
         NumGuts = NumGuts - 1
+        i -= 1
       END IF
 
     END SELECT
+    
+    if i >= NumGuts then
+        exit for
+    end if
 
   NEXT i
 
@@ -3026,15 +3060,15 @@ SUB LD2_RenderFrame
   FOR n = 1 TO NumGuts
     IF Guts(n).id < 16 THEN
       'LD2put INT(Guts(n%).x) - INT(XShift), INT(Guts(n%).y), VARSEG(sGuts(0)), VARPTR(sGuts(EPS * Guts(n%).id)), segBuffer1, Guts(n%).flip
-      SpritesGuts.putToScreenEx(int(Guts(n).x - XShift), INT(Guts(n).y), Guts(n).id, Guts(n).flip)
+      SpritesGuts.putToScreenEx(int(Guts(n).x - XShift), INT(Guts(n).y), Guts(n).id, Guts(n).facingLeft)
     ELSEIF Guts(n).id >= 38 then
-        cx = INT(Guts(n).x+7 - XShift)
-        cy = INT(Guts(n).y+7    )
-        sz = 5-abs(Guts(n).speed)
+        cx = INT(Guts(n).x - XShift)
+        cy = INT(Guts(n).y    )
+        sz = 5-abs(Guts(n).vx)
         LD2_fillm cx-sz, cy-sz, sz*2, sz*2, Guts(n).id, 1, 128
     ELSE
-      cx = INT(Guts(n).x+7 - XShift)
-      cy = INT(Guts(n).y+7    )
+      cx = INT(Guts(n).x - XShift)
+      cy = INT(Guts(n).y    )
       sz = (20-Guts(n).id)
       LD2_fill cx-sz, cy-sz, sz*2, sz*2, Guts(n).id+11, 1
     END IF
@@ -3452,8 +3486,8 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
         
     case ItemIds.Pistol
         
-        if (is_repeat = 1 and timeSinceLastShot < 0.50) then return 0
-        if (is_repeat = 0 and timeSinceLastShot < 0.15) then return 0
+        if (is_repeat = 1 and timeSinceLastShot < 0.45) then return 0
+        if (is_repeat = 0 and timeSinceLastShot < 0.25) then return 0
         Inventory(ItemIds.PistolAmmo) -= 1
         damage = 2
         
@@ -3493,9 +3527,13 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
                 mapX = int(x / SPRITE_W)
                 mapY = int((Player.y + 10) / SPRITE_H)
                 tile = TileMap(mapX, mapY)
-                if LD2_TileIsSolid(tile) then return 1
-                
                 contactX = x: contactY = int(Player.y + 8)
+                
+                if LD2_TileIsSolid(tile) then
+                    contactX = mapX * SPRITE_W
+                    for i = 0 to 4: LD2_MakeGuts SplatterTypes.Smoke, contactX, contactY,  1, RND(1)*-5: next i
+                    return 1
+                end if
                 
                 Mobs.resetNext
                 do while Mobs.canGetNext()
@@ -3515,9 +3553,13 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
                 mapX = int(x / SPRITE_W)
                 mapY = int((Player.y + 10) / SPRITE_H)
                 tile = TileMap(mapX, mapY)
-                if LD2_TileIsSolid(tile) then return 1
-                
                 contactX = x: contactY = int(Player.y + 8)
+                
+                if LD2_TileIsSolid(tile) then
+                    contactX = mapX * SPRITE_W + SPRITE_W
+                    for i = 0 to 4: LD2_MakeGuts SplatterTypes.Smoke, contactX, contactY,  1, RND(1)*5: next i
+                    return 1
+                end if
 
                 Mobs.resetNext
                 do while Mobs.canGetNext()

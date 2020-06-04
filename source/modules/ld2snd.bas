@@ -1,90 +1,12 @@
 #include once "inc/sdlsnd.bi"
 #include once "inc/ld2snd.bi"
-'///====================================================================
-'/// SOUND ADAPTER begin
-'///====================================================================
-dim shared SoundAdapter_Loop as integer
 
-SUB SoundAdapter_Init
-
-    SOUND_Init
-
-END SUB
-
-SUB SoundAdapter_AddSound (id as integer, filename as string, maxChannels as integer=4, loops as integer=0, volume as double=1.0)
-    
-    SOUND_AddSound id, filename, maxChannels, loops, volume
-    
-END SUB
-
-SUB SoundAdapter_LoadMusic (filepath AS STRING)
-    
-    SOUND_SetMusic filepath
-
-END SUB
-
-function SoundAdapter_GetMusicVolume() as double
-    
-    return SOUND_GetMusicVolume()
-    
-end function
-
-SUB SoundAdapter_SetMusicVolume (v AS double)
-    
-    SOUND_SetMusicVolume v
-
-END SUB
-
-SUB SoundAdapter_SetMusicLoop (doLoop AS INTEGER)
-
-    SoundAdapter_Loop = doLoop
-
-END SUB
-
-SUB SoundAdapter_PlayMusic
-    
-    SOUND_PlayMusic SoundAdapter_Loop
-	
-END SUB
-
-SUB SoundAdapter_PlaySound (id AS INTEGER)
-    
-    SOUND_PlaySound id
-
-END SUB
-
-SUB SoundAdapter_Release
-    
-    SOUND_Release
-
-END SUB
-
-SUB SoundAdapter_StopMusic
-
-    SOUND_StopMusic
-
-END SUB
-
-SUB SoundAdapter_PauseMusic
-
-    SOUND_PauseMusic
-
-END SUB
-'///====================================================================
-'/// SOUND ADAPTER end
-'///====================================================================
-
-'///====================================================================
-'/// LD2 Sound Methods begin
-'///====================================================================
 DIM SHARED LD2musicList(32) AS LD2MusicData
 DIM SHARED LD2musicListCount AS INTEGER
 DIM SHARED LD2soundEnabled AS INTEGER
 dim shared LD2soundMusicTargetVolume as double = -1
 dim shared LD2soundMusicVolumeChangeSpeed as double
-'///====================================================================
-'/// LD2 Sound Methods end
-'///====================================================================
+dim shared LoopMusic as integer
 
 SUB LD2_AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
 	
@@ -102,8 +24,11 @@ SUB LD2_AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
 END SUB
 
 SUB LD2_AddSound (id as integer, filename as string, loops as integer=0, volume as double=1.0)
-
-    SoundAdapter_AddSound id, filename, , loops, volume
+    
+    dim maxChannels as integer
+    
+    maxChannels = 4
+    SOUND_AddSound id, filename, maxChannels, loops, volume
     
 END SUB 
 
@@ -115,19 +40,10 @@ SUB LD2_FadeInMusic (speed as double = 1.0)
     dim stepsize as double
 	
     IF LD2soundEnabled THEN
-        SoundAdapter_SetMusicVolume 0.0
-        SoundAdapter_PlayMusic
+        SOUND_SetMusicVolume 0.0
+        SOUND_PlayMusic
         LD2soundMusicTargetVolume = 1.0
         LD2soundMusicVolumeChangeSpeed = 60/(3600*speed)
-        'v = SoundAdapter_GetMusicVolume()
-        'stepsize = ((1.0-v)*speed)/30
-        'for i = 0 to 29 step speed
-        '    delay = timer+0.05
-        '    v += stepsize
-        '    SoundAdapter_SetMusicVolume v
-        '    do: loop while timer < delay
-        'next i
-        'SoundAdapter_SetMusicVolume 1.0
     END IF
 
 END SUB
@@ -139,7 +55,7 @@ SUB LD2_FadeOutMusic (speed as double = 1.0)
 	dim delay as double
     dim stepsize as double
     
-    v = SoundAdapter_GetMusicVolume()
+    v = SOUND_GetMusicVolume()
 	
     IF LD2soundEnabled THEN
         LD2soundMusicTargetVolume = 0.0
@@ -152,7 +68,7 @@ SUB LD2_InitSound (enabled AS INTEGER)
 
     LD2soundEnabled = enabled
     IF LD2soundEnabled THEN
-        SoundAdapter_Init
+        SOUND_Init
     END IF
 
 END SUB
@@ -169,9 +85,9 @@ SUB LD2_LoadMusic (id AS INTEGER)
     IF LD2soundEnabled THEN
         FOR i = 0 TO LD2musicListCount - 1
             IF LD2musicList(i).id = id THEN
-                SoundAdapter_StopMusic
-                SoundAdapter_LoadMusic LD2musicList(i).filepath
-                SoundAdapter_SetMusicLoop LD2musicList(i).loopmusic
+                SOUND_StopMusic
+                SOUND_SetMusic LD2musicList(i).filepath
+                LoopMusic = LD2musicList(i).loopmusic
                 EXIT FOR
             END IF
         NEXT i
@@ -183,7 +99,7 @@ SUB LD2_PlayMusic (id AS INTEGER)
 
     IF LD2soundEnabled THEN
         LD2_SetMusic id
-        SoundAdapter_PlayMusic
+        SOUND_PlayMusic LoopMusic
     END IF
 
 END SUB
@@ -191,7 +107,7 @@ END SUB
 SUB LD2_PlaySound (id AS INTEGER)
 
     IF LD2soundEnabled THEN
-        SoundAdapter_PlaySound id
+        SOUND_PlaySound id
     END IF
 
 END SUB
@@ -199,7 +115,7 @@ END SUB
 SUB LD2_ReleaseSound
 
     IF LD2soundEnabled THEN
-        SoundAdapter_Release
+        SOUND_Release
     END IF
 
 END SUB
@@ -207,7 +123,7 @@ END SUB
 SUB LD2_StopMusic
 
     IF LD2soundEnabled THEN
-        SoundAdapter_StopMusic
+        SOUND_StopMusic
     END IF
 
 END SUB
@@ -215,7 +131,7 @@ END SUB
 SUB LD2_PauseMusic
 
     IF LD2soundEnabled THEN
-        SoundAdapter_PauseMusic
+        SOUND_PauseMusic
     END IF
 
 END SUB
@@ -223,20 +139,32 @@ END SUB
 SUB LD2_ContinueMusic
 
     IF LD2soundEnabled THEN
-        SoundAdapter_PlayMusic
+        SOUND_ResumeMusic
     END IF
 
 END SUB
 
 function LD2_GetMusicVolume() as double
     
-    return SoundAdapter_GetMusicVolume()
+    return SOUND_GetMusicVolume()
     
 end function
 
 sub LD2_SetMusicVolume(v as double)
     
-    SoundAdapter_SetMusicVolume v
+    SOUND_SetMusicVolume v
+    
+end sub
+
+function LD2_GetSoundVolume() as double
+    
+    return SOUND_GetSoundVolume()
+    
+end function
+
+sub LD2_SetSoundVolume(v as double)
+    
+    SOUND_SetSoundVolume v
     
 end sub
 
