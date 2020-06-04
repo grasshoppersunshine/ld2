@@ -5,3 +5,6 @@ data/sound/bak
 data/sound/splice
 data/sound/msplice
 
+*mptm.autosave.*
+autosave.ld2
+

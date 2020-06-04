@@ -271,7 +271,7 @@
     if keyboard(KEY_L) then
         filename = trim(inputText("Load Filename: ", ""))
         if filename <> "" then
-            SaveMap DATA_DIR+"rooms/tmp.ld2"
+            SaveMap DATA_DIR+"rooms/autosave.ld2"
             LoadMap DATA_DIR+"rooms/"+filename
             mapFilename = filename
         end if
