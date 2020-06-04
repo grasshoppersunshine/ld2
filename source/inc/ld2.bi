@@ -1,3 +1,47 @@
+enum TileIds
+    AlienWallBottom      = 85
+    AlienWallMiddle      = 86
+    AlienWallBurningUp   = 87
+    BehindDoor           = 52
+    Crate                = 95
+    DoorActivated        = 101
+    DoorOpening          = 102
+    DoorGreen            = 90
+    DoorBlue             = 91
+    DoorYellow           = 92
+    DoorRed              = 93
+    DoorWhite            = 106
+    ElevatorArrows       = 23
+    ElevatorArrowUp      = 24
+    ElevatorArrowDown    = 25
+    ElevatorDoorLeft     = 14
+    ElevatorDoorRight    = 15
+    ElevatorBehindDoor   = 16
+    ElevatorSignLeft     = 21
+    ElevatorSignRight    = 22
+    ElevatorSign2Left    = 27
+    ElevatorSign2Right   = 28
+    Grass                = 107
+    PortalTopLeft        = 110
+    PortalTopRight       = 111
+    PortalBottomLeft     = 112
+    PortalBottomRight    = 113
+    RadiationSuit        = 74
+    RadiationSuitMissing = 65
+    RadiationSuitTorn    = 66
+    RadiationSuitBloody  = 67
+    RoofKeypad           = 49
+    Sink                 = 117
+    SpinningFan          = 3
+    ToxicGas             = 61
+    Treadmill            = 97
+    Urinal               = 114
+    UrinalYellow         = 115
+    VentCovered          = 30
+    VentOpen             = 53
+    VentNoCovering       = 55
+    VentCovering         = 56
+end enum
 '===========================================
 '= ITEMS (SPRITE IDs AND INVENTORY IDs)
 '= ids correspond to location in OBJECTS.PUT
@@ -8,9 +52,9 @@ enum ItemIds
     Medikit50       = 1
     Medikit100      = 2
     Grenade         = 3
-    Shells          = 4
-    Bullets         = 5
-    MagRounds       = 6
+    ShotgunAmmo     = 4
+    PistolAmmo      = 5
+    MagnumAmmo      = 6
     WhiteCard       = 7
     WhiteCard1      = 8
     WhiteCard2      = 9
@@ -26,14 +70,15 @@ enum ItemIds
     YellowCard      = 19
     RedCard         = 20
     Shotgun         = 21
-    Rifle           = 22
+    MachineGun      = 22
     Pistol          = 23
-    Revolver        = 24
+    Magnum          = 24
     WalkieTalkie    = 25
-    RifleAmmo       = 26
+    MachineGunAmmo  = 26
     ExtraLife       = 27
     HP              = 28
 end enum
+
 CONST FIST = 0
 CONST NOTHING = 0
 CONST MEDIKIT50 = 1
@@ -84,6 +129,7 @@ enum ActionIds
     RunLeft
     RunRight
     Shoot
+    ShootRepeat
     UseItem
 end enum
 '======================
@@ -91,6 +137,7 @@ end enum
 '= High access needs to be higher numbers
 '= Doors are rendered based on offset of code (grn/blu/ylw/red)
 '======================
+CONST NOACCESS = 0
 CONST GREENACCESS = 1
 CONST BLUEACCESS = 2
 CONST YELLOWACCESS = 3
@@ -136,6 +183,18 @@ CONST mscUHOH      = 15
 CONST mscMARCHoftheUHOH = 16
 CONST mscTITLE     = 17
 const mscOPENING   = 18
+const mscELEVATOR  = 19
+const mscBASEMENT  = 20
+const mscWIND0     = 21
+const mscWIND1     = 22
+const mscROOM0     = 23
+const mscROOM1     = 24
+const mscROOM2     = 25
+const mscROOM3     = 26
+const mscROOM4     = 27
+const mscROOM5     = 28
+const mscSMALLROOM0 = 29
+const mscSMALLROOM1 = 30
 
 '==============================================
 '= SFX

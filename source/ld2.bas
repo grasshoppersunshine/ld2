@@ -276,6 +276,7 @@
   declare sub RenderScene (visible as integer = 1)
   declare sub AddSound (id as integer, filepath as string, loops as integer = 0)
   declare sub LoadSounds ()
+  declare sub SceneOpenElevatorDoors()
   
 '======================
 '= SCENE-RELATED
@@ -746,7 +747,7 @@ END SUB
 
 sub UpdateLarryPos ()
     
-    dim player as tPlayer
+    dim player as PlayerType
     
     LD2_GetPlayer player
     
@@ -774,8 +775,12 @@ sub LoadSounds ()
     AddSound Sounds.drop   , "drop.wav"
     AddSound Sounds.equip  , "orig/equip.wav"
     
-    AddSound Sounds.doorup     , "orig/doorup.ogg"
-    AddSound Sounds.doordown   , "orig/downdown.ogg"
+    AddSound Sounds.blood1 , "splice/blood1.wav"
+    AddSound Sounds.blood2 , "splice/blood0.wav"
+    AddSound Sounds.splatter, "splice/bloodexplode2.wav"
+    
+    AddSound Sounds.doorup     , "doorup.wav"
+    AddSound Sounds.doordown   , "downdown.wav"
     
     AddSound Sounds.shotgun    , "shotgun.wav"
     AddSound Sounds.pistol     , "pistol.wav"
@@ -795,7 +800,8 @@ end sub
 
 sub DoAction(actionId as integer, itemId as integer = 0)
     
-    dim player as tPlayer
+    dim player as PlayerType
+    dim success as integer
     
     select case actionId
     case ActionIds.Crouch
@@ -821,8 +827,13 @@ sub DoAction(actionId as integer, itemId as integer = 0)
     case ActionIds.RunLeft
         if LD2_MovePlayer(-1) then
         end if
-    case ActionIds.Shoot
-        if LD2_Shoot() then
+    case ActionIds.Shoot, ActionIds.ShootRepeat
+        if actionId = ActionIds.Shoot then
+            success = LD2_Shoot()
+        else
+            success = LD2_ShootRepeat()
+        end if
+        if success then
             LD2_GetPlayer player
             select case player.weapon
             case FIST
@@ -843,6 +854,36 @@ sub DoAction(actionId as integer, itemId as integer = 0)
     
 end sub
 
+sub StartFloorMusic(roomId as integer)
+    
+    dim roomTracks(5) as integer
+    
+    roomTracks(0) = mscROOM0
+    roomTracks(1) = mscROOM1
+    roomTracks(2) = mscROOM2
+    roomTracks(3) = mscROOM3
+    roomTracks(4) = mscROOM4
+    roomTracks(5) = mscROOM5
+    
+    select case roomId
+    case Rooms.Basement
+        LD2_PlayMusic mscBASEMENT
+    case Rooms.LarryOffice
+        LD2_PlayMusic mscWANDERING
+    case Rooms.VentControl, Rooms.PortalRoom
+        LD2_PlayMusic mscWIND0
+    case Rooms.Rooftop
+        LD2_PlayMusic mscWIND1
+    case Rooms.Unknown, Rooms.DebriefRoom
+        LD2_PlayMusic mscSMALLROOM0
+    case Rooms.LowerStorage, Rooms.UpperStorage
+        LD2_PlayMusic mscSMALLROOM1
+    case else
+        LD2_PlayMusic roomTracks(int(roomId mod (ubound(roomTracks)+1)))
+    end select
+    
+end sub
+
 SUB Main
   
   DIM EnteringCode AS INTEGER
@@ -857,7 +898,9 @@ SUB Main
   dim escaped as integer
   dim KeyInput as string
   dim PlayerIsRunning as integer
-  dim player as tPlayer
+  dim player as PlayerType
+
+    dim newShot as integer
   
   fm = 0
   
@@ -878,6 +921,7 @@ SUB Main
   
   CustomActions(1).actionId = ActionIds.Equip
   CustomActions(1).itemId   = ItemIds.Fist
+    newShot = 1
   
   DO
     
@@ -892,7 +936,8 @@ SUB Main
 	LD2_RenderFrame
     
     LD2_GetPlayer player
-  
+    
+    if SceneNo >= 0 then
 	SELECT CASE SceneNo
 	  CASE 2
 		LD2_put 1196, 144, POSEJANITOR, idSCENE, 0
@@ -915,6 +960,7 @@ SUB Main
 		LD2_put 368, 144, BARNEYBOX, idSCENE, 0
 		IF CurrentRoom <> 7 THEN SceneNo = 0
 	END SELECT
+    end if
 	
 	IF CurrentRoom = 1 AND player.x <= 1400 AND PortalScene = 0 THEN
 	  LD2_SetSceneMode LETTERBOX
@@ -1020,7 +1066,7 @@ SUB Main
 	  IF player.x <= 80 THEN SceneWeaponRoom2
 	END IF
 
-	IF SteveGoneScene = 0 AND SceneNo <> 2 AND SceneNo <> 4 THEN
+	IF SteveGoneScene = 0 AND SceneNo <> 2 AND SceneNo <> 4 and SceneNo <> -1 THEN
 	  IF CurrentRoom = 14 AND player.x <= 300 THEN
 		SceneSteveGone
 	  END IF
@@ -1044,7 +1090,12 @@ SUB Main
 	IF keyboard(KEY_ALT) THEN doAction ActionIds.Jump 'LD2_JumpPlayer 1.5
     IF keyboard(KEY_UP ) THEN doAction ActionIds.LookUp
     IF keyboard(KEY_DOWN ) OR keyboard(KEY_P  ) THEN doAction ActionIds.PickUpItem 'LD2_PickUpItem
-	IF keyboard(KEY_CTRL ) OR keyboard(KEY_Q  ) THEN doAction ActionIds.Shoot 'LD2_Shoot
+	IF keyboard(KEY_CTRL ) OR keyboard(KEY_Q  ) THEN
+        doAction iif(newShot, ActionIds.Shoot, ActionIds.ShootRepeat)
+        newShot = 0
+    else
+        newShot = 1
+    end if
     
 	IF keyboard(KEY_L) THEN
 	  LD2_SwapLighting
@@ -1052,7 +1103,15 @@ SUB Main
 	END IF
 
 	IF keyboard(KEY_TAB) AND LD2_AtElevator = 0 THEN StatusScreen
-	IF keyboard(KEY_TAB) AND LD2_AtElevator = 1 THEN EStatusScreen CurrentRoom
+	IF keyboard(KEY_TAB) AND LD2_AtElevator = 1 THEN
+        EStatusScreen CurrentRoom
+        if CurrentRoom <> LD2_GetRoom then
+            CurrentRoom = LD2_GetRoom
+            StartFloorMusic CurrentRoom
+            SceneOpenElevatorDoors
+        end if
+        LD2_ShowPlayer
+    end if
 
 	IF EnteringCode AND KeyCount < 4 THEN
 	  IF keyboard(KEY_1) THEN KeyInput = KeyInput + " 1": WaitForKeyup(KEY_1): KeyCount = KeyCount + 1
@@ -1074,6 +1133,18 @@ SUB Main
         IF keyboard(KEY_3) THEN doAction CustomActions(2).actionId, CustomActions(2).itemId
         IF keyboard(KEY_4) THEN doAction CustomActions(3).actionId, CustomActions(3).itemId
 	END IF
+    
+    if LD2_isTestMode() then
+        if keyboard(KEY_E) then
+            EStatusScreen CurrentRoom
+            if CurrentRoom <> LD2_GetRoom then
+                CurrentRoom = LD2_GetRoom
+                StartFloorMusic CurrentRoom
+                SceneOpenElevatorDoors
+            end if
+            LD2_ShowPlayer
+        end if
+    end if
 
 	if PlayerIsRunning = 0 then LD2_SetPlayerlAni 21 '- legs still/standing/not-moving
 
@@ -1249,7 +1320,7 @@ function Scene1Go () as integer
 	RenderPoses
     LD2_FadeIn 2
 
-	IF LD2_isDebugMode() THEN LD2_Debug "LD2_PlayMusic"
+	'IF LD2_isDebugMode() THEN LD2_Debug "LD2_PlayMusic"
     'LD2_SetMusic mscWANDERING
     'LD2_FadeInMusic 5.0
     LD2_PlayMusic mscWANDERING
@@ -1510,8 +1581,8 @@ function Scene4Go() as integer
     RenderScene
     
     LD2_PlaySound Sounds.shatter
-    LD2_ShatterGlass 208, 136, 2, -1
-    LD2_ShatterGlass 224, 136, 2, 1
+    LD2_MakeGuts SplatterTypes.Glass, 208, 136, 2, -1
+    LD2_MakeGuts SplatterTypes.Glass, 224, 136, 2, 1
 
     '- Rockmonster busts through window and eats the janitor/doctor
     '--------------------------------------------------------------
@@ -1638,7 +1709,6 @@ function Scene5Go() as integer
     LD2_SetSceneMode LETTERBOX
     UpdateLarryPos
     
-    AddSound Sounds.splatter, "splice/bloodexplode.wav"
     AddSound Sounds.snarl   , "splice/snarl.wav"
 
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
@@ -2567,7 +2637,7 @@ SUB Start
         EXIT DO
     END IF
     
-    IF (LD2_NotFlag(TESTMODE)) AND (LD2_NotFlag(SKIPOPENING)) THEN '(LD2_isDebugMode% = 0) AND
+    IF (LD2_NotFlag(TESTMODE)) THEN '(LD2_isDebugMode% = 0) AND
         LD2_FadeOutMusic
         'i% = WaitSecondsUntilKey%(1.0)
         TITLE_Intro
@@ -2583,14 +2653,12 @@ SUB Start
     'LD2_LoadBitmap DATA_DIR+"gfx/origback.bmp", 2, 0
     CurrentRoom = 14
     LD2_SetRoom CurrentRoom
-    LD2_LoadMap "14th.ld2"
+    LD2_LoadMap "14th.ld2", LD2_isTestMode()
     
     InitPlayer
     
-    IF LD2_isTestMode() OR LD2_isDebugMode() THEN
-      Scene1
-      SceneNo = 0
-      'EStatusScreen CurrentRoom
+    IF LD2_isTestMode() THEN
+      SceneNo = -1
     ELSE
       Scene1
     END IF
@@ -2609,44 +2677,34 @@ SUB InitPlayer
     
     IF LD2_isDebugMode() THEN LD2_Debug "InitPlayer()"
     
-    DIM p AS tPlayer
+    DIM p AS PlayerType
     
-    p.life = 100
-    p.uAni = 26
-    p.lAni = 21
     p.x = 92
     p.y = 144
-    'p.weapon = Player.weapon1
-    'LD2_ClearStatus (Inventory)
+    p.is_visible = 1
+    
     LD2_InitPlayer p
     LD2_SetXShift 0
     LD2_SetLives 3
     
-    '- temp stuff
-    LD2_AddToStatus(ItemIds.Shotgun, 1)
-    LD2_AddToStatus(ItemIds.Shells , 1)
-    LD2_AddToStatus(ItemIds.Shells , 1)
-    LD2_AddToStatus(ItemIds.Shells , 1)
-    LD2_AddAmmo ItemIds.Shells, 30
-    
     dim n as integer
-    IF LD2_isTestMode() OR LD2_isDebugMode() THEN
-      LD2_SetWeapon SHOTGUN
-      LD2_AddAmmo 1, 99
-      LD2_AddAmmo 2, 99
-      LD2_AddAmmo 3, 99
+    IF LD2_isTestMode() THEN
+      'LD2_SetWeapon SHOTGUN
+      LD2_AddAmmo ItemIds.ShotgunAmmo, 99
+      LD2_AddAmmo ItemIds.PistolAmmo, 99
+      LD2_AddAmmo ItemIds.MachineGunAmmo, 99
+      LD2_AddAmmo ItemIds.MagnumAmmo, 99
       LD2_SetLives 99
-      n = LD2_AddToStatus(WALKIETALKIE, 1)
-      n = LD2_AddToStatus(REDCARD, 1)
-      n = LD2_AddToStatus(WHITECARD, 1)
-      n = LD2_AddToStatus(SHOTGUN, 1)
-      n = LD2_AddToStatus(MACHINEGUN, 1)
-      n = LD2_AddToStatus(PISTOL, 1)
-      n = LD2_AddToStatus(DESERTEAGLE, 1)
-      LD2_SetAccessLevel REDACCESS
+      LD2_AddToStatus(WALKIETALKIE, 1)
+      LD2_AddToStatus(REDCARD, 1)
+      LD2_AddToStatus(SHOTGUN, 1)
+      LD2_AddToStatus(MACHINEGUN, 1)
+      LD2_AddToStatus(PISTOL, 1)
+      'LD2_AddToStatus(DESERTEAGLE, 1)
+      'LD2_AddToStatus(WHITECARD, 1)
+        LD2_PlayMusic mscWANDERING
     ELSE
-      n = LD2_AddToStatus(GREENCARD, 1)
-      LD2_SetAccessLevel GREENACCESS
+      LD2_AddToStatus(GREENCARD, 1)
     END IF
     
 END SUB
@@ -2672,14 +2730,47 @@ sub LD2_UseItem (id as integer, qty as integer)
     dim qtyUnused as integer
     
     select case id
-    case ItemIds.Shotgun, ItemIds.Pistol, ItemIds.Revolver, ItemIds.Rifle
+    case ItemIds.Shotgun, ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum
         CustomActions(0).actionId = ActionIds.Equip
         CustomActions(0).itemId   = id
         DoAction ActionIds.Equip, id
-    case ItemIds.Shells, ItemIds.Bullets, ItemIds.MagRounds, ItemIds.RifleAmmo
+    case ItemIds.ShotgunAmmo, ItemIds.PistolAmmo, ItemIds.MachineGunAmmo, ItemIds.MagnumAmmo
         qtyUnused = LD2_AddAmmo(id, qty)
     case ItemIds.HP
         LD2_AddAmmo -1, qty
     end select
+    
+end sub
+
+sub SceneOpenElevatorDoors()
+    
+    dim LarryPose as PoseType
+    dim ex as double, ey as double
+    dim mapX as integer, mapY as integer
+    dim x as integer
+    
+    UpdateLarryPos
+    
+    ex = Larry.x-8: ey = Larry.y
+    mapX = int(ex / 16)
+    mapY = int(ey / 16)
+    
+    LD2_ShowPlayer
+    
+    LD2_PutTile mapX, mapY, TileIds.ElevatorBehindDoor, 1
+    LD2_PutTile mapX+1, mapY, TileIds.ElevatorBehindDoor, 1
+
+    '- open elevator doors
+    dim i as integer
+    FOR x = 1 TO 16
+        RenderScene 0
+        LD2_put ex - x, ey, TileIds.ElevatorDoorLeft, idTILE, 0
+        LD2_put (ex + SPRITE_W) + x, ey, TileIds.ElevatorDoorRight, idTILE, 0
+        LD2_RefreshScreen
+        PullEvents
+    NEXT x
+
+    LD2_PutTile mapX-1, mapY, TileIds.ElevatorDoorLeft, 1
+    LD2_PutTile mapx+2, mapY, TileIds.ElevatorDoorRight, 1
     
 end sub

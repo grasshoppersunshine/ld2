@@ -22,7 +22,7 @@ dim shared GLOBAL_SoundChannels(GLOBAL_MaxChannels-1) as integer
 dim shared GLOBAL_NumSounds as integer
 dim shared GLOBAL_BackgroundMusic as Mix_Music ptr
 dim shared GLOBAL_SoundVolume as double = 1.0
-dim shared GLOBAL_MusicVolume as double = 1.0
+dim shared GLOBAL_MusicVolume as double = 0.75
 dim shared GLOBAL_MusicIsPlaying as integer = 0
 dim shared GLOBAL_SoundInitialized as integer = 0
 

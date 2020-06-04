@@ -77,7 +77,7 @@ END SUB
 '///====================================================================
 '/// LD2 Sound Methods begin
 '///====================================================================
-DIM SHARED LD2musicList(8) AS LD2MusicData
+DIM SHARED LD2musicList(32) AS LD2MusicData
 DIM SHARED LD2musicListCount AS INTEGER
 DIM SHARED LD2soundEnabled AS INTEGER
 dim shared LD2soundMusicTargetVolume as double = -1

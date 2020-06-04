@@ -4,9 +4,9 @@
 
 TYPE tFloor
   floorNo AS INTEGER
-  filename AS STRING * 8
-  label AS STRING * 20
-  allowed AS STRING * 50
+  filename AS STRING
+  label AS STRING
+  allowed AS STRING
 END TYPE
 
 DECLARE SUB EStatusScreen (currentRoomId AS INTEGER)

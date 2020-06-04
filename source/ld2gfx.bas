@@ -18,10 +18,15 @@ sub LD2_InitVideo(title as string, screen_w as integer, screen_h as integer, ful
     
     dim n as integer
     for n = 1 to 255
-        WhitePalette.setRGBA(n, 208, 208, 208, 255)
+        WhitePalette.setRGBA(n, 255, 255, 255, 255)
     next n
     WhitePalette.setRGBA(0, 0, 0, 0, 255)
-    WhitePalette.setRGBA(7, 176, 176, 176, 255)
+    
+end sub
+
+sub LD2_SetSpritesColor(sprites as VideoSprites ptr, c as integer)
+    
+    sprites->setColorMod(RGBpal.red(c), RGBpal.grn(c), RGBpal.blu(c))
     
 end sub
 
@@ -106,6 +111,23 @@ sub LD2_InitSprites(filename as string, sprites as VideoSprites ptr, w as intege
     
 end sub
 
+sub LD2_InitLayer(filename as string, sprites as VideoSprites ptr, flags as integer = 0)
+    
+    sprites->init( @VideoHandle )
+    if (flags and SpriteFlags.UseWhitePalette) then
+        sprites->setPalette(@WhitePalette)
+    else
+        sprites->setPalette(@RGBPal)
+    end if
+    if (flags and SpriteFlags.Transparent) then
+        sprites->setTransparentColor(0)
+    end if
+    if len(filename) then
+        sprites->loadBmp(filename)
+    end if
+    
+end sub
+
 SUB LD2_outline (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
     
     if bufferNum = 0 then
@@ -176,6 +198,9 @@ SUB LD2_FadeOut (speed AS INTEGER, col as integer = 0)
         PullEvents
     next a
     
+    VideoHandle.fillScreen(col)
+    VideoHandle.update()
+    
 END SUB
 
 SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)
@@ -190,6 +215,9 @@ SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)
         VideoHandle.update()
         PullEvents
     next a
+    
+    VideoBuffers(0).putToScreen()
+    VideoHandle.update()
     
 END SUB
 
@@ -208,6 +236,9 @@ SUB LD2_FadeInWhileNoKey (speed AS INTEGER, col as integer = 0)
             exit for
         end if
     next a
+    
+    VideoBuffers(0).putToScreen()
+    VideoHandle.update()
     
 END SUB
 

@@ -1,6 +1,6 @@
 #include once "inc/videosprites.bi"
 
-sub VideoSprites.init(v as Video ptr, w as integer, h as integer)
+sub VideoSprites.init(v as Video ptr, w as integer = 0, h as integer = 0)
     
     this._renderer = v->getRenderer()
     this._w = w
@@ -86,13 +86,33 @@ sub VideoSprites.load(filename as string)
     
 end sub
 
+sub VideoSprites.loadBmp(filename as string)
+    
+    dim imageSurface as SDL_Surface ptr
+    'dim imageTexture as SDL_Texture ptr
+    
+    imageSurface = SDL_LoadBMP(filename)
+    if imageSurface <> NULL then
+        this._w = imageSurface->w
+        this._h = imageSurface->h
+        SDL_SetColorKey( imageSurface, SDL_TRUE, SDL_MapRGB(imageSurface->format, 0, 0, 0) )
+        'this._data = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this._w, this._h)
+        this._data = SDL_CreateTextureFromSurface( this._renderer, imageSurface )
+        'SDL_SetRenderTarget( this._renderer, this._data )
+        'SDL_RenderCopy( this._renderer, imageTexture, NULL, NULL )
+        SDL_FreeSurface(imageSurface)
+        'SDL_DestroyTexture(imageTexture)
+    end if
+    
+end sub
+
 sub VideoSprites.setTransparentColor(c as integer)
     
     this._transparentColor = c
     
 end sub
 
-sub VideoSprites.putToScreen(x as integer, y as integer, spriteNum as integer)
+sub VideoSprites.putToScreen(x as integer, y as integer, spriteNum as integer = 0)
     
     dim src as SDL_RECT
     dim dst as SDL_RECT
@@ -126,5 +146,11 @@ sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer,
     end if
     
     SDL_RenderCopyEx( this._renderer, this._data, @src, @dst, rotateAngle, @center, iif(flipHorizontal, SDL_FLIP_HORIZONTAL, 0))
+    
+end sub
+
+sub VideoSprites.setColorMod(r as integer, g as integer, b as integer)
+    
+    SDL_SetTextureColorMod(this._data, r, g, b)
     
 end sub

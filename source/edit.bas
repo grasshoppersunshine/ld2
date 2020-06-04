@@ -678,7 +678,7 @@ SUB SaveMap (filename as string)
     ft = "[LD2L-V0.45]"
     nm = shortFilename
     cr = "Joe King"
-    dt = "10/31/02"
+    dt = date
     info = ""
     c = 1
 

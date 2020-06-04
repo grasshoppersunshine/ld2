@@ -155,7 +155,7 @@ SUB TITLE_Intro
   WaitSecondsUntilKey(2.0)
   if keyboard(KEY_ENTER) then
     LD2_FadeOut 2
-    LD2_FadeOutMusic
+    'LD2_FadeOutMusic
   end if
   
   LD2_LoadBitmap DATA_DIR+"gfx/back.bmp", 2, 0
@@ -165,7 +165,7 @@ SUB TITLE_Intro
   LD2_FadeInMusic 9.0
   IF WaitSecondsUntilKey(4.0) THEN
     LD2_FadeOut 2
-    LD2_FadeOutMusic
+    'LD2_FadeOutMusic
     EXIT SUB
   END IF
   
@@ -252,26 +252,56 @@ sub TITLE_ShowCredits
     LD2_CLS 1, 0
 
     LD2_InitElement @e, "Larry The Dinosaur II - October, 2002 - Delta Code", 31, ElementFlags.CenterX or ElementFlags.CenterText
-    e.y = 4
+    e.y = LD2_GetFontHeightWithSpacing()
     e.text_spacing = 1.25
     LD2_RenderElement @e
-
+    
     LD2_InitElement @e, "", 31
     open DATA_DIR+"tables/credits.txt" for input as #1
         do while not eof(1)
             line input #1, text
-            'e.x = 40: e.y = y: e.text = text
-            'LD2_RenderElement @e
-            'y += 10
             e.text += text+"\"
         loop
     close #1
-    e.x = 40: e.y = 30
+    e.x = 40: e.y = SCREEN_H*0.2
     e.text_is_monospace = 1
+    e.text_height = 2.4
     LD2_RenderELement @e
 
     LD2_InitElement @e, "Press Space To Continue", 31, ElementFlags.CenterX or ElementFlags.CenterText
-    e.y = 144
+    e.y = SCREEN_H - LD2_GetFontHeightWithSpacing() * 2.5
+    LD2_RenderElement @e
+
+    LD2_FadeIn 3
+
+    WaitForKeydown(KEY_SPACE)
+
+    LD2_PlaySound Sounds.select1
+    WaitSeconds 0.3333
+    LD2_FadeOut 3
+
+end sub
+
+sub TITLE_ShowCreditsNew
+    
+    dim e as ElementType
+    dim fontH as integer
+    
+    fontH = LD2_GetFontHeightWithSpacing()
+    
+    LD2_CLS 1, 0
+    LD2_InitElement @e, "Larry The Dinosaur II\Copyright (C) 2002, 2020 Delta Code\All Rights Reserved\Created By Joe King", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.y = fontH
+    e.text_spacing = 1.25
+    LD2_RenderElement @e
+    
+    LD2_InitElement @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.text = "SPECIAL THANKS\ChipTone (SFB Games)\PIXELplus 256 (C.Chadwick)\FreeBASIC (freebasic.net)\Simple Direct Media Layer (libsdl.org)"
+    e.y = 100
+    '"TESTING"
+    '"Dean Janjic"
+    '"Eric Lope"
+    
     LD2_RenderElement @e
 
     LD2_FadeIn 3
@@ -366,18 +396,22 @@ SUB TITLE_Goodbye
     IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Goodbye"
     
     dim e as ElementType
-    dim goodbyes(9) as string
+    dim goodbyes(13) as string
     
-    goodbyes(0) = "GOODBYE"
-    goodbyes(1) = "SMELL YA LATER"
-    goodbyes(2) = "GOODBYE"
-    goodbyes(3) = "GOODBYE"
-    goodbyes(4) = "MOTHER OF GOD!"
-    goodbyes(5) = "SAVE YOURSELF FROM HELL"
-    goodbyes(6) = "LIBERA TE TUTAMET EX INFERIS"
-    goodbyes(7) = "REALITY IS MUCH WORSE"
-    goodbyes(8) = "GOODBYE"
-    goodbyes(9) = "NOW SEE WHAT YOU CAN DO"
+    goodbyes(0)  = "GOODBYE"
+    goodbyes(1)  = "SMELL YA LATER" '- 1/12
+    goodbyes(2)  = "GOODBYE"
+    goodbyes(3)  = "GOODBYE"
+    goodbyes(4)  = "GOODBYE" '"MOTHER OF GOD!"
+    goodbyes(5)  = "SAVE YOURSELF FROM HELL" '- 1/20
+    goodbyes(6)  = "GOODBYE"
+    goodbyes(7)  = "GOODBYE"
+    goodbyes(8)  = "GOODBYE"
+    goodbyes(9)  = "REALITY IS MUCH WORSE" '- 1/20
+    goodbyes(10) = "GOODBYE"
+    goodbyes(11) = "GOODBYE"
+    goodbyes(12) = "GOODBYE"
+    goodbyes(13) = "LIBERA TE TUTAMET EX INFERIS" '- 1/20
     'goodbyes(3) = "CAN'T WIN THEM ALL" '- if died before exit?
     
     LD2_cls
@@ -394,7 +428,7 @@ SUB TITLE_Goodbye
     LD2_RenderElement @e
     
     LD2_FadeIn 4
-    IF WaitSecondsUntilKey(0.25) THEN
+    IF WaitSecondsUntilKey(0.2) THEN
         LD2_FadeOut 4
     ELSE
         LD2_FadeOut 4
