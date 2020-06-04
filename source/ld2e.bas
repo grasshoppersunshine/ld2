@@ -812,14 +812,14 @@ SUB LD2_Init
 
     LD2_InitSound 1
     
-    AddMusic mscTITLE    , DATA_DIR+"sound/title.ogg", 1
-    AddMusic mscTHEME    , DATA_DIR+"sound/theme.ogg", 0
-    AddMusic mscWANDERING, DATA_DIR+"sound/creepy.ogg", 1
+    'AddMusic mscTITLE    , DATA_DIR+"sound/title.ogg", 1
+    AddMusic mscTHEME    , DATA_DIR+"sound/music/theme.ogg", 0
+    AddMusic mscWANDERING, DATA_DIR+"sound/music/creepy.ogg", 1
     AddMusic mscOPENING  , DATA_DIR+"sound/orig/creepy.ogg", 1
     AddMusic mscINTRO    , DATA_DIR+"sound/orig/intro.ogg", 0
-    AddMusic mscUHOH     , DATA_DIR+"sound/uhoh.ogg", 0
-    AddMusic mscMARCHoftheUHOH, DATA_DIR+"sound/march.ogg", 1
-    AddMusic mscELEVATOR , DATA_DIR+"sound/goingup.ogg", 0
+    AddMusic mscUHOH     , DATA_DIR+"sound/music/uhoh.ogg", 0
+    AddMusic mscMARCHoftheUHOH, DATA_DIR+"sound/music/march.ogg", 1
+    AddMusic mscELEVATOR , DATA_DIR+"sound/music/goingup.ogg", 0
     
     AddMusic mscBASEMENT , DATA_DIR+"sound/msplice/basement.wav", 1
     AddMusic mscWIND0    , DATA_DIR+"sound/msplice/wind0.wav", 1
