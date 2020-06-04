@@ -1,5 +1,4 @@
-#include once "INC\INVENTRY.BI"
-#include once "INC\LD2E.BI"
+#include once "inc/inventory.bi"
 
 DECLARE SUB LoadSids (filename AS STRING)
 

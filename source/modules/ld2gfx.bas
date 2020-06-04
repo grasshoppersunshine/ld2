@@ -1,7 +1,11 @@
-#include once "inc/ld2GFX.bi"
-#include once "inc/sdlgfx.bi"
+#include once "SDL2/SDL.bi"
 #include once "inc/common.bi"
 #include once "inc/keys.bi"
+#include once "inc/palette256.bi"
+#include once "inc/video.bi"
+#include once "inc/videobuffer.bi"
+#include once "inc/videosprites.bi"
+#include once "inc/ld2gfx.bi"
 
 dim shared VideoHandle as Video
 dim shared VideoBuffers(1) as VideoBuffer

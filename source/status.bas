@@ -1,10 +1,10 @@
-#include once "INC\COMMON.BI"
-#include once "INC\LD2GFX.BI"
-#include once "INC\LD2SND.BI"
-#include once "INC\LD2E.BI"
-#include once "INC\LD2.BI"
-#include once "INC\KEYS.BI"
-#include once "INC\STATUS.BI"
+#include once "modules/inc/common.bi"
+#include once "modules/inc/keys.bi"
+#include once "modules/inc/ld2gfx.bi"
+#include once "modules/inc/ld2snd.bi"
+#include once "inc/ld2e.bi"
+#include once "inc/ld2.bi"
+#include once "inc/status.bi"
 
 DECLARE SUB Drop (item AS InventoryType)
 DECLARE SUB BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elementHeading as ElementType ptr, elementBorder as ElementType ptr)

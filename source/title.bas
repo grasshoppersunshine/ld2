@@ -1,13 +1,13 @@
 '- Intro Title and options screen
 '--------------------------------
 
-#include once "INC\COMMON.BI"
-#include once "INC\LD2GFX.BI"
-#include once "INC\LD2SND.BI"
-#include once "INC\LD2E.BI"
-#include once "INC\LD2.BI"
-#include once "INC\TITLE.BI"
-#include once "inc/keys.bi"
+#include once "modules/inc/common.bi"
+#include once "modules/inc/keys.bi"
+#include once "modules/inc/ld2gfx.bi"
+#include once "modules/inc/ld2snd.bi"
+#include once "inc/ld2e.bi"
+#include once "inc/ld2.bi"
+#include once "inc/title.bi"
 
 'inc\LD2_bi -- only needed for music ids
 'inc\ld2e.bi -- only needed for text put (and setflag)

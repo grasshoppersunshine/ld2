@@ -1,5 +1,5 @@
-#include once "inc/ld2snd.bi"
 #include once "inc/sdlsnd.bi"
+#include once "inc/ld2snd.bi"
 '///====================================================================
 '/// SOUND ADAPTER begin
 '///====================================================================

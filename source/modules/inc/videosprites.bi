@@ -1,7 +1,7 @@
 #pragma once
 #inclib "videosprites"
-#include once "inc/palette256.bi"
-#include once "inc/video.bi"
+#include once "palette256.bi"
+#include once "video.bi"
 
 type VideoSprites
 private:

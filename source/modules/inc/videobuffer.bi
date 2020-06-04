@@ -1,7 +1,7 @@
 #pragma once
 #inclib "videobuffer"
-#include once "inc/palette256.bi"
-#include once "inc/video.bi"
+#include once "palette256.bi"
+#include once "video.bi"
 
 declare function SDL_CreateSurfaceFromTexture( renderer as SDL_RENDERER ptr, texture as SDL_Texture ptr ) as SDL_Surface ptr
 

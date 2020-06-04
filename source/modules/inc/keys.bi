@@ -1,3 +1,6 @@
+#pragma once
+#include once "SDL2/SDL.bi"
+
 const KEY_ESCAPE = SDL_SCANCODE_ESCAPE
 const KEY_TAB    = SDL_SCANCODE_TAB
 const KEY_SPACE  = SDL_SCANCODE_SPACE

@@ -1,4 +1,4 @@
-#include once "INC\SCENE.BI"
+#include once "inc/scene.bi"
 
 '======================
 '= PRIVATE MEMBERS

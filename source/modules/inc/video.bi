@@ -1,6 +1,6 @@
 #pragma once
 #inclib "video"
-#include once "inc/palette256.bi"
+#include once "palette256.bi"
 #include once "SDL2/SDL.bi"
 
 type Video

@@ -2,15 +2,14 @@
 '- July, 2002 - Created by Joe King
 '==================================
 
-  #include once "INC\COMMON.BI"
-  #include once "INC\LD2SND.BI"
-  #include once "INC\LD2GFX.BI"
-  #include once "INC\LD2E.BI"
-  #include once "INC\LD2.BI"
-  #include once "INC\TITLE.BI"
-  #include once "INC\MOBS.BI"
-  #include once "inc/sdlgfx.bi" '- TODO -- get rid of this
-  #include once "inc/keys.bi"
+    #include once "modules/inc/common.bi"
+    #include once "modules/inc/keys.bi"
+    #include once "modules/inc/ld2snd.bi"
+    #include once "modules/inc/ld2gfx.bi"
+    #include once "modules/inc/mobs.bi"
+    #include once "inc/ld2e.bi"
+    #include once "inc/ld2.bi"
+    #include once "inc/title.bi"
   
   type tGuts
     id as integer
@@ -3601,9 +3600,11 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
             Player.lAni = 21 '- make const for legs still/standing
         end if
         
-        LD2_RenderFrame
-        LD2_RefreshScreen
-        WaitSeconds 0.05
+        if mob.hit then
+            LD2_RenderFrame
+            LD2_RefreshScreen
+            WaitSeconds 0.05
+        end if
     else
         return 0
     end if

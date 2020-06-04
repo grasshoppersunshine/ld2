@@ -39,16 +39,16 @@
 ' Have them group together in the Sky Room
 ' Got it, over
 '
-  #include once "INC\COMMON.BI"
-  #include once "INC\LD2GFX.BI"
-  #include once "INC\LD2SND.BI"
-  #include once "INC\LD2E.BI"
-  #include once "INC\TITLE.BI"
-  #include once "INC\LD2.BI"
-  #include once "INC\KEYS.BI"
-  #include once "INC\STATUS.BI"
-  #include once "INC\SCENE.BI"
-  #include once "SDL2/SDL.bi"
+    #include once "modules/inc/common.bi"
+    #include once "modules/inc/keys.bi"
+    #include once "modules/inc/ld2gfx.bi"
+    #include once "modules/inc/ld2snd.bi"
+    #include once "inc/ld2e.bi"
+    #include once "inc/title.bi"
+    #include once "inc/ld2.bi"
+    #include once "inc/status.bi"
+    #include once "inc/scene.bi"
+    #include once "SDL2/SDL.bi"
 
     type PoseAtom
         x as integer
@@ -2609,7 +2609,7 @@ SUB Start
     END IF
     
     CLS
-    PRINT "Larry the Dinosaur II v1.1.53"
+    PRINT "Larry the Dinosaur II v1.1.68"
     
     WaitSeconds 0.5
     

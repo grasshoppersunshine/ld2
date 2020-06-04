@@ -2,9 +2,9 @@
 '- July, 2002 - Created by Joe King
 '====================================
 
-    #include once "inc/ld2gfx.bi"
-    #include once "inc/common.bi"
-    #include once "inc/keys.bi"
+    #include once "modules/inc/ld2gfx.bi"
+    #include once "modules/inc/common.bi"
+    #include once "modules/inc/keys.bi"
     #include once "inc/ld2.bi"
     #include once "file.bi"
     

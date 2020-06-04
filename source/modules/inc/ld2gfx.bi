@@ -1,7 +1,7 @@
 #pragma once
 #inclib "ld2gfx"
 
-#include once "inc/sdlgfx.bi"
+#include once "videosprites.bi"
 
 declare sub LD2_InitVideo(title as string, screen_w as integer, screen_h as integer, fullscreen as integer = 0)
 declare sub LD2_LoadPalette(filename as string)
