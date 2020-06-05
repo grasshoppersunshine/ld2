@@ -7,6 +7,44 @@ DIM SHARED LD2soundEnabled AS INTEGER
 dim shared LD2soundMusicTargetVolume as double = -1
 dim shared LD2soundMusicVolumeChangeSpeed as double
 dim shared LoopMusic as integer
+dim shared SoundErrorMsg as string
+
+function LD2_GetSoundInfo() as string
+    
+    dim versionCompiled as SDL_Version
+    dim versionLinked as SDL_Version
+    dim compiled as string
+    dim linked as string
+    
+    SDL_MIXER_VERSION(@versionCompiled)
+    versionLinked = *Mix_Linked_Version()
+    compiled = str(versionCompiled.major)+"."+str(versionCompiled.minor)+"."+str(versionCompiled.patch)
+    linked = str(versionLinked.major)+"."+str(versionLinked.minor)+"."+str(versionLinked.patch)
+    
+    return "SDL 2 "+compiled+" (compiled) / "+linked+" (linked)"
+    
+end function
+
+function LD2_GetSoundErrorMsg() as string
+    
+    return SoundErrorMsg
+    
+end function
+
+function LD2_InitSound (enabled AS INTEGER) as integer
+    
+    SoundErrorMsg = ""
+    LD2soundEnabled = enabled
+    if LD2soundEnabled then
+        if SOUND_Init <> 0 then
+            SoundErrorMsg = SOUND_GetErrorMsg()
+            return 1
+        end if
+    end if
+    
+    return 0
+    
+end function
 
 SUB LD2_AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
 	
@@ -64,15 +102,6 @@ SUB LD2_FadeOutMusic (speed as double = 1.0)
 
 END SUB
 
-SUB LD2_InitSound (enabled AS INTEGER)
-
-    LD2soundEnabled = enabled
-    IF LD2soundEnabled THEN
-        SOUND_Init
-    END IF
-
-END SUB
-
 SUB LD2_SetMusic (id AS INTEGER)
     
     LD2_LoadMusic id
@@ -95,10 +124,12 @@ SUB LD2_LoadMusic (id AS INTEGER)
 
 END SUB
 
-SUB LD2_PlayMusic (id AS INTEGER)
+SUB LD2_PlayMusic (id AS INTEGER = 0)
 
     IF LD2soundEnabled THEN
-        LD2_SetMusic id
+        if id > 0 then
+            LD2_SetMusic id
+        end if
         SOUND_PlayMusic LoopMusic
     END IF
 

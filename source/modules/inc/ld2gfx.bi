@@ -3,7 +3,9 @@
 
 #include once "videosprites.bi"
 
-declare sub LD2_InitVideo(title as string, screen_w as integer, screen_h as integer, fullscreen as integer = 0)
+declare function LD2_GetVideoInfo() as string
+declare function LD2_GetVideoErrorMsg() as string
+declare function LD2_InitVideo(title as string, screen_w as integer, screen_h as integer, fullscreen as integer = 0) as integer
 declare sub LD2_LoadPalette(filename as string)
 declare sub LD2_SetTargetBuffer(bufferNum as integer)
 declare sub LD2_cls (bufferNum as integer = 0, col as integer = 0)

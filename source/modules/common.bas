@@ -11,6 +11,41 @@ dim shared EventMouseX as long
 dim shared EventMouseY as integer
 dim shared EventMouseLB as integer
 dim shared EventMouseRB as integer
+dim shared CommonErrorMsg as string
+
+function GetCommonInfo() as string
+    
+    dim versionCompiled as SDL_Version
+    dim versionLinked as SDL_Version
+    dim compiled as string
+    dim linked as string
+    
+    SDL_VERSION_(@versionCompiled)
+    SDL_GetVersion(@versionLinked)
+    compiled = str(versionCompiled.major)+"."+str(versionCompiled.minor)+"."+str(versionCompiled.patch)
+    linked = str(versionLinked.major)+"."+str(versionLinked.minor)+"."+str(versionLinked.patch)
+    
+    return "SDL "+compiled+" (compiled) / "+linked+" (linked)"
+    
+end function
+
+function GetCommonErrorMsg() as string
+    
+    return CommonErrorMsg
+    
+end function
+
+function InitCommon() as integer
+    
+    CommonErrorMsg = ""
+    if SDL_Init(SDL_INIT_EVENTS) <> 0 then
+        CommonErrorMsg = *SDL_GetError()
+        return 1
+    end if
+    
+    return 0
+    
+end function
 
 function keyboard(code as integer) as integer
     
@@ -105,19 +140,31 @@ FUNCTION WaitSecondsUntilKeyup (seconds AS DOUBLE, keycode as integer) as intege
     
 END FUNCTION
 
-sub WaitForKeydown (code as integer)
+sub WaitForKeydown (code as integer = -1)
     
-    do
-        PullEvents
-    loop until keyboard(code)
+    if code = -1 then
+        do
+            PullEvents
+        loop until EventKeyDown
+    else
+        do
+            PullEvents
+        loop until keyboard(code)
+    end if
     
 end sub
 
-sub WaitForKeyup (code as integer)
+sub WaitForKeyup (code as integer = -1)
     
-    do
-        PullEvents
-    loop while keyboard(code)
+    if code = -1 then
+        do
+            PullEvents
+        loop while EventKeyDown
+    else
+        do
+            PullEvents
+        loop while keyboard(code)
+    end if
     
 end sub
 
@@ -131,6 +178,8 @@ sub PullEvents()
             EventQuit = 1
         case SDL_KEYDOWN
             EventKeydown = event.key.keysym.sym
+        case SDL_KEYUP
+            EventKeydown = 0
         case SDL_MOUSEWHEEL
             EventMouseWheelY += event.wheel.y
         end select

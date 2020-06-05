@@ -15,9 +15,8 @@ end type
 
 declare function SOUND_FindSound (id as integer) as integer
 
-dim shared GLOBAL_MaxChannels as integer = 16
-
 redim shared GLOBAL_Sounds(0) as tSFX
+dim shared GLOBAL_MaxChannels as integer = 16
 dim shared GLOBAL_SoundChannels(GLOBAL_MaxChannels-1) as integer
 dim shared GLOBAL_NumSounds as integer
 dim shared GLOBAL_BackgroundMusic as Mix_Music ptr
@@ -25,19 +24,33 @@ dim shared GLOBAL_SoundVolume as double = 1.0
 dim shared GLOBAL_MusicVolume as double = 1.0
 dim shared GLOBAL_MusicIsPlaying as integer = 0
 dim shared GLOBAL_SoundInitialized as integer = 0
+dim shared GLOBAL_SoundErrorMsg as string
 
-sub SOUND_Init ()
+function SOUND_GetErrorMsg() as string
+    
+    return GLOBAL_SoundErrorMsg
+    
+end function
 
+function SOUND_Init () as integer
+    
 	GLOBAL_NumSounds = 0
+    GLOBAL_SoundErrorMsg = ""
+    
+    if SDL_Init( SDL_INIT_AUDIO ) <> 0 then
+        GLOBAL_SoundErrorMsg = *SDL_GetError()
+    end if
 	
-	if Mix_OpenAudio( AUDIO_RATE, AUDIO_FORMAT, AUDIO_CHANNELS, AUDIO_BUFFERS ) then
-		return
+	if Mix_OpenAudio( AUDIO_RATE, AUDIO_FORMAT, AUDIO_CHANNELS, AUDIO_BUFFERS ) <> 0 then
+        GLOBAL_SoundErrorMsg = *SDL_GetError()
+		return 1
 	end if
 	
 	if (Mix_Init( MIX_INIT_OGG ) and MIX_INIT_OGG) <> MIX_INIT_OGG then
-		return
+        GLOBAL_SoundErrorMsg = *SDL_GetError()
+		return 1
 	end if
-	
+    
 	Mix_AllocateChannels(GLOBAL_MaxChannels)
 	dim n as integer
 	for n = 0 to GLOBAL_MaxChannels-1
@@ -48,8 +61,10 @@ sub SOUND_Init ()
     Mix_VolumeMusic(GLOBAL_MusicVolume*MIX_MAX_VOLUME)
 	
 	GLOBAL_SoundInitialized = 1
-
-end sub
+    
+    return 0
+    
+end function
 
 sub SOUND_Release ()
 

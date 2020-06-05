@@ -779,56 +779,62 @@ SUB LD2_Init
   RANDOMIZE TIMER
   
   'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
-  
-  PRINT "Allocating memory..."
-  WaitSeconds 0.3333
-  
-  '- Init SHAREDs
-  '--------------------------------------------
-  LarryFile   = DATA_DIR+"gfx/larry2.put"
-  TilesFile   = DATA_DIR+"gfx/ld2tiles.put"
-  LightFile   = DATA_DIR+"gfx/ld2light.put"
-  EnemiesFile = DATA_DIR+"gfx/enemies.put"
-  GutsFile    = DATA_DIR+"gfx/ld2guts.put"
-  SceneFile   = DATA_DIR+"gfx/ld2scene.put"
-  ObjectsFile = DATA_DIR+"gfx/objects.put"
-  BossFile    = DATA_DIR+"gfx/boss1.put"
-  FontFile    = DATA_DIR+"gfx/font.put"
-  Animation   = 1
-  NumLives    = 1
-  Lighting1   = 1
-  Lighting2   = 1
-  Gravity     = 0.06
-  XShift      = 0
-  '--------------------------------------------
-  
-  REDIM TransparentSprites (255) AS INTEGER
-  '--------------------------------------------
-  'IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY ( post sprites alloc ):"+STR(FRE(-1))
-  '--------------------------------------------
-  'GFX_InitBuffers
-  '--------------------------------------------
-  'IF LD2_isDebugMode() THEN LD2_Debug "Allocating map arrays..."
-  '--------------------------------------------
-  
-  '--------------------------------------------
-  'IF LD2_isDebugMode() THEN LD2_Debug "FREE MEMORY ( post other alloc ):"+STR(FRE(-1))
+    
+    PRINT "Larry the Dinosaur II v1.1.68"
+    
+    print "Initializing system... ("+GetCommonInfo()+")"
+    if InitCommon() <> 0 then
+        print "INIT ERROR! "+GetCommonErrorMsg()
+    end if
+    
+    WaitSeconds 0.3333
+    
+    if LD2_HasFlag(CLASSICMODE) then
+        LarryFile   = DATA_DIR+"2002/gfx/larry2.put"
+        TilesFile   = DATA_DIR+"2002/gfx/ld2tiles.put"
+        LightFile   = DATA_DIR+"2002/gfx/ld2light.put"
+        EnemiesFile = DATA_DIR+"2002/gfx/enemies.put"
+        GutsFile    = DATA_DIR+"2002/gfx/ld2guts.put"
+        SceneFile   = DATA_DIR+"2002/gfx/ld2scene.put"
+        ObjectsFile = DATA_DIR+"2002/gfx/objects.put"
+        BossFile    = DATA_DIR+"2002/gfx/boss1.put"
+        FontFile    = DATA_DIR+"2002/gfx/font.put"
+    else
+        LarryFile   = DATA_DIR+"gfx/larry2.put"
+        TilesFile   = DATA_DIR+"gfx/ld2tiles.put"
+        LightFile   = DATA_DIR+"gfx/ld2light.put"
+        EnemiesFile = DATA_DIR+"gfx/enemies.put"
+        GutsFile    = DATA_DIR+"gfx/ld2guts.put"
+        SceneFile   = DATA_DIR+"gfx/ld2scene.put"
+        ObjectsFile = DATA_DIR+"gfx/objects.put"
+        BossFile    = DATA_DIR+"gfx/boss1.put"
+        FontFile    = DATA_DIR+"gfx/font.put"
+    end if
+    
+    Animation   = 1
+    NumLives    = 1
+    Lighting1   = 1
+    Lighting2   = 1
+    Gravity     = 0.06
+    XShift      = 0
   '--------------------------------------------
   
   NumItems = 0
   NumDoors = 0
   NumGuts = 0
   NumInvSlots = 8
-  
+    
   IF LD2_NotFlag(NOSOUND) THEN
     
-    PRINT "Initializing sound..."
+    PRINT "Initializing sound...  ("+LD2_GetSoundInfo()+")"
     WaitSeconds 0.3333
 
-    LD2_InitSound 1
+    if LD2_InitSound(1) <> 0 then
+        print "SOUND ERROR! "+LD2_GetSoundErrorMsg()
+        end
+    end if
     
     'AddMusic mscTITLE    , DATA_DIR+"sound/title.ogg", 1
-    AddMusic mscTHEME    , DATA_DIR+"sound/music/theme.ogg", 0
     AddMusic mscWANDERING, DATA_DIR+"sound/music/creepy.ogg", 1
     AddMusic mscOPENING  , DATA_DIR+"sound/orig/creepy.ogg", 1
     AddMusic mscINTRO    , DATA_DIR+"sound/orig/intro.ogg", 0
@@ -848,6 +854,13 @@ SUB LD2_Init
     AddMusic mscSMALLROOM0, DATA_DIR+"sound/msplice/smallroom0.wav", 1
     AddMusic mscSMALLROOM1, DATA_DIR+"sound/msplice/smallroom1.wav", 1
     
+    AddMusic mscTHEMECLASSIC , DATA_DIR+"2002/sfx/intro.mod", 0
+    AddMusic mscINTROCLASSIC , DATA_DIR+"2002/sfx/intro.mp3", 0
+    AddMusic mscWANDERCLASSIC, DATA_DIR+"2002/sfx/creepy.mp3", 1
+    AddMusic mscUHOHCLASSIC  , DATA_DIR+"2002/sfx/uhoh.mp3", 0
+    AddMusic mscBOSSCLASSIC  , DATA_DIR+"2002/sfx/boss.mp3", 1
+    AddMusic mscENDINGCLASSIC, DATA_DIR+"2002/sfx/ending.mod", 0
+    
     
     'AddSound sfxGROWL  , DATA_DIR+"sound/splice/growl2.ogg"
     'AddSound sfxSCARE  , DATA_DIR+"sound/splice/scare0.ogg"
@@ -864,8 +877,12 @@ SUB LD2_Init
     
   END IF
   
-  PRINT "Intializing video..."
-  LD2_InitVideo "Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL
+  PRINT "Initializing video...  ("+LD2_GetVideoInfo()+")"
+  if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL) <> 0 then
+    print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
+    end
+  end if
+    WaitSeconds 0.3333
   LD2_LoadPalette PaletteFile
   
   for i = 0 to 11
@@ -893,6 +910,8 @@ SUB LD2_Init
   
   Mobs.Init
   
+    print "Starting game..."
+    WaitSeconds 0.3333
   LD2_cls
   
   '- add method for LD2_addmobtype, move these to LD2_bas

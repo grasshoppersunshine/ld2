@@ -9,9 +9,10 @@
 #define AUDIO_CHANNELS  2
 #define AUDIO_BUFFERS   1024
 
-declare sub SOUND_Init ()
-declare sub SOUND_Release ()
-declare sub SOUND_Update ()
+declare function SOUND_GetErrorMsg() as string
+declare function SOUND_Init() as integer
+declare sub SOUND_Release()
+declare sub SOUND_Update()
 
 declare function SOUND_GetMusicVolume() as double
 declare function SOUND_GetSoundVolume() as double

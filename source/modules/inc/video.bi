@@ -13,10 +13,13 @@ private:
     _window as SDL_Window ptr
     _renderer as SDL_Renderer ptr
     _palette as Palette256 ptr
+    
+    _error_msg as string
 
 public:
 
-    declare sub init(cols as integer, rows as integer, fullscreen as integer, title as string)
+    declare function getErrorMsg() as string
+    declare function init(cols as integer, rows as integer, fullscreen as integer, title as string) as integer
     declare sub shutdown()
     declare sub setPalette(p as Palette256 ptr)
     declare function getRenderer() as SDL_Renderer ptr

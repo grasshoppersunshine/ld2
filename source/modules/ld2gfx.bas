@@ -11,12 +11,39 @@ dim shared VideoHandle as Video
 dim shared VideoBuffers(1) as VideoBuffer
 dim shared RGBpal as Palette256
 dim shared WhitePalette as Palette256
+dim shared VideoErrorMessage as string
 
 const DATA_DIR = "data/"
 
-sub LD2_InitVideo(title as string, screen_w as integer, screen_h as integer, fullscreen as integer = 0)
+function LD2_GetVideoInfo() as string
     
-    VideoHandle.init screen_w, screen_h, fullscreen, title
+    dim versionCompiled as SDL_Version
+    dim versionLinked as SDL_Version
+    dim compiled as string
+    dim linked as string
+    
+    SDL_VERSION_(@versionCompiled)
+    SDL_GetVersion(@versionLinked)
+    compiled = str(versionCompiled.major)+"."+str(versionCompiled.minor)+"."+str(versionCompiled.patch)
+    linked = str(versionLinked.major)+"."+str(versionLinked.minor)+"."+str(versionLinked.patch)
+    
+    return "SDL_mixer "+compiled+" (compiled) / "+linked+" (linked)"
+    
+end function
+
+function LD2_GetVideoErrorMsg() as string
+    
+    return VideoErrorMessage
+    
+end function
+
+function LD2_InitVideo(title as string, screen_w as integer, screen_h as integer, fullscreen as integer = 0) as integer
+    
+    VideoErrorMessage = ""
+    if VideoHandle.init(screen_w, screen_h, fullscreen, title) <> 0 then
+        VideoErrorMessage = VideoHandle.getErrorMsg()
+        return 1
+    end if
     VideoBuffers(0).init( @VideoHandle )
     VideoBuffers(1).init( @VideoHandle )
     
@@ -26,7 +53,9 @@ sub LD2_InitVideo(title as string, screen_w as integer, screen_h as integer, ful
     next n
     WhitePalette.setRGBA(0, 0, 0, 0, 255)
     
-end sub
+    return 0
+    
+end function
 
 sub LD2_SetSpritesColor(sprites as VideoSprites ptr, c as integer)
     

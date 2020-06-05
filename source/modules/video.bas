@@ -1,13 +1,23 @@
 #include once "inc/video.bi"
 
-sub Video.init(cols as integer, rows as integer, fullscreen as integer, title as string)
+function Video.getErrorMsg() as string
+    
+    return this._error_msg
+    
+end function
+
+function Video.init(cols as integer, rows as integer, fullscreen as integer, title as string) as integer
     
     this._cols = cols
     this._rows = rows
     this._fullscreen = fullscreen
     this._palette = 0
+    this._error_msg = ""
     
-    SDL_Init( SDL_INIT_VIDEO )
+    if SDL_Init( SDL_INIT_VIDEO ) <> 0 then
+        this._error_msg = *SDL_GetError()
+        return 1
+    end if
     
     if fullscreen then
         this._window = SDL_CreateWindow( title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP)
@@ -21,8 +31,10 @@ sub Video.init(cols as integer, rows as integer, fullscreen as integer, title as
     SDL_SetRenderDrawBlendMode( this._renderer, SDL_BLENDMODE_BLEND )
     
     if fullscreen then SDL_ShowCursor( 0 )
+    
+    return 0
 
-end sub
+end function
 
 sub Video.shutdown()
     
