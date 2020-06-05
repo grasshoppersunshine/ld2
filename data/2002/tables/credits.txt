@@ -1,0 +1,7 @@
+Programming :  Joe King
+Graphics    :  Joe King
+Story       :  Joe King
+Level Design:  Joe King
+Sound       :  Various Resources
+Music       :  Joe King & Various Resources
+Testing     :  Joe King
