@@ -1,0 +1,8 @@
+All files in this folder were created by Joe King for
+purposes of the Larry The Dinosaur II project.
+
+This code was compiled in Q(uick)BASIC v4.5
+LD2E.BAS is the main module.
+
+The code for NOSOUND.EXE is just all of this code with
+all the lines about DS4QB remarked out.
