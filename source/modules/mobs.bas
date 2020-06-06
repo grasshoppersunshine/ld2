@@ -10,7 +10,7 @@ sub MobileCollection.add (mob AS Mobile)
     
     i = this.findVacantSlot()
     
-    if (i >= 0) and (i < MAXMOBS) then
+    if (i >= 0) and (i < MAXMOBILES) then
         this._mobs(i).id = mob.id
         this._mobs(i).vx = mob.vx
         this._mobs(i).x = mob.x
@@ -71,7 +71,7 @@ end function
 sub MobileCollection.clear
     
     dim n as integer
-    for n = 0 to MAXMOBS - 1
+    for n = 0 to MAXMOBILES - 1
         this._mobs(n).vacant = 1
     next n
     
@@ -136,8 +136,8 @@ function MobileCollection.findVacantSlot () as integer
     dim vacant as integer
     
     vacant = -1
-    if (this._lastMob >= 0) and (this._lastMob < MAXMOBS) then
-        for n = this._lastMob to MAXMOBS - 1
+    if (this._lastMob >= 0) and (this._lastMob < MAXMOBILES) then
+        for n = this._lastMob to MAXMOBILES - 1
             if this._mobs(n).vacant then
                 vacant = n
                 exit for
@@ -151,7 +151,7 @@ function MobileCollection.findVacantSlot () as integer
                 end if
             next n
         end if
-    elseif this._lastMob < MAXMOBS then
+    elseif this._lastMob < MAXMOBILES then
         vacant = 0
     end if
     
@@ -213,7 +213,7 @@ end function
 
 sub MobileCollection.init
     
-    redim this._mobs(MAXMOBS) AS Mobile
+    redim this._mobs(MAXMOBILES) AS Mobile
     redim this._mobTypes(MAXMOBTYPES) AS MobileType
     
     this.clear

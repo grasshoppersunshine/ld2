@@ -773,7 +773,7 @@ sub LoadSounds ()
     AddSound Sounds.pickup , "pickup.wav"
     AddSound Sounds.look   , "look.wav"
     AddSound Sounds.drop   , "drop.wav"
-    AddSound Sounds.equip  , "orig/equip.wav"
+    AddSound Sounds.equip  , "reload.wav"
     
     AddSound Sounds.blood1 , "splice/blood1.wav"
     AddSound Sounds.blood2 , "splice/blood0.wav"
@@ -796,12 +796,16 @@ sub LoadSounds ()
     AddSound Sounds.jump   , "jump.wav"
     AddSound Sounds.punch  , "punch.wav"
     
+    AddSound Sounds.outofammo, "outofammo.wav"
+    AddSound Sounds.reload, "reload.wav"
+    
 end sub
 
 sub DoAction(actionId as integer, itemId as integer = 0)
     
     dim player as PlayerType
     dim success as integer
+    static soundTimer as double
     
     select case actionId
     case ActionIds.Crouch
@@ -811,21 +815,21 @@ sub DoAction(actionId as integer, itemId as integer = 0)
             LD2_PlaySound Sounds.equip
         end if
     case ActionIds.Jump
-        if LD2_JumpPlayer(1.5) then
+        if Player_Jump(1.5) then
             LD2_PlaySound Sounds.jump
         end if
     case ActionIds.LookUp
         if LD2_LookUp() then
         end if
     case ActionIds.PickUpItem
-        if LD2_PickUpItem() then
+        if Items_Pickup() then
             LD2_PlaySound Sounds.pickup
         end if
     case ActionIds.RunRight
-        if LD2_MovePlayer(1) then
+        if Player_Move(1) then
         end if
     case ActionIds.RunLeft
-        if LD2_MovePlayer(-1) then
+        if Player_Move(-1) then
         end if
     case ActionIds.Shoot, ActionIds.ShootRepeat
         if actionId = ActionIds.Shoot then
@@ -833,7 +837,7 @@ sub DoAction(actionId as integer, itemId as integer = 0)
         else
             success = LD2_ShootRepeat()
         end if
-        if success then
+        if success = 1 then
             LD2_GetPlayer player
             select case player.weapon
             case FIST
@@ -847,8 +851,11 @@ sub DoAction(actionId as integer, itemId as integer = 0)
             case DESERTEAGLE
                 LD2_PlaySound Sounds.deserteagle
             end select
-        else
-            '- play click sound???
+        elseif success = -1 then
+            if (timer - soundTimer) > 0.5 then
+                LD2_PlaySound Sounds.outofammo
+                soundTimer = timer
+            end if
         end if
     end select
     
@@ -901,6 +908,8 @@ SUB Main
   dim player as PlayerType
 
     dim newShot as integer
+    
+    dim keyrUp as integer
   
   fm = 0
   
@@ -931,8 +940,11 @@ SUB Main
 	END IF
     
     PullEvents
-    
-	LD2_ProcessEntities
+ 
+    Player_Animate
+	Mobs_Animate
+    Guts_Animate
+    Doors_Animate
 	LD2_RenderFrame
     
     LD2_GetPlayer player
@@ -1047,7 +1059,7 @@ SUB Main
 
 	IF RoofScene = 0 AND CurrentRoom = 23 THEN
 	  IF player.x <= 700 AND FirstBoss = 0 THEN
-		LD2_CreateMob 500, 144, BOSS1
+		Mobs_Add 500, 144, BOSS1
 		LD2_SetBossBar BOSS1
 		FirstBoss = 1
 	  ELSEIF player.x <= 1300 AND fm = 0 THEN
@@ -1144,13 +1156,23 @@ SUB Main
             end if
             LD2_ShowPlayer
         end if
+        if keyboard(KEY_R) and keyrUp then
+            LD2_AddAmmo ItemIds.ShotgunAmmo, 99
+            LD2_AddAmmo ItemIds.PistolAmmo, 99
+            LD2_AddAmmo ItemIds.MachineGunAmmo, 99
+            LD2_AddAmmo ItemIds.MagnumAmmo, 99
+            LD2_PlaySound Sounds.reload
+            keyRup = 0
+        else
+            keyrUp = 1
+        end if
     end if
 
 	if PlayerIsRunning = 0 then LD2_SetPlayerlAni 21 '- legs still/standing/not-moving
 
 	IF LD2_HasFlag(BOSSKILLED) THEN
 		IF CurrentRoom = ROOFTOP AND RoofScene = 0 THEN
-			LD2_CreateItem 0, 0, YELLOWCARD, BOSS1
+			Items_Add 0, 0, YELLOWCARD, BOSS1
 		END IF
 		LD2_SetBossBar 0
 		LD2_ClearFlag BOSSKILLED
@@ -1259,7 +1281,7 @@ end function
 
 sub RenderScene (visible as integer = 1)
     
-    LD2_ProcessGuts
+    Guts_Animate
     LD2_RenderFrame
     RenderPoses
     if visible then LD2_RefreshScreen
@@ -1539,7 +1561,7 @@ sub Scene4EndConditions()
     LD2_SetSceneMode MODEOFF
     
     LD2_PutTile 13, 8, 19, 3
-    LD2_CreateMob 208, 144, ROCKMONSTER
+    Mobs_Add 208, 144, ROCKMONSTER
     LD2_LockElevator
     
     LD2_PlayMusic mscMARCHoftheUHOH
@@ -1581,8 +1603,8 @@ function Scene4Go() as integer
     RenderScene
     
     LD2_PlaySound Sounds.shatter
-    LD2_MakeGuts SplatterTypes.Glass, 208, 136, 2, -1
-    LD2_MakeGuts SplatterTypes.Glass, 224, 136, 2, 1
+    Guts_Add GutsIds.Glass, 208, 136, 2, -1
+    Guts_Add GutsIds.Glass, 224, 136, 2, 1
 
     '- Rockmonster busts through window and eats the janitor/doctor
     '--------------------------------------------------------------
@@ -1822,8 +1844,8 @@ function Scene5Go() as integer
     
     LD2_StopMusic
     
-    LD2_MakeGuts rx + 8, 120, 8, 1
-    LD2_MakeGuts rx + 8, 120, 8, -1
+    Guts_Add rx + 8, 120, 8, 1
+    Guts_Add rx + 8, 120, 8, -1
     
     LD2_PlaySound Sounds.snarl
     LD2_PlaySound Sounds.splatter
@@ -2181,12 +2203,12 @@ SUB ScenePortal
 
   NEXT n
 
-  LD2_MakeGuts rx + 8, 144, 8, 1
-  LD2_MakeGuts rx + 8, 144, 8, -1
+  Guts_Add rx + 8, 144, 8, 1
+  Guts_Add rx + 8, 144, 8, -1
 
   SteveIsThere = 0
   FOR n = 1 TO 200
-	LD2_ProcessGuts
+	Guts_Animate
 	LD2_RenderFrame
    
 	LD2_put Trooper.x, Trooper.y, 72, idSCENE, 0
@@ -2234,12 +2256,12 @@ SUB ScenePortal
 
   NEXT n
 
-  LD2_MakeGuts rx + 8, 144, 8, 1
-  LD2_MakeGuts rx + 8, 144, 8, -1
+  Guts_Add rx + 8, 144, 8, 1
+  Guts_Add rx + 8, 144, 8, -1
 
   TrooperIsThere = 0
   FOR n = 1 TO 200
-	LD2_ProcessGuts
+	Guts_Animate
 	LD2_RenderFrame
    
 	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
@@ -2342,8 +2364,8 @@ SUB ScenePortal
 	NEXT n
 
   LD2_ClearMobs
-  LD2_CreateMob Barney.x - 32, 143, idBOSS2
-  LD2_SetBossBar idBOSS2
+  Mobs_Add Barney.x - 32, 143, BOSS2
+  LD2_SetBossBar BOSS2
   'FirstBoss = 1
   LD2_SetAccessLevel 0
   LD2_PlayMusic mscBOSS
@@ -2608,15 +2630,14 @@ SUB Start
       END
     END IF
     
-    CLS
-    PRINT "Larry the Dinosaur II v1.1.68"
-    
-    WaitSeconds 0.5
-    
     LD2_Init
     LD2_SetMusicVolume 1.0
-    LD2_SetSoundVolume 1.0
+    LD2_SetSoundVolume 0.5
     LoadSounds
+    
+    if LD2_HasFlag(CLASSICMODE) then
+        SCENE_SetScenesFile "2002/tables/scenes.txt"
+    end if
     
     'Mobs.AddType ROCKMONSTER
     'Mobs.AddType TROOP1
@@ -2626,11 +2647,17 @@ SUB Start
     
     IF (LD2_NotFlag(TESTMODE)) AND (LD2_NotFlag(SKIPOPENING)) THEN '(LD2_isDebugMode% = 0) AND
       IF firstLoop THEN
-        LD2_PlayMusic mscOPENING
-        i = WaitSecondsUntilKey(2.0)
-        TITLE_Opening
+        if LD2_HasFlag(CLASSICMODE) then
+            TITLE_Opening_Classic
+        else
+            TITLE_Opening
+        end if
       END IF
-      TITLE_Menu
+        if LD2_HasFlag(CLASSICMODE) then
+            TITLE_Menu_Classic
+        else
+            TITLE_Menu
+        end if
     ELSE
       'LD2_Ad
     END IF
@@ -2642,7 +2669,11 @@ SUB Start
     IF (LD2_NotFlag(TESTMODE)) THEN '(LD2_isDebugMode% = 0) AND
         LD2_FadeOutMusic
         'i% = WaitSecondsUntilKey%(1.0)
-        TITLE_Intro
+        if LD2_HasFlag(CLASSICMODE) then
+            TITLE_Intro_Classic
+        else
+            TITLE_Intro
+        end if
     ELSE
         'TITLE.Ad
         'TITLE.AdTwo
@@ -2651,7 +2682,11 @@ SUB Start
     IF LD2_isDebugMode() THEN LD2_Debug "Starting game..."
     
     STATUS_SetUseItemCallback @LD2_UseItem
-    LD2_GenerateSky 
+    if LD2_hasFlag(CLASSICMODE) then
+        LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp", 2, 0 '- add function to load bsv file?
+    else
+        LD2_GenerateSky 
+    end if
     'LD2_LoadBitmap DATA_DIR+"gfx/origback.bmp", 2, 0
     CurrentRoom = 14
     LD2_SetRoom CurrentRoom

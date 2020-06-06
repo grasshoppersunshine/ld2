@@ -256,8 +256,8 @@
     
     if keyboard(KEY_TAB) or keyboard(KEY_C) or mouseRB() then
         if activeLayer = 1 then CurrentTile = EditMap(mapX, mapY)
-        if activeLayer = 2 then CurrentTileL = LightMap1(mapX, mapY)
-        if activeLayer = 3 then CurrentTileL = LightMap2(mapX, mapY)
+        if activeLayer = 2 then CurrentTileL = LightMap2(mapX, mapY)
+        if activeLayer = 3 then CurrentTileL = LightMap1(mapX, mapY)
         if activeLayer = 4 then CUrrentTileO = GetItem(mapX, mapY)
     end if
    
@@ -372,10 +372,15 @@ SUB Init
 
 END SUB
 
+'sub SaveMapNewFormat(filename as string)
+'    
+'    open filename
+'    
+'end sub
+
 SUB LoadMap (filename as string)
 
-    dim _byte as string * 1
-    dim c as integer
+    dim _byte as ubyte 'string * 1
     dim cn as integer
     dim i as integer
     dim n as integer
@@ -398,19 +403,17 @@ SUB LoadMap (filename as string)
     end if
 
     NumItems = 0
-    c = 1
 
     '- Get the file header
     '-----------------------
  
       FOR n = 1 TO 12
-        GET #1, c, _byte
-        ft = ft + _byte
-        c = c + 1
+        GET #1, , _byte
+        ft = ft + chr(_byte)        
       NEXT n
 
-      GET #1, c, _byte: c = c + 1
-      GET #1, c, _byte: c = c + 1
+      GET #1, , _byte
+      GET #1, , _byte
      
       IF ft <> "[LD2L-V0.45]" THEN
         Notice !"ERROR!$$ * Invalid File Tag"
@@ -420,57 +423,57 @@ SUB LoadMap (filename as string)
     '- Get the Level Name
     '-----------------------
 
-      GET #1, c, _byte: c = c + 1
+      GET #1, , _byte
       
       DO
-        GET #1, c, _byte: c = c + 1
-        IF _byte = "|" THEN EXIT DO
-        nm = nm + _byte
+        GET #1, , _byte
+        IF chr(_byte) = "|" THEN EXIT DO
+        nm = nm + chr(_byte)
       LOOP
 
     '- Get the Credits
     '-----------------------
 
       DO
-        GET #1, c, _byte: c = c + 1
-        IF _byte = "|" THEN EXIT DO
-        cr = cr + _byte
+        GET #1, , _byte
+        IF chr(_byte) = "|" THEN EXIT DO
+        cr = cr + chr(_byte)
       LOOP
 
     '- Get the Date
     '-----------------------
 
       DO
-        GET #1, c, _byte: c = c + 1
-        IF _byte = CHR(34) THEN EXIT DO
-        dt = dt + _byte
+        GET #1, , _byte
+        IF _byte = 34 THEN EXIT DO
+        dt = dt + chr(_byte)
       LOOP
 
     '- Load in the info
     '-----------------------
 
-      GET #1, c, _byte: c = c + 1
-      GET #1, c, _byte: c = c + 1
-      GET #1, c, _byte: c = c + 1
+      GET #1, , _byte
+      GET #1, , _byte
+      GET #1, , _byte
 
       DO
-        GET #1, c, _byte: c = c + 1
-        IF _byte = CHR(34) THEN EXIT DO
-        info = info + _byte
+        GET #1, , _byte
+        IF _byte = 34 THEN EXIT DO
+        info = info + chr(_byte)
       LOOP
      
     '- Load in the map data
     '-----------------------
      
-      GET #1, c, _byte: c = c + 1
-      GET #1, c, _byte: c = c + 1
+      GET #1, , _byte
+      GET #1, , _byte
 
       FOR y = 0 TO 12
-        GET #1, c, _byte: c = c + 1
-        GET #1, c, _byte: c = c + 1
+        GET #1, , _byte
+        GET #1, , _byte
         FOR x = 0 TO 200
-          GET #1, c, _byte: c = c + 1
-          EditMap(x, y) = ASC(_byte)
+          GET #1, , _byte
+          EditMap(x, y) = _byte
         NEXT x
       NEXT y
 
@@ -478,13 +481,13 @@ SUB LoadMap (filename as string)
     '----------------------------
     
       FOR y = 0 TO 12
-        GET #1, c, _byte: c = c + 1
-        GET #1, c, _byte: c = c + 1
+        GET #1, , _byte
+        GET #1, , _byte
         FOR x = 0 TO 200
-          GET #1, c, _byte: c = c + 1
-          LightMap1(x, y) = ASC(_byte)
-          GET #1, c, _byte: c = c + 1
-          LightMap2(x, y) = ASC(_byte)
+          GET #1, , _byte
+          LightMap1(x, y) = _byte
+          GET #1, , _byte
+          LightMap2(x, y) = _byte
         NEXT x
       NEXT y
 
@@ -492,25 +495,25 @@ SUB LoadMap (filename as string)
     '-----------------------
     
       FOR y = 0 TO 12
-        GET #1, c, _byte: c = c + 1
-        GET #1, c, _byte: c = c + 1
+        GET #1, , _byte
+        GET #1, , _byte
         FOR x = 0 TO 200
-          GET #1, c, _byte: c = c + 1
-          AniMap(x, y) = ASC(_byte)
+          GET #1, , _byte
+          AniMap(x, y) = _byte
         NEXT x
       NEXT y
 
     '- Load in the item data
     '-----------------------
      
-      GET #1, c, _byte: c = c + 1
-      GET #1, c, _byte: c = c + 1
+      GET #1, , _byte
+      GET #1, , _byte
 
-      GET #1, c, _byte: NumItems = ASC(_byte): c = c + 1
+      GET #1, , _byte: NumItems = _byte
       FOR i = 1 TO NumItems
-        GET #1, c, Item(i).x: c = c + 2
-        GET #1, c, Item(i).y: c = c + 2
-        GET #1, c, _byte: Item(i).Item = ASC(_byte): c = c + 1
+        GET #1, , Item(i).x
+        GET #1, , Item(i).y
+        GET #1, , _byte: Item(i).Item = _byte
       NEXT i
  
   CLOSE #1
@@ -687,68 +690,68 @@ SUB SaveMap (filename as string)
   
       FOR n = 1 TO LEN(ft)
         v = ASC(mid(ft, n, 1))
-        PUT #1, c, v
-        c = c + 1
+        PUT #1, , v
+        
       NEXT n
 
-      v = 13: PUT #1, c, v: c = c + 1
-      v = 10: PUT #1, c, v: c = c + 1
+      v = 13: PUT #1, , v
+      v = 10: PUT #1, , v
 
     '- Write the name
     '-----------------------
    
-      v = 34: PUT #1, c, v: c = c + 1      '- 34 = double quotes
+      v = 34: PUT #1, , v      '- 34 = double quotes
      
       FOR n = 1 TO LEN(nm)
         v = ASC(MID(nm, n, 1))
-        PUT #1, c, v
-        c = c + 1
+        PUT #1, , v
+        
       NEXT n
 
-      v = 124: PUT #1, c, v: c = c + 1     '- 124 is |
+      v = 124: PUT #1, , v     '- 124 is |
 
     '- Write the credits
     '-----------------------
 
       FOR n = 1 TO LEN(cr)
         v = ASC(MID(cr, n, 1))
-        PUT #1, c, v
-        c = c + 1
+        PUT #1, , v
+        
       NEXT n
    
-      v = 124: PUT #1, c, v: c = c + 1     '- 124 is |
+      v = 124: PUT #1, , v     '- 124 is |
      
     '- Write the date
     '-----------------------
 
       FOR n = 1 TO LEN(dt)
         v = ASC(MID(dt, n, 1))
-        PUT #1, c, v
-        c = c + 1
+        PUT #1, , v
+        
       NEXT n
 
-      v = 34: PUT #1, c, v: c = c + 1      '- 34 = double quotes
+      v = 34: PUT #1, , v      '- 34 = double quotes
      
-      v = 13: PUT #1, c, v: c = c + 1
-      v = 10: PUT #1, c, v: c = c + 1
+      v = 13: PUT #1, , v
+      v = 10: PUT #1, , v
 
     '- Write the info
     '-----------------------
 
-      v = 34: PUT #1, c, v: c = c + 1      '- 34 = double quotes
+      v = 34: PUT #1, , v      '- 34 = double quotes
      
       FOR n = 1 TO LEN(info)
         v = ASC(MID(info, n, 1))
-        PUT #1, c, v
-        c = c + 1
+        PUT #1, , v
+        
       NEXT n
 
-      v = 34: PUT #1, c, v: c = c + 1      '- 34 = double quotes
+      v = 34: PUT #1, , v      '- 34 = double quotes
     
-      v = 13: PUT #1, c, v: c = c + 1
-      v = 10: PUT #1, c, v: c = c + 1
-      v = 13: PUT #1, c, v: c = c + 1
-      v = 10: PUT #1, c, v: c = c + 1
+      v = 13: PUT #1, , v
+      v = 10: PUT #1, , v
+      v = 13: PUT #1, , v
+      v = 10: PUT #1, , v
 
     '- Write the map data
     '-----------------------
@@ -756,11 +759,11 @@ SUB SaveMap (filename as string)
       FOR y = 0 TO 12
         FOR x = 0 TO 200
             _word = EditMap(x, y)
-          PUT #1, c, _word
-          c = c + 1
+          PUT #1, , _word
+          
         NEXT x
-        v = 13: PUT #1, c, v: c = c + 1
-        v = 10: PUT #1, c, v: c = c + 1
+        v = 13: PUT #1, , v
+        v = 10: PUT #1, , v
       NEXT y
 
     '- Write the light map data
@@ -768,13 +771,13 @@ SUB SaveMap (filename as string)
 
       FOR y = 0 TO 12
         FOR x = 0 TO 200
-            _word = LightMap1(x, y): put #1, c, _word: c = c + 1
-            _word = LightMap2(x, y): put #1, c, _word: c = c + 1
-          'PUT #1, c, LightMap1(x, y): c = c + 1
-          'PUT #1, c, LightMap2(x, y): c = c + 1
+            _word = LightMap1(x, y): put #1, , _word
+            _word = LightMap2(x, y): put #1, , _word
+          'PUT #1, , LightMap1(x, y)
+          'PUT #1, , LightMap2(x, y)
         NEXT x
-        v = 13: PUT #1, c, v: c = c + 1
-        v = 10: PUT #1, c, v: c = c + 1
+        v = 13: PUT #1, , v
+        v = 10: PUT #1, , v
       NEXT y
 
     '- Write the animation data
@@ -783,11 +786,11 @@ SUB SaveMap (filename as string)
       FOR y = 0 TO 12
         FOR x = 0 TO 200
             _word = AniMap(x, y)
-            PUT #1, c, _word
-            c = c + 1
+            PUT #1, , _word
+            
         NEXT x
-        v = 13: PUT #1, c, v: c = c + 1
-        v = 10: PUT #1, c, v: c = c + 1
+        v = 13: PUT #1, , v
+        v = 10: PUT #1, , v
       NEXT y
 
 
@@ -795,11 +798,11 @@ SUB SaveMap (filename as string)
     '-----------------------
 
         _word = NumItems
-        put #1, c, _word: c = c + 1
+        put #1, , _word
         for i = 1 to NumItems
-            _word = Item(i).x   : put #1, c, _word: c = c + 2
-            _word = Item(i).y   : put #1, c, _word: c = c + 2
-            _word = Item(i).item: put #1, c, _word: c = c + 1
+            _word = Item(i).x   : put #1, , _word: c = c + 2
+            _word = Item(i).y   : put #1, , _word: c = c + 2
+            _word = Item(i).item: put #1, , _word
         next i
 
   CLOSE #1

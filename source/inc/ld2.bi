@@ -153,6 +153,7 @@ CONST TROOP2 = 302
 CONST BLOBMINE = 303
 CONST JELLYBLOB = 304
 CONST BOSS1 = 305
+CONST BOSS2 = 306
 'CONST MINIROCK    = 306
 'CONST TROOP3      = 307
 'CONST PLANT       = 308
@@ -195,6 +196,14 @@ const mscROOM4     = 27
 const mscROOM5     = 28
 const mscSMALLROOM0 = 29
 const mscSMALLROOM1 = 30
+
+const mscINTROCLASSIC = 101
+const mscTHEMECLASSIC = 102
+const mscWANDERCLASSIC = 103
+const mscUHOHCLASSIC = 104
+const mscBOSSCLASSIC = 105
+const mscENDINGCLASSIC = 106
+
 
 '==============================================
 '= SFX
@@ -250,6 +259,9 @@ enum Sounds
     '// scene 5
     splatter
     snarl
+    '//
+    outofammo
+    reload
 end enum
 
 '=======================
@@ -297,6 +309,7 @@ CONST BOSSKILLED    = &H80
 CONST GOTITEM       = &h100
 CONST MAPISLOADED   = &h200
 CONST FADEIN        = &h400
+CONST CLASSICMODE   = &h800
 
 '======================
 '= SCENE POSES

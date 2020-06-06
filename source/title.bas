@@ -21,6 +21,8 @@ TYPE TextType
 END TYPE
 
 const DATA_DIR = "data/"
+const CLASSIC_LOADBMP_DELAY = 0.5
+const CLASSIC_SCREEN_DELAY = 0.2
 
 SUB TITLE_EndDemo
 
@@ -41,11 +43,29 @@ SUB TITLE_EndDemo
 
 END SUB
 
+sub TITLE_Opening_Classic
+    
+    LD2_cls
+    LD2_LoadBitmap DATA_DIR+"2002/gfx/warning.bmp", 1, -1
+    WaitSeconds 1.0
+    LD2_RefreshScreen
+    WaitForKeyup: WaitForkeydown
+    LD2_cls
+    WaitSeconds CLASSIC_LOADBMP_DELAY
+    LD2_LoadBitmap DATA_DIR+"2002/gfx/logo.bmp", 1, -1
+    LD2_RefreshScreen
+    WaitForKeyup: WaitForkeydown
+    
+end sub
+
 SUB TITLE_Opening
     
     IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Opening"
     
     DIM e AS ElementType
+    
+    LD2_PlayMusic mscOPENING
+    WaitSecondsUntilKey(2.0)
     
     LD2_cls
     
@@ -86,6 +106,37 @@ SUB TITLE_Opening
     WaitSeconds(0.50)
     
 END SUB
+
+sub TITLE_Menu_Classic
+    
+    LD2_cls 0, 66
+    LD2_LoadBitmap DATA_DIR+"2002/gfx/title.bmp", 1, -1
+    WaitSeconds CLASSIC_LOADBMP_DELAY
+    LD2_RefreshScreen
+    
+    LD2_PlayMusic mscTHEMECLASSIC
+    do
+        PullEvents
+        if keyboard(KEY_1) or keyboard(KEY_KP_1) then
+            exit do
+        end if
+        if keyboard(KEY_2) or keyboard(KEY_KP_2) then
+            TITLE_ShowCredits_Classic
+            LD2_cls 0, 66
+            LD2_LoadBitmap DATA_DIR+"2002/gfx/title.bmp", 1, -1
+            WaitSeconds CLASSIC_LOADBMP_DELAY
+            LD2_RefreshScreen
+        end if
+        if keyboard(KEY_3) or keyboard(KEY_KP_3) then
+            WaitSeconds CLASSIC_SCREEN_DELAY
+            LD2_cls
+            WaitSeconds CLASSIC_SCREEN_DELAY
+            LD2_SetFlag EXITGAME
+            exit do
+        endif
+    loop
+    
+end sub
 
 SUB TITLE_Menu
     
@@ -138,6 +189,70 @@ SUB TITLE_Menu
     LD2_StopMusic
     
 END SUB
+
+sub TITLE_Intro_Classic
+
+  DIM File AS INTEGER
+  DIM text AS STRING
+  dim x as integer
+  dim y as integer
+  dim n as integer
+  dim a as integer
+  dim e as ElementType
+  
+    LD2_cls: LD2_cls 1, 0
+    LD2_StopMusic
+    WaitSeconds 0.6667
+    LD2_PlayMusic mscINTROCLASSIC
+    WaitSeconds 3.0 '- change to fade-in music, 0 to 50 and increments of 5 every 0.3 seconds
+    
+  LD2_RefreshScreen
+  
+  LD2_InitElement @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
+  e.y = 60
+  
+  File = FREEFILE
+  OPEN DATA_DIR+"2002/tables/intro.txt" FOR INPUT AS File
+  
+  DO WHILE NOT EOF(File)
+    
+    LINE INPUT #File, text
+    
+    if lcase(left(text, 21)) = "larry the dinosaur ii" then
+        LD2_FadeOutMusic
+    end if
+    
+    e.text = ltrim(rtrim(text))
+    
+    FOR y = 0 TO 7
+ 
+      LD2_RenderElement @e
+      a = (8-y)*54-1
+      LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
+      LD2_RefreshScreen
+      IF WaitSecondsUntilKey(0.27) THEN EXIT DO
+
+    NEXT y
+    
+    LD2_RenderElement @e
+    LD2_RefreshScreen
+    IF WaitSecondsUntilKey(3.3333) THEN EXIT DO
+
+    FOR y = 0 TO 7
+      
+      LD2_RenderElement @e
+      a = (y+1)*54-1
+      LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
+      LD2_RefreshScreen
+      IF WaitSecondsUntilKey(0.27) THEN EXIT DO
+     
+    NEXT y
+
+  LOOP
+  
+  CLOSE File
+
+end sub
 
 SUB TITLE_Intro
   
@@ -239,6 +354,43 @@ SUB TITLE_Intro
   LD2_FadeOutMusic
 
 END SUB
+
+sub TITLE_ShowCredits_Classic
+       
+    dim e as ElementType
+    dim y as integer
+    dim text as string
+    
+    WaitSeconds CLASSIC_SCREEN_DELAY
+    LD2_cls
+    LD2_cls 1, 0
+    
+    LD2_InitElement @e, "Larry The Dinosaur II - October, 2002 - Delta Code", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.y = 4
+    LD2_RenderElement @e
+    
+    LD2_InitElement @e, "", 31
+    open DATA_DIR+"tables/credits.txt" for input as #1
+        do while not eof(1)
+            line input #1, text
+            e.text += text+"\"
+            'y = y + 10
+        loop
+    close #1
+    e.x = 40: e.y = 30
+    e.text_is_monospace = 1
+    'e.text_height = 2.4
+    LD2_RenderELement @e
+    
+    LD2_InitElement @e, "Press Space To Continue", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.y = 144
+    LD2_RenderElement @e
+    
+    LD2_RefreshScreen
+    
+    WaitForKeydown(KEY_SPACE)
+    
+end sub
 
 sub TITLE_ShowCredits
     

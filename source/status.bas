@@ -118,8 +118,10 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
     
     LD2_PlaySound Sounds.status
 	
+    dim roomsFile as string
+    roomsFile = iif(LD2_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
 	ElevatorFile = FREEFILE
-	OPEN DATA_DIR+"tables/rooms.txt" FOR INPUT AS ElevatorFile
+	OPEN DATA_DIR+roomsFile FOR INPUT AS ElevatorFile
 	DO WHILE NOT EOF(ElevatorFile)
 		INPUT #ElevatorFile, floorNo: IF EOF(ElevatorFile) THEN EXIT DO
 		INPUT #ElevatorFile, filename: IF EOF(ElevatorFile) THEN EXIT DO

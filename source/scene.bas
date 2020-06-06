@@ -18,10 +18,18 @@ dim shared SceneCommands(31) as string
 dim shared SceneParams(31) as string
 dim shared SceneNumCommands as integer
 
+dim shared ScenesFile as string
+
 const DATA_DIR = "data/"
+const DEFAULT_SCENES_FILE = "tables/scenes.txt"
 '======================
 '= END PRIVATE MEMBERS
 '======================
+sub SCENE_SetScenesFile (path as string)
+    
+    ScenesFile = path
+    
+end sub
 
 FUNCTION SCENE_GetSpeakerDialogue() as string
     
@@ -39,9 +47,14 @@ FUNCTION SCENE_Init (label AS STRING) as integer
     
     DIM found AS INTEGER
     DIM row AS STRING
+    dim scenesFile as string
+    
+    if ScenesFile = "" then
+        ScenesFile = DEFAULT_SCENES_FILE
+    end if
     
     SceneData.FileId = FREEFILE
-    OPEN DATA_DIR+"tables/scenes.txt" FOR INPUT AS SceneData.FileId
+    OPEN DATA_DIR+ScenesFile FOR INPUT AS SceneData.FileId
     
     DO WHILE NOT EOF(SceneData.FileId)
         

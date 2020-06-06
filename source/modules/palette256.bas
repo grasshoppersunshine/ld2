@@ -30,9 +30,9 @@ sub Palette256.loadPalette(filename as string)
         r = (c and &hFF)
         g = (c \ &h100) and &hFF
         b = (c \ &h10000)
-        this._palette(n).r = r shl 2
-        this._palette(n).g = g shl 2
-        this._palette(n).b = b shl 2
+        this._palette(n).r = (r shl 2) + iif(r > 0, 3, 0)
+        this._palette(n).g = (g shl 2) + iif(g > 0, 3, 0)
+        this._palette(n).b = (b shl 2) + iif(b > 0, 3, 0)
         this._palette(n).a = 255
     next n
 

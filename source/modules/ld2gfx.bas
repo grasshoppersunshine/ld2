@@ -63,23 +63,40 @@ sub LD2_SetSpritesColor(sprites as VideoSprites ptr, c as integer)
     
 end sub
 
-sub LD2_LoadPalette (filename as string)
+sub LD2_LoadPalette (filename as string, alter as integer = 1)
     
     RGBPal.loadPalette filename
     VideoHandle.setPalette(@RGBPal)
     VideoBuffers(0).setPalette(@RGBPal)
     VideoBuffers(1).setPalette(@RGBPal)
     
+    if alter then
+        dim n as integer
+        dim r as integer
+        dim g as integer
+        dim b as integer
+        for n = 0 to 15
+            r = n * 16 + 7
+            g = n * 15 + 7
+            b = n * 14 + 7
+            RGBPal.setRGBA(240+n, r, g, b)
+        next n
+    end if
+    
+end sub
+
+sub LD2_CreateLightPalette(pal as Palette256 ptr)
+    
+    dim i as integer
     dim n as integer
-    dim r as integer
-    dim g as integer
-    dim b as integer
-    for n = 0 to 15
-        r = n * 16 + 7
-        g = n * 15 + 7
-        b = n * 14 + 7
-        RGBPal.setRGBA(240+n, r, g, b)
-    next n
+    dim vals(15) as integer
+    for i = 0 to 7
+        n = i*36
+        pal->setRGBA(i, 0, 0, 0, n)
+    next i
+    for i = 8 to 15
+        pal->setRGBA(i, 0, 0, 0, 255)
+    next i
     
 end sub
 
@@ -126,6 +143,16 @@ sub LD2_LoadBitmap (filename as string, bufferNum as integer, convert as integer
     end if
     
 end sub
+
+'sub LD2_LoadBitmapClassic (filename as string, bufferNum as string, convert as integer)
+'    
+'    if bufferNum = 0 then
+'        VideoHandle.loadBmp(filename)
+'    else
+'        VideoBuffers(bufferNum-1).loadBmp(filename)
+'    end if
+'    
+'end sub
 
 sub LD2_InitSprites(filename as string, sprites as VideoSprites ptr, w as integer, h as integer, flags as integer = 0)
     

@@ -6,18 +6,21 @@ const MAX_ACTION_ITEMS = 4
 type PlayerType
     x as double
     y as double
+    vx as double
+    vy as double
     state as integer
     stateTimestamp as double
-    velocity as double '- downward velocity
     landTime as double
     life as integer
     weapon as integer
     is_shooting as integer
     is_visible as integer
+    is_lookingdown as integer
     flip as integer
     lAni as double
     uAni as double
     stillani as integer
+    moved as integer
 end type
 
 type ElementType
@@ -46,21 +49,59 @@ type ElementType
     is_rendered as integer
 end type
 
-enum SplatterTypes
+type GutsIncorporated
+    id as integer
+    x as double
+    y as double
+    vx as double
+    vy as double
+    colour as integer
+    count as integer
+    angle as double
+    spin as double
+    sprite as integer
+    facing as integer
+    declare property facingLeft() as integer
+    declare property facingLeft(isFacingLeft as integer)
+    declare property facingRight() as integer
+    declare property facingRight(isFacingRight as integer)
+end type
+
+enum GutsIds
     Blood = 1
+    BloodSprite
     Glass
-    Guts
+    Gibs
     Sparks
     Smoke
 end enum
 
-'shells AS INTEGER
-'bullets AS INTEGER
-'deagles AS INTEGER
-'whitecard AS INTEGER
+declare sub Doors_Add ()
+declare sub Doors_Animate ()
+declare sub Doors_Update(id as integer)
+declare sub Doors_Open(id as integer)
+declare sub Doors_Close(id as integer)
 
-'code AS INTEGER '- door access level (make sure white is not too high)
-'tempcode AS INTEGER '- temp door access level
+declare sub Guts_Add (gutsId as integer, x as integer, y as integer, qty as integer, direction as integer = 0)
+declare sub Guts_Animate ()
+declare sub Guts_Draw ()
+
+declare sub Items_Add (x as integer, y as integer, id as integer, mobId as integer = 0)
+declare sub Items_Draw ()
+declare function Items_Pickup () as integer
+
+DECLARE SUB Mobs_Add (x AS INTEGER, y AS INTEGER, id AS INTEGER)
+
+declare sub Mobs_Generate ()
+declare sub Mobs_Animate ()
+declare sub Mobs_Draw ()
+
+declare sub Stats_Draw ()
+
+declare sub Player_Animate ()
+declare sub Player_Draw()
+declare function Player_Jump (Amount as double) as integer
+declare function Player_Move (XAmount as double) as integer
 
 DECLARE function LD2_AddAmmo (Kind AS INTEGER, Amount AS INTEGER) as integer
 DECLARE SUB LD2_AddLives (Amount AS INTEGER)
@@ -69,8 +110,7 @@ DECLARE FUNCTION LD2_AtElevator () as integer
 DECLARE SUB LD2_ClearInventorySlot (slot AS INTEGER)
 DECLARE SUB LD2_ClearMobs ()
 DECLARE SUB LD2_CountFrame ()
-DECLARE SUB LD2_CreateMob (x AS INTEGER, y AS INTEGER, id AS INTEGER)
-DECLARE SUB LD2_CreateItem (x AS INTEGER, y AS INTEGER, item AS INTEGER, EntityNum AS INTEGER)
+
 DECLARE SUB LD2_Debug (Message AS STRING)
 DECLARE SUB LD2_Drop (item as integer)
 DECLARE SUB LD2_GetPlayer (p AS PlayerType)
@@ -81,15 +121,11 @@ DECLARE SUB LD2_Init ()
 DECLARE SUB LD2_InitPlayer (p AS PlayerType)
 DECLARE FUNCTION LD2_isTestMode () as integer
 DECLARE FUNCTION LD2_isDebugMode () as integer
-DECLARE function LD2_JumpPlayer (Amount AS SINGLE) as integer
+
 declare SUB LD2_LoadMap (Filename AS STRING, skipMobs as integer = 0)
 DECLARE SUB LD2_LockElevator ()
 declare function LD2_LookUp () as integer
-declare sub LD2_MakeGuts (splatterType as integer, x as integer, y as integer, qty as integer, direction as integer = 0)
-DECLARE function LD2_MovePlayer (XAmount AS DOUBLE) as integer
-DECLARE function LD2_PickUpItem () as integer
 DECLARE SUB LD2_ProcessEntities ()
-DECLARE SUB LD2_ProcessGuts ()
 DECLARE SUB LD2_PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
 DECLARE SUB LD2_PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, BufferNum AS INTEGER)
 DECLARE SUB LD2_PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)

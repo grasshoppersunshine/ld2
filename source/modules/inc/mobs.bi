@@ -83,6 +83,6 @@ public:
     declare function findVacantSlot() as integer
 end type
 
-CONST MAXMOBS = 50
+CONST MAXMOBILES = 50
 CONST MAXMOBTYPES = 15
 
