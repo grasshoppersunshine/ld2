@@ -17,7 +17,7 @@
 07,  "7th.ld2", "Weapons Locker     ", ""
 06,  "6th.ld2", "Storage A          ", "ALL"
 05,  "5th.ld2", "Assembly Hall      ", "ALL"
-04,  "4th.ld2", "Gym                ", "ALL"
+04,  "4th.ld2", "Rec Room           ", "ALL"
 03,  "3th.ld2", "Cafeteria          ", "ALL"
 02,  "2th.ld2", "Restrooms          ", "ALL"
 01,  "1th.ld2", "Lobby              ", ""

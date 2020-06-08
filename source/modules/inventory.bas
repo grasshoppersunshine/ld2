@@ -7,16 +7,19 @@ type UseType
     dim useCommand as string
     dim item as string
     dim itemQty as string
+    dim discard as string
     dim message as string
 end type
 
 REDIM SHARED InventoryItems(0) AS InventoryType
 REDIM SHARED ItemSids(0) AS STRING
 DIM SHARED InventorySize AS INTEGER
+dim shared VisibleSize as integer
 
 dim shared UseItemId as integer
 dim shared UseItemQty as integer
 dim shared UseItemMessage as string
+dim shared UseItemDiscard as integer
 
 const DATA_DIR = "data/"
 
@@ -26,7 +29,30 @@ FUNCTION Inventory_Add (id AS INTEGER, qty AS INTEGER) as integer
     DIM added AS INTEGER
 
     added = 0
-    FOR i = 0 TO InventorySize - 1
+    FOR i = 0 TO VisibleSize - 1
+        IF InventoryItems(i).id = 0 THEN
+            InventoryItems(i).id = id
+            InventoryItems(i).qty = qty
+            added = 1
+            EXIT FOR
+        END IF
+    NEXT i
+    
+    IF added THEN
+        return 0
+    ELSE
+        return InventoryErr_NOVACANTSLOT
+    END IF
+    
+END FUNCTION
+
+FUNCTION Inventory_AddHidden (id AS INTEGER, qty AS INTEGER) as integer
+    
+    DIM i AS INTEGER
+    DIM added AS INTEGER
+
+    added = 0
+    FOR i = VisibleSize TO InventorySize - 1
         IF InventoryItems(i).id = 0 THEN
             InventoryItems(i).id = id
             InventoryItems(i).qty = qty
@@ -112,15 +138,21 @@ FUNCTION Inventory_GetItemBySlot (item AS InventoryType, slot AS INTEGER) as int
     
 END FUNCTION
 
-FUNCTION Inventory_Init (size AS INTEGER) as integer
+FUNCTION Inventory_Init (size AS INTEGER, sizeVisible as integer = -1) as integer
     
     DIM i AS INTEGER
+    
+    if sizeVisible = -1 then
+        sizeVisible = size
+    end if
     
     IF (size > 0) AND (size <= INVENTORYMAXSIZE) THEN
         REDIM InventoryItems(size - 1) AS InventoryType
         InventorySize = size
+        VisibleSize = sizeVisible
         FOR i = 0 TO InventorySize - 1
             InventoryItems(i).slot = i
+            InventoryItems(i).visible = iif(i < sizeVisible, 1, 0)
         NEXT i
         LoadSids "tables/items.txt"
     ELSE
@@ -268,7 +300,10 @@ SUB LoadSids (filename AS STRING)
     SEEK File, 1
     DO WHILE NOT EOF(File)
         INPUT #File, id, sid
-        ItemSids(id) = UCASE(LTRIM(RTRIM(sid)))
+        sid = UCASE(LTRIM(RTRIM(sid)))
+        if len(sid) then
+            ItemSids(id) = sid
+        end if
     LOOP
     CLOSE File
     
@@ -286,18 +321,20 @@ function Inventory_Use (itemId as integer) as integer
     UseItemId = 0
     UseItemQty = 0
     UseItemMessage = ""
+    UseItemDiscard = 0
         
     ItemsFile = freefile
     open DATA_DIR+"tables/uses.txt" for input as ItemsFile
         
         while not eof(ItemsFile)
             
-            input #ItemsFile, _data.toUse, _data.useCommand, _data.item, _data.itemQty, _data.message
+            input #ItemsFile, _data.toUse, _data.useCommand, _data.item, _data.itemQty, _data.discard, _data.message
             
             _data.toUse      = trim(_data.toUse)
             _data.useCommand = trim(_data.useCommand)
             _data.item       = trim(_data.item)
             _data.itemQty    = trim(_data.itemQty)
+            _data.discard    = trim(_data.discard)
             _data.message    = trim(_data.message)
             
             if left(_data.toUse, 1) = "#" then continue while
@@ -305,6 +342,7 @@ function Inventory_Use (itemId as integer) as integer
             toUseId = Inventory_SidToItemId(_data.toUse)
             
             if toUseId = itemId then
+                UseItemDiscard = iif(lcase(_data.discard) = "discard" ,1 ,0)
                 select case ucase(_data.useCommand)
                 case "ADD"
                     UseItemId = Inventory_SidToItemId(_data.item)
@@ -354,6 +392,12 @@ function Inventory_GetUseMessage() as string
     return UseItemMessage
     
 end function
+
+function Inventory_GetUseItemDiscard() as integer
+    
+    return UseItemDiscard
+    
+end function 
 
 FUNCTION Inventory_Mix(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS STRING) as integer
     

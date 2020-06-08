@@ -1,0 +1,42 @@
+LIGHTER        , Lighter       , Lighter
+MOLOTOV        , Molotov       , Molotov Cocktail
+WINEBOTTLE     , Wine Bottle   , Wine Bottle
+NAPKIN         , Napkin        , Paper Napkin
+LEADPIPE       , Lead Pipe     , Lead Pipe
+WRENCH         , Wrench        , Metal Wrench
+TRAMPOLINE     , Trampoline    , Trampoline
+FLASK          , Flask         , Metal Flask
+
+SODACAN        , Soda Can      , Soda Can
+BAGOFSOIL      , Potting Soil  , Bag of Potting Soil
+SHOVEL         , Shovel        , Shovel
+GLOVES         , Gloves        , Nitrile Gloves (Chemical Resistant)
+PLUNGER        , Toilet Plunger, Toilet Plunger
+
+CROSSBOW       , Crossbow      , Carbon Fiber Crossbow
+ARROWS         , Arrows        , Arrows
+
+WD40           , Lubricant Spry, Penetrating Oil and Water-Displacing Spray
+
+SMALLKEY       , SML Bronze Key, Small Bronze Key
+SILVERKEY      , SML Silver Key, Small Silver Key
+LOCKERKEY      , Locker Key    , Locker Key
+
+GLASSJAR       , Glass Jar     , Glass Jar
+
+CHARCOALSTICK  , Charcoal Stick, Charcoal Stick
+
+TOHRTANIUMAXE  , Tohrtaniume Ax, Tohrtanium Throwing Axe
+
+WATERPROOFLIGHTER, Waterproof LTR, Waterproof Lighter
+
+TOWEL          , Ragged Towel  , Ragged Towel (stick in vent or exhause pipe?)
+
+PANCAKEMIX     , Pancake Mix   , Pancake Mix (no idea)
+
+AIRFILTER      , AIRFILTER     , Air Filter (for furnace?)
+
+FLARES         , Flares        , Emergency Flares
+FIREEXT        , Fire Ext.     , Fire Extinguisher
+AED            , AED           , AED (Automated External Defibrillator)
+

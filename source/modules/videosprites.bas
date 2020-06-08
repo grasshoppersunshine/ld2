@@ -154,3 +154,9 @@ sub VideoSprites.setColorMod(r as integer, g as integer, b as integer)
     SDL_SetTextureColorMod(this._data, r, g, b)
     
 end sub
+
+sub VideoSprites.setAlphaMod(a as integer)
+    
+    SDL_SetTextureAlphaMod(this._data, a)
+    
+end sub

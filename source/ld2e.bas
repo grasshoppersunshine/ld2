@@ -89,10 +89,15 @@
   
   '= ENEMY/ENTITY STATES
   '========================
-  CONST SPAWNED = 1
-  CONST HOSTILE = 2
-  CONST PLANNING = 3
-  CONST MOVING = 4
+  CONST SPAWNED   = 1
+  CONST GO        = 2
+  CONST GOING     = 3
+  CONST HURT      = 4
+  CONST HURTING   = 5
+  CONST ATTACK    = 6
+  CONST ATTACKING = 7
+  CONST RETREAT   = 8
+  CONST RETRATING = 9
   
   '= BYTES PER SPRITE
   '========================
@@ -330,7 +335,6 @@ function LD2_AddAmmo (Kind AS INTEGER, Amount AS INTEGER) as integer
     end if
     if Amount > 0 then
         Inventory(Kind) += Amount
-        LD2_PlaySound Sounds.equip
     end if
 
   'IF Kind = 1 THEN Inventory(SHELLS) = Inventory(SHELLS) + Amount
@@ -380,12 +384,16 @@ FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
     FOR i = 0 TO NumInvSlots-1
         IF InvSlots(i) = item THEN
             Inventory(item) = Inventory(item) + Amount
+            if Inventory(item) <= 0 then
+                Inventory(item) = 0
+                InvSlots(i) = 0
+            end if
             added = 1
             EXIT FOR
         END IF
     NEXT i
 
-    IF added = 0 THEN
+    IF (added = 0) and (Amount > 0) THEN
         FOR i = 0 TO NumInvSlots-1
             IF InvSlots(i) = 0 THEN
                 InvSlots(i) = item
@@ -741,14 +749,16 @@ SUB LD2_Init
     AddMusic mscBASEMENT , DATA_DIR+"sound/msplice/basement.wav", 1
     AddMusic mscWIND0    , DATA_DIR+"sound/msplice/wind0.wav", 1
     AddMusic mscWIND1    , DATA_DIR+"sound/msplice/wind1.wav", 1
-    AddMusic mscROOM0    , DATA_DIR+"sound/msplice/room1.wav", 1
-    AddMusic mscROOM1    , DATA_DIR+"sound/msplice/room3.wav", 1
-    AddMusic mscROOM2    , DATA_DIR+"sound/msplice/room4.wav", 1
+    AddMusic mscROOM0    , DATA_DIR+"sound/msplice/room1.wav", 1 'good
+    AddMusic mscROOM1    , DATA_DIR+"sound/msplice/room3.wav", 1 'maybe
+    AddMusic mscROOM2    , DATA_DIR+"sound/msplice/room4.wav", 1 'too loud
     AddMusic mscROOM3    , DATA_DIR+"sound/msplice/room5.wav", 1
-    AddMusic mscROOM4    , DATA_DIR+"sound/msplice/room6.wav", 1
+    'AddMusic mscROOM4    , DATA_DIR+"sound/msplice/room6.wav", 1 'too boring
+    AddMusic mscROOM4    , DATA_DIR+"sound/msplice/basement.wav", 1
     AddMusic mscROOM5    , DATA_DIR+"sound/msplice/room7.wav", 1
     AddMusic mscSMALLROOM0, DATA_DIR+"sound/msplice/smallroom0.wav", 1
     AddMusic mscSMALLROOM1, DATA_DIR+"sound/msplice/smallroom1.wav", 1
+    AddMusic mscTRUTH     , DATA_DIR+"sound/msplice/thetruth.wav", 1
     
     AddMusic mscTHEMECLASSIC , DATA_DIR+"2002/sfx/intro.mod", 0
     '- need to update SDL_Mixer for mp3 support
@@ -1397,6 +1407,8 @@ SUB LD2_LoadMap (Filename AS STRING, skipMobs as integer = 0)
             next x
         next y
     end if
+    
+    Mobs_Animate '- let them go through their initial "spawned" state
   
 END SUB
 
@@ -2423,6 +2435,12 @@ SUB LD2_SetXShift (ShiftX AS INTEGER)
 
 END SUB
 
+function LD2_GetInventoryQty(itemId as integer) as integer
+    
+    return Inventory(itemId)
+    
+end function
+
 function LD2_ShootRepeat() as integer
     
     return LD2_Shoot(1)
@@ -2464,8 +2482,13 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
         
     case ItemIds.Pistol
         
-        if (is_repeat = 1 and timeSinceLastShot < 0.45) then return 0
-        if (is_repeat = 0 and timeSinceLastShot < 0.20) then return 0
+        if Player.state = CROUCHING then
+            if (is_repeat = 1 and timeSinceLastShot < 0.33) then return 0
+            'if (is_repeat = 0 and timeSinceLastShot < 0.10) then return 0
+        else
+            if (is_repeat = 1 and timeSinceLastShot < 0.45) then return 0
+            if (is_repeat = 0 and timeSinceLastShot < 0.25) then return 0
+        end if
         Inventory(ItemIds.PistolAmmo) -= 1
         damage = 2
         
@@ -2494,13 +2517,20 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
     Player.is_shooting = 1
     timestamp = timer
     
+    dim fireY as integer
+    if Player.state = CROUCHING then
+        fireY = 12
+    else
+        fireY = 8
+    end if
+    
     if (Player.weapon <> ItemIds.Fist) and (Player.uAni = Player.stillAni) then
 
         Player.uAni = Player.uAni + 1
         
         if Player.is_lookingdown then
             
-            for y = Player.y+15 to Player.y+SCREEN_H step 8
+            for y = Player.y+15 to Player.y+SCREEN_H step 4
                 
                 mapX = int((Player.x + 8) / SPRITE_W)
                 mapY = int(y / SPRITE_H)
@@ -2516,7 +2546,7 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
                 Mobs.resetNext
                 do while Mobs.canGetNext()
                     Mobs.getNext mob
-                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > mob.y and contactY < (mob.y + 15) then
+                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > (mob.y+mob.top) and contactY < (mob.y + 15) then
                         mob.hit = 1
                         exit do
                     end if
@@ -2529,9 +2559,9 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
             for x = Player.x+15 to Player.x+SCREEN_W step 8
                 
                 mapX = int(x / SPRITE_W)
-                mapY = int((Player.y + 10) / SPRITE_H)
+                mapY = int((Player.y + fireY) / SPRITE_H)
                 tile = TileMap(mapX, mapY)
-                contactX = x: contactY = int(Player.y + 8)
+                contactX = x: contactY = int(Player.y + fireY)
                 
                 if LD2_TileIsSolid(tile) then
                     contactX = mapX * SPRITE_W
@@ -2542,7 +2572,7 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
                 Mobs.resetNext
                 do while Mobs.canGetNext()
                     Mobs.getNext mob
-                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > mob.y and contactY < (mob.y + 15) then
+                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > (mob.y+mob.top) and contactY < (mob.y + 15) then
                         mob.hit = 1
                         exit do
                     end if
@@ -2555,9 +2585,9 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
             for x = Player.x to Player.x-SCREEN_W step -8
 
                 mapX = int(x / SPRITE_W)
-                mapY = int((Player.y + 10) / SPRITE_H)
+                mapY = int((Player.y + fireY) / SPRITE_H)
                 tile = TileMap(mapX, mapY)
-                contactX = x: contactY = int(Player.y + 8)
+                contactX = x: contactY = int(Player.y + fireY)
                 
                 if LD2_TileIsSolid(tile) then
                     contactX = mapX * SPRITE_W + SPRITE_W
@@ -2568,7 +2598,7 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
                 Mobs.resetNext
                 do while Mobs.canGetNext()
                     Mobs.getNext mob
-                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > mob.y and contactY < (mob.y + 15) then
+                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > (mob.y+mob.top) and contactY < (mob.y + 15) then
                         mob.hit = 1
                         exit do
                     end if
@@ -2581,7 +2611,7 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
         if mob.hit then
             select case Player.weapon
             case ItemIds.Shotgun
-                dist = abs(contactX - (mob.x+7))
+                dist = abs(contactX - (Player.x+7))
                 select case dist
                 case  0 to 15: mob.life -= damage * 1.0000
                 case 16 to 47: mob.life -= damage * 0.6667
@@ -2725,6 +2755,7 @@ SUB Mobs_Add (x AS INTEGER, y AS INTEGER, id AS INTEGER)
   mob.id    = id
   mob.life  = -99
   mob.state = SPAWNED
+  mob.top   = 0
 
   Mobs.add mob
 
@@ -2742,6 +2773,12 @@ sub Mobs_Kill (mob as Mobile)
         LD2_SetFlag BOSSKILLED
         LD2_PlayMusic mscWANDERING
         Inventory(AUTH) = REDACCESS
+    case TROOP1, TROOP2
+        if int(5*rnd(1)) = 0 then
+            LD2_PlaySound Sounds.troopDie
+        end if
+    case ROCKMONSTER
+        LD2_PlaySound Sounds.rockDie
     end select
 
     Guts_Add GutsIds.Gibs, mob.x + 8, mob.y + 8, 3+int(4*rnd(1))
@@ -2812,7 +2849,7 @@ sub Mobs_Generate ()
         next x
     next y
     
-    numMobs = int(numFloors / 10)
+    numMobs = int(numFloors / 5)
     
     for i = 0 to numMobs-1
         do
@@ -2824,15 +2861,15 @@ sub Mobs_Generate ()
         loop
         n = int(100*rnd(1))
         select case n
-        case 0 to 9
+        case 0 to 14
             mobType = ROCKMONSTER
-        case 10 to 49
+        case 20 to 49
             mobType = TROOP1
-        case 50 to 89
+        case 50 to 79
             mobType = TROOP2
-        case 90 to 97
+        case 15 to 19, 80 to 89
             mobType = BLOBMINE
-        case 98 to 99
+        case 90 to 99
             mobType = JELLYBLOB
         end select
         Mobs_Add x * 16, y * 16, mobType
@@ -2867,21 +2904,37 @@ sub Mobs_Animate()
         SELECT CASE mob.state
         CASE SPAWNED
 
-            mob.life  = 8
+            mob.life  = 10
             mob.ani   = 1
-            mob.state = HOSTILE
+            mob.state = GO
+        
+        CASE HURT
+            
+            mob.ani = 6
+            mob.counter = 0.1
+            mob.state = HURTING
+            if int(3*rnd(1)) = 0 then
+                LD2_PlaySound Sounds.rockHurt
+            end if
+        
+        CASE HURTING
+            
+            mob.counter -= DELAYMOD*0.0167
+            IF mob.counter <= 0 THEN
+                mob.state = GO
+            END IF
+        
+        CASE GO
+            
+            mob.state = GOING
 
-        CASE HOSTILE
+        CASE GOING
 
             mob.ani = mob.ani + .1
             IF mob.ani > 6 THEN mob.ani = 1
             
-            IF mob.hit > 0 THEN
-                mob.ani = 6
-            ELSE
-                IF mob.x < Player.x THEN mob.x = mob.x + .5*f: mob.flip = 0
-                IF mob.x > Player.x THEN mob.x = mob.x - .5*f: mob.flip = 1
-            END IF
+            IF mob.x < Player.x THEN mob.x = mob.x + .5*f: mob.flip = 0
+            IF mob.x > Player.x THEN mob.x = mob.x - .5*f: mob.flip = 1
             
             IF mob.x + 7 >= Player.x AND mob.x + 7 <= Player.x + 15 THEN
                 IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
@@ -2900,26 +2953,23 @@ sub Mobs_Animate()
         SELECT CASE mob.state
         CASE SPAWNED
         
-            mob.life  = 8
+            mob.life  = 2
             mob.ani   = 7
-            mob.state = PLANNING
+            mob.top   = 11
+            mob.state = GO
+        
+        CASE HURT
             
-        CASE PLANNING
+            mob.state = GO
+            
+        CASE GO
             
             IF mob.x < Player.x THEN mob.vx =  0.3333*f: mob.flip = 0
             IF mob.x > Player.x THEN mob.vx = -0.3333*f: mob.flip = 1
             mob.counter = RND(1)*2+1
-            mob.state = MOVING
-            
-        'CASE SLIDEPREATTACK
-        '
-        'CASE SLIDEATTACK
-        '
-        'CASE PREJUMP
-        '
-        'CASE JUMP
+            mob.state = GOING
         
-        CASE MOVING
+        CASE GOING
         
             mob.ani = mob.ani + .1*f
             IF mob.ani >= 9 THEN mob.ani = 7
@@ -2931,16 +2981,18 @@ sub Mobs_Animate()
                     FOR i = 0 TO 14
                         Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1, -RND(1)*30
                         Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1, RND(1)*30
+                        LD2_PlaySound Sounds.boom
+                        LD2_PlaySound Sounds.larryDie
                     NEXT i
                     Player_Jump 2.0
-                    'toDelete(deleteCount) = n%: deleteCount = deleteCount + 1
+                    Player.vx += 5-10*rnd(1)
                     deleted = 1
                 END IF
             END IF
             
             mob.counter = mob.counter - DELAYMOD*0.0167
             IF mob.counter <= 0 THEN
-                mob.state = PLANNING
+                mob.state = GO
             END IF
             
         END SELECT
@@ -2950,15 +3002,35 @@ sub Mobs_Animate()
         SELECT CASE mob.state
         CASE SPAWNED
             
-            mob.life  = 4
+            mob.life  = 3+3*rnd(1)
             mob.ani   = 20
-            mob.state = HOSTILE
+            mob.state = GO
         
-        CASE HOSTILE
+        CASE HURT
+            
+            mob.ani = 29
+            mob.counter = 0.1
+            mob.state = HURTING
+            if int(3*rnd(1)) = 0 then
+                i = int(3*rnd(1))
+                if i = 0 then LD2_PlaySound Sounds.troopHurt0
+                if i = 1 then LD2_PlaySound Sounds.troopHurt1
+                if i = 2 then LD2_PlaySound Sounds.troopHurt2
+            end if
         
-            IF mob.hit > 0 THEN
-                mob.ani = 29
-            ELSE
+        CASE HURTING
+            
+            mob.counter -= DELAYMOD*0.0167
+            IF mob.counter <= 0 THEN
+                mob.state = GO
+            END IF
+        
+        CASE GO
+            
+            mob.state = GOING
+        
+        CASE GOING
+        
             IF ABS(mob.x - Player.x) < 50 AND mob.shooting = 0 THEN
                 IF Player.y + 8 >= mob.y AND Player.y + 8 <= mob.y + 15 THEN
                     IF Player.x > mob.x AND mob.flip = 0 THEN mob.shooting = 100
@@ -2987,45 +3059,45 @@ sub Mobs_Animate()
                 IF INT(30 * RND(1)) + 1 = 1 THEN
                     LD2_PlaySound Sounds.laugh
                 END IF
-                '- Make entity shoot
                 IF (mob.shooting AND 7) = 0 THEN
                     LD2_PlaySound Sounds.machinegun2
-                        IF mob.flip = 0 THEN
-                        'DEF SEG = VARSEG(TileMap(0))
+                    IF mob.flip = 0 THEN
                         FOR i = mob.x + 15 TO mob.x + SCREEN_W STEP 8
                             px = i \ 16: py = INT(mob.y + 10) \ 16
-                            'p% = PEEK(px% + py% * MAPW)
                             p = TileMap(px, py)
                             IF p >= 80 AND p <= 109 THEN EXIT FOR
                             IF i > Player.x AND i < Player.x + 15 THEN
                                 IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
                                     Guts_Add GutsIds.Blood, i, mob.y + 8, 1
                                     Player.life = Player.life - 1
+                                    IF INT(10 * RND(1)) + 1 = 1 THEN
+                                        LD2_PlaySound Sounds.blood1
+                                        LD2_PlaySound Sounds.larryHurt
+                                    END IF
                                 END IF
                             END IF
                         NEXT i
-                        'DEF SEG
                     ELSE
-                        'DEF SEG = VARSEG(TileMap(0))
                         FOR i = mob.x TO mob.x - SCREEN_W STEP -8
                             px = i \ 16: py = INT(mob.y + 10) \ 16
-                            'p% = PEEK(px% + py% * MAPW)
                             p = TileMap(px, py)
                             IF p >= 80 AND p <= 109 THEN EXIT FOR
                             IF i > Player.x AND i < Player.x + 15 THEN
                                 IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
                                     Guts_Add GutsIds.Blood, i, mob.y + 8, 1
                                     Player.life = Player.life - 1
+                                    IF INT(10 * RND(1)) + 1 = 1 THEN
+                                        LD2_PlaySound Sounds.blood1
+                                        LD2_PlaySound Sounds.larryHurt
+                                    END IF
                                 END IF
                             END IF
                         NEXT i
-                        'DEF SEG
                     END IF
                 END IF
                 mob.ani = 27 + (mob.shooting AND 7) \ 4
                 mob.shooting = mob.shooting - 1
             END IF
-        END IF
         
     END SELECT
 
@@ -3034,79 +3106,98 @@ sub Mobs_Animate()
         SELECT CASE mob.state
         CASE SPAWNED
             
-            mob.life  = 6
+            mob.life  = 3+3*rnd(1)
             mob.ani   = 30
-            mob.state = HOSTILE
+            mob.state = GO
+        
+        CASE HURT
             
-        CASE HOSTILE
+            mob.ani = 39
+            mob.counter = 0.1
+            mob.state = HURTING
+            if int(3*rnd(1)) = 0 then
+                i = int(3*rnd(1))
+                if i = 0 then LD2_PlaySound Sounds.troopHurt0
+                if i = 1 then LD2_PlaySound Sounds.troopHurt1
+                if i = 2 then LD2_PlaySound Sounds.troopHurt2
+            end if
+        
+        CASE HURTING
             
-            IF mob.hit > 0 THEN
-                mob.ani = 39
-            ELSE
-                IF ABS(mob.x - Player.x) < 50 AND mob.shooting = 0 THEN
-                    IF Player.y + 8 >= mob.y AND Player.y + 8 <= mob.y + 15 THEN
-                        IF Player.x > mob.x AND mob.flip = 0 THEN mob.shooting = 100
-                        IF Player.x < mob.x AND mob.flip = 1 THEN mob.shooting = 100
-                    END IF
+            mob.counter -= DELAYMOD*0.0167
+            IF mob.counter <= 0 THEN
+                mob.state = GO
+            END IF
+        
+        CASE GO
+            
+            mob.state = GOING
+            
+        CASE GOING
+            
+            IF ABS(mob.x - Player.x) < 50 AND mob.shooting = 0 THEN
+                IF Player.y + 8 >= mob.y AND Player.y + 8 <= mob.y + 15 THEN
+                    IF Player.x > mob.x AND mob.flip = 0 THEN mob.shooting = 100
+                    IF Player.x < mob.x AND mob.flip = 1 THEN mob.shooting = 100
                 END IF
-                
-                IF mob.shooting = 0 THEN
-                    IF mob.counter = 0 THEN
-                        mob.counter = -INT(150 * RND(1)) + 1
-                        mob.flag = INT(2 * RND(1)) + 1
-                    ELSEIF mob.counter > 0 THEN
-                        mob.ani = mob.ani + .1
-                        IF mob.ani > 37 THEN mob.ani = 31
-                        IF mob.flag = 1 THEN mob.x = mob.x + .5*f: mob.flip = 0
-                        IF mob.flag = 2 THEN mob.x = mob.x - .5*f: mob.flip = 1
-                        mob.counter = mob.counter - 1
+            END IF
+            
+            IF mob.shooting = 0 THEN
+                IF mob.counter = 0 THEN
+                    mob.counter = -INT(150 * RND(1)) + 1
+                    mob.flag = INT(2 * RND(1)) + 1
+                ELSEIF mob.counter > 0 THEN
+                    mob.ani = mob.ani + .1
+                    IF mob.ani > 37 THEN mob.ani = 31
+                    IF mob.flag = 1 THEN mob.x = mob.x + .5*f: mob.flip = 0
+                    IF mob.flag = 2 THEN mob.x = mob.x - .5*f: mob.flip = 1
+                    mob.counter = mob.counter - 1
+                ELSE
+                    mob.counter = mob.counter + 1
+                    mob.ani = 30
+                    IF mob.counter > -1 THEN mob.counter = INT(150 * RND(1)) + 1
+                END IF
+            END IF
+            
+            IF mob.shooting > 0 THEN
+                IF (mob.shooting AND 15) = 0 THEN
+                    LD2_PlaySound Sounds.pistol2
+                    IF mob.flip = 0 THEN
+                        FOR i = mob.x + 15 TO mob.x + SCREEN_W STEP 8
+                            px = i \ 16: py = INT(mob.y + 10) \ 16
+                            p = TileMap(px, py)
+                            IF p >= 80 AND p <= 109 THEN EXIT FOR
+                            IF i > Player.x AND i < Player.x + 15 THEN
+                                IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
+                                    Guts_Add GutsIds.Blood, i, mob.y + 8, 1
+                                    Player.life = Player.life - 2
+                                    IF INT(10 * RND(1)) + 1 = 1 THEN
+                                        LD2_PlaySound Sounds.blood1
+                                        LD2_PlaySound Sounds.larryHurt
+                                    END IF
+                                END IF
+                            END IF
+                        NEXT i
                     ELSE
-                        mob.counter = mob.counter + 1
-                        mob.ani = 30
-                        IF mob.counter > -1 THEN mob.counter = INT(150 * RND(1)) + 1
-                    END IF
-                END IF
-                
-                IF mob.shooting > 0 THEN
-                    '- Make entity shoot
-                    IF (mob.shooting AND 15) = 0 THEN
-                        LD2_PlaySound Sounds.pistol2
-                        IF mob.flip = 0 THEN
-                            'DEF SEG = VARSEG(TileMap(0))
-                            FOR i = mob.x + 15 TO mob.x + SCREEN_W STEP 8
-                                px = i \ 16: py = INT(mob.y + 10) \ 16
-                                'p% = PEEK(px% + py% * MAPW)
-                                p = TileMap(px, py)
-                                IF p >= 80 AND p <= 109 THEN EXIT FOR
-                                IF i > Player.x AND i < Player.x + 15 THEN
-                                    IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
-                                        Guts_Add GutsIds.Blood, i, mob.y + 8, 1
-                                        Player.life = Player.life - 2
+                        FOR i = mob.x TO mob.x - SCREEN_W STEP -8
+                            px = i \ 16: py = INT(mob.y + 10) \ 16
+                            p = TileMap(px, py)
+                            IF p >= 80 AND p <= 109 THEN EXIT FOR
+                            IF i > Player.x AND i < Player.x + 15 THEN
+                                IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
+                                    Guts_Add GutsIds.Blood, i, mob.y + 8, 1
+                                    Player.life = Player.life - 2
+                                    IF INT(10 * RND(1)) + 1 = 1 THEN
+                                        LD2_PlaySound Sounds.blood1
+                                        LD2_PlaySound Sounds.larryHurt
                                     END IF
                                 END IF
-                            NEXT i
-                            'DEF SEG
-                        ELSE
-                            'DEF SEG = VARSEG(TileMap(0))
-                            FOR i = mob.x TO mob.x - SCREEN_W STEP -8
-                                px = i \ 16: py = INT(mob.y + 10) \ 16
-                                'p% = PEEK(px% + py% * MAPW)
-                                p = TileMap(px, py)
-                                IF p >= 80 AND p <= 109 THEN EXIT FOR
-                                IF i > Player.x AND i < Player.x + 15 THEN
-                                    IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
-                                        Guts_Add GutsIds.Blood, i, mob.y + 8, 1
-                                        Player.life = Player.life - 2
-                                    END IF
-                                END IF
-                            NEXT i
-                            'DEF SEG
-                        END IF
+                            END IF
+                        NEXT i
                     END IF
-                    mob.ani = 37 + (mob.shooting AND 15) \ 8
-                    mob.shooting = mob.shooting - 1
                 END IF
-
+                mob.ani = 37 + (mob.shooting AND 15) \ 8
+                mob.shooting = mob.shooting - 1
             END IF
         
         END SELECT
@@ -3116,24 +3207,42 @@ sub Mobs_Animate()
         SELECT CASE mob.state
         CASE SPAWNED
             
-            mob.life = 14
-            mob.ani = 11
-            mob.state = HOSTILE
+            mob.life = 10
+            'mob.ani = 11
+            mob.ani = 47
+            mob.state = GO
+            mob.y -= 10
+        
+        CASE HURT
             
-        CASE HOSTILE
+            mob.ani = 51
+            mob.counter = 0.1
+            mob.state = HURTING
+        
+        CASE HURTING
             
-            IF mob.hit > 0 THEN
-                mob.ani = 19
-            ELSE
-                mob.ani = mob.ani + .1
-                IF mob.ani > 15 THEN mob.ani = 11
+            mob.counter -= DELAYMOD*0.0167
+            IF mob.counter <= 0 THEN
+                mob.state = GO
+            END IF
+        
+        CASE GO
+            
+            IF mob.x < Player.x THEN mob.vx =  0.7: mob.flip = 0
+            IF mob.x > Player.x THEN mob.vx = -0.7: mob.flip = 1
+            mob.counter = RND(1)*4+1
+            mob.state = GOING
+        
+        CASE GOING
+            
+            mob.ani = mob.ani + .1
+            IF mob.ani > 50 THEN mob.ani = 47
                 
-                IF ABS(mob.x - Player.x) < 100 THEN
-                    IF mob.x < Player.x THEN
-                        mob.x = mob.x + .8*f: mob.flip = 0
-                    ELSE
-                        mob.x = mob.x - .8*f: mob.flip = 1
-                    END IF
+            IF ABS(mob.x - Player.x) < 100 THEN
+                IF mob.x < Player.x THEN
+                    mob.x += mob.vx*f: mob.flip = 0
+                ELSE
+                    mob.x -= mob.vx*f: mob.flip = 1
                 END IF
             END IF
             
@@ -3141,10 +3250,16 @@ sub Mobs_Animate()
                 IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
                     IF INT(10 * RND(1)) + 1 = 1 THEN
                         LD2_PlaySound Sounds.blood1
+                        LD2_PlaySound Sounds.larryHurt
                     END IF
                     Player.life = Player.life - 1
                     Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8, 1
                 END IF
+            END IF
+            
+            mob.counter = mob.counter - DELAYMOD*0.0167
+            IF mob.counter <= 0 THEN
+                mob.state = GO
             END IF
             
         END SELECT
@@ -3234,7 +3349,10 @@ sub Mobs_Animate()
        
     END SELECT
  
-    IF mob.hit > 0 THEN mob.hit = 0
+    IF mob.hit > 0 THEN
+        mob.hit = 0
+        mob.state = HURT
+    END IF
 
     IF CheckMobWallHit(mob) THEN
       mob.x = ox
@@ -3245,6 +3363,7 @@ sub Mobs_Animate()
     IF CheckMobFloorHit(mob) = 0 THEN
       mob.y = mob.y + mob.velocity
       mob.velocity = mob.velocity + Gravity
+        if mob.id = JELLYBLOB then mob.velocity = 0
       IF mob.velocity > 3 THEN mob.velocity = 3
       IF CheckMobFloorHit(mob) THEN
         IF mob.velocity >= 0 THEN
@@ -3333,8 +3452,10 @@ sub Player_Animate()
     dim f as double
     
     if Player.life <= 0 then
+        LD2_PlaySound Sounds.larryDie
         NumLives = NumLives - 1
         if NumLives <= 0 then
+            LD2_PlayMusic mscUHOH
             LD2_PopText "Game Over"
             LD2_ShutDown
         else
@@ -3375,7 +3496,7 @@ sub Player_Animate()
             Player.vy = 3
         end if
         if Player.moved = 0 then
-            if Player.is_lookingdown = 0 then
+            'if Player.is_lookingdown = 0 then
                 if Player.vx > 0 then
                     Player.vx -= Gravity*f*0.5
                     if Player.vx < 0 then Player.vx = 0
@@ -3384,7 +3505,7 @@ sub Player_Animate()
                     Player.vx += Gravity*f*0.5
                     if Player.vx > 0 then Player.vx = 0
                 end if
-            end if
+            'end if
             prevX = Player.x
             Player.x += Player.vx
             if CheckPlayerWallHit() then
@@ -3435,7 +3556,7 @@ sub Player_Animate()
             if Player.uAni >= 11 then Player.uAni = 8: Player.is_shooting = 0
             Player.stillani = 8
         case PISTOL
-            Player.uAni = Player.uAni + .19
+            Player.uAni = Player.uAni + iif(Player.state = CROUCHING, 0.23, 0.19)
             if Player.uAni >= 14 then Player.uAni = 11: Player.is_shooting = 0
             Player.stillani = 11
         case DESERTEAGLE
@@ -3540,7 +3661,16 @@ sub Player_Draw()
     lan = int(Player.lAni): uan = int(Player.uAni)
     select case Player.state
     case CROUCHING
-        SpritesLarry.putToScreenEx(px, py, LARRYCROUCH, Player.flip)
+        if Player.weapon = PISTOL then
+            SpritesLarry.putToScreenEx(px, py, 58, Player.flip)
+            if Player.is_shooting then
+                SpritesLarry.putToScreenEx(px+iif(Player.flip=0,2,-2), py, 60+int(Player.uAni-12), Player.flip)
+            else
+                SpritesLarry.putToScreenEx(px+iif(Player.flip=0,2,-2), py, 59, Player.flip)
+            end if
+        else
+            SpritesLarry.putToScreenEx(px, py, LARRYCROUCH, Player.flip)
+        end if
     case LOOKINGUP
         SpritesLarry.putToScreenEx(px, py, 50, Player.flip)
     case else
@@ -3704,6 +3834,12 @@ function Player_Move (dx AS DOUBLE) as integer
   
 end function
 
+function Player_GetHP() as integer
+    
+    return Player.life
+    
+end function
+
 sub Stats_Draw ()
     
     dim pad as integer
@@ -3717,6 +3853,8 @@ sub Stats_Draw ()
         SpritesLarry.putToScreen(pad, pad+12, 46)
     case SHOTGUN
         SpritesLarry.putToScreen(pad, pad+12, 45)
+    case PISTOL
+        SpritesLarry.putToScreen(pad, pad+12, 52)
     end select
     
     LD2_putTextCol pad+16, pad+3, str(Player.life), 15, 1
@@ -3737,9 +3875,9 @@ end function
 
 SUB LD2_ShutDown
   
-  'nil% = keyboard(-2)
   LD2_StopMusic
   LD2_ReleaseSound
+  FreeCommon
   
 END SUB
 
@@ -3939,11 +4077,19 @@ RETURN
 
 END SUB
 
-SUB LD2_Debug(message AS STRING)
+sub LD2_LogDebug(message as string)
     
-    logdebug message
+    if LD2_IsDebugMode() then
+        logdebug message
+    end if
     
-END SUB
+end sub
+
+sub LD2_Debug(message as string)
+    
+    LD2_LogDebug message
+    
+end sub
 
 function LD2_GetFontWidthWithSpacing (spacing as double = 1.2) as integer
         
@@ -3972,7 +4118,7 @@ function LD2_GetElementTextWidth (e as ElementType ptr) as integer
     dim d as double
     dim textSpacing as integer
     
-    text = e->text
+    text = ucase(e->text)
     
     d = (FONT_W*e->text_spacing)-FONT_W
     textSpacing = int(d)
@@ -3998,6 +4144,7 @@ sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as int
     e->border_width = 0
     e->border_color = 15
     e->text = text
+    e->text_alpha = 1.0
     e->text_color   = text_color
     e->text_spacing = 1.2
     e->text_height  = 1.4
@@ -4123,9 +4270,10 @@ sub LD2_RenderElement(e as ElementType ptr)
     w = e->w+e->padding_x*2: h = e->h+e->padding_y*2
     
     if e->background >= 0 then
-        backgroundAlpha = e->background_alpha * 255
+        backgroundAlpha = int(e->background_alpha * 255)
         LD2_fillm x, y, w, h, e->background, 1, backgroundAlpha
     end if
+    SpritesFont.setAlphaMod(int(e->text_alpha * 255))
     
     x = e->x+e->padding_x+e->border_width: y = e->y+e->padding_y+e->border_width
     if e->text_is_centered then x += int((e->w-textWidth)/2) '- center for each line break -- todo

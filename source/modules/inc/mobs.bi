@@ -20,6 +20,7 @@ type Mobile
     prv as integer
     nxt as integer
     vacant as integer
+    top as integer
 end type
 
 type MobileType

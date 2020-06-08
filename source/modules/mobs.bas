@@ -28,6 +28,7 @@ sub MobileCollection.add (mob AS Mobile)
         this._mobs(i).uid = uid
         this._mobs(i).nxt = -1
         this._mobs(i).vacant = 0
+        this._mobs(i).top = 0
         this._mobs(i).idx = i
         if this._firstMob = -1 then
             this._firstMob = i

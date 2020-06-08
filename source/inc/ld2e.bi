@@ -33,6 +33,7 @@ type ElementType
     border_width as integer
     border_color as integer
     text as string
+    text_alpha as double
     text_color as integer
     text_spacing as double
     text_height as double
@@ -102,6 +103,8 @@ declare sub Player_Animate ()
 declare sub Player_Draw()
 declare function Player_Jump (Amount as double) as integer
 declare function Player_Move (XAmount as double) as integer
+declare function Player_GetHP() as integer
+declare function LD2_GetInventoryQty(itemId as integer) as integer
 
 DECLARE function LD2_AddAmmo (Kind AS INTEGER, Amount AS INTEGER) as integer
 DECLARE SUB LD2_AddLives (Amount AS INTEGER)
@@ -111,7 +114,8 @@ DECLARE SUB LD2_ClearInventorySlot (slot AS INTEGER)
 DECLARE SUB LD2_ClearMobs ()
 DECLARE SUB LD2_CountFrame ()
 
-DECLARE SUB LD2_Debug (Message AS STRING)
+declare sub LD2_LogDebug (message as string)
+declare sub LD2_Debug (message as string)
 DECLARE SUB LD2_Drop (item as integer)
 DECLARE SUB LD2_GetPlayer (p AS PlayerType)
 DECLARE SUB LD2_GenerateSky ()

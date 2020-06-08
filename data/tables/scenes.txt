@@ -325,7 +325,7 @@ SCENE-STEVE-GONE
     
     LARRY
     Huh?
-    Where's steve?
+    Where's Steve?
 
 END
 
@@ -934,5 +934,15 @@ SCENE-BASEMENT-1A
     You need to vent the radiation from the room first.
     ...
     Hurry!
+    
+END
+
+SCENE-GOO
+    
+    LARRY
+    Woah!
+    Some type of crystalized alien goo is in the way.
+    I'll need to find some type of chemical to...
+    break down this goo.
     
 END

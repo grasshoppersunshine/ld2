@@ -47,36 +47,40 @@ end enum
 '= ids correspond to location in OBJECTS.PUT
 '===========================================
 enum ItemIds
-    Nothing         = 0
-    Fist            = 0
-    Medikit50       = 1
-    Medikit100      = 2
-    Grenade         = 3
-    ShotgunAmmo     = 4
-    PistolAmmo      = 5
-    MagnumAmmo      = 6
-    WhiteCard       = 7
-    WhiteCard1      = 8
-    WhiteCard2      = 9
-    FlashlightNoBat = 10
-    MysteryMeat     = 11
-    Chemical409     = 12
-    Chemical410     = 13
-    JanitorNote     = 14
-    Batteries       = 15
-    Flashlight      = 16
-    GreenCard       = 17
-    BlueCard        = 18
-    YellowCard      = 19
-    RedCard         = 20
-    Shotgun         = 21
-    MachineGun      = 22
-    Pistol          = 23
-    Magnum          = 24
-    WalkieTalkie    = 25
-    MachineGunAmmo  = 26
-    ExtraLife       = 27
-    HP              = 28
+    Nothing          = 0
+    Fist             = 0
+    Medikit50        = 1
+    Medikit100       = 2
+    Grenade          = 3
+    ShotgunAmmo      = 4
+    PistolAmmo       = 5
+    MagnumAmmo       = 6
+    WhiteCard        = 7
+    WhiteCard1       = 8
+    WhiteCard2       = 9
+    FlashlightNoBat  = 10
+    MysteryMeat      = 11
+    Chemical409      = 12
+    Chemical410      = 13
+    JanitorNote      = 14
+    Batteries        = 15
+    Flashlight       = 16
+    GreenCard        = 17
+    BlueCard         = 18
+    YellowCard       = 19
+    RedCard          = 20
+    Shotgun          = 21
+    MachineGun       = 22
+    Pistol           = 23
+    Magnum           = 24
+    WalkieTalkie     = 25
+    MachineGunAmmo   = 26
+    ExtraLife        = 27
+    HP               = 28
+    ShotgunLoaded    = 29
+    PistolLoaded     = 30
+    MachineGunLoaded = 31
+    MagnumLoaded     = 32
 end enum
 
 CONST FIST = 0
@@ -196,6 +200,7 @@ const mscROOM4     = 27
 const mscROOM5     = 28
 const mscSMALLROOM0 = 29
 const mscSMALLROOM1 = 30
+const mscTRUTH      = 31
 
 const mscINTROCLASSIC = 101
 const mscTHEMECLASSIC = 102
@@ -213,6 +218,25 @@ enum Sounds
     jump
     kick
     punch
+    '//
+    titleReveal
+    titleSelect
+    titleStart
+    '// menus
+    uiMenu
+    uiSubmenu
+    uiArrows
+    uiSelect
+    uiDenied
+    uiCancel
+    uiInvalid
+    uiMix
+    useExtraLife
+    useMedikit
+    '// actions
+    pickup
+    drop
+    equip
     '// weapons
     shotgun
     machinegun
@@ -221,23 +245,17 @@ enum Sounds
     '// doors
     doorup
     doordown
-    '// menus
-    status
-    select1
-    denied
-    pickup
-    look
-    use
-    drop
-    equip
-    '// title
-    startgame
-    revealtitle
-    '// scenes
-    dialog
     '// blood
     blood1
     blood2
+    troopHurt0
+    troopHurt1
+    troopHurt2
+    troopDie
+    rockHurt
+    rockDie
+    larryHurt
+    larryDie
     '// enemies
     laugh
     machinegun2
@@ -259,9 +277,16 @@ enum Sounds
     '// scene 5
     splatter
     snarl
-    '//
+    '// misc
+    startgame
+    dialog
+    boom
     outofammo
     reload
+    '// rooftop
+    keypadInput
+    keypadGranted
+    keypadDenied
 end enum
 
 '=======================

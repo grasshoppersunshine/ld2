@@ -13,6 +13,8 @@ dim shared EventMouseLB as integer
 dim shared EventMouseRB as integer
 dim shared CommonErrorMsg as string
 
+dim shared keysoff as ubyte ptr
+
 function GetCommonInfo() as string
     
     dim versionCompiled as SDL_Version
@@ -37,15 +39,30 @@ end function
 
 function InitCommon() as integer
     
+    dim numkeys as integer
+    dim n as integer
+    
     CommonErrorMsg = ""
     if SDL_Init(SDL_INIT_EVENTS) <> 0 then
         CommonErrorMsg = *SDL_GetError()
         return 1
     end if
     
+    SDL_GetKeyboardState(@numkeys)
+    keysoff = allocate(sizeof(integer)*numkeys)
+    for n = 0 to numkeys-1
+        keysoff[n] = 1
+    next n
+    
     return 0
     
 end function
+
+sub FreeCommon()
+    
+    deallocate(keysoff)
+    
+end sub
 
 function keyboard(code as integer) as integer
     
@@ -54,6 +71,21 @@ function keyboard(code as integer) as integer
     keys = SDL_GetKeyboardState(0)
     
     return keys[code]
+    
+end function
+
+function keypress(code as integer) as integer
+    
+    dim keys as const ubyte ptr
+    dim keyoff as integer
+    
+    keys = SDL_GetKeyboardState(0)
+    keyoff = keysoff[code]
+    if keys[code] then
+        keysoff[code] = 0
+    end if
+    
+    return (keys[code] and keyoff)
     
 end function
 
@@ -171,15 +203,18 @@ end sub
 sub PullEvents()
     
     dim event as SDL_Event
+    dim code as integer
     
     while( SDL_PollEvent( @event ) )
         select case event.type
         case SDL_QUIT_
             EventQuit = 1
         case SDL_KEYDOWN
-            EventKeydown = event.key.keysym.sym
+            EventKeydown = event.key.keysym.scancode
         case SDL_KEYUP
             EventKeydown = 0
+            code = event.key.keysym.scancode
+            keysoff[code] = 1
         case SDL_MOUSEWHEEL
             EventMouseWheelY += event.wheel.y
         end select

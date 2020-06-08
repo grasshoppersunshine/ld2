@@ -43,6 +43,7 @@
     #include once "modules/inc/keys.bi"
     #include once "modules/inc/ld2gfx.bi"
     #include once "modules/inc/ld2snd.bi"
+    #include once "modules/inc/inventory.bi"
     #include once "inc/ld2e.bi"
     #include once "inc/title.bi"
     #include once "inc/ld2.bi"
@@ -298,13 +299,20 @@
   declare sub Scene7 ()
   declare sub Scene7EndConditions ()
   declare function Scene7Go () as integer
+  declare sub SceneSteveGone ()
+  declare sub SceneSteveGoneEndConditions ()
+  declare function SceneSteveGoneGo () as integer
+  declare sub SceneGoo ()
+  declare sub SceneGooEndConditions ()
+  declare function SceneGooGo () as integer
+  declare sub SceneGooDestroy ()
+  declare sub SceneGooDestroyEndConditions ()
+  declare function SceneGooDestroyGo () as integer
   DECLARE SUB SceneFlashlight ()
   DECLARE SUB SceneFlashlight2 ()
   DECLARE SUB SceneLobby ()
   DECLARE SUB ScenePortal ()
   DECLARE SUB SceneRoofTop ()
-  DECLARE SUB SceneSteveGone ()
-  DECLARE SUB SceneVent1 ()
   DECLARE SUB SceneWeaponRoom ()
   DECLARE SUB SceneWeaponRoom2 ()
 
@@ -348,7 +356,7 @@
   DIM SHARED SteveGoneScene as integer
   DIM SHARED FlashLightScene as integer
   DIM SHARED PortalScene as integer
-  DIM SHARED SceneVent AS INTEGER
+  DIM SHARED GooScene AS INTEGER
   DIM SHARED Larry AS tScener
   DIM SHARED Steve AS tScener
   DIM SHARED Janitor AS tScener
@@ -361,6 +369,8 @@
   DIM SHARED TrooperIsThere as integer: DIM SHARED TrooperPoint as integer: DIM SHARED TrooperTalking as integer: DIM SHARED TrooperPos as integer
   
   const DATA_DIR = "data/"
+  
+  const KEYPAD_ENTRY_TEXT = "Enter in the 4-digit PIN:"
 
   dim shared CustomActions(3) as ActionItem
   
@@ -766,12 +776,22 @@ end sub
 
 sub LoadSounds ()
     
-    AddSound Sounds.dialog , "dialog.wav"
-    AddSound Sounds.status , "status.wav"
-    AddSound Sounds.select1, "select.wav"
-    AddSound Sounds.denied , "denied.wav"
+    AddSound Sounds.dialog , "scenechar.wav"
+    
+    AddSound Sounds.uiMenu   , "ui-menu.wav"
+    AddSound Sounds.uiSubmenu, "ui-submenu.wav"
+    AddSound Sounds.uiArrows , "ui-arrows.wav"
+    AddSound Sounds.uiSelect , "ui-select.wav"
+    AddSound Sounds.uiDenied , "ui-denied.wav"
+    AddSound Sounds.uiInvalid, "ui-invalid.wav"
+    AddSound Sounds.uiCancel , "ui-cancel.wav"
+    AddSound Sounds.uiMix    , "ui-mix.wav"
+    
+    AddSound Sounds.titleReveal, "ui-submenu.wav"
+    AddSound Sounds.titleSelect, "ui-arrows.wav"
+    AddSound Sounds.titleStart , "start.wav"
+    
     AddSound Sounds.pickup , "pickup.wav"
-    AddSound Sounds.look   , "look.wav"
     AddSound Sounds.drop   , "drop.wav"
     AddSound Sounds.equip  , "reload.wav"
     
@@ -787,7 +807,7 @@ sub LoadSounds ()
     AddSound Sounds.machinegun , "machinegun.wav"
     AddSound Sounds.deserteagle, "deagle.wav"
     
-    AddSound Sounds.laugh       , "splice/laugh.wav"
+    AddSound Sounds.laugh       , "recorded/laugh.wav"
     AddSound Sounds.machinegun2 , "machinegun.wav"
     AddSound Sounds.pistol2     , "pistol.wav"
     
@@ -798,6 +818,25 @@ sub LoadSounds ()
     
     AddSound Sounds.outofammo, "outofammo.wav"
     AddSound Sounds.reload, "reload.wav"
+    
+    AddSound Sounds.useMedikit  , "use-medikit.wav"
+    AddSound Sounds.useExtraLife, "use-extralife.wav"
+    
+    AddSound Sounds.troopHurt0, "maybe/splice/alienhurt0.ogg"
+    AddSound Sounds.troopHurt1, "maybe/splice/alienhurt1.ogg"
+    AddSound Sounds.troopHurt2, "recorded/bleh.wav"
+    AddSound Sounds.troopDie, "splice/fuck.wav"
+    AddSound Sounds.rockHurt, "rockland.wav"
+    AddSound Sounds.rockDie, "splice/snarl.wav"
+    
+    AddSound Sounds.larryHurt, "maybe/splice/larryhurt0.ogg"
+    AddSound Sounds.larryDie, "maybe/splice/larryhurt1.ogg"
+    
+    AddSound Sounds.boom, "boom.wav"
+    
+    AddSound Sounds.keypadInput  , "kp-input.wav"
+    AddSound Sounds.keypadGranted, "kp-granted.wav"
+    AddSound Sounds.keypadDenied , "kp-denied.wav"
     
 end sub
 
@@ -863,7 +902,7 @@ end sub
 
 sub StartFloorMusic(roomId as integer)
     
-    dim roomTracks(5) as integer
+    dim roomTracks(6) as integer
     
     roomTracks(0) = mscROOM0
     roomTracks(1) = mscROOM1
@@ -871,20 +910,23 @@ sub StartFloorMusic(roomId as integer)
     roomTracks(3) = mscROOM3
     roomTracks(4) = mscROOM4
     roomTracks(5) = mscROOM5
+    roomTracks(6) = mscWANDERING
     
     select case roomId
     case Rooms.Basement
         LD2_PlayMusic mscBASEMENT
     case Rooms.LarryOffice
         LD2_PlayMusic mscWANDERING
-    case Rooms.VentControl, Rooms.PortalRoom
+    case Rooms.SkyRoom
         LD2_PlayMusic mscWIND0
-    case Rooms.Rooftop
+    case Rooms.Rooftop, Rooms.VentControl
         LD2_PlayMusic mscWIND1
-    case Rooms.Unknown, Rooms.DebriefRoom
+    case Rooms.DebriefRoom
         LD2_PlayMusic mscSMALLROOM0
     case Rooms.LowerStorage, Rooms.UpperStorage
         LD2_PlayMusic mscSMALLROOM1
+    case Rooms.Unknown
+        LD2_PlayMusic mscTRUTH
     case else
         LD2_PlayMusic roomTracks(int(roomId mod (ubound(roomTracks)+1)))
     end select
@@ -906,6 +948,9 @@ SUB Main
   dim KeyInput as string
   dim PlayerIsRunning as integer
   dim player as PlayerType
+  dim inputPin as ElementType
+  dim inputPinResponse as ElementType
+  dim inputTimer as double
 
     dim newShot as integer
     
@@ -931,6 +976,14 @@ SUB Main
   CustomActions(1).actionId = ActionIds.Equip
   CustomActions(1).itemId   = ItemIds.Fist
     newShot = 1
+    
+    LD2_InitElement @inputPin, KEYPAD_ENTRY_TEXT, 31, ElementFlags.CenterX
+    inputPin.y = 170
+    inputPin.background_alpha = 0
+    
+    LD2_InitElement @inputPinResponse, "", 31, ElementFlags.CenterX
+    inputPinResponse.y = 180
+    inputPinResponse.background_alpha = 0
   
   DO
     
@@ -1001,31 +1054,47 @@ SUB Main
 	  SceneLobby
 	END IF
 
-	IF SceneVent = 0 AND CurrentRoom = VENTCONTROL AND player.x <= 754 THEN SceneVent1
+	IF GooScene = 0 AND CurrentRoom = VENTCONTROL AND player.x <= 754 THEN SceneGoo
+    
 	EnteringCode = 0
 	IF CurrentRoom = 23 AND player.x >= 1377 AND player.x <= 1407 THEN
 	  EnteringCode = 1
-	  IF KeyCount < 4 THEN
-		LD2_WriteText "Enter in the 4-digit Code:" + KeyInput
-	  ELSE
-		KeyCount = KeyCount - 1
+      if KeyCount < 4 then
+          inputPin.text = KEYPAD_ENTRY_TEXT + KeyInput
+          inputPin.text_color = 31
+	  elseif KeyCount = 4 then
+        inputPin.text = KEYPAD_ENTRY_TEXT + KeyInput
 		IF KeyInput = RoofCode THEN
-		  LD2_WriteText KeyInput + " : Access Granted."
+          LD2_PlaySound Sounds.keypadGranted
+		  inputPinResponse.text = "Access Granted."
+          inputPinResponse.text_color = 56
 		  LD2_SetTempAccess YELLOWACCESS '- can you run back to the elevator and use this on another floor/door?
 		ELSE
-		  LD2_WriteText KeyInput + " : Invalid Code!!"
+          LD2_PlaySound Sounds.keypadDenied
+		  inputPinResponse.text = "Invalid PIN. Access Denied."
+          inputPinResponse.text_color = 232
 		END IF
-		IF KeyCount = 4 THEN
-		  KeyCount = 0
-		  KeyInput = ""
-		END IF
-	  END IF
+		KeyCount = 5
+        inputTimer = timer
+      end if
+      if KeyCount = 5 then
+        LD2_RenderElement @inputPinResponse
+	    if (timer - inputTimer > 2.0) then
+            KeyCount = 0
+            KeyInput = ""
+        end if
+      end if
+      LD2_RenderElement @inputPin
 	ELSEIF CurrentRoom = 23 THEN
 	  LD2_WriteText ""
 	  KeyCount = 0
 	  KeyInput = ""
+      inputPin.text = KEYPAD_ENTRY_TEXT
+      inputPin.text_color = 31
 	ELSE
 	  KeyInput = ""
+      inputPin.text = KEYPAD_ENTRY_TEXT
+      inputPin.text_color = 31
 	END IF
 
 	IF PortalScene = 0 AND CurrentRoom = 21 AND player.x <= 300 THEN
@@ -1121,24 +1190,22 @@ SUB Main
             CurrentRoom = LD2_GetRoom
             StartFloorMusic CurrentRoom
             SceneOpenElevatorDoors
+            if GooScene = 1 then GooScene = 0
         end if
         LD2_ShowPlayer
     end if
 
 	IF EnteringCode AND KeyCount < 4 THEN
-	  IF keyboard(KEY_1) THEN KeyInput = KeyInput + " 1": WaitForKeyup(KEY_1): KeyCount = KeyCount + 1
-	  IF keyboard(KEY_2) THEN KeyInput = KeyInput + " 2": WaitForKeyup(KEY_2): KeyCount = KeyCount + 1
-	  IF keyboard(KEY_3) THEN KeyInput = KeyInput + " 3": WaitForKeyup(KEY_3): KeyCount = KeyCount + 1
-	  IF keyboard(KEY_4) THEN KeyInput = KeyInput + " 4": WaitForKeyup(KEY_4): KeyCount = KeyCount + 1
-	  IF keyboard(KEY_5) THEN KeyInput = KeyInput + " 5": WaitForKeyup(KEY_5): KeyCount = KeyCount + 1
-	  IF keyboard(KEY_6) THEN KeyInput = KeyInput + " 6": WaitForKeyup(KEY_6): KeyCount = KeyCount + 1
-	  IF keyboard(KEY_7) THEN KeyInput = KeyInput + " 7": WaitForKeyup(KEY_7): KeyCount = KeyCount + 1
-	  IF keyboard(KEY_8) THEN KeyInput = KeyInput + " 8": WaitForKeyup(KEY_8): KeyCount = KeyCount + 1
-	  IF keyboard(KEY_9) THEN KeyInput = KeyInput + " 9": WaitForKeyup(KEY_9): KeyCount = KeyCount + 1
-	  IF keyboard(KEY_0) THEN KeyInput = KeyInput + " 0": WaitForKeyup(KEY_0): KeyCount = KeyCount + 1
-	  IF KeyCount >= 4 THEN
-		KeyCount = 200
-	  END IF
+	  IF keyboard(KEY_1) THEN KeyInput = KeyInput + " 1": WaitForKeyup(KEY_1): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
+	  IF keyboard(KEY_2) THEN KeyInput = KeyInput + " 2": WaitForKeyup(KEY_2): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
+	  IF keyboard(KEY_3) THEN KeyInput = KeyInput + " 3": WaitForKeyup(KEY_3): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
+	  IF keyboard(KEY_4) THEN KeyInput = KeyInput + " 4": WaitForKeyup(KEY_4): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
+	  IF keyboard(KEY_5) THEN KeyInput = KeyInput + " 5": WaitForKeyup(KEY_5): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
+	  IF keyboard(KEY_6) THEN KeyInput = KeyInput + " 6": WaitForKeyup(KEY_6): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
+	  IF keyboard(KEY_7) THEN KeyInput = KeyInput + " 7": WaitForKeyup(KEY_7): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
+	  IF keyboard(KEY_8) THEN KeyInput = KeyInput + " 8": WaitForKeyup(KEY_8): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
+	  IF keyboard(KEY_9) THEN KeyInput = KeyInput + " 9": WaitForKeyup(KEY_9): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
+	  IF keyboard(KEY_0) THEN KeyInput = KeyInput + " 0": WaitForKeyup(KEY_0): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
     else
         IF keyboard(KEY_1) THEN doAction CustomActions(0).actionId, CustomActions(0).itemId 'LD2_SetWeapon 1
         IF keyboard(KEY_2) THEN doAction CustomActions(1).actionId, CustomActions(1).itemId 'LD2_SetWeapon 3
@@ -1162,7 +1229,9 @@ SUB Main
             LD2_AddAmmo ItemIds.MachineGunAmmo, 99
             LD2_AddAmmo ItemIds.MagnumAmmo, 99
             LD2_PlaySound Sounds.reload
-            keyRup = 0
+        end if
+        if keyboard(KEY_R) then
+            keyrUp = 0
         else
             keyrUp = 1
         end if
@@ -1487,7 +1556,6 @@ function Scene3Go () as integer
     'AddSound Sounds.scare, "splice/scare0.ogg"
     AddSound Sounds.crack  , "splice/crack.wav"
     AddSound Sounds.glass  , "splice/glass.wav"
-    
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
     GetCharacterPose JanitorPose, CharacterIds.Janitor, PoseIds.Talking
@@ -2416,52 +2484,116 @@ SUB SceneRoofTop
 
 END SUB
 
-SUB SceneSteveGone
+sub SceneSteveGone
+    
+    if SceneSteveGoneGo() then
+        LD2_FadeOut 2
+        SceneSteveGoneEndConditions
+        RenderScene 0
+        LD2_FadeIn 2
+    else
+        SceneSteveGoneEndConditions
+    end if
+    
+end sub
 
-  LD2_SetSceneMode LETTERBOX
-  UpdateLarryPos
-  LarryIsThere = 1
-  LarryPoint = 1
-  LarryPos = 0
- 
-  SceneNo = 0
-  Larry.y = 144
+sub SceneSteveGoneEndConditions
+    
+    ClearPoses
+    LD2_SetSceneMode MODEOFF
+    SteveGoneScene = 1
+    
+end sub
 
-  dim escaped as integer
-  IF SCENE_Init("SCENE-STEVE-GONE") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-  LD2_WriteText ""
+function SceneSteveGoneGo () as integer
+    
+    dim LarryPose as PoseType
+    LD2_SetSceneMode LETTERBOX
+    UpdateLarryPos
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
+    LarryPose.setX Larry.x: LarryPose.setY 144
+    ClearPoses
+    AddPose @LarryPose
+    RenderScene
+    WaitSeconds 1.0
+    
+    if DoScene("SCENE-STEVE-GONE") then return 1 '// Huh? Where's Steve?
+    
+end function
 
-  SteveGoneScene = 1
-  LD2_SetSceneMode MODEOFF
-  LarryIsThere = 0
+sub SceneGoo
+    
+    if SceneGooGo() then
+        LD2_FadeOut 2
+        SceneGooEndConditions
+        RenderScene 0
+        LD2_FadeIn 2
+    else
+        SceneGooEndConditions
+    end if
+    
+end sub
 
-END SUB
+sub SceneGooEndConditions
+    
+    ClearPoses
+    LD2_SetSceneMode MODEOFF
+    GooScene = 1
+    
+end sub
 
-SUB SceneVent1
+function SceneGooGo() as integer
+    
+    dim LarryPose as PoseType
+    LD2_SetSceneMode LETTERBOX
+    UpdateLarryPos
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
+    LarryPose.setX Larry.x: LarryPose.setY 144
+    ClearPoses
+    AddPose @LarryPose
+    RenderScene
+    WaitSeconds 1.0
+    
+    if DoScene("SCENE-GOO") then return 1 '// Woah! Some type of crystalized alien goo is in the way.
+    
+end function
 
-  LD2_SetSceneMode LETTERBOX
-  UpdateLarryPos
-  LarryIsThere = 1
-  LarryPoint = 1
+sub SceneGooDestroy
+    
+    if SceneGooDestroyGo() then
+        LD2_FadeOut 2
+        SceneGooDestroyEndConditions
+        RenderScene 0
+        LD2_FadeIn 2
+    else
+        SceneGooDestroyEndConditions
+    end if
+    
+end sub
 
-  SceneNo = 0
-  Larry.y = 144
+sub SceneGooDestroyEndConditions
+    
+    ClearPoses
+    LD2_SetSceneMode MODEOFF
+    GooScene = 2
+    
+end sub
 
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "Woah!")
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "Some type of crystalized alien goo is in the way.")
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "I'll need to find some type of chemical to...")
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "break down this goo.")
-  LD2_WriteText ""
-
-  SceneVent = 1 '- LD2_CreateItem SCENECOMPLETE, 0, 0, 0
-  LD2_SetSceneMode MODEOFF
-  LarryIsThere = 0
-
-END SUB
+function SceneGooDestroyGo () as integer
+    
+    dim LarryPose as PoseType
+    LD2_SetSceneMode LETTERBOX
+    UpdateLarryPos
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
+    LarryPose.setX Larry.x: LarryPose.setY 144
+    ClearPoses
+    AddPose @LarryPose
+    RenderScene
+    WaitSeconds 1.0
+    
+    return 0
+    
+end function
 
 SUB SceneWeaponRoom
 
@@ -2625,14 +2757,14 @@ SUB Start
   
   DO
     
-    IF Inventory_Init(8) THEN
+    IF Inventory_Init(16, 8) THEN
       'PRINT Inventory_GetErrorMessage()
       END
     END IF
     
     LD2_Init
     LD2_SetMusicVolume 1.0
-    LD2_SetSoundVolume 0.5
+    LD2_SetSoundVolume 0.75
     LoadSounds
     
     if LD2_HasFlag(CLASSICMODE) then
@@ -2732,13 +2864,18 @@ SUB InitPlayer
       LD2_AddAmmo ItemIds.MachineGunAmmo, 99
       LD2_AddAmmo ItemIds.MagnumAmmo, 99
       LD2_SetLives 99
-      LD2_AddToStatus(WALKIETALKIE, 1)
-      LD2_AddToStatus(REDCARD, 1)
-      LD2_AddToStatus(SHOTGUN, 1)
-      LD2_AddToStatus(MACHINEGUN, 1)
-      LD2_AddToStatus(PISTOL, 1)
-      'LD2_AddToStatus(DESERTEAGLE, 1)
+      LD2_AddToStatus(ItemIds.Redcard, 1)
+      LD2_AddToStatus(ItemIds.Medikit50, 1)
+      LD2_AddToStatus(ItemIds.Shotgun, 1)
+      'LD2_AddToStatus(ItemIds.MachineGun, 1)
+      LD2_AddToStatus(ItemIds.Pistol, 1)
+      'LD2_AddToStatus(ItemIds.Magnum, 1)
+      'LD2_AddToStatus(ItemIds.ShotgunAmmo, 30)
+      'LD2_AddToStatus(WALKIETALKIE, 1)
       'LD2_AddToStatus(WHITECARD, 1)
+      LD2_AddToStatus(ItemIds.MysteryMeat, 1)
+      LD2_AddToStatus(ItemIds.Chemical409, 1)
+      LD2_AddToStatus(ItemIds.JanitorNote, 1)
         LD2_PlayMusic mscWANDERING
     ELSE
       LD2_AddToStatus(GREENCARD, 1)
@@ -2775,6 +2912,12 @@ sub LD2_UseItem (id as integer, qty as integer)
         qtyUnused = LD2_AddAmmo(id, qty)
     case ItemIds.HP
         LD2_AddAmmo -1, qty
+        LD2_PlaySound Sounds.useMedikit
+    case ItemIds.ExtraLife
+        LD2_AddLives 1
+        LD2_PlaySound Sounds.useExtraLife
+    case ItemIds.Chemical410
+        SceneGooDestroy
     end select
     
 end sub

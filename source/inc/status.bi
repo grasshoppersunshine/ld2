@@ -1,6 +1,5 @@
 #pragma once
 #inclib "status"
-#include once "modules/inc/inventory.bi"
 
 TYPE tFloor
   floorNo AS INTEGER

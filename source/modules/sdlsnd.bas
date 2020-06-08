@@ -133,7 +133,7 @@ end sub
 sub SOUND_PlayMusic (loops as integer = -1)
 
 	if GLOBAL_SoundInitialized and (GLOBAL_BackgroundMusic <> 0) then
-		Mix_PlayMusic( GLOBAL_BackgroundMusic, loops )
+		Mix_PlayMusic( GLOBAL_BackgroundMusic, iif(loops <> 0, -1, 0) )
 		GLOBAL_MusicIsPlaying = 1
 	end if
 

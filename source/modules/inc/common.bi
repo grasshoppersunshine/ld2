@@ -4,7 +4,9 @@
 declare function GetCommonInfo() as string
 declare function GetCommonErrorMsg() as string
 declare function InitCommon() as integer
+declare sub FreeCommon()
 declare function keyboard(code as integer) as integer
+declare function keypress(code as integer) as integer
 DECLARE SUB logdebug (message AS STRING)
 DECLARE SUB WaitSeconds (seconds AS DOUBLE)
 DECLARE FUNCTION WaitSecondsUntilKey (seconds AS DOUBLE) as integer

@@ -70,37 +70,50 @@ SUB LD2_AddSound (id as integer, filename as string, loops as integer=0, volume 
     
 END SUB 
 
-SUB LD2_FadeInMusic (speed as double = 1.0)
+function LD2_FadeInMusic (speed as double = 1.0) as integer
 
-	dim i as integer
 	dim v as double
 	dim delay as double
-    dim stepsize as double
-	
-    IF LD2soundEnabled THEN
-        SOUND_SetMusicVolume 0.0
-        SOUND_PlayMusic
-        LD2soundMusicTargetVolume = 1.0
-        LD2soundMusicVolumeChangeSpeed = 60/(3600*speed)
-    END IF
-
-END SUB
-
-SUB LD2_FadeOutMusic (speed as double = 1.0)
-
-	dim i as integer
-	dim v as double
-	dim delay as double
-    dim stepsize as double
+    static lastTime as double
     
-    v = SOUND_GetMusicVolume()
-	
-    IF LD2soundEnabled THEN
-        LD2soundMusicTargetVolume = 0.0
-        LD2soundMusicVolumeChangeSpeed = 60/(3600*speed)
-    END IF
+    if LD2soundEnabled = 0 then return 0
+    
+    delay = speed / 10
+    
+    if (timer - lastTime) >= delay then
+        v = SOUND_GetMusicVolume()
+        v += 0.10
+        if v > 1.0 then v = 1.0
+        SOUND_SetMusicVolume v
+        lastTime = timer
+    end if
+    
+    return (v < 1.0)
 
-END SUB
+end function
+
+function LD2_FadeOutMusic (speed as double = 1.0) as integer
+
+	dim v as double
+	dim delay as double
+    static lastTime as double
+    
+    if LD2soundEnabled = 0 then return 0
+    
+    delay = speed / 10
+    
+    if (timer - lastTime) >= delay then
+        v = SOUND_GetMusicVolume()
+        v -= 0.10
+        if v < 0.0 then v = 0.0
+        SOUND_SetMusicVolume v
+        lastTime = timer
+        return (v > 0.0)
+    end if
+    
+    return 1
+
+end function
 
 SUB LD2_SetMusic (id AS INTEGER)
     
