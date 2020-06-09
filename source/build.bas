@@ -256,6 +256,7 @@ dim modulesUpdated as integer
 args.init
 args.add "modules/common.bas"      , "-lib -x lib/libcommon.a"      , "lib/libcommon.a"
 args.add "modules/mobs.bas"        , "-lib -x lib/libmobs.a"        , "lib/libmobs.a"
+args.add "modules/poses.bas"       , "-lib -x lib/libposes.a"       , "lib/libposes.a"
 args.add "modules/inventory.bas"   , "-lib -x lib/libinventory.a"   , "lib/libinventory.a"
 args.add "modules/palette256.bas"  , "-lib -x lib/libpalette256.a"  , "lib/libpalette256.a"
 args.add "modules/video.bas"       , "-lib -x lib/libvideo.a"       , "lib/libvideo.a"
@@ -271,6 +272,7 @@ args.add "scene.bas" , "-lib -p lib/ -x lib/libscene.a" , "lib/libscene.a"
 args.add "status.bas", "-lib -p lib/ -x lib/libstatus.a", "lib/libstatus.a"
 args.add "title.bas" , "-lib -p lib/ -x lib/libtitle.a" , "lib/libtitle.a"
 args.add "ld2e.bas"  , "-lib -p lib/ -x lib/libld2e.a"  , "lib/libld2e.a"
+args.add "scenes.bas", "-lib -p lib/ -x lib/libscenes.a", "lib/libscenes.a"
 modulesUpdated = doArgs(args, pathToFbc, ucase("[2/3] game modules"), dependenciesUpdated)
 
 args.init

@@ -208,7 +208,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     '- show item that was picked up (lower-right corner of screen: "Picked Up Shotgun")
     '- copy steve scene sprites over
     
-    SELECT CASE Player.life
+    SELECT CASE Player_GetItemQty(ItemIds.Hp)
     CASE IS > 80
         valueStatus.text = "Good"
         valueStatus.text_color = 56
@@ -239,7 +239,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
         valueWeapon.text = "Magnum"
     END SELECT
     
-    valueHealth.text = ltrim(str(Player.life))+"%"
+    valueHealth.text = ltrim(str(Player_GetItemQty(ItemIds.Hp)))+"%"
     
     FOR i = 0 TO 7
         
@@ -530,7 +530,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
         END IF
         IF keypress(KEY_ENTER) or keypress(KEY_SPACE) THEN
             LD2_PlaySound Sounds.uiSelect
-            LD2_SetRoom selectedRoom
+            Player_SetItemQty ItemIds.CurrentRoom, selectedRoom
             doLoadMap = 1
             EXIT DO
         END IF
@@ -709,11 +709,11 @@ SUB RefreshStatusScreen
             EXIT FOR
         END IF
     NEXT i
-    Inventory_AddHidden(ItemIds.HP, Player_GetHP())
-    Inventory_AddHidden(ItemIds.ShotgunLoaded   , LD2_GetInventoryQty(ItemIds.ShotgunAmmo   ))
-    Inventory_AddHidden(ItemIds.PistolLoaded    , LD2_GetInventoryQty(ItemIds.PistolAmmo    ))
-    Inventory_AddHidden(ItemIds.MachineGunLoaded, LD2_GetInventoryQty(ItemIds.MachineGunAmmo))
-    Inventory_AddHidden(ItemIds.MagnumLoaded    , LD2_GetInventoryQty(ItemIds.MagnumAmmo    ))
+    Inventory_AddHidden(ItemIds.Hp, Player_GetItemQty(ItemIds.Hp))
+    Inventory_AddHidden(ItemIds.ShotgunLoaded   , Player_GetItemQty(ItemIds.ShotgunAmmo   ))
+    Inventory_AddHidden(ItemIds.PistolLoaded    , Player_GetItemQty(ItemIds.PistolAmmo    ))
+    Inventory_AddHidden(ItemIds.MachineGunLoaded, Player_GetItemQty(ItemIds.MachineGunAmmo))
+    Inventory_AddHidden(ItemIds.MagnumLoaded    , Player_GetItemQty(ItemIds.MagnumAmmo    ))
     Inventory_RefreshNames
     
 END SUB
@@ -847,9 +847,12 @@ SUB StatusScreen
                 select case action
                 case 0  '- USE
                     UseItem selected
+                    action = -1
                 case 1  '- LOOK
                     LD2_PlaySound Sounds.uiSelect
                     Look selected
+                    action = -1
+                    LD2_PlaySound Sounds.uiSubmenu
                 case 2  '- MIX
                     if selected.id = ItemIds.NOTHING then
                         LD2_CopyBuffer 2, 1
@@ -865,6 +868,7 @@ SUB StatusScreen
                     end if
                 case 3  '- Drop
                     Drop selected
+                    action = -1
                 end select
             else
                 'if selected.id > 0 then

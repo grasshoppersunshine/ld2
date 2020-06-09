@@ -1,3 +1,5 @@
+#include once "modules/inc/poses.bi"
+
 enum TileIds
     AlienWallBottom      = 85
     AlienWallMiddle      = 86
@@ -75,12 +77,37 @@ enum ItemIds
     Magnum           = 24
     WalkieTalkie     = 25
     MachineGunAmmo   = 26
-    ExtraLife        = 27
+    Lives            = 27
     HP               = 28
     ShotgunLoaded    = 29
     PistolLoaded     = 30
     MachineGunLoaded = 31
     MagnumLoaded     = 32
+    '=======================================
+    CurrentRoom          = 90
+    BossRooftopBegin     = 91
+    BossRooftopEnd       = 92
+    BossPortalBegin      = 93
+    BossPortalEnd        = 94
+    BossKilledId         = 99
+    SceneIntro           = 101
+    SceneJanitor         = 102
+    SceneJanitorDies     = 103
+    SceneElevator        = 104
+    SceneWeaponsLocker1  = 105
+    SceneWeaponsLocker2  = 106
+    SceneWeaponsLocker3  = 107
+    SceneWheresSteve     = 108
+    SceneGoo             = 109
+    SceneGooGone         = 110
+    SceneRooftopGotCard  = 111
+    SceneFlashlight      = 112
+    SceneBarneyPlan      = 113
+    SceneVentCrawl       = 114
+    SceneVentRemoveSteve = 115
+    ScenePortal          = 116
+    SceneLobby           = 117
+    SceneTheEnd          = 118
 end enum
 
 CONST FIST = 0
@@ -335,6 +362,7 @@ CONST GOTITEM       = &h100
 CONST MAPISLOADED   = &h200
 CONST FADEIN        = &h400
 CONST CLASSICMODE   = &h800
+CONST PLAYERDIED    = &h1000
 
 '======================
 '= SCENE POSES
@@ -364,11 +392,16 @@ CONST BARNEYEXITELEVATOR = 50
 
 enum CharacterIds
     Barney = 1
+    BarneyRadio
     Janitor
     Larry
+    LarryLookingUp
+    LarryThinking
+    LarryThinkTalking
+    LarryRadio
     Rockmonster
     Steve
-    Stevesick
+    SteveSick
     Trooper
 end enum
 
@@ -416,12 +449,19 @@ enum Options
     Yes = 1
 end enum
 
-CONST LARRYCHATBOX = 37
-CONST STEVECHATBOX = 39
-CONST STEVESICKCHATBOX = 115
-CONST BARNEYCHATBOX = 43
-CONST JANITORCHATBOX = 41
-CONST TROOPERCHATBOX = 74
+enum ChatBoxes
+    Larry                = 37
+    LarryLookingUp       = 125
+    LarryThinking        = 132
+    LarryThinkTalking    = 134
+    LarryRadio           = 68
+    Steve                = 39
+    SteveSick            = 115
+    Barney               = 43
+    BarneyRadio          = 70
+    Janitor              = 41
+    Trooper              = 74
+end enum
 
 '======================
 '= SCENE MODES
@@ -431,3 +471,17 @@ CONST LETTERBOX = 1
 
 declare sub LD2_UseItem (id as integer, qty as integer)
 declare sub LD2_LookItem (id as integer, byref desc as string)
+declare sub AddSound (id as integer, filepath as string, loops as integer = 0)
+declare sub RetraceDelay (qty as integer)
+
+declare sub RenderScene (visible as integer = 1)
+declare function DoScene (sceneId as string) as integer
+
+declare sub AddPose (pose as PoseType ptr)
+declare sub ClearPoses ()
+declare sub GetCharacterPose (pose as PoseType, characterId as integer, poseId as integer)
+declare sub RemovePose (pose as PoseType ptr)
+declare sub RenderPoses ()
+
+declare function FadeInMusic(id as integer = -1, seconds as double = 3.0) as integer
+declare function FadeOutMusic(seconds as double = 3.0) as integer

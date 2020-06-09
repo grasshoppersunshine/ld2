@@ -114,7 +114,7 @@
   CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)
   CONST MAXDOORS     =  16 '- per room
   CONST MAXFLOORS    =  23
-  CONST MAXINVENTORY =  63
+  CONST MAXINVENTORY =  127
   CONST MAXINVSLOTS  =   7
   CONST MAXTILES     = 120
   CONST MAXEVENTS    =   9
@@ -218,7 +218,6 @@
   DIM SHARED NumDoors AS INTEGER
   DIM SHARED NumGuts AS INTEGER
   DIM SHARED NumInvSlots AS INTEGER
-  DIM SHARED NumLives AS INTEGER
   DIM SHARED NumLoadedTiles AS INTEGER
   
   DIM SHARED SceneCaption AS STRING
@@ -234,7 +233,6 @@
   DIM SHARED Elevator AS ElevatorType
   
   DIM SHARED XShift AS DOUBLE
-  DIM SHARED CurrentRoom AS INTEGER
   
   DIM SHARED Animation AS SINGLE
   
@@ -297,25 +295,16 @@ FUNCTION File_getAllocSize (filename AS STRING) as long
     
 END FUNCTION
 
-'DEFINT A-Z
-function LD2_AddAmmo (Kind AS INTEGER, Amount AS INTEGER) as integer
+function Player_AddAmmo (weaponId as integer, qty as integer) as integer
     
     dim spaceLeft as integer
     dim qtyUnused as integer
     dim qtyMax as integer
     dim itemId as integer
     
-    if Kind = -1 then
-        Player.life += Amount
-        if Player.life > MAXLIFE then
-            Player.life = MAXLIFE
-        end if
-        return 0
-    end if
-    
     qtyUnused = 0
     
-    select case Kind
+    select case weaponId
     case ItemIds.ShotgunAmmo
         qtyMax = SHOTGUN_MAX
     case ItemIds.PistolAmmo
@@ -328,13 +317,13 @@ function LD2_AddAmmo (Kind AS INTEGER, Amount AS INTEGER) as integer
         return 0
     end select
     
-    spaceLeft = qtyMax - Inventory(Kind)
-    if spaceLeft < Amount then
-        qtyUnused = Amount - spaceLeft
-        Amount = spaceLeft
+    spaceLeft = qtyMax - Inventory(weaponId)
+    if spaceLeft < qty then
+        qtyUnused = qty - spaceLeft
+        qty = spaceLeft
     end if
-    if Amount > 0 then
-        Inventory(Kind) += Amount
+    if qty > 0 then
+        Inventory(weaponId) += qty
     end if
 
   'IF Kind = 1 THEN Inventory(SHELLS) = Inventory(SHELLS) + Amount
@@ -353,18 +342,6 @@ function LD2_AddAmmo (Kind AS INTEGER, Amount AS INTEGER) as integer
     return qtyUnused
 
 end function
-
-SUB LD2_AddLives (Amount AS INTEGER)
-
-  NumLives = NumLives + Amount
-
-END SUB
-
-SUB LD2_SetLives (Amount AS INTEGER)
-  
-  NumLives = Amount
-  
-END SUB
 
 SUB AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
     
@@ -433,12 +410,6 @@ SUB LD2_ClearInventorySlot (slot AS INTEGER)
     end select
     
 END SUB
-
-FUNCTION LD2_AtElevator() as integer
-    
-    return Elevator.isOpen
-    
-END FUNCTION
 
 SUB LD2_LockElevator
     
@@ -717,7 +688,6 @@ SUB LD2_Init
     end if
     
     Animation   = 1
-    NumLives    = 1
     Lighting1   = 1
     Lighting2   = 1
     Gravity     = 0.06
@@ -945,7 +915,7 @@ SUB LD2_InitPlayer(p AS PlayerType)
     
     Player = p
     
-    Player.life = MAXLIFE
+    Inventory(ItemIds.Hp) = MAXLIFE
     LD2_SetWeapon ItemIds.Fist
     
 END SUB
@@ -999,7 +969,7 @@ SUB SaveItems (filename AS STRING)
     GET #InFile, , roomItemCount
     
     FOR roomId = 0 TO roomCount-1
-        IF roomId = CurrentRoom THEN
+        IF roomId = Inventory(ItemIds.CurrentRoom) THEN
             PUT #OutFile, , roomId
             PUT #OutFile, , roomItemCount
             FOR i = 0 TO NumItems-1
@@ -1054,13 +1024,13 @@ SUB LD2_LoadMap (Filename AS STRING, skipMobs as integer = 0)
   
   'LD2_FadeOut 2, 0
   
-  IF WentToRoom(CurrentRoom) = 0 THEN
+  IF WentToRoom(Inventory(ItemIds.CurrentRoom)) = 0 THEN
     did = 0
   ELSE
     did = 1
   END IF
 
-  WentToRoom(CurrentRoom) = 1
+  WentToRoom(Inventory(ItemIds.CurrentRoom)) = 1
   
   Inventory(TEMPAUTH) = 0
   
@@ -1619,42 +1589,6 @@ sub Guts_Draw()
     next n
     
 end sub
-
-SUB LD2_PlayerAddItem (id AS INTEGER)
-    
-    IF Inventory(id) = 0 THEN
-        Inventory(id) = 1
-    END IF
-    
-END SUB
-
-SUB LD2_PlayerAddQty (id AS INTEGER, qty AS INTEGER)
-    
-    Inventory(id) = Inventory(id) + qty
-    
-END SUB
-
-FUNCTION LD2_PlayerGetQty (id AS INTEGER) as integer
-    
-    return Inventory(id)
-    
-END FUNCTION
-
-SUB LD2_PlayerSetQty (id AS INTEGER, qty AS INTEGER)
-    
-    Inventory(id) = qty
-    
-END SUB
-
-FUNCTION LD2_PlayerHasItem (id AS INTEGER) as integer
-    
-    IF Inventory(id) > 0 THEN
-        return 1
-    ELSE
-        return 0
-    END IF
-    
-END FUNCTION
 
 SUB SetPlayerState(state AS INTEGER)
     
@@ -2334,46 +2268,12 @@ SUB LD2_ClearMobs
 
 END SUB
 
-SUB LD2_SetPlayerFlip (flp AS INTEGER)
-
-  '- set the player's flip status
-  '------------------------------
-
-  Player.flip = flp
-
-END SUB
-
 SUB LD2_SetPlayerlAni (Num AS INTEGER)
 
   '- Set the current lower animation of the player
 
   Player.lAni = Num
 
-END SUB
-
-SUB LD2_SetPlayerXY (x AS INTEGER, y AS INTEGER)
-
-  '- set the player's coordinates
-  '------------------------------
-
-  Player.x = x
-  Player.y = y
-
-END SUB
-
-function LD2_GetRoom () as integer
-    
-    return CurrentRoom
-    
-end function
-
-SUB LD2_SetRoom (Room AS INTEGER)
-
-  '- Set the current room
-  '----------------------
-
-  CurrentRoom = Room
- 
 END SUB
 
 SUB LD2_SetSceneMode (OnOff AS INTEGER)
@@ -2480,7 +2380,7 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
     case ItemIds.Shotgun
         
         Inventory(ItemIds.ShotgunAmmo) -= 1
-        damage = 6
+        damage = 5
         
     case ItemIds.Pistol
         
@@ -2615,10 +2515,10 @@ function LD2_Shoot(is_repeat as integer = 0) as integer
             case ItemIds.Shotgun
                 dist = abs(contactX - (Player.x+7))
                 select case dist
-                case  0 to 15: mob.life -= damage * 1.0000
-                case 16 to 47: mob.life -= damage * 0.6667
-                case 48 to 79: mob.life -= damage * 0.5000
-                case else    : mob.life -= damage * 0.3333
+                case  0 to 15: mob.life -= (damage - 0)
+                case 16 to 47: mob.life -= (damage - 1)
+                case 48 to 79: mob.life -= (damage - 2)
+                case else    : mob.life -= (damage - 3)
                 end select
             case ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum
                 mob.life -= damage
@@ -2770,9 +2670,11 @@ sub Mobs_Kill (mob as Mobile)
     select case mob.id
     case BOSS1
         LD2_SetFlag BOSSKILLED
+        Player_SetItemQty ItemIds.BossKilledId, BOSS1
         LD2_StopMusic
     case BOSS2
         LD2_SetFlag BOSSKILLED
+        Player_SetItemQty ItemIds.BossKilledId, BOSS1
         LD2_PlayMusic mscWANDERING
         Inventory(AUTH) = REDACCESS
     case TROOP1, TROOP2
@@ -2906,7 +2808,7 @@ sub Mobs_Animate()
         SELECT CASE mob.state
         CASE SPAWNED
 
-            mob.life  = 10
+            mob.life  = 8
             mob.ani   = 1
             mob.state = GO
         
@@ -2943,7 +2845,7 @@ sub Mobs_Animate()
                     IF INT(10 * RND(1)) + 1 = 1 THEN
                         LD2_PlaySound Sounds.blood2
                     END IF
-                    Player.life = Player.life - 1
+                    Inventory(ItemIds.Hp) -= 1
                     Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8, 1, (1+2*rnd(1))*iif(int(2*rnd(1)),1,-1)
                 END IF
             END IF
@@ -3071,7 +2973,7 @@ sub Mobs_Animate()
                             IF i > Player.x AND i < Player.x + 15 THEN
                                 IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
                                     Guts_Add GutsIds.Blood, i, mob.y + 8, 1
-                                    Player.life = Player.life - 1
+                                    Inventory(ItemIds.Hp) -= 1
                                     IF INT(10 * RND(1)) + 1 = 1 THEN
                                         LD2_PlaySound Sounds.blood1
                                         LD2_PlaySound Sounds.larryHurt
@@ -3087,7 +2989,7 @@ sub Mobs_Animate()
                             IF i > Player.x AND i < Player.x + 15 THEN
                                 IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
                                     Guts_Add GutsIds.Blood, i, mob.y + 8, 1
-                                    Player.life = Player.life - 1
+                                    Inventory(ItemIds.Hp) -= 1
                                     IF INT(10 * RND(1)) + 1 = 1 THEN
                                         LD2_PlaySound Sounds.blood1
                                         LD2_PlaySound Sounds.larryHurt
@@ -3172,7 +3074,7 @@ sub Mobs_Animate()
                             IF i > Player.x AND i < Player.x + 15 THEN
                                 IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
                                     Guts_Add GutsIds.Blood, i, mob.y + 8, 1
-                                    Player.life = Player.life - 2
+                                    Inventory(ItemIds.Hp) -= 2
                                     IF INT(10 * RND(1)) + 1 = 1 THEN
                                         LD2_PlaySound Sounds.blood1
                                         LD2_PlaySound Sounds.larryHurt
@@ -3188,7 +3090,7 @@ sub Mobs_Animate()
                             IF i > Player.x AND i < Player.x + 15 THEN
                                 IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
                                     Guts_Add GutsIds.Blood, i, mob.y + 8, 1
-                                    Player.life = Player.life - 2
+                                    Inventory(ItemIds.Hp) -= 2
                                     IF INT(10 * RND(1)) + 1 = 1 THEN
                                         LD2_PlaySound Sounds.blood1
                                         LD2_PlaySound Sounds.larryHurt
@@ -3213,7 +3115,7 @@ sub Mobs_Animate()
             'mob.ani = 11
             mob.ani = 47
             mob.state = GO
-            mob.y -= 10
+            mob.y -= 7
         
         CASE HURT
             
@@ -3254,7 +3156,7 @@ sub Mobs_Animate()
                         LD2_PlaySound Sounds.blood1
                         LD2_PlaySound Sounds.larryHurt
                     END IF
-                    Player.life = Player.life - 1
+                    Inventory(ItemIds.Hp) -= 1
                     Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8, 1
                 END IF
             END IF
@@ -3299,7 +3201,7 @@ sub Mobs_Animate()
                 if int(10 * rnd(1)) + 1 = 1 then
                     LD2_PlaySound Sounds.blood2
                 end if
-                Player.life -= 1
+                Inventory(ItemIds.Hp) -= 1
                 Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8, 1
             end if
         end if
@@ -3347,7 +3249,7 @@ sub Mobs_Animate()
 
         IF mob.x + 7 >= Player.x AND mob.x + 7 <= Player.x + 15 THEN
           IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
-            Player.life = Player.life - 1
+           Inventory(ItemIds.Hp) -= 1
           END IF
         END IF
        
@@ -3455,16 +3357,17 @@ sub Player_Animate()
     dim prevX as double
     dim f as double
     
-    if Player.life <= 0 then
+    if Inventory(ItemIds.Hp) <= 0 then
         LD2_PlaySound Sounds.larryDie
-        NumLives = NumLives - 1
-        if NumLives <= 0 then
+        Inventory(ItemIds.Lives) -= 1
+        if Inventory(ItemIds.Lives) <= 0 then
             LD2_PlayMusic mscUHOH
             LD2_PopText "Game Over"
             LD2_ShutDown
         else
-            LD2_PopText "Lives Left:" + str(NumLives)
-            Player.life = MAXLIFE
+            LD2_PopText "Lives Left:" + str(Inventory(ItemIds.Lives))
+            LD2_SetFlag PLAYERDIED
+            Inventory(ItemIds.Hp) = MAXLIFE
             if showLife and (CurrentRoom = ROOFTOP) then
                 Inventory(SHELLS) = 40
                 Inventory(BULLETS) = 50
@@ -3476,7 +3379,7 @@ sub Player_Animate()
                 XShift = 300
                 Player.x = 80
             else
-                CurrentRoom = WEAPONSLOCKER
+                Inventory(ItemIds.CurrentRoom) = WEAPONSLOCKER
                 LD2_LoadMap "7th.LD2"
                 XShift = 560
                 Player.x = 80
@@ -3844,9 +3747,64 @@ function Player_GetAccessLevel() as integer
     
 end function
 
-function Player_GetHP() as integer
+function Player_GetItemQty(itemId as integer) as integer
     
-    return Player.life
+    return Inventory(itemId)
+    
+end function
+
+function Player_HasItem(itemId as integer) as integer
+    
+    return (Inventory(itemId) > 0)
+    
+end function
+
+function Player_NotItem(itemId as integer) as integer
+    
+    return (Inventory(itemId) = 0)
+    
+end function
+
+sub Player_AddItem(itemId as integer, qty as integer = 1)
+    
+    Inventory(itemId) += qty
+    
+end sub
+
+sub Player_SetItemQty(itemId as integer, qty as integer)
+    
+    Inventory(itemId) = qty
+    
+end sub
+
+function Player_AtElevator() as integer
+    
+    return Elevator.isOpen
+    
+end function
+
+sub Player_SetFlip (flipped as integer)
+    
+    Player.flip = flipped
+    
+end sub
+
+sub Player_SetXY (x as integer, y as integer)
+    
+    Player.x = x
+    Player.y = y
+    
+end sub
+
+function Player_GetX() as integer
+    
+    return Player.x
+    
+end function
+
+function Player_GetY() as integer
+    
+    return Player.y
     
 end function
 
@@ -3867,7 +3825,7 @@ sub Stats_Draw ()
         SpritesLarry.putToScreen(pad, pad+12, 52)
     end select
     
-    LD2_putTextCol pad+16, pad+3, str(Player.life), 15, 1
+    LD2_putTextCol pad+16, pad+3, str(Inventory(ItemIds.Hp)), 15, 1
     
     if Player.weapon = SHOTGUN     then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(SHELLS)), 15, 1
     if Player.weapon = MACHINEGUN  then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(BULLETS)), 15, 1

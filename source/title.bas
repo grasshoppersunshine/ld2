@@ -265,7 +265,7 @@ SUB TITLE_Intro
 
     LD2_CLS 0, 0
 
-    WaitSecondsUntilKey(1.0)
+    WaitSecondsUntilKey(2.0)
     if keyboard(KEY_ENTER) then
         LD2_FadeOut 2
     end if

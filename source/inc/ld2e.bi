@@ -11,7 +11,6 @@ type PlayerType
     state as integer
     stateTimestamp as double
     landTime as double
-    life as integer
     weapon as integer
     is_shooting as integer
     is_visible as integer
@@ -104,13 +103,19 @@ declare sub Player_Draw()
 declare function Player_Jump (Amount as double) as integer
 declare function Player_Move (XAmount as double) as integer
 declare function Player_GetAccessLevel() as integer
-declare function Player_GetHP() as integer
-declare function LD2_GetInventoryQty(itemId as integer) as integer
+declare function Player_GetItemQty(itemId as integer) as integer
+declare function Player_HasItem(itemId as integer) as integer
+declare function Player_NotItem(itemId as integer) as integer
+declare sub Player_AddItem(itemId as integer, qty as integer = 1)
+declare sub Player_SetItemQty(itemId as integer, qty as integer)
+declare function Player_AddAmmo (weaponId as integer, qty as integer) as integer
+declare function Player_AtElevator () as integer
+declare sub Player_SetFlip (flipped as integer)
+declare sub Player_SetXY (x as integer, y as integer)
+declare function Player_GetX() as integer
+declare function Player_GetY() as integer
 
-DECLARE function LD2_AddAmmo (Kind AS INTEGER, Amount AS INTEGER) as integer
-DECLARE SUB LD2_AddLives (Amount AS INTEGER)
 DECLARE FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
-DECLARE FUNCTION LD2_AtElevator () as integer
 DECLARE SUB LD2_ClearInventorySlot (slot AS INTEGER)
 DECLARE SUB LD2_ClearMobs ()
 DECLARE SUB LD2_CountFrame ()
@@ -137,13 +142,8 @@ DECLARE SUB LD2_PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS I
 declare sub LD2_RenderBackground(height as double)
 DECLARE SUB LD2_RenderFrame ()
 DECLARE SUB LD2_SetAccessLevel (CodeNum AS INTEGER)
-DECLARE SUB LD2_SetLives (Amount AS INTEGER)
 DECLARE SUB LD2_SetPlayerlAni (Num AS INTEGER)
-DECLARE SUB LD2_SetPlayerFlip (flip AS INTEGER)
-DECLARE SUB LD2_SetPlayerXY (x AS INTEGER, y AS INTEGER)
 DECLARE SUB LD2_SetNotice (message AS STRING)
-declare function LD2_GetRoom () as integer
-DECLARE SUB LD2_SetRoom (Room AS INTEGER)
 DECLARE SUB LD2_SetSceneMode (OnOff AS INTEGER)
 DECLARE SUB LD2_SetSceneNo (Num AS INTEGER)
 DECLARE SUB LD2_SetTempAccess (accessLevel AS INTEGER)

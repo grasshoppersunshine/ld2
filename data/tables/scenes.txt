@@ -65,7 +65,7 @@ END
 
 SCENE-1D
     
-    STEVESICK [ SICK ]
+    STEVE_SICK
     Larry...
     I don't feel so good.
     There's something in the cola...
@@ -91,13 +91,13 @@ END
 
 SCENE-3A
     
-        LARRY
+    LARRY
     Hey!
 
-        JANITOR
+    JANITOR
     What?
     
-        LARRY
+    LARRY
     You a doctor?
     
     JANITOR
@@ -328,6 +328,26 @@ SCENE-STEVE-GONE
 
 END
 
+SCENE-ROOFTOP-GOT-CARD
+    
+    LARRY_RADIO
+    Barney, come in.
+    
+    BARNEY_RADIO
+    Yea, Larry, I'm here, over.
+    
+    LARRY_RADIO
+    I've found a code-yellow access card.
+    
+    BARNEY_RADIO
+    Great!
+    Okay, meet me in the weapon's locker, over.
+    
+    LARRY_RADIO
+    I copy that.
+    
+END
+
 SCENE-FLASHLIGHT-1A
     
     LARRY
@@ -392,7 +412,7 @@ END
 
 SCENE-FLASHLIGHT-1B
     
-    LARRY
+    LARRY_RADIO
     Barney...come in...
     Are you there? over...
 
@@ -400,69 +420,69 @@ END
 
 SCENE-FLASHLIGHT-1C
     
-    BARNEY
+    BARNEY_RADIO
     Hehehe...
     
-    LARRY
+    LARRY_RADIO
     Huh?
     
-    BARNEY
+    BARNEY_RADIO
     This building's mine now.
     
-    LARRY
+    LARRY_RADIO
     !!!
     What?!
     
-    BARNEY
+    BARNEY_RADIO
     It's too bad for you, Larry.
     I was thinking of letting you in on the deal...
     but I knew you would be too stubborn.
     
-    LARRY
+    LARRY_RADIO
     What deal?
     
-    BARNEY
+    BARNEY_RADIO
     The aliens have technology far superior to us...
     It's only a matter of time before the earth...
     is taken over and ruled by then.
     So they contacted us for helping them make...
     that happen faster.
     
-    LARRY
+    LARRY_RADIO
     Barney! You traitor!
     
-    BARNEY
+    BARNEY_RADIO
     Hehehe...
     I told you I would tell you what was going on.
     
-    LARRY
+    LARRY_RADIO
     What did you do to help the aliens, Barney!
     
-    BARNEY
+    BARNEY_RADIO
     Me and some friends built a portal for them...
     A portal that directly leads from our world...
     to theirs, and their world to ours.
     
-    LARRY
+    LARRY_RADIO
     You're mad!
     
-    BARNEY
+    BARNEY_RADIO
     Mad!
     I'll tell you what's mad...
     Mad is believing that we can stop these...
     high-tech aliens from invading our planet.
     
-    LARRY
+    LARRY_RADIO
     Our planet?!
     You've betrayed this planet.
     
-    BARNEY
+    BARNEY_RADIO
     I saved it is what.
     Now, since I've got you trapped in there...
     There's no one that can stop me now.
     Hehehe...
     
-    LARRY
+    LARRY_RADIO
     ...
 
 END
@@ -962,12 +982,30 @@ SCENE-BASEMENT-1A
     
 END
 
-SCENE-GOO
+SCENE-GOO-CLASSIC
     
     LARRY
     Woah!
     Some type of crystalized alien goo is in the way.
     I'll need to find some type of chemical to...
     break down this goo.
+    
+END
+
+SCENE-GOO
+    
+    LARRY_LOOKINGUP
+    Now, what the hell is this thing?
+    A wall of crystalized goo?
+    
+    LARRY_THINKING
+    Hmm...
+    
+    LARRY_THINKING_TALKING
+    Seems like I can't shoot it down. It's too strong.
+    
+    LARRY_LOOKINGUP
+    ...
+    Damn!
     
 END
