@@ -279,6 +279,9 @@
   declare sub LoadSounds ()
   declare sub SceneOpenElevatorDoors()
   declare sub Rooms_DoRooftop (player as PlayerType)
+  declare sub SceneCheck (player as PlayerType)
+  declare sub BossCheck (player as PlayerType)
+  declare sub GenerateRoofCode ()
   
 '======================
 '= SCENE-RELATED
@@ -312,6 +315,7 @@
   DECLARE SUB SceneFlashlight ()
   DECLARE SUB SceneFlashlight2 ()
   DECLARE SUB SceneLobby ()
+  declare sub SceneTheEnd ()
   DECLARE SUB ScenePortal ()
   DECLARE SUB SceneRoofTop ()
   DECLARE SUB SceneWeaponRoom ()
@@ -918,7 +922,7 @@ sub StartFloorMusic(roomId as integer)
     select case roomId
     case Rooms.Basement
         LD2_PlayMusic mscBASEMENT
-    case Rooms.LarryOffice
+    case Rooms.LarrysOffice
         LD2_PlayMusic mscWANDERING
     case Rooms.SkyRoom
         LD2_PlayMusic mscWIND0
@@ -938,46 +942,23 @@ end sub
 
 SUB Main
   
-  DIM EnteringCode AS INTEGER
-  DIM KeyCount AS INTEGER
-  DIM FirstBoss AS INTEGER
-  DIM itemId AS INTEGER
-  DIM item AS InventoryType
-  dim fm as integer
-  dim i as integer
-  dim n as integer
-  dim escaped as integer
-  dim KeyInput as string
-  dim PlayerIsRunning as integer
-  dim player as PlayerType
-  
+    dim itemId as integer
+    dim item AS InventoryType
+    dim i as integer
+    dim n as integer
+    dim PlayerIsRunning as integer
+    dim player as PlayerType
     dim newShot as integer
-    
     dim keyrUp as integer
+    dim atKeypad as integer
+    dim hasAccess as integer
     
-  fm = 0
-  
-  '- Create random roof code
-  RoofCode = ""
-  FOR i = 1 TO 4
-	n = INT(9 * RND(1))
-	RoofCode = RoofCode + STR(n)
-  NEXT i
-  'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
-  
-  'actions(ActionIds.Jump).i
-  'LD2_SetActionParam ActionIds.Jump 1.5
-  'LD2_SetActionParam ActionIds.RunLeft 1
-  'LD2_SetActionParam ActionIds.RunRight 1
-  'CustomActions(0).actionId = ActionIds.Equip
-  'CustomActions(1).actionId = ActionIds.Equip
-  'CustomActions(2).actionId = ActionIds.Equip
-  
-  CustomActions(1).actionId = ActionIds.Equip
-  CustomActions(1).itemId   = ItemIds.Fist
-
-  newShot = 1
-  
+    CustomActions(1).actionId = ActionIds.Equip
+    CustomActions(1).itemId   = ItemIds.Fist
+    
+    newShot = 1
+    GenerateRoofCode
+    
   DO
     
     IF LD2_HasFlag(MAPISLOADED) THEN
@@ -995,125 +976,17 @@ SUB Main
     
     LD2_GetPlayer player
     
-    if SceneNo >= 0 then
-	SELECT CASE SceneNo
-	  CASE 2
-		LD2_put 1196, 144, POSEJANITOR, idSCENE, 0
-		LD2_put 162, 144, 121, idSCENE, 1
-        LD2_put 178, 144, 120, idSCENE, 1
-		IF player.x >= 1160 THEN
-            Scene3 '- larry meets janitor
-            Scene4 '- rockmonster eats janitor
-        end if
-	  CASE 4
-		LD2_put 162, 144, 121, idSCENE, 1
-        LD2_put 178, 144, 120, idSCENE, 1
-		IF player.x >= 1500 THEN Scene5 '- larry at elevator
-	  CASE 6 '- barney/larry exit at weapons locker
-		LD2_put 368, 144, BARNEYEXITELEVATOR, idSCENE, 0
-		LD2_put 368, 144, BARNEYBOX, idSCENE, 0
-		IF CurrentRoom = 7 AND player.x <= 400 THEN Scene7
-	  CASE 7 '- long exposition from barney in weapons locker
-		LD2_put 368, 144, BARNEYEXITELEVATOR, idSCENE, 0
-		LD2_put 368, 144, BARNEYBOX, idSCENE, 0
-		IF CurrentRoom <> 7 THEN SceneNo = 0
-	END SELECT
-    end if
-	
-	IF CurrentRoom = 1 AND player.x <= 1400 AND PortalScene = 0 THEN
-	  LD2_SetSceneMode LETTERBOX
-      UpdateLarryPos
-	  LarryIsThere = 1
-	  SteveIsThere = 0
-	  LarryPoint = 1
-	  LarryPos = 0
-	  Larry.y = 4 * 16 - 16
-
-	  SceneNo = 0
-
-	  escaped = CharacterSpeak(CharacterIds.Larry, "Hmmm...")
-	  escaped = CharacterSpeak(CharacterIds.Larry, "I better find steve before I leave...")
-	  LD2_WriteText ""
-
-	  LD2_PopText "Larry Heads Back To The Weapons Locker"
-	  LD2_SetRoom 7
-	  LD2_LoadMap "7th.LD2"
-	  CurrentRoom = 7
-	 
-	  LD2_SetSceneMode MODEOFF
-	  LarryIsThere = 0
-	END IF
-	IF CurrentRoom = 1 AND player.x >= 1600 THEN
-	  SceneLobby
-	END IF
-
-	IF GooScene = 0 AND CurrentRoom = VENTCONTROL AND player.x <= 754 THEN SceneGoo
+    SceneCheck player
+    BossCheck player
     
     if CurrentRoom = Rooms.Rooftop then
         Rooms_DoRooftop player
     end if
 
-	IF PortalScene = 0 AND CurrentRoom = 21 AND player.x <= 300 THEN
-	  PortalScene = 1
-	  ScenePortal
-	ELSEIF CurrentRoom = 21 AND PortalScene = 0 THEN
-	  LD2_put 260, 144, 12, idSCENE, 0
-	  LD2_put 260, 144, 14, idSCENE, 0
-	  LD2_put 240, 144, 50, idSCENE, 0
-	  LD2_put 240, 144, 45, idSCENE, 0
-	  LD2_put 200, 144, 72, idSCENE, 0
-	END IF
-   
-	IF FlashLightScene = 1 AND player.x >= 1240 THEN
-	  SceneFlashlight2
-	  LD2_SetPlayerXY 20, 144
-	  LD2_SetXShift 1400
-	  FlashLightScene = 2
-	ELSEIF FlashLightScene = 1 THEN
-	  LD2_put 400, 144, 12, idSCENE, 1
-	  LD2_put 400, 144, 14, idSCENE, 1
-	END IF
-	
-	IF FlashLightScene = 2 AND CurrentRoom = 20 THEN
-	  LD2_put 1450, 144, 12, idSCENE, 1
-	  LD2_put 1450, 144, 14, idSCENE, 1
-	ELSEIF FlashLightScene = 2 AND CurrentRoom <> 20 THEN
-	  FlashLightScene = 3
-	END IF
-
-
-	IF RoofScene = 0 AND CurrentRoom = 23 THEN
-	  IF player.x <= 700 AND FirstBoss = 0 THEN
-		Mobs_Add 500, 144, BOSS1
-		LD2_SetBossBar BOSS1
-		FirstBoss = 1
-	  ELSEIF player.x <= 1300 AND fm = 0 THEN
-		fm = 1
-		LD2_PlayMusic mscBOSS
-	  END IF
-	END IF
-	IF RoofScene = 2 AND CurrentRoom = 7 THEN
-	  LD2_put 388, 144, 50, idSCENE, 0
-	  LD2_put 388, 144, 45, idSCENE, 0
-	  IF player.x <= 420 THEN SceneWeaponRoom
-	END IF
-	IF RoofScene = 3 AND CurrentRoom = 7 THEN
-	  LD2_put 48, 144, 50, idSCENE, 0
-	  LD2_put 48, 144, 45, idSCENE, 0
-	  IF player.x <= 80 THEN SceneWeaponRoom2
-	END IF
-
-	IF SteveGoneScene = 0 AND SceneNo <> 2 AND SceneNo <> 4 and SceneNo <> -1 THEN
-	  IF CurrentRoom = 14 AND player.x <= 300 THEN
-		SceneSteveGone
-	  END IF
-	END IF
-
 	LD2_RefreshScreen
 	LD2_CountFrame
    
-	PlayerIsRunning = 0
-	IF keyboard(KEY_ESCAPE) THEN
+	if keyboard(KEY_ESCAPE) then
         LD2_PauseMusic
         if STATUS_DialogYesNo("Exit Game?") = Options.Yes then
             LD2_SetFlag EXITGAME
@@ -1122,25 +995,29 @@ SUB Main
             LD2_ContinueMusic
         end if
     end if
-	IF keyboard(KEY_RIGHT) THEN doAction ActionIds.RunRight: PlayerIsRunning = 1 'LD2_MovePlayer  1: PlayerIsRunning = 1
-	IF keyboard(KEY_LEFT ) THEN doAction ActionIds.RunLeft : PlayerIsRunning = 1 'LD2_MovePlayer -1: PlayerIsRunning = 1
-	IF keyboard(KEY_ALT) THEN doAction ActionIds.Jump 'LD2_JumpPlayer 1.5
-    IF keyboard(KEY_UP ) THEN doAction ActionIds.LookUp
-    IF keyboard(KEY_DOWN ) OR keyboard(KEY_P  ) THEN doAction ActionIds.PickUpItem 'LD2_PickUpItem
-	IF keyboard(KEY_CTRL ) OR keyboard(KEY_Q  ) THEN
+    
+    if keyboard(KEY_L) then
+        LD2_SwapLighting
+        WaitForKeyup(KEY_L)
+	end if
+    
+    PlayerIsRunning = 0
+	IF keyboard(KEY_RIGHT) then doAction ActionIds.RunRight: PlayerIsRunning = 1
+	IF keyboard(KEY_LEFT ) then doAction ActionIds.RunLeft : PlayerIsRunning = 1
+	IF keyboard(KEY_ALT  ) then doAction ActionIds.Jump
+    IF keyboard(KEY_UP   ) then doAction ActionIds.LookUp
+    IF keyboard(KEY_DOWN ) or keyboard(KEY_P  ) then doAction ActionIds.PickUpItem 
+	IF keyboard(KEY_CTRL ) or keyboard(KEY_Q  ) then
         doAction iif(newShot, ActionIds.Shoot, ActionIds.ShootRepeat)
         newShot = 0
     else
         newShot = 1
     end if
     
-	IF keyboard(KEY_L) THEN
-	  LD2_SwapLighting
-	  WaitForKeyup(KEY_L)
-	END IF
-
-	IF keyboard(KEY_TAB) AND LD2_AtElevator = 0 THEN StatusScreen
-	IF keyboard(KEY_TAB) AND LD2_AtElevator = 1 THEN
+	if keyboard(KEY_TAB) and (LD2_AtElevator = 0) then
+        StatusScreen
+    end if
+	if keyboard(KEY_TAB) and (LD2_AtElevator = 1) then
         EStatusScreen CurrentRoom
         if CurrentRoom <> LD2_GetRoom then
             CurrentRoom = LD2_GetRoom
@@ -1150,9 +1027,10 @@ SUB Main
         end if
         LD2_ShowPlayer
     end if
-
 	
-    if (EnteringCode = 0) then
+    atKeypad  = (CurrentRoom = Rooms.Rooftop) and (player.x >= 1376 and player.x <= 1408)
+    hasAccess = (Player_GetAccessLevel() >= YELLOWACCESS)
+    if (atKeypad = 0) or (atKeypad and hasAccess) then
         if keypress(KEY_1) then doAction CustomActions(0).actionId, CustomActions(0).itemId
         if keypress(KEY_2) then doAction CustomActions(1).actionId, CustomActions(1).itemId
         if keypress(KEY_3) then doAction CustomActions(2).actionId, CustomActions(2).itemId
@@ -1185,29 +1063,17 @@ SUB Main
 
 	if PlayerIsRunning = 0 then LD2_SetPlayerlAni 21 '- legs still/standing/not-moving
 
-	IF LD2_HasFlag(BOSSKILLED) THEN
-		IF CurrentRoom = ROOFTOP AND RoofScene = 0 THEN
-			Items_Add 0, 0, YELLOWCARD, BOSS1
-		END IF
-		LD2_SetBossBar 0
-		LD2_ClearFlag BOSSKILLED
-	END IF
-	IF LD2_HasFlag(GOTITEM) AND (LD2_GetFlagData = YELLOWCARD) THEN
-		IF RoofScene = 0 THEN
-			SceneRoofTop
-		END IF
-		LD2_ClearFlag GOTITEM
-    ELSEIF LD2_HasFlag(GOTITEM) THEN
+	if LD2_HasFlag(GOTITEM) then
         itemId = LD2_GetFlagData
         Inventory_RefreshNames
         Inventory_GetItem item, itemId
         LD2_SetNotice "Found "+item.shortName
         LD2_ClearFlag GOTITEM
-	END IF
+	end if
   
-  LOOP WHILE LD2_NotFlag(EXITGAME)
+  loop while LD2_NotFlag(EXITGAME)
   
-END SUB
+end sub
 
 SUB PutRestOfSceners
 
@@ -2103,7 +1969,28 @@ SUB SceneFlashlight2
  
 END SUB
 
-SUB SceneLobby
+sub SceneLobby
+    LD2_SetSceneMode LETTERBOX
+    UpdateLarryPos
+    LarryIsThere = 1
+    SteveIsThere = 0
+    LarryPoint = 1
+    LarryPos = 0
+    Larry.y = 4 * 16 - 16
+
+    SceneNo = 0
+
+    DoScene "SCENE-LOBBY"
+    
+    LD2_SetRoom 7
+    LD2_LoadMap "7th.LD2"
+    CurrentRoom = 7
+
+    LD2_SetSceneMode MODEOFF
+    LarryIsThere = 0
+end sub
+
+SUB SceneTheEnd
 
   LD2_SetSceneMode LETTERBOX
   
@@ -2115,18 +2002,8 @@ SUB SceneLobby
   LarryPoint = 0
   LarryPos = 0
  
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "hmm...")
   LD2_FadeOutMusic
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "It sure is nice to have some fresh air again.")
-  LarryPoint = 1
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "...")
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "Poor Steve...")
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "...sigh...")
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "...he's in a better place now...")
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "...probably with his friend, matt...")
-  LarryPoint = 0
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "many stories ended tonight...")
-  'escaped = CharacterSpeak%(CharacterIds.Larry, "...but mine lives on...")
+  DoScene "SCENE-THEEND"
 
   LD2_WriteText ""
 
@@ -2712,7 +2589,7 @@ sub Rooms_DoRooftop (player as PlayerType)
             else
                 inputPin.text = KEYPAD_ENTRY_TEXT + iif(len(KeyInput), inputText, " * * * *")
             end if
-            inputPinResponse.text = "Access Granted."
+            inputPinResponse.text = "Access Granted"
             inputPinResponse.text_color = 56
             LD2_RenderElement @inputPin
             LD2_RenderElement @inputPinResponse
@@ -2728,12 +2605,12 @@ sub Rooms_DoRooftop (player as PlayerType)
                 inputPin.text = KEYPAD_ENTRY_TEXT + inputText
                 if KeyInput = RoofCode then
                     LD2_PlaySound Sounds.keypadGranted
-                    inputPinResponse.text = "Access Granted."
+                    inputPinResponse.text = "Access Granted"
                     inputPinResponse.text_color = 56
                     LD2_SetTempAccess YELLOWACCESS
                 else
                     LD2_PlaySound Sounds.keypadDenied
-                    inputPinResponse.text = "Invalid PIN. Access Denied."
+                    inputPinResponse.text = "Invalid PIN - Access Denied"
                     inputPinResponse.text_color = 232
                 end if
                 messageTimer = timer
@@ -2757,6 +2634,157 @@ sub Rooms_DoRooftop (player as PlayerType)
             messageTimer = 0
         end if
     end if
+    
+end sub
+
+sub SceneCheck (player as PlayerType)
+    
+    if SceneNo >= 0 then
+        select case SceneNo
+        case 2
+            LD2_put 1196, 144, POSEJANITOR, idSCENE, 0
+            LD2_put 162, 144, 121, idSCENE, 1
+            LD2_put 178, 144, 120, idSCENE, 1
+            if player.x >= 1160 then
+                Scene3 '- larry meets janitor
+                Scene4 '- rockmonster eats janitor
+            end if
+        case 4
+            LD2_put 162, 144, 121, idSCENE, 1
+            LD2_put 178, 144, 120, idSCENE, 1
+            if player.x >= 1500 then
+                Scene5 '- larry at elevator
+            end if
+        case 6
+            LD2_put 368, 144, BARNEYEXITELEVATOR, idSCENE, 0
+            LD2_put 368, 144, BARNEYBOX, idSCENE, 0
+            if (CurrentRoom = 7) and (player.x <= 400) then
+                Scene7 '- long exposition from barney in weapons locker
+            end if
+        case 7
+            LD2_put 368, 144, BARNEYEXITELEVATOR, idSCENE, 0
+            LD2_put 368, 144, BARNEYBOX, idSCENE, 0
+            if CurrentRoom <> 7 then
+                SceneNo = 0
+            end if
+        end select
+    end if
+	
+	if (CurrentRoom = Rooms.Lobby) and (player.x <= 1400) and (PortalScene = 0) then
+        SceneLobby
+	end if
+    
+	if (CurrentRoom = Rooms.Lobby) and (player.x >= 1600) then
+        SceneTheEnd '- the end
+	end if
+
+	if (GooScene = 0) and (CurrentRoom = Rooms.VentControl) and (player.x <= 754) then
+        SceneGoo
+    end if
+    
+    if (PortalScene = 0) and (CurrentRoom = Rooms.PortalRoom) and (player.x <= 300) then
+        PortalScene = 1
+        ScenePortal
+    elseif (CurrentRoom = Rooms.PortalRoom) and (PortalScene = 0) then
+        LD2_put 260, 144, 12, idSCENE, 0
+        LD2_put 260, 144, 14, idSCENE, 0
+        LD2_put 240, 144, 50, idSCENE, 0
+        LD2_put 240, 144, 45, idSCENE, 0
+        LD2_put 200, 144, 72, idSCENE, 0
+    end if
+
+    if (FlashLightScene = 1) and (player.x >= 1240) then
+        SceneFlashlight2
+        LD2_SetPlayerXY 20, 144
+        LD2_SetXShift 1400
+        FlashLightScene = 2
+    elseif FlashLightScene = 1 then
+        LD2_put 400, 144, 12, idSCENE, 1
+        LD2_put 400, 144, 14, idSCENE, 1
+    end if
+
+    if (FlashLightScene = 2) and (CurrentRoom = Rooms.Unknown) then
+        LD2_put 1450, 144, 12, idSCENE, 1
+        LD2_put 1450, 144, 14, idSCENE, 1
+    elseif (FlashLightScene = 2) and (CurrentRoom <> Rooms.Unknown) then
+        FlashLightScene = 3
+    end if
+    
+    if (RoofScene = 2) and (CurrentRoom = Rooms.WeaponsLocker) then
+        LD2_put 388, 144, 50, idSCENE, 0
+        LD2_put 388, 144, 45, idSCENE, 0
+        if player.x <= 420 then
+            SceneWeaponRoom
+        end if
+    end if
+    if (RoofScene = 3) and (CurrentRoom = Rooms.WeaponsLocker) then
+        LD2_put 48, 144, 50, idSCENE, 0
+        LD2_put 48, 144, 45, idSCENE, 0
+        if player.x <= 80 then
+            SceneWeaponRoom2
+        end if
+    end if
+    
+    if (SteveGoneScene = 0) and (SceneNo <> 2) and (SceneNo <> 4) and (SceneNo <> -1) then
+        if (CurrentRoom = Rooms.LarrysOffice) and (player.x <= 300) then
+            SceneSteveGone
+        end if
+    end if
+    
+    if LD2_HasFlag(GOTITEM) and (LD2_GetFlagData = YELLOWCARD) then
+		if RoofScene = 0 then
+			SceneRoofTop
+		end if
+    end if
+    
+end sub
+
+sub BossCheck (player as PlayerType)
+    
+    static firstBoss as integer
+    static bossMusicStarted as integer
+    
+    if (RoofScene = 0) and (CurrentRoom = Rooms.Rooftop) then
+        if (player.x <= 700) and (firstBoss = 0) then
+            Mobs_Add 500, 144, BOSS1
+            LD2_SetBossBar BOSS1
+            firstBoss = 1
+        elseif (player.x <= 1300) and (bossMusicStarted = 0) then
+            bossMusicStarted = 1
+            LD2_PlayMusic mscBOSS
+        end if
+    end if
+    
+    if LD2_HasFlag(BOSSKILLED) then
+		if (CurrentRoom = Rooms.Rooftop) and (RoofScene = 0) then
+			Items_Add 0, 0, YELLOWCARD, BOSS1
+		end if
+		LD2_SetBossBar 0
+		LD2_ClearFlag BOSSKILLED
+	end if
+    
+end sub
+
+sub GenerateRoofCode
+    
+    dim i as integer
+    dim j as integer
+    dim n as integer
+    dim dups as integer
+    
+    RoofCode = ""
+    for i = 0 to 3
+        do
+            n = int(10 * rnd(1))
+            dups = 0
+            for j = 0 to i-1
+                if mid(RoofCode, j, 1) = str(n) then
+                    dups += 1
+                end if
+            next j
+        loop while dups > 1
+        RoofCode = RoofCode + str(n)
+    next i
     
 end sub
 

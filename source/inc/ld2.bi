@@ -303,7 +303,7 @@ enum Rooms
     UpperOffice3  = 16
     UpperOffice2  = 15
     UpperOffice1  = 14
-    LarryOffice   = 14
+    LarrysOffice  = 14
     UpperStorage  = 13
     VentControl   = 12
     LowerOffice4  = 11

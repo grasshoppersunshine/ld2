@@ -3101,8 +3101,8 @@ sub Mobs_Animate()
                 mob.shooting = mob.shooting - 1
             END IF
         
-    END SELECT
-
+        END SELECT
+    
     CASE TROOP2
         
         SELECT CASE mob.state
@@ -3268,39 +3268,41 @@ sub Mobs_Animate()
         
     CASE BOSS1
 
-        IF mob.life = -99 THEN
-          mob.life = 100
-          mob.ani = 41
-        END IF
-        IF mob.ani < 1 THEN mob.ani = 41
+        if mob.life = -99 then
+            mob.life = 100
+            mob.ani = 41
+        end if
+        
+        if mob.ani < 1 then mob.ani = 41
+        
         mob.ani = mob.ani + .1
-        IF mob.ani > 43 THEN mob.ani = 41
+        if mob.ani > 43 then mob.ani = 41
               
-        IF mob.hit > 0 THEN
-          mob.ani = 45
-        ELSE
-          IF mob.x < Player.x THEN mob.x = mob.x + .6*f: mob.flip = 1
-          IF mob.x > Player.x THEN mob.x = mob.x - .6*f: mob.flip = 0
-        END IF
+        if mob.hit > 0 then
+            mob.ani = 45
+        else
+            if mob.x < Player.x then mob.x += .6*f: mob.flip = 1
+            if mob.x > Player.x then mob.x -= .6*f: mob.flip = 0
+        end if
 
-        IF ABS(mob.x - Player.x) < 50 AND mob.counter < 10 THEN
-          mob.ani = 44
-          IF mob.x < Player.x THEN mob.x = mob.x + .5*f: mob.flip = 1
-          IF mob.x > Player.x THEN mob.x = mob.x - .5*f: mob.flip = 0
-        END IF
+        if (abs(mob.x - Player.x) < 50) and (mob.counter < 10) then
+            mob.ani = 44
+            if mob.x < Player.x then mob.x += .5*f: mob.flip = 1
+            if mob.x > Player.x then mob.x -= .5*f: mob.flip = 0
+        end if
 
-        mob.counter = mob.counter - .1
-        IF mob.counter < 0 THEN mob.counter = 20
-
-        IF mob.x + 7 >= Player.x AND mob.x + 7 <= Player.x + 15 THEN
-          IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
-            IF INT(10 * RND(1)) + 1 = 1 THEN
-              LD2_PlaySound Sounds.blood2
-            END IF
-            Player.life = Player.life - 1
-            Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8, 1
-          END IF
-        END IF
+        mob.counter -= .1
+        if mob.counter < 0 then mob.counter = 20
+        
+        if (mob.x + 7) >= Player.x and (mob.x + 7) <= (Player.x + 15) then
+            if (mob.y + 10) >= Player.y and (mob.y + 10) <= (Player.y + 15) then
+                if int(10 * rnd(1)) + 1 = 1 then
+                    LD2_PlaySound Sounds.blood2
+                end if
+                Player.life -= 1
+                Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8, 1
+            end if
+        end if
    
     CASE BOSS2
 

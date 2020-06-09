@@ -61,11 +61,7 @@ end sub
 
 function MobileCollection.canGetNext() as integer
     
-    if this._curMob >= 0 then
-        return (this._mobs(this._curMob).nxt >= 0)
-    else
-        return 0
-    end if
+    return (this._curMob >= 0)
     
 end function
 
