@@ -430,3 +430,4 @@ CONST MODEOFF = 0
 CONST LETTERBOX = 1
 
 declare sub LD2_UseItem (id as integer, qty as integer)
+declare sub LD2_LookItem (id as integer, byref desc as string)

@@ -103,6 +103,7 @@ declare sub Player_Animate ()
 declare sub Player_Draw()
 declare function Player_Jump (Amount as double) as integer
 declare function Player_Move (XAmount as double) as integer
+declare function Player_GetAccessLevel() as integer
 declare function Player_GetHP() as integer
 declare function LD2_GetInventoryQty(itemId as integer) as integer
 

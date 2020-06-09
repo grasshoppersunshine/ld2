@@ -143,6 +143,8 @@ FUNCTION SCENE_ReadLine() as integer
         LINE INPUT #SceneData.FileId, row
         row = LTRIM(RTRIM(row))
         
+        if left(row, 1) = "#" then continue do
+        
         IF (UCASE(row) = "END") OR EOF(SceneData.FileId) THEN
             CLOSE SceneData.FileId
             return 0

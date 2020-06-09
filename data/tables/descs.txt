@@ -12,7 +12,7 @@ FLASHLIGHTNOBAT, "This should brighten up a dark area pretty well...\but is has 
 MYSTERYMEAT    , "White processed mystery meat.\Processed meat usually has certain mysterious\chemicals in it that try to simulate the taste of\meat, which fail to succeed."
 CHEMICAL409    , "A strong kitchen cleaner.\The warning label says to keep this away from processed foods.\Seems ironic for a *kitchen* cleaner."
 CHEMICAL410    , "A strong acidic chemical with a PH value of 0.0\I didn't even know such number existed in the PH\scale. This can probably eat away anything."
-JANITORNOTE    , "Notice to all maintenance personell.\ \Security has prohibited access to the rooftop with a keypad lock. Entry now requires a secure 4-digit PIN. All permitted personell will receive a copy.\The PIN for the current cycle is shown below:\ \* 4  7  0  1 *"
+JANITORNOTE    , "Notice to all maintenance personell.\ \Security has prohibited access to the rooftop with a keypad lock. Entry now requires a secure 4-digit PIN. All permitted personell will receive a copy.\The PIN for the current cycle is shown below:\ \"
 BATTERIES      , "Looks like they are in good condition."
 FLASHLIGHT     , "This should brighten up a dark area pretty well."
 GREENCARD      , "Allows access to doors with green trims.\It's not much, but it gets you around."

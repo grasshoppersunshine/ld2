@@ -17,6 +17,7 @@ DECLARE SUB UseItem (item AS InventoryType)
 
 DIM SHARED selectedInventorySlot AS INTEGER
 dim shared UseItemCallback as sub(id as integer, qty as integer)
+dim shared LookItemCallback as sub(id as integer, byref description as string)
 
 const DATA_DIR = "data/"
 const STATUS_DIALOG_ALPHA_UNIT = 0.75
@@ -29,6 +30,12 @@ const STATUS_COLOR_DENIED = 232
 sub STATUS_SetUseItemCallback(callback as sub(id as integer, qty as integer))
     
     UseItemCallback = callback
+    
+end sub
+
+sub STATUS_SetLookItemCallback(callback as sub(id as integer, byref description as string))
+    
+    LookItemCallback = callback
     
 end sub
 
@@ -308,7 +315,7 @@ SUB Drop (item AS InventoryType)
         RefreshStatusScreen
         LD2_CopyBuffer 2, 1
         RenderStatusScreen
-        ShowResponse "Dropped " + item.shortName, STATUS_COLOR_SUCCESS
+        ShowResponse "Dropped " + trim(item.shortName), STATUS_COLOR_SUCCESS
     end if
     
 END SUB
@@ -338,6 +345,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 	DIM numFloors AS INTEGER
 	DIM scroll AS INTEGER
 	DIM doLoadMap AS INTEGER
+    dim current as integer
     
     dim menuWindow as ElementType
     dim menuTitle as ElementType
@@ -483,13 +491,20 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
         end if
         
         '- TODO: hold down for one second, then scroll down with delay
+        current = selectedRoom
         IF keypress(KEY_UP) THEN
             selectedRoom = selectedRoom + 1
-            IF LTRIM(floors(numFloors - selectedRoom - 1).filename) = "" THEN
-                selectedRoom = selectedRoom + 1
-            END IF
+            if selectedRoom <= numFloors - 1 then
+                while (selectedRoom <= numFloors-1)
+                    if trim(floors(numFloors-1-selectedRoom).filename) = "" then
+                        selectedRoom = selectedRoom + 1
+                    else
+                        exit while
+                    end if
+                wend
+            end if
             IF selectedRoom > numFloors - 1 THEN
-                selectedRoom = numFloors - 1
+                selectedRoom = current
                 LD2_PlaySound Sounds.uiInvalid
             ELSE
                 LD2_PlaySound Sounds.uiArrows
@@ -497,11 +512,17 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
         END IF
         IF keypress(KEY_DOWN) THEN
             selectedRoom = selectedRoom - 1
-            IF LTRIM(floors(numFloors - selectedRoom - 1).filename) = "" THEN
-                selectedRoom = selectedRoom - 1
-            END IF
+            if selectedRoom >= 0 then
+                while (selectedRoom >= 0)
+                    if trim(floors(numFloors-1-selectedRoom).filename) = "" then
+                        selectedRoom = selectedRoom - 1
+                    else
+                        exit while
+                    end if
+                wend
+            end if
             IF selectedRoom < 0 THEN
-                selectedRoom = 0
+                selectedRoom = current
                 LD2_PlaySound Sounds.uiInvalid
             ELSE
                 LD2_PlaySound Sounds.uiArrows
@@ -630,6 +651,9 @@ SUB Look (item AS InventoryType)
     fontH = LD2_GetFontHeightWithSpacing()
 	
 	desc = Inventory_LoadDescription(item.id)
+    if LookItemCallback <> 0 then
+        LookItemCallback(item.id, desc)
+    end if
 	IF desc = "" THEN
 		desc = "No description found for item id: " + STR(item.id)
 	END IF
@@ -662,7 +686,7 @@ SUB Look (item AS InventoryType)
 	
 	DO
         PullEvents
-		IF keypress(KEY_ENTER) THEN
+		IF keypress(KEY_ENTER) or keypress(KEY_TAB) or keypress(KEY_ESCAPE) THEN
 			EXIT DO
         END IF
 	LOOP

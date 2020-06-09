@@ -421,11 +421,16 @@ END FUNCTION
 
 SUB LD2_ClearInventorySlot (slot AS INTEGER)
     
-    DIM i AS INTEGER
-    i = InvSlots(slot)
+    dim item as integer
+    item = InvSlots(slot)
     
-    Inventory(i) = 0
+    Inventory(item) = 0
     InvSlots(slot) = 0
+    
+    select case item
+    case GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
+      RefreshPlayerAccess
+    end select
     
 END SUB
 
@@ -581,10 +586,6 @@ SUB LD2_Drop (item as integer)
   Items(n).y = (y \ 16) * 16
   Items(n).id = item
 
-  SELECT CASE item
-    CASE GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
-      RefreshPlayerAccess
-  END SELECT
   'IF Player.weapon1 = item% - 20 THEN LD2_SetWeapon1 0 '- what's this for???
  
 END SUB
@@ -614,7 +615,7 @@ SUB RefreshPlayerAccess
     
     maxLevel = NOACCESS
     FOR i = 0 TO 7
-        item = Inventory(InvSlots(i))
+        item = InvSlots(i)
         SELECT CASE item
         CASE GREENCARD
             IF GREENACCESS > maxLevel  THEN maxLevel = GREENACCESS
@@ -1060,6 +1061,8 @@ SUB LD2_LoadMap (Filename AS STRING, skipMobs as integer = 0)
   END IF
 
   WentToRoom(CurrentRoom) = 1
+  
+  Inventory(TEMPAUTH) = 0
   
   'SaveItems DATA_DIR+"save/items"+LTRIM$(STR(CurrentRoom))+".bin"
   
@@ -1704,7 +1707,7 @@ SUB Doors_Animate
         playerIsNear    = (pcx >= Doors(i).x-16) and (pcx <= Doors(i).x+Doors(i).w+16) and (pcy >= Doors(i).y) and (pcy <= Doors(i).y+Doors(i).h)
         doorIsMoving    = (Doors(i).ani > 0) and (Doors(i).ani < 4)
         
-        if playerIsNear then 'playerHasAccess AND playerIsNear THEN
+        if playerHasAccess AND playerIsNear THEN
             Doors_Open i
         elseif doorIsMoving then '- allows entities to piggyback through doors
             entityIsNear = 0
@@ -1773,7 +1776,6 @@ sub Doors_Open (id as integer)
     
     if doorIsClosed then
         LD2_PlaySound Sounds.doorup
-        Inventory(TEMPAUTH) = 0
     end if
     
     Doors(id).anicount = DOOROPENSPEED
@@ -3832,6 +3834,12 @@ function Player_Move (dx AS DOUBLE) as integer
   
   return success
   
+end function
+
+function Player_GetAccessLevel() as integer
+    
+    return iif(Inventory(AUTH) > Inventory(TEMPAUTH), Inventory(AUTH), Inventory(TEMPAUTH))
+    
 end function
 
 function Player_GetHP() as integer

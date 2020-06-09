@@ -278,6 +278,7 @@
   declare sub AddSound (id as integer, filepath as string, loops as integer = 0)
   declare sub LoadSounds ()
   declare sub SceneOpenElevatorDoors()
+  declare sub Rooms_DoRooftop (player as PlayerType)
   
 '======================
 '= SCENE-RELATED
@@ -367,6 +368,8 @@
   DIM SHARED SteveIsThere as integer: DIM SHARED StevePoint as integer: DIM SHARED SteveTalking as integer: DIM SHARED StevePos as integer
   DIM SHARED JanitorIsThere as integer: DIM SHARED JanitorPoint as integer: DIM SHARED JanitorTalking as integer: DIM SHARED JanitorPos as integer
   DIM SHARED TrooperIsThere as integer: DIM SHARED TrooperPoint as integer: DIM SHARED TrooperTalking as integer: DIM SHARED TrooperPos as integer
+  
+  DIM SHARED RoofCode AS STRING
   
   const DATA_DIR = "data/"
   
@@ -800,7 +803,7 @@ sub LoadSounds ()
     AddSound Sounds.splatter, "splice/bloodexplode2.wav"
     
     AddSound Sounds.doorup     , "doorup.wav"
-    AddSound Sounds.doordown   , "downdown.wav"
+    AddSound Sounds.doordown   , "doordown.wav"
     
     AddSound Sounds.shotgun    , "shotgun.wav"
     AddSound Sounds.pistol     , "pistol.wav"
@@ -937,7 +940,6 @@ SUB Main
   
   DIM EnteringCode AS INTEGER
   DIM KeyCount AS INTEGER
-  DIM RoofCode AS STRING
   DIM FirstBoss AS INTEGER
   DIM itemId AS INTEGER
   DIM item AS InventoryType
@@ -948,17 +950,15 @@ SUB Main
   dim KeyInput as string
   dim PlayerIsRunning as integer
   dim player as PlayerType
-  dim inputPin as ElementType
-  dim inputPinResponse as ElementType
-  dim inputTimer as double
-
+  
     dim newShot as integer
     
     dim keyrUp as integer
-  
+    
   fm = 0
   
   '- Create random roof code
+  RoofCode = ""
   FOR i = 1 TO 4
 	n = INT(9 * RND(1))
 	RoofCode = RoofCode + STR(n)
@@ -975,15 +975,8 @@ SUB Main
   
   CustomActions(1).actionId = ActionIds.Equip
   CustomActions(1).itemId   = ItemIds.Fist
-    newShot = 1
-    
-    LD2_InitElement @inputPin, KEYPAD_ENTRY_TEXT, 31, ElementFlags.CenterX
-    inputPin.y = 170
-    inputPin.background_alpha = 0
-    
-    LD2_InitElement @inputPinResponse, "", 31, ElementFlags.CenterX
-    inputPinResponse.y = 180
-    inputPinResponse.background_alpha = 0
+
+  newShot = 1
   
   DO
     
@@ -1056,46 +1049,9 @@ SUB Main
 
 	IF GooScene = 0 AND CurrentRoom = VENTCONTROL AND player.x <= 754 THEN SceneGoo
     
-	EnteringCode = 0
-	IF CurrentRoom = 23 AND player.x >= 1377 AND player.x <= 1407 THEN
-	  EnteringCode = 1
-      if KeyCount < 4 then
-          inputPin.text = KEYPAD_ENTRY_TEXT + KeyInput
-          inputPin.text_color = 31
-	  elseif KeyCount = 4 then
-        inputPin.text = KEYPAD_ENTRY_TEXT + KeyInput
-		IF KeyInput = RoofCode THEN
-          LD2_PlaySound Sounds.keypadGranted
-		  inputPinResponse.text = "Access Granted."
-          inputPinResponse.text_color = 56
-		  LD2_SetTempAccess YELLOWACCESS '- can you run back to the elevator and use this on another floor/door?
-		ELSE
-          LD2_PlaySound Sounds.keypadDenied
-		  inputPinResponse.text = "Invalid PIN. Access Denied."
-          inputPinResponse.text_color = 232
-		END IF
-		KeyCount = 5
-        inputTimer = timer
-      end if
-      if KeyCount = 5 then
-        LD2_RenderElement @inputPinResponse
-	    if (timer - inputTimer > 2.0) then
-            KeyCount = 0
-            KeyInput = ""
-        end if
-      end if
-      LD2_RenderElement @inputPin
-	ELSEIF CurrentRoom = 23 THEN
-	  LD2_WriteText ""
-	  KeyCount = 0
-	  KeyInput = ""
-      inputPin.text = KEYPAD_ENTRY_TEXT
-      inputPin.text_color = 31
-	ELSE
-	  KeyInput = ""
-      inputPin.text = KEYPAD_ENTRY_TEXT
-      inputPin.text_color = 31
-	END IF
+    if CurrentRoom = Rooms.Rooftop then
+        Rooms_DoRooftop player
+    end if
 
 	IF PortalScene = 0 AND CurrentRoom = 21 AND player.x <= 300 THEN
 	  PortalScene = 1
@@ -1195,23 +1151,13 @@ SUB Main
         LD2_ShowPlayer
     end if
 
-	IF EnteringCode AND KeyCount < 4 THEN
-	  IF keyboard(KEY_1) THEN KeyInput = KeyInput + " 1": WaitForKeyup(KEY_1): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
-	  IF keyboard(KEY_2) THEN KeyInput = KeyInput + " 2": WaitForKeyup(KEY_2): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
-	  IF keyboard(KEY_3) THEN KeyInput = KeyInput + " 3": WaitForKeyup(KEY_3): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
-	  IF keyboard(KEY_4) THEN KeyInput = KeyInput + " 4": WaitForKeyup(KEY_4): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
-	  IF keyboard(KEY_5) THEN KeyInput = KeyInput + " 5": WaitForKeyup(KEY_5): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
-	  IF keyboard(KEY_6) THEN KeyInput = KeyInput + " 6": WaitForKeyup(KEY_6): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
-	  IF keyboard(KEY_7) THEN KeyInput = KeyInput + " 7": WaitForKeyup(KEY_7): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
-	  IF keyboard(KEY_8) THEN KeyInput = KeyInput + " 8": WaitForKeyup(KEY_8): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
-	  IF keyboard(KEY_9) THEN KeyInput = KeyInput + " 9": WaitForKeyup(KEY_9): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
-	  IF keyboard(KEY_0) THEN KeyInput = KeyInput + " 0": WaitForKeyup(KEY_0): KeyCount = KeyCount + 1: LD2_PlaySound Sounds.keypadInput
-    else
-        IF keyboard(KEY_1) THEN doAction CustomActions(0).actionId, CustomActions(0).itemId 'LD2_SetWeapon 1
-        IF keyboard(KEY_2) THEN doAction CustomActions(1).actionId, CustomActions(1).itemId 'LD2_SetWeapon 3
-        IF keyboard(KEY_3) THEN doAction CustomActions(2).actionId, CustomActions(2).itemId
-        IF keyboard(KEY_4) THEN doAction CustomActions(3).actionId, CustomActions(3).itemId
-	END IF
+	
+    if (EnteringCode = 0) then
+        if keypress(KEY_1) then doAction CustomActions(0).actionId, CustomActions(0).itemId
+        if keypress(KEY_2) then doAction CustomActions(1).actionId, CustomActions(1).itemId
+        if keypress(KEY_3) then doAction CustomActions(2).actionId, CustomActions(2).itemId
+        if keypress(KEY_4) then doAction CustomActions(3).actionId, CustomActions(3).itemId
+	end if
     
     if LD2_isTestMode() then
         if keyboard(KEY_E) then
@@ -2708,6 +2654,112 @@ SUB SceneWeaponRoom2
 
 END SUB
 
+sub Rooms_DoRooftop (player as PlayerType)
+    
+    static inputPin as ElementType
+    static inputPinResponse as ElementType
+    static messageTimer as double
+    static keyInput as string
+    static keypadAccessCheck as integer
+    static first as integer = 1
+    
+    dim atKeypad as integer
+    dim hasAccess as integer
+    dim hasRed as integer
+    dim hasYellow as integer
+    dim inputText as string
+    dim keyCount as integer
+    
+    if first then
+        
+        first = 0
+        
+        LD2_InitElement @inputPin, KEYPAD_ENTRY_TEXT, 31, ElementFlags.CenterX
+        inputPin.y = 170
+        inputPin.background_alpha = 0
+        
+        LD2_InitElement @inputPinResponse, "", 31, ElementFlags.CenterX
+        inputPinResponse.y = 180
+        inputPinResponse.background_alpha = 0
+        
+    end if
+    
+    atKeypad  = (player.x >= 1376 and player.x <= 1408)
+    hasAccess = (Player_GetAccessLevel() >= YELLOWACCESS)
+    keyCount  = len(keyInput)
+    
+    if atKeypad and (KeyCount < 4) and (hasAccess = 0) then
+        if keypress(KEY_1) or keypress(KEY_KP_1) then keyInput += "1": LD2_PlaySound Sounds.keypadInput
+        if keypress(KEY_2) or keypress(KEY_KP_2) then keyInput += "2": LD2_PlaySound Sounds.keypadInput
+        if keypress(KEY_3) or keypress(KEY_KP_3) then keyInput += "3": LD2_PlaySound Sounds.keypadInput
+        if keypress(KEY_4) or keypress(KEY_KP_4) then keyInput += "4": LD2_PlaySound Sounds.keypadInput
+        if keypress(KEY_5) or keypress(KEY_KP_5) then keyInput += "5": LD2_PlaySound Sounds.keypadInput
+        if keypress(KEY_6) or keypress(KEY_KP_6) then keyInput += "6": LD2_PlaySound Sounds.keypadInput
+        if keypress(KEY_7) or keypress(KEY_KP_7) then keyInput += "7": LD2_PlaySound Sounds.keypadInput
+        if keypress(KEY_8) or keypress(KEY_KP_8) then keyInput += "8": LD2_PlaySound Sounds.keypadInput
+        if keypress(KEY_9) or keypress(KEY_KP_9) then keyInput += "9": LD2_PlaySound Sounds.keypadInput
+        if keypress(KEY_0) or keypress(KEY_KP_0) then keyInput += "0": LD2_PlaySound Sounds.keypadInput
+    end if
+    
+    if LD2_GetInventoryQty(ItemIds.RedCard) then hasRed = 1
+    if LD2_GetInventoryQty(ItemIds.YellowCard) then hasYellow = 1
+
+    if (atKeypad or (timer - messageTimer < 2.0)) and (keypadAccessCheck < 2) then
+        inputText = " "+left(keyInput,1)+" "+mid(keyInput,2,1)+" "+mid(keyInput,3,1)+" "+mid(keyInput,4,1)
+        if Player_GetAccessLevel() >= YELLOWACCESS then
+            if hasRed or hasYellow then
+                inputPin.text = "Security Override: " + iif(hasRed, "RED CARD", "YELLOW CARD")
+            else
+                inputPin.text = KEYPAD_ENTRY_TEXT + iif(len(KeyInput), inputText, " * * * *")
+            end if
+            inputPinResponse.text = "Access Granted."
+            inputPinResponse.text_color = 56
+            LD2_RenderElement @inputPin
+            LD2_RenderElement @inputPinResponse
+            if keypadAccessCheck = 0 then
+                keypadAccessCheck = 1
+                LD2_PlaySound Sounds.keypadGranted
+                messageTimer = timer
+            end if
+        else
+            if keyCount < 4 then
+                inputPin.text = KEYPAD_ENTRY_TEXT + inputText
+            elseif (keyCount = 4) and (messageTimer = 0) then
+                inputPin.text = KEYPAD_ENTRY_TEXT + inputText
+                if KeyInput = RoofCode then
+                    LD2_PlaySound Sounds.keypadGranted
+                    inputPinResponse.text = "Access Granted."
+                    inputPinResponse.text_color = 56
+                    LD2_SetTempAccess YELLOWACCESS
+                else
+                    LD2_PlaySound Sounds.keypadDenied
+                    inputPinResponse.text = "Invalid PIN. Access Denied."
+                    inputPinResponse.text_color = 232
+                end if
+                messageTimer = timer
+            end if
+            LD2_RenderElement @inputPin
+        end if
+        if (messageTimer > 0) then
+            LD2_RenderElement @inputPinResponse
+            if (timer - messageTimer > 2.0) then
+                messageTimer = 0
+                keyCount = 0
+                keyInput = ""
+                keypadAccessCheck = 2
+            end if
+        end if
+    else
+        keyCount = 0
+        keyInput = ""
+        if (atKeypad = 0) or (Player_GetAccessLevel() < YELLOWACCESS) then
+            keypadAccessCheck = 0
+            messageTimer = 0
+        end if
+    end if
+    
+end sub
+
 SUB SetAllowedEntities (codeString AS STRING)
 	
 	DIM n AS INTEGER
@@ -2814,6 +2866,7 @@ SUB Start
     IF LD2_isDebugMode() THEN LD2_Debug "Starting game..."
     
     STATUS_SetUseItemCallback @LD2_UseItem
+    STATUS_SetLookItemCallback @LD2_LookItem
     if LD2_hasFlag(CLASSICMODE) then
         LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp", 2, 0 '- add function to load bsv file?
     else
@@ -2918,6 +2971,15 @@ sub LD2_UseItem (id as integer, qty as integer)
         LD2_PlaySound Sounds.useExtraLife
     case ItemIds.Chemical410
         SceneGooDestroy
+    end select
+    
+end sub
+
+sub LD2_LookItem (id as integer, byref desc as string)
+    
+    select case id
+    case ItemIds.JanitorNote
+        desc += " * "+left(RoofCode,1)+" - "+mid(RoofCode,2,1)+" - "+mid(RoofCode,3,1)+" - "+mid(RoofCode,4,1)
     end select
     
 end sub
