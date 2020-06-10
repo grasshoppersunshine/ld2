@@ -1,5 +1,6 @@
 #pragma once
 #inclib "ld2e"
+#include once "modules/inc/mobs.bi"
 
 const MAX_ACTION_ITEMS = 4
 
@@ -76,6 +77,19 @@ enum GutsIds
     Smoke
 end enum
 
+type BoxType
+    w as integer
+    h as integer
+    top as integer
+    btm as integer
+    lft as integer
+    rgt as integer
+    padTop as integer
+    padBtm as integer
+    padLft as integer
+    padRgt as integer
+end type
+
 declare sub Doors_Add ()
 declare sub Doors_Animate ()
 declare sub Doors_Update(id as integer)
@@ -90,18 +104,27 @@ declare sub Items_Add (x as integer, y as integer, id as integer, mobId as integ
 declare sub Items_Draw ()
 declare function Items_Pickup () as integer
 
-DECLARE SUB Mobs_Add (x AS INTEGER, y AS INTEGER, id AS INTEGER)
+declare sub Map_Load (filename as string, skipMobs as integer = 0)
+declare sub Map_LockElevator ()
+declare sub Map_UnlockElevator ()
+declare sub Map_SetXShift (x as integer)
 
-declare sub Mobs_Generate ()
+declare sub Mobs_Add (x as integer, y as integer, id as integer)
+declare sub Mobs_Generate  (forceNumMobs as integer = 0, forceMobType as integer = 0)
 declare sub Mobs_Animate ()
 declare sub Mobs_Draw ()
+declare sub Mobs_Kill (mob as Mobile)
+declare sub Mobs_KillAll ()
 
 declare sub Stats_Draw ()
 
 declare sub Player_Animate ()
 declare sub Player_Draw()
-declare function Player_Jump (Amount as double) as integer
-declare function Player_Move (XAmount as double) as integer
+declare function Player_Jump (amount as double, is_repeat as integer = 0) as integer
+declare function Player_JumpRepeat(amount as double) as integer
+declare function Player_JumpDown () as integer
+declare function Player_Move (XAmount as double, canFlip as integer = 1) as integer
+declare function Player_Fall() as integer
 declare function Player_GetAccessLevel() as integer
 declare function Player_GetItemQty(itemId as integer) as integer
 declare function Player_HasItem(itemId as integer) as integer
@@ -114,6 +137,17 @@ declare sub Player_SetFlip (flipped as integer)
 declare sub Player_SetXY (x as integer, y as integer)
 declare function Player_GetX() as integer
 declare function Player_GetY() as integer
+declare sub Player_Hide ()
+declare sub Player_Unhide ()
+DECLARE SUB Player_Init (p AS PlayerType)
+declare function Player_LookUp () as integer
+declare function Player_SetWeapon (itemId as integer) as integer
+DECLARE function Player_Shoot (is_repeat as integer = 0) as integer
+declare function Player_ShootRepeat() as integer
+declare sub Player_SetAccessLevel (accessLevel as integer)
+declare sub Player_SetTempAccess (accessLevel as integer)
+declare function Player_GetCollisionBox() as BoxType
+
 
 DECLARE FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
 DECLARE SUB LD2_ClearInventorySlot (slot AS INTEGER)
@@ -128,37 +162,28 @@ DECLARE SUB LD2_GenerateSky ()
 DECLARE FUNCTION LD2_GetStatusAmount (slot AS INTEGER) as integer
 DECLARE FUNCTION LD2_GetStatusItem (slot AS INTEGER) as integer
 DECLARE SUB LD2_Init ()
-DECLARE SUB LD2_InitPlayer (p AS PlayerType)
 DECLARE FUNCTION LD2_isTestMode () as integer
 DECLARE FUNCTION LD2_isDebugMode () as integer
 
-declare SUB LD2_LoadMap (Filename AS STRING, skipMobs as integer = 0)
-DECLARE SUB LD2_LockElevator ()
-declare function LD2_LookUp () as integer
+
+
 DECLARE SUB LD2_ProcessEntities ()
 DECLARE SUB LD2_PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
 DECLARE SUB LD2_PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, BufferNum AS INTEGER)
 DECLARE SUB LD2_PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
 declare sub LD2_RenderBackground(height as double)
 DECLARE SUB LD2_RenderFrame ()
-DECLARE SUB LD2_SetAccessLevel (CodeNum AS INTEGER)
 DECLARE SUB LD2_SetPlayerlAni (Num AS INTEGER)
 DECLARE SUB LD2_SetNotice (message AS STRING)
 DECLARE SUB LD2_SetSceneMode (OnOff AS INTEGER)
 DECLARE SUB LD2_SetSceneNo (Num AS INTEGER)
-DECLARE SUB LD2_SetTempAccess (accessLevel AS INTEGER)
 DECLARE SUB LD2_ShutDown ()
-DECLARE function LD2_Shoot (is_repeat as integer = 0) as integer
-declare function LD2_ShootRepeat() as integer
 DECLARE SUB LD2_SetBossBar (mobId AS INTEGER)
-declare function LD2_SetWeapon (itemId as integer) as integer
-DECLARE SUB LD2_SetXShift (ShiftX AS INTEGER)
-DECLARE SUB LD2_SwapLighting ()
-DECLARE SUB LD2_UnlockElevator ()
-declare function LD2_TileIsSolid(tileId as integer) as integer
 
-declare sub LD2_HidePlayer ()
-declare sub LD2_ShowPlayer ()
+
+DECLARE SUB LD2_SwapLighting ()
+
+declare function LD2_TileIsSolid(tileId as integer) as integer
 
 '- are these all used somewhere? ---
 'DECLARE SUB LD2_PlayerAddItem (id AS INTEGER)
@@ -210,3 +235,18 @@ const SPRITE_W = 16
 const SPRITE_H = 16
 const FONT_W = 6
 const FONT_h = 5
+
+CONST MAXGUTS      = 100
+CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)
+CONST MAXDOORS     =  16 '- per room
+CONST MAXFLOORS    =  23
+CONST MAXINVENTORY =  127
+CONST MAXINVSLOTS  =   7
+CONST MAXTILES     = 120
+CONST MAXEVENTS    =   9
+
+CONST MAXLIFE        = 100
+CONST SHOTGUN_MAX    = 8
+CONST PISTOL_MAX     = 15
+CONST MAGNUM_MAX     = 6
+CONST MACHINEGUN_MAX = 50

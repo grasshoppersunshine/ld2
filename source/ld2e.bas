@@ -55,6 +55,12 @@
     ani as double
     anicount as double
   end type
+    
+    type PointType
+        x as integer
+        y as integer
+    end type
+    
   
   '= SPRITES (LD2TILES.PUT)
   '========================
@@ -99,31 +105,10 @@
   CONST RETREAT   = 8
   CONST RETRATING = 9
   
-  '= BYTES PER SPRITE
-  '========================
-  CONST EPS = 130
-  
   '= THE ALMIGHT PIE
   '= (PIE FLAVORED!)
   '========================
   CONST PI = 3.141592
-  
-  '= ARRAY MAXES
-  '========================
-  CONST MAXGUTS      = 100
-  CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)
-  CONST MAXDOORS     =  16 '- per room
-  CONST MAXFLOORS    =  23
-  CONST MAXINVENTORY =  127
-  CONST MAXINVSLOTS  =   7
-  CONST MAXTILES     = 120
-  CONST MAXEVENTS    =   9
-  
-  CONST MAXLIFE        = 100
-  CONST SHOTGUN_MAX    = 8
-  CONST PISTOL_MAX     = 15
-  CONST MAGNUM_MAX     = 6
-  CONST MACHINEGUN_MAX = 50
   
 '======================
 '= PRIVATE METHODS
@@ -143,8 +128,6 @@
   
   DECLARE SUB GetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
   DECLARE SUB SetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
-  
-  DECLARE SUB Mobs_Kill (mob AS Mobile)
 
 '======================
 '= HASH MODULE
@@ -199,8 +182,8 @@
   
   DIM SHARED TileMap  ( MAPW, MAPH ) AS INTEGER
   DIM SHARED MixMap   ( MAPW, MAPH ) AS INTEGER
-  DIM SHARED LightMap1( MAPW, MAPH ) AS INTEGER
-  DIM SHARED LightMap2( MAPW, MAPH ) AS INTEGER
+  DIM SHARED LightMapFg( MAPW, MAPH ) AS INTEGER
+  DIM SHARED LightMapBg( MAPW, MAPH ) AS INTEGER
   DIM SHARED AniMap   ( MAPW, MAPH ) AS INTEGER
   DIM SHARED FloorMap ( MAPW, MAPH ) AS INTEGER
   
@@ -261,8 +244,15 @@
   dim shared BackupElementsCount as integer
   dim shared BackupElements(64) as ElementType ptr
     
-    dim shared PlayerFloorHitX as integer
-    dim shared PlayerFloorHitY as integer
+    dim shared FallContactMapX as integer
+    dim shared FallContactMapY as integer
+    dim shared FallContactPointX as integer
+    dim shared FallContactPointY as integer
+    
+    dim shared WallContactMapX as integer
+    dim shared WallContactMapY as integer
+    dim shared WallContactPointX as integer
+    dim shared WallContactPointY as integer
   
   const DATA_DIR = "data/"
   PaletteFile = DATA_DIR+"gfx/gradient.pal"
@@ -411,18 +401,6 @@ SUB LD2_ClearInventorySlot (slot AS INTEGER)
     
 END SUB
 
-SUB LD2_LockElevator
-    
-    Elevator.isLocked = 1
-    
-END SUB
-
-SUB LD2_UnlockElevator
-    
-    Elevator.isLocked = 0
-    
-END SUB
-
 FUNCTION LD2_GetStatusItem (slot AS INTEGER) as integer
     
     IF LD2_isDebugMode() THEN LD2_Debug "LD2_GetStatusItem% ("+STR(slot)+" )"
@@ -452,24 +430,112 @@ SUB LD2_GetPlayer (p AS PlayerType)
 END SUB
 
 FUNCTION CheckPlayerFloorHit as integer
-  
-  'SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
-  dim x as integer
-  dim px as integer
-  dim py as integer
-  dim p as integer
- 
-  FOR x = 2 TO 13 STEP 11
-    px = INT(Player.x + x) \ SPRITE_W: py = INT(Player.y) \ SPRITE_H
-    p = FloorMap(px, py+1)
-    IF p THEN
-        PlayerFloorHitX = px
-        PlayerFloorHitY = py
-        return 1
+    
+    dim pointsToCheck(1) as PointType
+    dim mapX as integer
+    dim mapY as integer
+    dim box as BoxType
+    dim x as integer
+    dim y as integer
+    dim m as integer
+    dim n as integer
+    
+    dim floorHeight as integer
+    dim contactX as integer
+    dim contactY as integer
+    dim xmod as integer
+    dim ymod as integer
+    
+    box = Player_GetCollisionBox()
+    
+    contactX = 0
+    contactY = 0
+    
+    if Player.vy < 0 then
+        
+        pointsToCheck(0).y = box.top: pointsToCheck(0).x = box.lft
+        pointsToCheck(1).y = box.top: pointsToCheck(1).x = box.rgt
+        
+        for n = 0 to 1
+            x = pointsToCheck(n).x
+            y = pointsToCheck(n).y
+            mapX = int(x / SPRITE_W)
+            mapY = int(y / SPRITE_H)
+            m = FloorMap(mapX, mapY)
+            if m = 1 then
+                contactX = x
+                contactY = mapY * SPRITE_H + SPRITE_H - 1
+                exit for
+            end if
+        next n
+        
+    elseif Player.vy >= 0 then
+        
+        pointsToCheck(0).y = box.btm+1: pointsToCheck(0).x = box.lft
+        pointsToCheck(1).y = box.btm+1: pointsToCheck(1).x = box.rgt
+        
+        for n = 0 to 1
+            x = pointsToCheck(n).x
+            y = pointsToCheck(n).y
+            mapX = int(x / SPRITE_W)
+            mapY = int(y / SPRITE_H)
+            m = FloorMap(mapX, mapY)
+            if m = 1 then
+                contactX = x
+                contactY = mapY * SPRITE_H
+                exit for
+            end if
+            if (m >= 10) and (m <= 25) then
+                floorHeight = m - 10
+                ymod = (y and 15)
+                if ymod >= floorHeight and ymod <= (floorHeight+1) then
+                    contactX = x
+                    contactY = mapY * SPRITE_H + floorHeight
+                    exit for
+                end if
+            end if
+            if m = 30 then
+                ymod = (y and 15)
+                xmod = (x and 15)
+                if ymod >= (15-xmod) and ymod <= ((15-xmod)+1) then
+                    contactX = x
+                    contactY = mapY * SPRITE_H + (15-xmod)
+                    exit for
+                end if
+            end if
+            if m = 31 then
+                ymod = (y and 15)
+                xmod = (x and 15)
+                if ymod >= xmod and ymod <= (xmod+1) then
+                    contactX = x
+                    contactY = mapY * SPRITE_H + xmod
+                    exit for
+                end if
+            end if
+        next n
+        
     end if
-  NEXT x
-  
-  return 0
+    
+    if (contactX = 0) and (contactY = 0) then
+        return 0
+    else
+        FallContactMapX = mapX
+        FallContactMapY = mapY
+        FallContactPointX = contactX
+        FallContactPointY = contactY
+    end if
+    
+    'FOR x = 2 TO 13 STEP 11
+    '    px = INT(Player.x + x) \ SPRITE_W: py = INT(Player.y) \ SPRITE_H
+    '    p = FloorMap(px, py+1)
+    '    IF p THEN
+    '        PlayerFloorHitX = px
+    '        PlayerFloorHitY = py
+    '        return 1
+    '    end if
+    'NEXT x
+    
+    return 1
  
 END FUNCTION
 
@@ -491,22 +557,82 @@ FUNCTION CheckMobFloorHit (mob AS Mobile) as integer
 END FUNCTION
 
 FUNCTION CheckPlayerWallHit() as integer
-  
-  'SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
-  dim x as integer, y as integer
-  dim px as integer, py as integer
-  dim p as integer  
-
-  FOR y = 0 TO 15 STEP 15
-    FOR x = 0 TO 15 STEP 15
-      px = INT(Player.x + x) \ 16: py = INT(Player.y + y) \ 16
-      p = FloorMap(px, py)
-      IF p THEN return 1
-    NEXT x
-  NEXT y
-  
-  return 0
-  
+    
+    dim pointsToCheck(1) as PointType
+    dim mapX as integer
+    dim mapY as integer
+    dim xmod as integer
+    dim ymod as integer
+    dim box as BoxType
+    dim x as integer
+    dim y as integer
+    dim m as integer
+    dim n as integer
+    
+    box = Player_GetCollisionBox()
+    
+    if Player.vx >= 0 then
+        
+        pointsToCheck(0).x = box.rgt: pointsToCheck(0).y = box.top
+        pointsToCheck(1).x = box.rgt: pointsToCheck(1).y = box.btm
+        
+    elseif Player.vx < 0 then
+        
+        pointsToCheck(0).x = box.lft: pointsToCheck(0).y = box.top
+        pointsToCheck(1).x = box.lft: pointstoCheck(1).y = box.btm
+        
+    end if
+    
+    for n = 0 to 1
+        x = pointsToCheck(n).x
+        y = pointsToCheck(n).y
+        mapX = int(x / SPRITE_W)
+        mapY = int(y / SPRITE_H)
+        m = FloorMap(mapX, mapY)
+        if m = 1 then
+            WallContactMapX = mapX
+            WallContactMapY = mapY
+            WallContactPointX = mapX * SPRITE_W + iif(Player.vx < 0, SPRITE_W-1, 0)
+            WallContactPointY = y
+            return 1
+        end if
+        if n = 1 then '// only check bottom
+            if (m = 30) and (Player.vx > 0) then
+                ymod = (y and 15)
+                xmod = (x and 15)
+                if ymod >= (15-xmod) and ymod <= ((15-xmod)+1) then
+                    WallContactMapX = mapX
+                    WallContactMapY = mapY
+                    WallContactPointX = x
+                    WallContactPointY = mapY * SPRITE_H + (15-xmod)
+                    Player.y = WallContactPointY - SPRITE_H
+                    return 0
+                end if
+            end if
+            if (m = 31) and (Player.vx < 0) then
+                ymod = (y and 15)
+                xmod = (x and 15)
+                if ymod >= xmod and ymod <= (xmod+1) then
+                    WallContactMapX = mapX
+                    WallContactMapY = mapY
+                    WallContactPointX = x
+                    WallContactPointY = mapY * SPRITE_H + xmod
+                    Player.y = WallContactPointY - SPRITE_H
+                    return 0
+                end if
+            end if
+        end if
+    next n
+    'FOR y = 0 TO 15 STEP 15
+    '    FOR x = 0 TO 15 STEP 15
+    '        px = INT(Player.x + x) \ 16: py = INT(Player.y + y) \ 16
+    '        p = FloorMap(px, py)
+    '        IF p THEN return 1
+    '    NEXT x
+    'NEXT y
+    
+    return 0
+    
 END FUNCTION
 
 FUNCTION CheckMobWallHit (mob AS Mobile) as integer
@@ -582,7 +708,6 @@ SUB RefreshPlayerAccess
     DIM maxLevel AS INTEGER
     
     Inventory(AUTH) = 0
-    Inventory(WHITECARD) = 0
     
     maxLevel = NOACCESS
     FOR i = 0 TO 7
@@ -594,10 +719,10 @@ SUB RefreshPlayerAccess
             IF BLUEACCESS > maxLevel   THEN maxLevel = BLUEACCESS
         CASE YELLOWCARD
             IF YELLOWACCESS > maxLevel THEN maxLevel = YELLOWACCESS
+        CASE WHITECARD
+            IF WHITEACCESS > maxLevel THEN maxLevel = WHITEACCESS
         CASE REDCARD
             IF REDACCESS > maxLevel    THEN maxLevel = REDACCESS
-        CASE WHITECARD
-            Inventory(WHITECARD) = 1
         END SELECT
     NEXT i
     
@@ -911,38 +1036,6 @@ sub LD2_RenderBackground(height as double)
     
 end sub
 
-SUB LD2_InitPlayer(p AS PlayerType)
-    
-    Player = p
-    
-    Inventory(ItemIds.Hp) = MAXLIFE
-    LD2_SetWeapon ItemIds.Fist
-    
-END SUB
-
-sub LD2_HidePlayer()
-    
-    Player.is_visible = 0
-    
-end sub
-
-sub LD2_ShowPlayer()
-    
-    Player.is_visible = 1
-    
-end sub
-
-function LD2_LookUp () as integer
-    
-    if Player.state = JUMPING then
-        return 0
-    else
-        SetPlayerState( LOOKINGUP )
-        return 1
-    end if
-    
-end function
-
 SUB SaveItems (filename AS STRING)
     
     DIM InFile AS INTEGER
@@ -1008,7 +1101,7 @@ SUB SaveItems (filename AS STRING)
     
 END SUB
 
-SUB LD2_LoadMap (Filename AS STRING, skipMobs as integer = 0)
+SUB Map_Load (Filename AS STRING, skipMobs as integer = 0)
   
   IF LD2_isDebugMode() THEN LD2_Debug "LD2_LoadMap ( "+filename+" )"
     
@@ -1212,13 +1305,20 @@ SUB LD2_LoadMap (Filename AS STRING, skipMobs as integer = 0)
             Doors(NumDoors).accessLevel = WHITEACCESS
             NumDoors = NumDoors + 1
           END IF
-          IF ASC(_byte) >= 80 AND ASC(_byte) <= 109 THEN
-            'PokeBitmap x, y, 1
-            FloorMap(x, y) = 1
-          ELSE
-            'PokeBitmap x, y, 0
-            FloorMap(x, y) = 0
-          END IF
+          FloorMap(x, y) = 0
+          IF ASC(_byte) >= 80 AND ASC(_byte) <= 109 THEN FloorMap(x, y) = 1
+          if (asc(_byte) = 120) or (asc(_byte) = 124) or (asc(_byte) = 127) then FloorMap(x, y) = 1
+          if (asc(_byte) = 5) or (asc(_byte) = 6) then FloorMap(x, y) = 19
+          if (asc(_byte) = 155) then FloorMap(x, y) = 1
+          if (asc(_byte) = 156) then FloorMap(x, y) = 1
+          if (asc(_byte) = 157) then FloorMap(x, y) = 30
+          if (asc(_byte) = 158) then FloorMap(x, y) = 31
+          if (asc(_byte) = 159) then FloorMap(x, y) = 30
+          if (asc(_byte) = 160) then FloorMap(x, y) = 31
+          if (asc(_byte) = 161) then FloorMap(x, y) = 30
+          if (asc(_byte) = 162) then FloorMap(x, y) = 31
+          if (asc(_byte) = 163) then FloorMap(x, y) = 10
+          if (asc(_byte) = 164) then FloorMap(x, y) = 0
         NEXT x
       NEXT y
     
@@ -1240,28 +1340,28 @@ SUB LD2_LoadMap (Filename AS STRING, skipMobs as integer = 0)
         GET #MapFile, c, _byte: c = c + 1
         FOR x = 0 TO 200
           IF x < MAPW THEN
-            'DEF SEG = VARSEG(LightMap2(0)): POKE (x + y * MAPW), 0: DEF SEG
-            LightMap2(x, y) = 0
+            'DEF SEG = VARSEG(LightMapBg(0)): POKE (x + y * MAPW), 0: DEF SEG
+            LightMapBg(x, y) = 0
           END IF
           GET #MapFile, c, _byte: c = c + 1
           IF x < MAPW THEN
             'DEF SEG = VARSEG(TileMap(0)): t = PEEK (x + y * MAPW): DEF SEG
             t = TileMap(x, y)
             IF t = 0 THEN
-              'DEF SEG = VARSEG(LightMap2(0)): POKE (x + y * MAPW), ASC(_byte): DEF SEG
-              LightMap2(x, y) = ASC(_byte)
+              'DEF SEG = VARSEG(LightMapBg(0)): POKE (x + y * MAPW), ASC(_byte): DEF SEG
+              LightMapBg(x, y) = ASC(_byte)
             ELSE
-              'DEF SEG = VARSEG(LightMap1(0)): POKE (x + y * MAPW), ASC(_byte): DEF SEG
-              LightMap1(x, y) = ASC(_byte)
+              'DEF SEG = VARSEG(LightMapFg(0)): POKE (x + y * MAPW), ASC(_byte): DEF SEG
+              LightMapFg(x, y) = ASC(_byte)
             END IF
           END IF
           GET #MapFile, c, _byte: c = c + 1
           IF x < MAPW THEN
-            'DEF SEG = VARSEG(LightMap2(0))
+            'DEF SEG = VARSEG(LightMapBg(0))
             'IF PEEK(x + y * MAPW) = 0 THEN POKE (x + y * MAPW), ASC(_byte)
             'DEF SEG
-            if LightMap2(x, y) = 0 then
-                LightMap2(x, y) = ASC(_byte)
+            if LightMapBg(x, y) = 0 then
+                LightMapBg(x, y) = ASC(_byte)
             end if
           END IF
         NEXT x
@@ -1358,8 +1458,8 @@ SUB LD2_LoadMap (Filename AS STRING, skipMobs as integer = 0)
         for y = 1 to 11
             for x = 1 to 199
                 if x > Elevator.mapX + 4 then
-                    LightMap1(x, y) = 0
-                    LightMap2(x, y) = 0
+                    LightMapFg(x, y) = 0
+                    LightMapBg(x, y) = 0
                 end if
                 if TileMap(x, y) = 81 and TileMap(x, y+1) = 1 and TileMap(x-1, y+1) = 81 then
                     TileMap(x, y) = 120
@@ -1637,7 +1737,7 @@ SUB Doors_Animate
     
     for i = 0 to NumDoors-1
         
-        playerHasAccess = (code >= Doors(i).accessLevel) or (tempcode >= Doors(i).accessLevel) or ((Inventory(WHITECARD) = 1) and (Doors(i).accessLevel = WHITEACCESS))
+        playerHasAccess = (code >= Doors(i).accessLevel) or (tempcode >= Doors(i).accessLevel)
         playerIsNear    = (pcx >= Doors(i).x-16) and (pcx <= Doors(i).x+Doors(i).w+16) and (pcy >= Doors(i).y) and (pcy <= Doors(i).y+Doors(i).h)
         doorIsMoving    = (Doors(i).ani > 0) and (Doors(i).ani < 4)
         
@@ -1830,13 +1930,13 @@ SUB LD2_PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
     TileMap(x, y) = Tile
     MixMap(x, y) = Tile
   CASE 2
-    'DEF SEG = VARSEG(LightMap1(0))
-    'POKE VARPTR(LightMap1(0))+m, Tile
-    LightMap1(x, y) = Tile
+    'DEF SEG = VARSEG(LightMapFg(0))
+    'POKE VARPTR(LightMapFg(0))+m, Tile
+    LightMapFg(x, y) = Tile
   CASE 3
-    'DEF SEG = VARSEG(LightMap2(0))
-    'POKE VARPTR(LightMap2(0))+m, Tile
-    LightMap2(x, y) = Tile
+    'DEF SEG = VARSEG(LightMapBg(0))
+    'POKE VARPTR(LightMapBg(0))+m, Tile
+    LightMapBg(x, y) = Tile
   END SELECT
 
 END SUB
@@ -1859,8 +1959,8 @@ SUB LD2_RenderFrame
   'DIM segAniMap    AS INTEGER
   'DIM segTileMap   AS INTEGER
   'DIM segMixMap    AS INTEGER
-  'DIM segLightMap1 AS INTEGER
-  'DIM segLightMap2 AS INTEGER
+  'DIM segLightMapFg AS INTEGER
+  'DIM segLightMapBg AS INTEGER
   'DIM segTile      AS INTEGER
   'DIM segLight     AS INTEGER
   'DIM segBuffer1   AS INTEGER
@@ -1874,8 +1974,8 @@ SUB LD2_RenderFrame
   'segAniMap    = VARSEG(AniMap(0))
   'segTileMap   = VARSEG(TileMap(0))
   'segMixMap    = VARSEG(MixMap(0))
-  'segLightMap1 = VARSEG(LightMap1(0))
-  'segLightMap2 = VARSEG(LightMap2(0))
+  'segLightMapFg = VARSEG(LightMapFg(0))
+  'segLightMapBg = VARSEG(LightMapBg(0))
   'segTile      = VARSEG(sTile(0))
   'segLight     = VARSEG(sLight(0))
   'segBuffer1   = GetBufferSeg%(1)
@@ -1884,13 +1984,13 @@ SUB LD2_RenderFrame
   'DIM ptrTileMap   AS INTEGER
   'DIM ptrMixMap    AS INTEGER
   'DIM ptrAniMap    AS INTEGER
-  'DIM ptrLightMap1 AS INTEGER
-  'DIM ptrLightMap2 AS INTEGER
+  'DIM ptrLightMapFg AS INTEGER
+  'DIM ptrLightMapBg AS INTEGER
   'DEF SEG = segTileMap  : ptrTileMap   = VARPTR(TileMap(0))  : DEF SEG
   'DEF SEG = segMixMap   : ptrMixMap    = VARPTR(MixMap(0))   : DEF SEG
   'DEF SEG = segAniMap   : ptrAniMap    = VARPTR(AniMap(0))   : DEF SEG
-  'DEF SEG = segLightMap1: ptrLightMap1 = VARPTR(LightMap1(0)): DEF SEG
-  'DEF SEG = segLightMap2: ptrLightMap2 = VARPTR(LightMap2(0)): DEF SEG
+  'DEF SEG = segLightMapFg: ptrLightMapFg = VARPTR(LightMapFg(0)): DEF SEG
+  'DEF SEG = segLightMapBg: ptrLightMapBg = VARPTR(LightMapBg(0)): DEF SEG
 
   Animation = Animation + .2
   IF Animation > 9 THEN Animation = 1
@@ -2002,8 +2102,8 @@ SUB LD2_RenderFrame
                 SpritesTile.putToScreen(xp, yp, m+a)
             end if
           '// background lighting (mostly for windows)
-          'DEF SEG = segLightMap2: l% = PEEK(ml%): DEF SEG
-          l = LightMap2(mapX, mapY)
+          'DEF SEG = segLightMapBg: l% = PEEK(ml%): DEF SEG
+          l = LightMapBg(mapX, mapY)
           IF l THEN
             'if (m > 0) and Player.is_shooting and (abs(playerMapX-mapX) <= 3) and (abs(playerMapY-mapY) <= 3) then
             'else
@@ -2081,9 +2181,9 @@ SUB LD2_RenderFrame
         'doDynamicLighting% = PeekBitmap%(x%, y%)
         'doDynamicLighting = skipLight(x, y)
         'IF doDynamicLighting THEN
-        '  'DEF SEG = segLightMap1: l% = PEEK(ml%): DEF SEG
+        '  'DEF SEG = segLightMapFg: l% = PEEK(ml%): DEF SEG
           m = FloorMap(mapX, mapY)
-          l = LightMap1(mapx, mapY)
+          l = LightMapFg(mapx, mapY)
           IF l THEN
             if (m = 0) and Player.is_shooting and ((Player.uAni-Player.stillAni) < 1.5) and (abs(playerMapX-mapX) <= 3) and (abs(playerMapY-mapY) <= 2) then
                 
@@ -2250,16 +2350,6 @@ FUNCTION LD2_GetFlagData() as integer
     
 END FUNCTION
 
-SUB LD2_SetAccessLevel (CodeNum AS INTEGER)
-
-  IF CodeNum = WHITEACCESS THEN
-    Inventory(WHITECARD) = 1
-  ELSE
-    Inventory(AUTH) = CodeNum
-  END IF
-
-END SUB
-
 SUB LD2_ClearMobs
 
   'IF NE = 0 THEN ??? not sure what the NE check is for
@@ -2297,12 +2387,6 @@ SUB LD2_SetBossBar (mobId AS INTEGER)
 
 END SUB
 
-SUB LD2_SetTempAccess (accessLevel AS INTEGER)
-
-  Inventory(TEMPAUTH) = accessLevel
-
-END SUB
-
 SUB LD2_SetNotice (message AS STRING)
     
     GameNoticeMsg = message
@@ -2310,286 +2394,23 @@ SUB LD2_SetNotice (message AS STRING)
     
 END SUB
 
-function LD2_SetWeapon (itemId as integer) as integer
-
-  '- Set the current weapon
-  '------------------------
-  
-  Player.weapon = itemId
-  
-  IF itemId = FIST        THEN Player.uAni = 26: Player.stillani = Player.uAni
-  IF itemId = SHOTGUN     THEN Player.uAni = 01: Player.stillani = Player.uAni
-  IF itemId = MACHINEGUN  THEN Player.uAni = 08: Player.stillani = Player.uAni
-  IF itemId = PISTOL      THEN Player.uAni = 11: Player.stillani = Player.uAni
-  IF itemId = DESERTEAGLE THEN Player.uAni = 14: Player.stillani = Player.uAni
-  
-  return 1
-  
-end function
-
-SUB LD2_SetXShift (ShiftX AS INTEGER)
-
-  '- Set the x shift
-  '-----------------
-
-  XShift = ShiftX
-
-
-END SUB
-
-function LD2_GetInventoryQty(itemId as integer) as integer
+sub Map_SetXShift (x as integer)
     
-    return Inventory(itemId)
+    XShift = x
     
-end function
+end sub
 
-function LD2_ShootRepeat() as integer
+sub Map_LockElevator
     
-    return LD2_Shoot(1)
+    Elevator.isLocked = 1
     
-end function
+end sub
 
-function LD2_Shoot(is_repeat as integer = 0) as integer
-
-    dim mob AS Mobile
-    dim mapX as integer, mapY as integer
-    dim tile as integer
-    dim dist as integer
-    dim contactX as integer
-    dim contactY as integer
-    dim damage as integer
-    dim x as integer
-    dim y as integer
-    dim i as integer
-    dim n as integer
-    dim r as integer
+sub Map_UnlockElevator
     
-    static timestamp as double
-    dim timeSinceLastShot as double
-
-    if Player.is_shooting then return 0
-
-    if Player.weapon = ItemIds.Shotgun    and Inventory(ItemIds.ShotgunAmmo)    = 0 then return -1
-    if Player.weapon = ItemIds.Pistol     and Inventory(ItemIds.PistolAmmo)     = 0 then return -1
-    if Player.weapon = ItemIds.MachineGun and Inventory(ItemIds.MachineGunAmmo) = 0 then return -1
-    if Player.weapon = ItemIds.Magnum     and Inventory(ItemIds.MagnumAmmo)     = 0 then return -1
-
-    timeSinceLastShot = (timer - timestamp)
-
-    select case Player.weapon
-    case ItemIds.Shotgun
-        
-        Inventory(ItemIds.ShotgunAmmo) -= 1
-        damage = 5
-        
-    case ItemIds.Pistol
-        
-        if Player.state = CROUCHING then
-            if (is_repeat = 1 and timeSinceLastShot < 0.33) then return 0
-            'if (is_repeat = 0 and timeSinceLastShot < 0.10) then return 0
-        else
-            if (is_repeat = 1 and timeSinceLastShot < 0.45) then return 0
-            if (is_repeat = 0 and timeSinceLastShot < 0.25) then return 0
-        end if
-        Inventory(ItemIds.PistolAmmo) -= 1
-        damage = 2
-        
-    case ItemIds.MachineGun
-        
-        Inventory(ItemIds.MachineGunAmmo) -= 1
-        damage = 1
-        
-    case ItemIds.Magnum
-        
-        Inventory(ItemIds.Magnum) -= 1
-        damage = 7
-        
-    case ItemIds.Fist
-        
-        if (is_repeat = 1 and timeSinceLastShot < 0.30) then return 0
-        if (is_repeat = 0 and timeSinceLastShot < 0.10) then return 0
-        damage = 2
-        
-    case else
-        
-        return 0
-        
-    end select
+    Elevator.isLocked = 0
     
-    Player.is_shooting = 1
-    timestamp = timer
-    
-    dim fireY as integer
-    if Player.state = CROUCHING then
-        fireY = 12
-    else
-        fireY = 8
-    end if
-    
-    if (Player.weapon <> ItemIds.Fist) and (Player.uAni = Player.stillAni) then
-
-        Player.uAni = Player.uAni + 1
-        
-        if Player.is_lookingdown then
-            
-            for y = Player.y+15 to Player.y+SCREEN_H step 4
-                
-                mapX = int((Player.x + 8) / SPRITE_W)
-                mapY = int(y / SPRITE_H)
-                tile = TileMap(mapX, mapY)
-                contactX = int(Player.x + 8): contactY = y
-                
-                if LD2_TileIsSolid(tile) then
-                    contactY = mapY * SPRITE_H
-                    for i = 0 to 4: Guts_Add GutsIds.Smoke, contactX, contactY,  1, RND(1)*-5: next i
-                    return 1
-                end if
-                
-                Mobs.resetNext
-                do while Mobs.canGetNext()
-                    Mobs.getNext mob
-                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > (mob.y+mob.top) and contactY < (mob.y + 15) then
-                        mob.hit = 1
-                        exit do
-                    end if
-                loop
-                if mob.hit then exit for
-            next y
-
-        elseif Player.flip = 0 then
-
-            for x = Player.x+15 to Player.x+SCREEN_W step 8
-                
-                mapX = int(x / SPRITE_W)
-                mapY = int((Player.y + fireY) / SPRITE_H)
-                tile = TileMap(mapX, mapY)
-                contactX = x: contactY = int(Player.y + fireY)
-                
-                if LD2_TileIsSolid(tile) then
-                    contactX = mapX * SPRITE_W
-                    for i = 0 to 4: Guts_Add GutsIds.Smoke, contactX, contactY,  1, RND(1)*-5: next i
-                    return 1
-                end if
-                
-                Mobs.resetNext
-                do while Mobs.canGetNext()
-                    Mobs.getNext mob
-                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > (mob.y+mob.top) and contactY < (mob.y + 15) then
-                        mob.hit = 1
-                        exit do
-                    end if
-                loop
-                if mob.hit then exit for
-            next x
-            
-        else
-            
-            for x = Player.x to Player.x-SCREEN_W step -8
-
-                mapX = int(x / SPRITE_W)
-                mapY = int((Player.y + fireY) / SPRITE_H)
-                tile = TileMap(mapX, mapY)
-                contactX = x: contactY = int(Player.y + fireY)
-                
-                if LD2_TileIsSolid(tile) then
-                    contactX = mapX * SPRITE_W + SPRITE_W
-                    for i = 0 to 4: Guts_Add GutsIds.Smoke, contactX, contactY,  1, RND(1)*5: next i
-                    return 1
-                end if
-
-                Mobs.resetNext
-                do while Mobs.canGetNext()
-                    Mobs.getNext mob
-                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > (mob.y+mob.top) and contactY < (mob.y + 15) then
-                        mob.hit = 1
-                        exit do
-                    end if
-                loop
-                if mob.hit then exit for
-            next x
-            
-        end if
-        
-        if mob.hit then
-            select case Player.weapon
-            case ItemIds.Shotgun
-                dist = abs(contactX - (Player.x+7))
-                select case dist
-                case  0 to 15: mob.life -= (damage - 0)
-                case 16 to 47: mob.life -= (damage - 1)
-                case 48 to 79: mob.life -= (damage - 2)
-                case else    : mob.life -= (damage - 3)
-                end select
-            case ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum
-                mob.life -= damage
-            end select
-            if mob.life <= 0 then
-                Mobs_Kill mob
-                LD2_PlaySound Sounds.splatter
-            else
-                Mobs.update mob
-                LD2_PlaySound Sounds.blood2
-            end if
-            Guts_Add GutsIds.BloodSprite, contactX, int(Player.y + 8), 1
-            for n = 0 to 4
-                Guts_Add GutsIds.Blood, contactX, contactY,  1, iif(Player.flip = 0, -rnd(1)*3, -rnd(1)*5)
-                Guts_Add GutsIds.Blood, contactX, contactY,  1, iif(Player.flip = 0,  rnd(1)*5,  rnd(1)*3)
-            next n
-            LD2_RenderFrame
-            LD2_RefreshScreen
-            WaitSeconds 0.05
-        end if
-        
-    elseif (Player.weapon = ItemIds.Fist) and (Player.uAni = Player.stillAni) then
-        
-        Player.uAni = Player.uAni + 1
-        
-        Mobs.resetNext
-        do while Mobs.canGetNext()
-            Mobs.getNext mob
-            contactX = iif(Player.flip = 0, int(Player.x+14), int(Player.x+1))
-            contactY = int(Player.y+10)
-            if contactX > mob.x and contactX < (mob.x + 15) and contactY > mob.y and contactY < (mob.y + 15) then
-                mob.hit = 1
-            end if
-            'if mob.hit then
-            '    SetPlayerState( BLOCKED )
-            'end if
-            if mob.hit then
-                mob.life -= damage
-                if mob.life <= 0 then
-                    Mobs_Kill mob
-                    LD2_PlaySound Sounds.splatter
-                else
-                    Mobs.update mob
-                    LD2_PlaySound Sounds.blood2
-                end if
-                Guts_Add GutsIds.BloodSprite, contactX, int(Player.y + 8), 1
-                for i = 0 to 2
-                    Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8,  1, -rnd(1)*5
-                    Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8,  1,  rnd(1)*5
-                next i
-                exit do
-            end if
-        loop
-        
-        if Player.state <> JUMPING then
-            SetPlayerState( BLOCKED )
-            Player.lAni = 21 '- make const for legs still/standing
-        end if
-        
-        if mob.hit then
-            LD2_RenderFrame
-            LD2_RefreshScreen
-            WaitSeconds 0.05
-        end if
-    else
-        return 0
-    end if
-    
-    return 1
-    
-end function
+end sub
 
 sub Items_Add (x as integer, y as integer, id as integer, mobId as integer = 0)
     dim mob as Mobile
@@ -2674,7 +2495,7 @@ sub Mobs_Kill (mob as Mobile)
         LD2_StopMusic
     case BOSS2
         LD2_SetFlag BOSSKILLED
-        Player_SetItemQty ItemIds.BossKilledId, BOSS1
+        Player_SetItemQty ItemIds.BossKilledId, BOSS2
         LD2_PlayMusic mscWANDERING
         Inventory(AUTH) = REDACCESS
     case TROOP1, TROOP2
@@ -2695,7 +2516,19 @@ sub Mobs_Kill (mob as Mobile)
     
 end sub
 
-sub Mobs_Generate ()
+sub Mobs_KillAll ()
+    
+    dim mob as Mobile
+    
+    Mobs.resetNext
+    do while Mobs.canGetNext()
+        Mobs.getNext mob
+        Mobs_Kill mob
+    loop
+    
+end sub
+
+sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
     
     dim x as integer, y as integer
     dim n as integer
@@ -2755,6 +2588,10 @@ sub Mobs_Generate ()
     
     numMobs = int(numFloors / 5)
     
+    if forceNumMobs > 0 then
+        numMobs = forceNumMobs
+    end if
+    
     for i = 0 to numMobs-1
         do
             x = int((Elevator.mapX-5) * rnd(1))
@@ -2763,19 +2600,23 @@ sub Mobs_Generate ()
                 exit do
             end if
         loop
-        n = int(100*rnd(1))
-        select case n
-        case 0 to 14
-            mobType = ROCKMONSTER
-        case 20 to 49
-            mobType = TROOP1
-        case 50 to 79
-            mobType = TROOP2
-        case 15 to 19, 80 to 89
-            mobType = BLOBMINE
-        case 90 to 99
-            mobType = JELLYBLOB
-        end select
+        if forceMobType > 0 then
+            mobType = forceMobType
+        else
+            n = int(100*rnd(1))
+            select case n
+            case 0 to 14
+                mobType = ROCKMONSTER
+            case 20 to 49
+                mobType = TROOP1
+            case 50 to 79
+                mobType = TROOP2
+            case 15 to 19, 80 to 89
+                mobType = BLOBMINE
+            case 90 to 99
+                mobType = JELLYBLOB
+            end select
+        end if
         Mobs_Add x * 16, y * 16, mobType
     next i
     
@@ -3380,7 +3221,7 @@ sub Player_Animate()
                 Player.x = 80
             else
                 Inventory(ItemIds.CurrentRoom) = WEAPONSLOCKER
-                LD2_LoadMap "7th.LD2"
+                Map_Load "7th.LD2"
                 XShift = 560
                 Player.x = 80
                 Player.y = 144
@@ -3390,63 +3231,9 @@ sub Player_Animate()
     
     f = 1 'DELAYMOD
     
-    Player.y += Player.vy
-    if CheckPlayerFloorHit() = 0 then
-        falling = 1
-        if Player.weapon = FIST then
-            Player.lAni = iif(Player.vy < -0.5, 48, 49)
-        else
-            Player.lAni = 25
-        end if
-        Player.vy += Gravity*f
-        if Player.vy > 3 then
-            Player.vy = 3
-        end if
-        if Player.moved = 0 then
-            'if Player.is_lookingdown = 0 then
-                if Player.vx > 0 then
-                    Player.vx -= Gravity*f*0.5
-                    if Player.vx < 0 then Player.vx = 0
-                end if
-                if Player.vx < 0 then
-                    Player.vx += Gravity*f*0.5
-                    if Player.vx > 0 then Player.vx = 0
-                end if
-            'end if
-            prevX = Player.x
-            Player.x += Player.vx
-            if CheckPlayerWallHit() then
-                Player.x = prevx
-                Player.lAni = 21
-            end if
-        end if
-    else
-        if falling then
-            falling = 0
-            if Player.weapon = FIST then
-                Player.lAni = 42
-            else
-                Player.lAni = 24
-            end if
-        end if
-        Player.y = PlayerFloorHitY * SPRITE_H
-        Player.vy = 0
-        Player.is_lookingdown = 0
-        if Player.moved = 0 then
-            Player.vx = 0
-        end if
-    end if
+    falling = Player_Fall()
     
     Player.moved = 0
-    
-    '- check for ceiling hit
-    Player.y -= SPRITE_H
-    if CheckPlayerFloorHit() then
-        Player.y = PlayerFloorHitY * SPRITE_H + (SPRITE_H*2)
-        Player.vy = -Player.vy
-    else
-        Player.y += SPRITE_H
-    end if
     
     if Player.is_shooting then
         select case Player.weapon
@@ -3615,12 +3402,21 @@ sub Player_Draw()
     
 end sub
 
-function Player_Jump (Amount as double) as integer
+function Player_JumpRepeat(amount as double) as integer
+    
+    return Player_Jump(amount, 1)
+    
+end function
+
+function Player_Jump (amount as double, is_repeat as integer = 0) as integer
     
     dim success as integer
-    IF (TIMER - Player.landtime) < 0.15 THEN
+    IF is_repeat and ((TIMER - Player.landtime) < 0.15) THEN
         return 0
     END IF
+    if (is_repeat = 0) and ((TIMER - Player.landtime) < 0.05) then
+        return 0
+    end if
 
     IF Player.weapon = FIST THEN
         Amount = Amount * 1.1
@@ -3638,107 +3434,218 @@ function Player_Jump (Amount as double) as integer
     
 end function
 
-function Player_Move (dx AS DOUBLE) as integer
-
-  IF Player.state = CROUCHING THEN
-    return 0
-  END IF
-  IF Player.state = LOOKINGUP THEN
-    return 0
-  END IF
-  if Player.state = BLOCKED then
-    return 0
-  end if
-  
-  DIM moved AS DOUBLE
-  DIM prevx AS DOUBLE
-  DIM diffx AS DOUBLE
-  DIM prvxs AS DOUBLE
-  DIM ex AS DOUBLE
-  dim f as double
-  
-  static footstep as integer = 0
-  
-  dim success as integer
-  success = 1
+function Player_JumpDown () as integer
     
+    static timestamp as double
+    dim pointsToCheck(1) as PointType
+    dim timeSinceLast as double
+    dim mapX as integer
+    dim mapY as integer
+    dim box as BoxType
+    dim x as integer
+    dim y as integer
+    dim m as integer
+    dim n as integer
+    
+    timeSinceLast = (timer - timestamp)
+    if (timeSinceLast < 0.5) then return 0
+    timestamp = timer
+    
+    box = Player_GetCollisionBox()
+    
+    pointsToCheck(0).x = box.lft: pointsToCheck(0).y = box.btm+1
+    pointsToCheck(1).x = box.rgt: pointsToCheck(1).y = box.btm+1
+    
+    for n = 0 to 1
+        x = pointsToCheck(n).x
+        y = pointsToCheck(n).y
+        mapX = int(x / SPRITE_W)
+        mapY = int(y / SPRITE_H)
+        m = FloorMap(x, y)
+        if m = 1 then
+            return 0
+        end if
+    next n
+    
+    Player.y += 2
+    Player.state = JUMPING
+    
+    return 1
+    
+end function
+
+function Player_Fall() as integer
+    
+    dim isFalling as integer
+    dim fallingDown as integer
+    dim box as BoxType
+    dim f as double
+    
+    box = Player_GetCollisionBox()
+    isFalling = 0
+    fallingDown = iif(Player.vy >= 0, 1, 0)
+    f = DELAYMOD
+    
+    Player.y += Player.vy
+    if CheckPlayerFloorHit() = 0 then
+        isFalling = 1
+        if Player.weapon = FIST then
+            Player.lAni = iif(Player.vy < -0.5, 48, 49)
+        else
+            Player.lAni = 25
+        end if
+        Player.vy += Gravity*f
+        if Player.vy > 3 then
+            Player.vy = 3
+        end if
+    else
+        if isFalling then
+            isFalling = 0
+            if Player.weapon = FIST then
+                Player.lAni = 42
+            else
+                Player.lAni = 24
+            end if
+        end if
+        if fallingDown then
+            Player.y = FallContactPointY - (box.h+box.padTop)
+        else
+            Player.y = FallContactPointY - box.padTop + 1
+        end if
+        Player.vy = 0
+        Player.is_lookingdown = 0
+        if Player.moved = 0 then
+            Player.vx = 0
+        end if
+    end if
+    
+    if isFalling and (Player.moved = 0) then
+        if Player.vx > 0 then
+            Player.vx -= Gravity*f*0.5
+            if Player.vx < 0 then Player.vx = 0
+        end if
+        if Player.vx < 0 then
+            Player.vx += Gravity*f*0.5
+            if Player.vx > 0 then Player.vx = 0
+        end if
+        Player.x += Player.vx
+        if CheckPlayerWallHit() then
+            Player.x = WallContactPointX + iif(Player.vx > 0, -(box.w+box.padLft), -box.padLft+1)
+        end if
+    end if
+    
+    return isFalling
+    
+end function
+
+function Player_Move (dx AS DOUBLE, canFlip as integer = 1) as integer
+
+    if (Player.state = CROUCHING)  or (Player.state = LOOKINGUP) or (Player.state = BLOCKED) then
+        return 0
+    end if
+
+    static footstep as integer = 0
+    dim success as integer
+    dim forward as integer
+    dim cond0 as integer
+    dim cond1 as integer
+    dim box as BoxType
+    dim f as double
+    
+    success = 1
     Player.moved = 1
 
+    if canFlip then
+        Player_SetFlip(iif(dx > 0, 0, 1))
+    end if
+    
+    cond0 = (dx > 0) and (Player.flip = 0)
+    cond1 = (dx < 0) and (Player.flip = 1)
+    forward = iif((cond0 or cond1), 1, 0)
+    
     f = DELAYMOD
+    dx *= f
+    
     if Player.state = JUMPING then
-        dx = f*dx
-        ex = dx*1.1
-        if abs(ex) < abs(Player.vx) and sgn(ex) = sgn(Player.vx) then
-            if ex > 0 then
-                ex = abs(Player.vx)
+        dx *= 1.1
+        if (abs(dx) < abs(Player.vx)) and (sgn(dx) = sgn(Player.vx)) then
+            if dx > 0 then
+                dx = abs(Player.vx)
             else
-                ex = -abs(Player.vx)
+                dx = -abs(Player.vx)
             end if
-            dx = ex
-        else
-            'dx *= 1.25
-            'ex = dx
-            dx = ex
         end if
-        ex = dx
     else
-    dx = f*dx
-    'ex = dx*1.0625
-    ex = dx*1.25
-    dx *= 1.25 '1.15
+        dx *= 1.25
     end if
-  
-  prevx    = Player.x
-  prvxs    = XShift
-  
-  IF Player.weapon = FIST THEN
-    Player.vx = ex
-    Player.x    = Player.x + ex
-    Player.lAni = Player.lAni + ABS(ex / 7.5)
-    if Player.state <> JUMPING then
-        select case footstep
-            case 0
-                if player.lani >= 37 then LD2_PlaySound Sounds.footstep: footstep += 1
-            case 1
-                if player.lani >= 41 then LD2_PlaySound Sounds.footstep: footstep += 1
-        end select
-    end if
-  ELSE
-    Player.vx = dx
-    Player.x    = Player.x + dx
-    Player.lAni = Player.lAni + ABS(dx / 7.5)
-    if Player.state <> JUMPING then
-        select case footstep
-            case 0
-                if player.lani >= 23 then LD2_PlaySound Sounds.footstep: footstep += 1
-        end select
-    end if
-  END IF
-  
-  IF CheckPlayerWallHit() THEN
-    Player.x = prevx
-    Player.lAni = 21
-    success = 0
-  else
-
-    IF Player.weapon = FIST THEN
-        IF Player.lAni > 21 AND Player.lAni < 36 THEN Player.lAni = 36
-        if Player.lAni >= 44 then
+    
+    if Player.weapon = FIST then
+        Player.vx   = dx
+        Player.x    = Player.x + dx
+        if (Player.lAni < 36) or (Player.lani >= 44) then
             Player.lAni = 36
             footstep = 0
         end if
-    ELSE
-        if Player.lAni >= 26 then
-            Player.lAni = 22
-            footstep = 0
+        Player.lAni = Player.lAni + iif(forward, abs(dx / 7.5), -abs(dx / 7.5))
+        if Player.state <> JUMPING then
+            select case footstep
+            case 0
+                if (forward = 1) and (player.lani >= 37) then LD2_PlaySound Sounds.footstep: footstep += 1
+                if (forward = 0) and (player.lani <= 41) then LD2_PlaySound Sounds.footstep: footstep += 1
+            case 1
+                if (forward = 1) and (player.lani >= 41) then LD2_PlaySound Sounds.footstep: footstep += 1
+                if (forward = 0) and (player.lani <= 37) then LD2_PlaySound Sounds.footstep: footstep += 1
+            end select
         end if
-    END IF
-  END IF
-  
-  IF dx < 0 THEN Player.flip = 1 ELSE Player.flip = 0
-  
-  return success
-  
+    else
+        Player.vx   = dx
+        Player.x    = Player.x + dx
+        Player.lAni = Player.lAni + iif(forward, abs(dx / 7.5), -abs(dx / 7.5))
+        if Player.state <> JUMPING then
+            select case footstep
+            case 0
+                if (forward = 1) and (player.lani >= 23) then LD2_PlaySound Sounds.footstep: footstep += 1
+                if (forward = 0) and (player.lani <= 23) then LD2_PlaySound Sounds.footstep: footstep += 1
+            end select
+        end if
+    end if
+    
+    if CheckPlayerWallHit() then
+        box = Player_GetCollisionBox()
+        Player.x = WallContactPointX + iif(dx > 0, -(box.w+box.padLft), -box.padLft+1)
+        Player.vx = 0
+        Player.lAni = 21
+        success = 0
+    else
+        if (forward = 1) then
+            if Player.weapon = FIST then
+                if Player.lAni >= 44 then
+                    Player.lAni = 36
+                    footstep = 0
+                end if
+            else
+                if Player.lAni >= 26 then
+                    Player.lAni = 22
+                    footstep = 0
+                end if
+            end if
+        elseif (forward = 0) then
+            if Player.weapon = FIST then
+                if Player.lAni < 36 then
+                    Player.lAni = 43.9999
+                    footstep = 0
+                end if
+            else
+                if Player.lAni < 22 then
+                    Player.lAni = 25.9999
+                    footstep = 0
+                end if
+            end if
+        end if
+    end if
+    
+    return success
+    
 end function
 
 function Player_GetAccessLevel() as integer
@@ -3785,6 +3692,16 @@ end function
 
 sub Player_SetFlip (flipped as integer)
     
+    dim box as BoxType
+    
+    box = Player_GetCollisionBox()
+    
+    if (flipped = 0) and (Player.flip = 1) then
+        Player.x += (box.padLft - box.padRgt)
+    elseif (flipped = 1) and (Player.flip = 0) then
+        Player.x += (box.padLft - box.padRgt)
+    end if
+    
     Player.flip = flipped
     
 end sub
@@ -3805,6 +3722,340 @@ end function
 function Player_GetY() as integer
     
     return Player.y
+    
+end function
+
+SUB Player_Init(p AS PlayerType)
+    
+    Player = p
+    
+    
+    
+END SUB
+
+sub Player_Hide()
+    
+    Player.is_visible = 0
+    
+end sub
+
+sub Player_Unhide()
+    
+    Player.is_visible = 1
+    
+end sub
+
+function Player_LookUp () as integer
+    
+    if Player.state = JUMPING then
+        return 0
+    else
+        SetPlayerState( LOOKINGUP )
+        return 1
+    end if
+    
+end function
+
+function Player_SetWeapon (itemId as integer) as integer
+
+  '- Set the current weapon
+  '------------------------
+  
+  Player.weapon = itemId
+  
+  IF itemId = FIST        THEN Player.uAni = 26: Player.stillani = Player.uAni
+  IF itemId = SHOTGUN     THEN Player.uAni = 01: Player.stillani = Player.uAni
+  IF itemId = MACHINEGUN  THEN Player.uAni = 08: Player.stillani = Player.uAni
+  IF itemId = PISTOL      THEN Player.uAni = 11: Player.stillani = Player.uAni
+  IF itemId = DESERTEAGLE THEN Player.uAni = 14: Player.stillani = Player.uAni
+  
+  return 1
+  
+end function
+
+sub Player_SetAccessLevel (accessLevel as integer)
+
+    Inventory(AUTH) = accessLevel
+
+end sub
+
+sub Player_SetTempAccess (accessLevel as integer)
+    
+    Inventory(TEMPAUTH) = accessLevel
+    
+end sub
+
+function Player_ShootRepeat() as integer
+    
+    return Player_Shoot(1)
+    
+end function
+
+function Player_Shoot(is_repeat as integer = 0) as integer
+
+    dim mob AS Mobile
+    dim mapX as integer, mapY as integer
+    dim tile as integer
+    dim dist as integer
+    dim contactX as integer
+    dim contactY as integer
+    dim damage as integer
+    dim fireY as integer
+    dim x as integer
+    dim y as integer
+    dim i as integer
+    dim n as integer
+    dim r as integer
+    
+    static timestamp as double
+    dim timeSinceLastShot as double
+
+    if Player.is_shooting then return 0
+
+    if Player.weapon = ItemIds.Shotgun    and Inventory(ItemIds.ShotgunAmmo)    = 0 then return -1
+    if Player.weapon = ItemIds.Pistol     and Inventory(ItemIds.PistolAmmo)     = 0 then return -1
+    if Player.weapon = ItemIds.MachineGun and Inventory(ItemIds.MachineGunAmmo) = 0 then return -1
+    if Player.weapon = ItemIds.Magnum     and Inventory(ItemIds.MagnumAmmo)     = 0 then return -1
+
+    timeSinceLastShot = (timer - timestamp)
+
+    select case Player.weapon
+    case ItemIds.Shotgun
+        
+        Inventory(ItemIds.ShotgunAmmo) -= 1
+        damage = 5
+        fireY = iif(Player.state = CROUCHING, 12, 8)
+        
+    case ItemIds.Pistol
+        
+        if Player.state = CROUCHING then
+            if (is_repeat = 1 and timeSinceLastShot < 0.33) then return 0
+            'if (is_repeat = 0 and timeSinceLastShot < 0.10) then return 0
+        else
+            if (is_repeat = 1 and timeSinceLastShot < 0.45) then return 0
+            if (is_repeat = 0 and timeSinceLastShot < 0.25) then return 0
+        end if
+        Inventory(ItemIds.PistolAmmo) -= 1
+        damage = 2
+        fireY = iif(Player.state = CROUCHING, 12, 5)
+        
+    case ItemIds.MachineGun
+        
+        Inventory(ItemIds.MachineGunAmmo) -= 1
+        damage = 1
+        fireY = iif(Player.state = CROUCHING, 7, 5)
+        
+    case ItemIds.Magnum
+        
+        Inventory(ItemIds.Magnum) -= 1
+        damage = 7
+        fireY = iif(Player.state = CROUCHING, 12, 8)
+        
+    case ItemIds.Fist
+        
+        if (is_repeat = 1 and timeSinceLastShot < 0.30) then return 0
+        if (is_repeat = 0 and timeSinceLastShot < 0.10) then return 0
+        damage = 2
+        
+    case else
+        
+        return 0
+        
+    end select
+    
+    Player.is_shooting = 1
+    timestamp = timer
+    
+    if (Player.weapon <> ItemIds.Fist) and (Player.uAni = Player.stillAni) then
+
+        Player.uAni = Player.uAni + 1
+        
+        if Player.is_lookingdown then
+            
+            for y = Player.y+15 to Player.y+SCREEN_H step 4
+                
+                mapX = int((Player.x + 8) / SPRITE_W)
+                mapY = int(y / SPRITE_H)
+                tile = TileMap(mapX, mapY)
+                contactX = int(Player.x + 8): contactY = y
+                
+                if LD2_TileIsSolid(tile) then
+                    contactY = mapY * SPRITE_H
+                    for i = 0 to 4: Guts_Add GutsIds.Smoke, contactX, contactY,  1, RND(1)*-5: next i
+                    return 1
+                end if
+                
+                Mobs.resetNext
+                do while Mobs.canGetNext()
+                    Mobs.getNext mob
+                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > (mob.y+mob.top) and contactY < (mob.y + 15) then
+                        mob.hit = 1
+                        exit do
+                    end if
+                loop
+                if mob.hit then exit for
+            next y
+
+        elseif Player.flip = 0 then
+
+            for x = Player.x+15 to Player.x+SCREEN_W step 8
+                
+                mapX = int(x / SPRITE_W)
+                mapY = int((Player.y + fireY) / SPRITE_H)
+                tile = TileMap(mapX, mapY)
+                contactX = x: contactY = int(Player.y + fireY)
+                
+                if LD2_TileIsSolid(tile) then
+                    contactX = mapX * SPRITE_W
+                    for i = 0 to 4: Guts_Add GutsIds.Smoke, contactX, contactY,  1, RND(1)*-5: next i
+                    return 1
+                end if
+                
+                Mobs.resetNext
+                do while Mobs.canGetNext()
+                    Mobs.getNext mob
+                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > (mob.y+mob.top) and contactY < (mob.y + 15) then
+                        mob.hit = 1
+                        exit do
+                    end if
+                loop
+                if mob.hit then exit for
+            next x
+            
+        else
+            
+            for x = Player.x to Player.x-SCREEN_W step -8
+
+                mapX = int(x / SPRITE_W)
+                mapY = int((Player.y + fireY) / SPRITE_H)
+                tile = TileMap(mapX, mapY)
+                contactX = x: contactY = int(Player.y + fireY)
+                
+                if LD2_TileIsSolid(tile) then
+                    contactX = mapX * SPRITE_W + SPRITE_W
+                    for i = 0 to 4: Guts_Add GutsIds.Smoke, contactX, contactY,  1, RND(1)*5: next i
+                    return 1
+                end if
+
+                Mobs.resetNext
+                do while Mobs.canGetNext()
+                    Mobs.getNext mob
+                    if contactX > mob.x and contactX < (mob.x + 15) and contactY > (mob.y+mob.top) and contactY < (mob.y + 15) then
+                        mob.hit = 1
+                        exit do
+                    end if
+                loop
+                if mob.hit then exit for
+            next x
+            
+        end if
+        
+        if mob.hit then
+            select case Player.weapon
+            case ItemIds.Shotgun
+                dist = abs(contactX - (Player.x+7))
+                select case dist
+                case  0 to 15: mob.life -= (damage - 0)
+                case 16 to 47: mob.life -= (damage - 1)
+                case 48 to 79: mob.life -= (damage - 2)
+                case else    : mob.life -= (damage - 3)
+                end select
+            case ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum
+                mob.life -= damage
+            end select
+            if mob.life <= 0 then
+                Mobs_Kill mob
+                LD2_PlaySound Sounds.splatter
+            else
+                Mobs.update mob
+                LD2_PlaySound Sounds.blood2
+            end if
+            Guts_Add GutsIds.BloodSprite, contactX, int(Player.y + 8), 1
+            for n = 0 to 4
+                Guts_Add GutsIds.Blood, contactX, contactY,  1, iif(Player.flip = 0, -rnd(1)*3, -rnd(1)*5)
+                Guts_Add GutsIds.Blood, contactX, contactY,  1, iif(Player.flip = 0,  rnd(1)*5,  rnd(1)*3)
+            next n
+            LD2_RenderFrame
+            LD2_RefreshScreen
+            WaitSeconds 0.05
+        end if
+        
+    elseif (Player.weapon = ItemIds.Fist) and (Player.uAni = Player.stillAni) then
+        
+        Player.uAni = Player.uAni + 1
+        
+        Mobs.resetNext
+        do while Mobs.canGetNext()
+            Mobs.getNext mob
+            contactX = iif(Player.flip = 0, int(Player.x+14), int(Player.x+1))
+            contactY = int(Player.y+10)
+            if contactX > mob.x and contactX < (mob.x + 15) and contactY > mob.y and contactY < (mob.y + 15) then
+                mob.hit = 1
+            end if
+            'if mob.hit then
+            '    SetPlayerState( BLOCKED )
+            'end if
+            if mob.hit then
+                mob.life -= damage
+                if mob.life <= 0 then
+                    Mobs_Kill mob
+                    LD2_PlaySound Sounds.splatter
+                else
+                    Mobs.update mob
+                    LD2_PlaySound Sounds.blood2
+                end if
+                Guts_Add GutsIds.BloodSprite, contactX, int(Player.y + 8), 1
+                for i = 0 to 2
+                    Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8,  1, -rnd(1)*5
+                    Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8,  1,  rnd(1)*5
+                next i
+                exit do
+            end if
+        loop
+        
+        if Player.state <> JUMPING then
+            SetPlayerState( BLOCKED )
+            Player.lAni = 21 '- make const for legs still/standing
+        end if
+        
+        if mob.hit then
+            LD2_RenderFrame
+            LD2_RefreshScreen
+            WaitSeconds 0.05
+        end if
+    else
+        return 0
+    end if
+    
+    return 1
+    
+end function
+
+function Player_GetCollisionBox() as BoxType
+    
+    dim box as BoxType
+    dim x as integer
+    dim y as integer
+    dim w as integer
+    dim h as integer
+    
+    x = iif(Player.flip = 0, 2, 9)
+    y = 0
+    h = 16
+    w = 5
+    
+    box.w = w
+    box.h = h
+    box.top = int(Player.y) + y
+    box.btm = box.top + h - 1
+    box.lft = int(Player.x) + x
+    box.rgt = box.lft + w - 1
+    box.padTop = y
+    box.padBtm = SPRITE_H-(y+h)
+    box.padLft = x
+    box.padRgt = SPRITE_W-(x+w)
+    
+    return box
     
 end function
 
@@ -3977,8 +4228,8 @@ SUB MixTiles()
             'lightPtr2 = VARPTR(sLight(EPS * l2%))
             
             t = TileMap(x, y)
-            l1 = LightMap1(x, y)
-            l2 = LightMap2(x, y)
+            l1 = LightMapFg(x, y)
+            l2 = LightMapBg(x, y)
             
             'DEF SEG = aniMapSeg   : a%  = PEEK(m): DEF SEG
             

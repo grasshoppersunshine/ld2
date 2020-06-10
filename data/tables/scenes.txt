@@ -996,16 +996,36 @@ SCENE-GOO
     
     LARRY_LOOKINGUP
     Now, what the hell is this thing?
-    A wall of crystalized goo?
+    It's coming out of the pipes!
     
     LARRY_THINKING
-    Hmm...
+    Hmm... . . . . . . . .
     
     LARRY_THINKING_TALKING
-    Seems like I can't shoot it down. It's too strong.
+    It's solified into a dense, crystal-like structure.
+    Perhaps a chemical from the lab could dissolve this...thing.
+    ...but I don't have access to that floor.
     
     LARRY_LOOKINGUP
     ...
     Damn!
+    
+END
+
+SCENE-PITCH-BLACK
+    
+    LARRY_RADIO
+    Barney, come in! Over.
+    
+    RADIO_STATIC
+    
+    LARRY_RADIO
+    Barney, come in!
+    I could use some help.
+    
+    CRASH
+    
+    LARRY_RADIO
+    I'm not alone down here!
     
 END

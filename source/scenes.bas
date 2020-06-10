@@ -63,7 +63,7 @@ function Scene1Go () as integer
 
     LD2_SetSceneMode LETTERBOX
 	LD2_ClearMobs
-    LD2_SetXShift 0
+    Map_SetXShift 0
     
     AddSound Sounds.kickvending, "kick.wav"
     AddSound Sounds.sodacanopen, "splice/sodacanopen.wav"
@@ -161,7 +161,7 @@ function Scene1Go () as integer
     
     '// Steve looks ill
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Surprised
-    GetCharacterPose StevePose, CharacterIds.SteveSICK, PoseIds.Talking
+    GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Sick
     StevePose.setX 170
     RenderScene
 
@@ -207,7 +207,7 @@ sub Scene3EndConditions()
     
     Player_SetXY 240, 144
     Player_SetFlip 1
-    LD2_SetXShift 0
+    Map_SetXShift 0
     
 end sub
 
@@ -259,7 +259,7 @@ function Scene3Go () as integer
     
     Player_SetXY LarryPose.getX(), LarryPose.getY()
     Player_SetFlip LarryPose.getFlip()
-    LD2_SetXShift 0
+    Map_SetXShift 0
     
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.PassedOut
     StevePose.setX 170: StevePose.setY 144: StevePose.setFlip 1
@@ -299,7 +299,7 @@ sub Scene4EndConditions()
     
     LD2_PutTile 13, 8, 19, 3
     Mobs_Add 208, 144, ROCKMONSTER
-    LD2_LockElevator
+    Map_LockElevator
     
     LD2_SetMusicVolume 1.0
     LD2_PlayMusic mscMARCHoftheUHOH
@@ -439,7 +439,7 @@ sub Scene5EndConditions()
     Player_SetItemQty ItemIds.SceneElevator, 1
     
     if Player_GetItemQty(ItemIds.CurrentRoom) <> Rooms.WeaponsLocker then
-        LD2_LoadMap "7th.ld2"
+        Map_Load "7th.ld2"
         Player_SetItemQty ItemIds.CurrentRoom, Rooms.WeaponsLocker
     end if
     
@@ -449,9 +449,8 @@ sub Scene5EndConditions()
     Player_SetXY 720, 144
     Player_SetFlip 1
     
-    LD2_SetAccessLevel 2 '// shouldn't adding the blue card do this automatically? (with a hook?)
     LD2_AddToStatus(BLUECARD, 1)
-    LD2_UnlockElevator
+    Map_UnlockElevator
     
 end sub
 
@@ -602,11 +601,11 @@ function Scene5Go() as integer
     '- 45,10
     LD2_WriteText ""
     Player_SetItemQty ItemIds.CurrentRoom, 7
-    LD2_LoadMap "7th.ld2"
+    Map_Load "7th.ld2"
     
     ClearPoses
     
-    LD2_SetXShift 600
+    Map_SetXShift 600
     RenderScene
     RetraceDelay 80
     
@@ -635,7 +634,7 @@ function Scene5Go() as integer
     RetraceDelay 80
     
     
-    LD2_SetXShift 600
+    Map_SetXShift 600
     if DoScene("SCENE-5C") then return 1
     
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Walking
@@ -744,11 +743,11 @@ function SceneBarneyPlanGo() as integer
     dim BarneyPose as PoseType
     
     Player_SetItemQty ItemIds.CurrentRoom, 20
-    LD2_LoadMap "20th.ld2"
+    Map_Load "20th.ld2"
     LD2_ClearMobs
     LD2_SetSceneMode LETTERBOX
     
-    LD2_SetXShift 300
+    Map_SetXShift 300
     Player_SetXY 20, 144
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
@@ -765,10 +764,10 @@ function SceneBarneyPlanGo() as integer
 
     if DoScene("SCENE-FLASHLIGHT-1A") then return 1
     
-    GetCharacterPose LarryPose, CharacterIds.LarryRadio, PoseIds.Talking
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Radio
     if DoScene("SCENE-FLASHLIGHT-1B") then return 1
     
-    GetCharacterPose BarneyPose, CharacterIds.BarneyRadio, PoseIds.Talking
+    GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
     BarneyPose.setHidden 1
     AddPose @BarneyPose
     if DoScene("SCENE-FLASHLIGHT-1C") then return 1
@@ -799,7 +798,7 @@ sub SceneVentCrawlEndConditions()
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneVentCrawl, 1
     
-    LD2_SetXShift 1400
+    Map_SetXShift 1400
     Player_SetXY 1420, 144
     Player_SetFlip 0
     LD2_Drop WhiteCard2
@@ -822,7 +821,7 @@ function SceneVentCrawlGo() as integer
     
     if DoScene("SCENE-FLASHLIGHT-2A") then return 1
     
-    LD2_SetXShift 1400
+    Map_SetXShift 1400
     LarryPose.setX 1420: LarryPose.setY 144
     
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Talking
@@ -853,7 +852,7 @@ sub SceneLobbyEndConditions()
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneLobby, 1
     
-    LD2_LoadMap "7th.LD2"
+    Map_Load "7th.LD2"
     Player_SetItemQty ItemIds.CurrentRoom, 7
     
 end sub
@@ -946,19 +945,25 @@ sub SceneGooEndConditions
     ClearPoses
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneGoo, 1
+    Player_SetXY Player_GetX(), 144
+    Player_SetFlip 1
     
 end sub
 
 function SceneGooGo() as integer
     
     dim LarryPose as PoseType
+    dim n as integer
+    
     LD2_SetSceneMode LETTERBOX
     
-    GetCharacterPose LarryPose, CharacterIds.LarryLookingUp, PoseIds.Talking
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.LookingUp
     LarryPose.setX Player_GetX(): LarryPose.setY 144
     LarryPose.setFlip 1
+    
     ClearPoses
     AddPose @LarryPose
+    
     RenderScene
     WaitSeconds 1.0
     
@@ -992,7 +997,7 @@ function SceneGooGoneGo () as integer
     dim LarryPose as PoseType
     LD2_SetSceneMode LETTERBOX
     
-    GetCharacterPose LarryPose, CharacterIds.LarryLookingUp, PoseIds.Talking
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.LookingUp
     LarryPose.setX Player_GetX(): LarryPose.setY 144
     LarryPose.setFlip 1
     
@@ -1063,7 +1068,7 @@ sub SceneRooftopGotCardEndConditions
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneRooftopGotCard, 1
     
-    LD2_SetAccessLevel YELLOWACCESS
+    Player_SetAccessLevel YELLOWACCESS
     Player_SetFlip 0
     
 end sub
@@ -1075,8 +1080,8 @@ function SceneRooftopGotCardGo() as integer
     
     LD2_SetSceneMode LETTERBOX
     
-    GetCharacterPose LarryPose, CharacterIds.LarryRadio, PoseIds.Talking
-    GetCharacterPose BarneyPose, CharacterIds.BarneyRadio, PoseIds.Talking
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Radio
+    GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
     
     LarryPose.setX Player_GetX: LarryPose.setY 144
     LarryPose.setFlip 0

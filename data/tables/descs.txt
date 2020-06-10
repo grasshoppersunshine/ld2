@@ -11,7 +11,7 @@ WHITECARD2     , "This would allow access to white doors, but\it's broken in hal
 FLASHLIGHTNOBAT, "This should brighten up a dark area pretty well...\but is has no batteries."
 MYSTERYMEAT    , "White processed mystery meat.\Processed meat usually has certain mysterious\chemicals in it that try to simulate the taste of\meat, which fail to succeed."
 CHEMICAL409    , "A strong kitchen cleaner.\The warning label says to keep this away from processed foods.\Seems ironic for a *kitchen* cleaner."
-CHEMICAL410    , "A strong acidic chemical with a PH value of 0.0\I didn't even know such number existed in the PH\scale. This can probably eat away anything."
+CHEMICAL410    , "The mixture of chemical 409 and, whatever might be in the mystery meat, has coalesced into a very potent acid.\ \This can probably eat away anything."
 JANITORNOTE    , "Notice to all maintenance personell.\ \Security has prohibited access to the rooftop with a keypad lock. Entry now requires a secure 4-digit PIN. All permitted personell will receive a copy.\The PIN for the current cycle is shown below:\ \"
 BATTERIES      , "Looks like they are in good condition."
 FLASHLIGHT     , "This should brighten up a dark area pretty well."

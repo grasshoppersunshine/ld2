@@ -7,10 +7,14 @@ dim shared EventQuit as integer
 dim shared EventKeyDown as integer
 dim shared EventMouseWheelY as integer
 dim shared EventMouseState as long
-dim shared EventMouseX as long
+dim shared EventMouseX as integer
 dim shared EventMouseY as integer
+dim shared EventMouseRelState as long
+dim shared EventMouseRelX as integer
+dim shared EventMouseRelY as integer
 dim shared EventMouseLB as integer
 dim shared EventMouseRB as integer
+dim shared EventMouseMB as integer
 dim shared CommonErrorMsg as string
 
 dim shared keysoff as ubyte ptr
@@ -202,6 +206,8 @@ end sub
 
 sub PullEvents()
     
+    static newMouseWheelY as integer
+    static oldMouseWheelY as integer
     dim event as SDL_Event
     dim code as integer
     
@@ -216,13 +222,17 @@ sub PullEvents()
             code = event.key.keysym.scancode
             keysoff[code] = 1
         case SDL_MOUSEWHEEL
-            EventMouseWheelY += event.wheel.y
+            newMouseWheelY += event.wheel.y
         end select
     wend
     
-    EventMouseState = SDL_GetMouseState(@EventMouseX, @EventMouseY)
-    EventMouseLB    = EventMouseState and SDL_BUTTON(SDL_BUTTON_LEFT)
-    EventMouseRB    = EventMouseState and SDL_BUTTON(SDL_BUTTON_RIGHT)
+    EventMouseState    = SDL_GetMouseState(@EventMouseX, @EventMouseY)
+    EventMouseRelState = SDL_GetRelativeMouseState(@EventMouseRelX, @EventMouseRelY)
+    EventMouseLB       = EventMouseState and SDL_BUTTON(SDL_BUTTON_LEFT)
+    EventMouseRB       = EventMouseState and SDL_BUTTON(SDL_BUTTON_RIGHT)
+    EventMouseMB       = EventMouseState and SDL_BUTTON(SDL_BUTTON_MIDDLE)
+    EventMouseWheelY   = oldMouseWheelY - newMouseWheelY
+    oldMouseWheelY     = newMouseWheelY
     
     LD2_Sound_Update
 
@@ -240,6 +250,18 @@ function mouseY() as integer
     
 end function
 
+function mouseRelX() as integer
+    
+    return EventMouseRelX
+    
+end function
+
+function mouseRelY() as integer
+    
+    return EventMouseRelY
+    
+end function
+
 function mouseLB() as integer
     
     return EventMouseLB
@@ -252,8 +274,26 @@ function mouseRB() as integer
     
 end function
 
+function mouseMB() as integer
+    
+    return EventMouseMB
+    
+end function
+
 function mouseWheelY() as integer
     
     return EventMouseWheelY
+    
+end function
 
+function mouseWheelUp() as integer
+    
+    return (EventMouseWheelY < 0)
+    
+end function
+
+function mouseWheelDown() as integer
+    
+    return (EventMouseWheelY > 0)
+    
 end function

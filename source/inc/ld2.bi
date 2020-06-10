@@ -155,25 +155,27 @@ enum ActionIds
     DropItem
     Equip
     Jump
+    JumpRepeat
+    JumpDown
     LookUp
     PickUpItem
     RunLeft
     RunRight
+    StrafeLeft
+    StrafeRight
     Shoot
     ShootRepeat
     UseItem
 end enum
 '======================
 '= DOOR ACCESS LEVELS
-'= High access needs to be higher numbers
-'= Doors are rendered based on offset of code (grn/blu/ylw/red)
 '======================
-CONST NOACCESS = 0
-CONST GREENACCESS = 1
-CONST BLUEACCESS = 2
+CONST NOACCESS     = 0
+CONST GREENACCESS  = 1
+CONST BLUEACCESS   = 2
 CONST YELLOWACCESS = 3
-CONST REDACCESS = 4
-CONST WHITEACCESS = 55
+CONST WHITEACCESS  = 4
+CONST REDACCESS    = 5
 
 '======================
 '= ENTITIES
@@ -279,6 +281,7 @@ enum Sounds
     troopHurt1
     troopHurt2
     troopDie
+    rockJump
     rockHurt
     rockDie
     larryHurt
@@ -392,39 +395,12 @@ CONST BARNEYEXITELEVATOR = 50
 
 enum CharacterIds
     Barney = 1
-    BarneyRadio
     Janitor
     Larry
-    LarryLookingUp
-    LarryThinking
-    LarryThinkTalking
-    LarryRadio
     Rockmonster
     Steve
-    SteveSick
     Trooper
 end enum
-
-'======================
-'= POSE IDS SCENES
-'======================
-'CONST POSEMOUTHOPEN = 1
-'CONST POSEMOUTHCLOSE = 2
-'CONST POSESURPRISE = 3
-'CONST POSECYNICAL = 4 '- or POSEASSERTIVE ???
-'CONST POSESMILE = 5
-'CONST POSEPASSEDOUT = 6
-'CONST POSEDYING = 7
-'CONST POSEANGRY = 8
-'CONST POSEPOINTFINGER = 9 '- with mouthopen+mouthclosed
-'CONST POSELAUGHING = 10
-'CONST POSEFACEPALM = 11
-'const POSEWALKING = 12
-'const POSEKICKING = 13
-'const POSEGETSODA = 14
-'const POSECRASHING = 15
-'const POSETONGUE = 16
-'const POSECHEWING = 17
 
 enum PoseIds
     Charging = 1
@@ -436,12 +412,17 @@ enum PoseIds
     Jumping
     Kicking
     PassedOut
+    Radio
+    Sick
     Shooting
     Still
     Surprised
     Talking
     Tongue
     Walking
+    LookingUp
+    Thinking
+    ThinkingTalking
 end enum
 
 enum Options

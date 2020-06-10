@@ -253,7 +253,7 @@ end sub
 
 SUB TITLE_Intro
 
-    LD2_Debug "TITLE_Intro"
+    LD2_LogDebug "TITLE_Intro"
 
     dim file as integer
     dim text as string
@@ -421,7 +421,11 @@ SUB TITLE_Intro
     'LD2_RenderElement @heading
     'LD2_RefreshScreen
     '
-    WaitSeconds 3.3333
+    if WaitSecondsUntilKey(3.3333) then
+        LD2_FadeOut 2
+        exit sub
+    end if
+    
     LD2_FadeOut 2
     WaitSeconds 1.0
     

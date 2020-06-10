@@ -80,7 +80,7 @@
 '======================
 '= PRIVATE METHODS
 '======================
-  DECLARE FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING) as integer
+  DECLARE FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseId as integer, chatBox as integer) as integer
   DECLARE FUNCTION DoDialogue () as integer
   
   declare sub CharacterDoCommands(characterId AS INTEGER)
@@ -212,49 +212,23 @@ sub RemovePose (pose as PoseType ptr)
     
 end sub
 
-FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING) as integer
+FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseId as integer, chatBox as integer) as integer
     
     IF LD2_isDebugMode() THEN LD2_Debug "CharacterSpeak% ("+STR(characterId)+", "+caption+" )"
 	
 	DIM escapeFlag AS INTEGER
 	DIM renderPose AS PoseType
 	DIM poseTalking AS PoseType
-    dim chatBox as integer
 	DIM cursor AS INTEGER
 	DIM words AS INTEGER
 	DIM n AS INTEGER
     
     if caption = "" then return 0
-	
-	GetPose renderPose, characterId
-    poseTalking = renderPose
-	GetCharacterPose poseTalking, characterId, PoseIds.Talking
-    UpdatePose renderPose, poseTalking
     
-    select case renderPose.getId()
-    case CharacterIds.Larry
-        chatBox = ChatBoxes.Larry
-    case CharacterIds.LarryLookingUp
-        chatBox = ChatBoxes.LarryLookingUp
-    case CharacterIds.LarryThinking
-        chatBox = ChatBoxes.LarryThinking
-    case CharacterIds.LarryThinkTalking
-        chatBox = ChatBoxes.LarryThinkTalking
-    case CharacterIds.LarryRadio
-        chatBox = ChatBoxes.LarryRadio
-    case CharacterIds.Steve
-        chatBox = ChatBoxes.Steve
-    case CharacterIds.SteveSick
-        chatBox = ChatBoxes.SteveSick
-    case CharacterIds.Barney
-        chatBox = ChatBoxes.Barney
-    case CharacterIds.BarneyRadio
-        chatBox = ChatBoxes.BarneyRadio
-    case CharacterIds.Janitor
-        chatBox = ChatBoxes.Janitor
-    case CharacterIds.Trooper
-        chatBox = ChatBoxes.Trooper
-    end select
+    GetPose renderPose, characterId
+    poseTalking = renderPose
+	GetCharacterPose poseTalking, characterId, talkingPoseId
+    UpdatePose renderPose, poseTalking
     
     LD2_WriteText caption
 	
@@ -380,6 +354,8 @@ FUNCTION DoDialogue() as integer
 	DIM dialogue AS STRING
 	DIM sid AS STRING
     dim characterId as integer
+    dim poseId as integer
+    dim chatBox as integer
 	
 	IF LD2_isDebugMode() THEN LD2_Debug "DoDialogue()"
 	
@@ -393,31 +369,53 @@ FUNCTION DoDialogue() as integer
         LD2_PopText dialogue
 	CASE "LARRY"
         characterId = CharacterIds.Larry
+        poseId = PoseIds.Talking
+        chatBox = ChatBoxes.Larry
     case "LARRY_LOOKINGUP"
-        characterId = CharacterIds.LarryLookingUp
+        characterId = CharacterIds.Larry
+        poseId = PoseIds.LookingUp
+        chatBox = ChatBoxes.LarryLookingUp
     case "LARRY_THINKING"
-        characterId = CharacterIds.LarryThinking
+        characterId = CharacterIds.Larry
+        poseId = PoseIds.Thinking
+        chatBox = ChatBoxes.LarryThinking
     case "LARRY_THINKING_TALKING"
-        characterId = CharacterIds.LarryThinkTalking
+        characterId = CharacterIds.Larry
+        poseId = PoseIds.ThinkingTalking
+        chatBox = ChatBoxes.LarryThinkTalking
     case "LARRY_RADIO"
-        characterId = CharacterIds.LarryRadio
+        characterId = CharacterIds.Larry
+        poseId = PoseIds.Radio
+        chatBox = ChatBoxes.LarryRadio
 	CASE "STEVE"
         characterId = CharacterIds.Steve
+        poseId = PoseIds.Talking
+        chatBox = ChatBoxes.Steve
     CASE "STEVE_SICK"
-        characterId = CharacterIds.SteveSick
+        characterId = CharacterIds.Steve
+        poseId = PoseIds.Sick
+        chatBox = ChatBoxes.SteveSick
 	CASE "BARNEY"
         characterId = CharacterIds.Barney
+        poseId = PoseIds.Talking
+        chatBox = ChatBoxes.Barney
     CASE "BARNEY_RADIO"
-        characterId = CharacterIds.BarneyRadio
+        characterId = CharacterIds.Barney
+        poseId = PoseIds.Radio
+        chatBox = ChatBoxes.BarneyRadio
 	CASE "JANITOR"
         characterId = CharacterIds.Janitor
+        poseId = PoseIds.Talking
+        chatBox = ChatBoxes.Janitor
 	CASE "TROOPER"
         characterId = CharacterIds.Trooper
+        poseId = PoseIds.Talking
+        chatBox = ChatBoxes.Trooper
 	END SELECT
     
     if characterId then
         CharacterDoCommands( characterId )
-		escaped = CharacterSpeak( characterId, dialogue )
+		escaped = CharacterSpeak( characterId, dialogue, poseId, chatBox )
     end if
 	
 	return escaped
@@ -426,7 +424,7 @@ END FUNCTION
 
 SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGER)
 	
-    IF LD2_isDebugMode() THEN LD2_Debug "GetCharacterPose ( pose,"+STR(characterId)+","+STR(poseId)+" )"
+    LD2_LogDebug "GetCharacterPose ( pose,"+STR(characterId)+","+STR(poseId)+" )"
     
     pose.truncateFrames
     pose.setId characterId
@@ -452,28 +450,16 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
             pose.addSprite 41: pose.takeSnapshot
             pose.addSprite 42: pose.takeSnapshot
             pose.addSprite 43: pose.takeSnapshot
-		end select
-    case CharacterIds.LarryLookingUp
-        select case poseId
-        case PoseIds.Talking
+		case PoseIds.LookingUp
             pose.addSprite 122: pose.addSprite 123: pose.takeSnapshot
             pose.addSprite 122: pose.addSprite 124: pose.takeSnapshot
-        end select
-    case CharacterIds.LarryThinking
-        select case poseId
-        case PoseIds.Talking
-            pose.addSprite 127: pose.addSprite 128: pose.takeSnapshot
-            pose.addSprite 127: pose.addSprite 129: pose.takeSnapshot
-        end select
-    case CharacterIds.LarryThinkTalking
-        select case poseId
-        case PoseIds.Talking
-            pose.addSprite 127: pose.addSprite 130: pose.takeSnapshot
-            pose.addSprite 127: pose.addSprite 131: pose.takeSnapshot
-        end select
-    case CharacterIds.LarryRadio
-        select case poseId
-        case PoseIds.Talking
+        case PoseIds.Thinking
+            pose.addSprite 127: pose.addSprite 128, 0, -1: pose.takeSnapshot
+            pose.addSprite 127: pose.addSprite 129, 0, -1: pose.takeSnapshot
+        case PoseIds.ThinkingTalking
+            pose.addSprite 127: pose.addSprite 130, 0, -1: pose.takeSnapshot
+            pose.addSprite 127: pose.addSprite 131, 0, -1: pose.takeSnapshot
+        case PoseIds.Radio
             pose.addSprite 5: pose.addSprite 0: pose.takeSnapshot
             pose.addSprite 5: pose.addSprite 1: pose.takeSnapshot
         end select
@@ -500,10 +486,7 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
             pose.addSprite 121, -8, 0
             pose.addSprite 120,  8, 0
             pose.takeSnapshot
-		END SELECT
-    CASE CharacterIds.SteveSick
-        SELECT CASE poseId
-		CASE PoseIds.Talking
+		case PoseIds.Sick
 			pose.addSprite 26: pose.addSprite 117: pose.takeSnapshot
             pose.addSprite 26: pose.addSprite 118: pose.takeSnapshot
 		END SELECT
@@ -522,10 +505,7 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
             pose.addSprite 53: pose.addSprite 45: pose.takeSnapshot
         CASE PoseIds.FacingScreen
             pose.addSprite 48: pose.takeSnapshot
-		END SELECT
-    case CharacterIds.BarneyRadio
-        select case poseId
-        case PoseIds.Talking
+		case PoseIds.Radio
             pose.addSprite 50: pose.addSprite 45: pose.takeSnapshot
             pose.addSprite 50: pose.addSprite 46: pose.takeSnapshot
         end select
@@ -658,6 +638,7 @@ sub LoadSounds ()
     AddSound Sounds.troopHurt2, "recorded/bleh.wav"
     AddSound Sounds.troopDie, "splice/fuck.wav"
     AddSound Sounds.rockHurt, "rockland.wav"
+    AddSound Sounds.rockJump, "rockjump.wav"
     AddSound Sounds.rockDie, "splice/snarl.wav"
     
     AddSound Sounds.larryHurt, "maybe/splice/larryhurt0.ogg"
@@ -681,15 +662,22 @@ sub DoAction(actionId as integer, itemId as integer = 0)
     case ActionIds.Crouch
         '- same as pickupitem???
     case ActionIds.Equip
-        if LD2_SetWeapon(itemId) then
+        if Player_SetWeapon(itemId) then
             LD2_PlaySound Sounds.equip
         end if
     case ActionIds.Jump
         if Player_Jump(1.5) then
             LD2_PlaySound Sounds.jump
         end if
+    case ActionIds.JumpRepeat
+        if Player_JumpRepeat(1.5) then
+            LD2_PlaySound Sounds.jump
+        end if
+    case ActionIds.JumpDown
+        if Player_JumpDown() then
+        end if
     case ActionIds.LookUp
-        if LD2_LookUp() then
+        if Player_LookUp() then
         end if
     case ActionIds.PickUpItem
         if Items_Pickup() then
@@ -701,11 +689,17 @@ sub DoAction(actionId as integer, itemId as integer = 0)
     case ActionIds.RunLeft
         if Player_Move(-1) then
         end if
+    case ActionIds.StrafeRight
+        if Player_Move(1, 0) then
+        end if
+    case ActionIds.StrafeLeft
+        if Player_Move(-1, 0) then
+        end if
     case ActionIds.Shoot, ActionIds.ShootRepeat
         if actionId = ActionIds.Shoot then
-            success = LD2_Shoot()
+            success = Player_Shoot()
         else
-            success = LD2_ShootRepeat()
+            success = Player_ShootRepeat()
         end if
         if success = 1 then
             LD2_GetPlayer player
@@ -733,15 +727,15 @@ end sub
 
 sub StartFloorMusic(roomId as integer)
     
-    dim roomTracks(6) as integer
+    dim roomTracks(5) as integer
     
     roomTracks(0) = mscROOM0
-    roomTracks(1) = mscROOM1
-    roomTracks(2) = mscROOM2
-    roomTracks(3) = mscROOM3
-    roomTracks(4) = mscROOM4
-    roomTracks(5) = mscROOM5
-    roomTracks(6) = mscWANDERING
+    'roomTracks(1) = mscROOM1
+    roomTracks(1) = mscROOM2
+    roomTracks(2) = mscROOM3
+    roomTracks(3) = mscROOM4
+    roomTracks(4) = mscROOM5
+    roomTracks(5) = mscWANDERING
     
     select case roomId
     case Rooms.Basement
@@ -771,7 +765,8 @@ SUB Main
     dim PlayerIsRunning as integer
     dim player as PlayerType
     dim newShot as integer
-    dim keyrUp as integer
+    dim newJump as integer
+    dim newReload as integer
     dim atKeypad as integer
     dim hasAccess as integer
     
@@ -779,7 +774,11 @@ SUB Main
     CustomActions(1).itemId   = ItemIds.Fist
     
     newShot = 1
+    newJump = 1
+    newReload = 1
     NewGame
+    
+    dim nomouseRB as integer
     
   DO
     
@@ -824,22 +823,73 @@ SUB Main
 	end if
     
     PlayerIsRunning = 0
-	IF keyboard(KEY_RIGHT) then doAction ActionIds.RunRight: PlayerIsRunning = 1
-	IF keyboard(KEY_LEFT ) then doAction ActionIds.RunLeft : PlayerIsRunning = 1
-	IF keyboard(KEY_ALT  ) then doAction ActionIds.Jump
-    IF keyboard(KEY_UP   ) then doAction ActionIds.LookUp
-    IF keyboard(KEY_DOWN ) or keyboard(KEY_P  ) then doAction ActionIds.PickUpItem 
-	IF keyboard(KEY_CTRL ) or keyboard(KEY_Q  ) then
+    if keyboard(KEY_LSHIFT) or keyboard(KEY_KP_0) then
+        if keyboard(KEY_RIGHT) or keyboard(KEY_D) then doAction ActionIds.StrafeRight: PlayerIsRunning = 1
+        if keyboard(KEY_LEFT ) or keyboard(KEY_A) then doAction ActionIds.StrafeLeft : PlayerIsRunning = 1
+    else
+        if keyboard(KEY_RIGHT) or keyboard(KEY_D) then doAction ActionIds.RunRight: PlayerIsRunning = 1
+        if keyboard(KEY_LEFT ) or keyboard(KEY_A) then doAction ActionIds.RunLeft : PlayerIsRunning = 1
+    end if
+	IF keyboard(KEY_UP   ) or keyboard(KEY_W    ) then doAction ActionIds.LookUp
+    IF keyboard(KEY_CTRL ) or keyboard(KEY_Q    ) or mouseLB() then
         doAction iif(newShot, ActionIds.Shoot, ActionIds.ShootRepeat)
         newShot = 0
     else
         newShot = 1
     end if
+    IF keyboard(KEY_ALT) or keyboard(KEY_SPACE) or keyboard(KEY_UP) then
+        if keyboard(KEY_DOWN) or keyboard(KEY_S) then
+            doAction ActionIds.JumpDown
+            newJump = 1
+        else
+            doAction iif(newJump, ActionIds.Jump, ActionIds.JumpRepeat)
+            newJump = 0
+        end if
+    else
+        newJump = 1
+        IF keyboard(KEY_DOWN) or keyboard(KEY_S) or keyboard(KEY_P) then doAction ActionIds.PickUpItem 
+    end if
     
-	if keyboard(KEY_TAB) and (Player_AtElevator = 0) then
+    if mouseRelX() < -115 then Player_SetFlip 1
+    if mouseRelX() >  115 then Player_SetFlip 0
+    
+    if LD2_isTestMode() then
+        if keyboard(KEY_TAB) then
+            EStatusScreen CurrentRoom
+            if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
+                CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
+                StartFloorMusic CurrentRoom
+                SceneOpenElevatorDoors
+            end if
+            Player_Unhide
+        end if
+        if keypress(KEY_R) or ((mouseRB() > 0) and newReload) then
+            Player_AddAmmo ItemIds.ShotgunAmmo, 99
+            Player_AddAmmo ItemIds.PistolAmmo, 99
+            Player_AddAmmo ItemIds.MachineGunAmmo, 99
+            Player_AddAmmo ItemIds.MagnumAmmo, 99
+            LD2_PlaySound Sounds.reload
+            newReload = 0
+        end if
+        if keypress(KEY_K) then
+            Mobs_KillAll
+        end if
+        if keypress(KEY_G) then
+            Mobs_Generate(1)
+            LD2_PlaySound Sounds.rockJump
+        end if
+    end if
+    
+    if mouseRB() then
+        newReload = 0
+    else
+        newReload = 1
+    end if
+    
+	if keyboard(KEY_E) or ((keyboard(KEY_TAB) or mouseMB()) and (Player_AtElevator = 0)) then
         StatusScreen
     end if
-	if keyboard(KEY_TAB) and (Player_AtElevator = 1) then
+	if (keyboard(KEY_TAB) or mouseMB()) and (Player_AtElevator = 1) then
         EStatusScreen CurrentRoom
         if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
             CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
@@ -847,7 +897,7 @@ SUB Main
             SceneOpenElevatorDoors
             if GooScene = 1 then GooScene = 0
         end if
-        LD2_ShowPlayer
+        Player_Unhide
     end if
 	
     atKeypad  = (CurrentRoom = Rooms.Rooftop) and (player.x >= 1376 and player.x <= 1408)
@@ -858,30 +908,6 @@ SUB Main
         if keypress(KEY_3) then doAction CustomActions(2).actionId, CustomActions(2).itemId
         if keypress(KEY_4) then doAction CustomActions(3).actionId, CustomActions(3).itemId
 	end if
-    
-    if LD2_isTestMode() then
-        if keyboard(KEY_E) then
-            EStatusScreen CurrentRoom
-            if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
-                CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
-                StartFloorMusic CurrentRoom
-                SceneOpenElevatorDoors
-            end if
-            LD2_ShowPlayer
-        end if
-        if keyboard(KEY_R) and keyrUp then
-            Player_AddAmmo ItemIds.ShotgunAmmo, 99
-            Player_AddAmmo ItemIds.PistolAmmo, 99
-            Player_AddAmmo ItemIds.MachineGunAmmo, 99
-            Player_AddAmmo ItemIds.MagnumAmmo, 99
-            LD2_PlaySound Sounds.reload
-        end if
-        if keyboard(KEY_R) then
-            keyrUp = 0
-        else
-            keyrUp = 1
-        end if
-    end if
 
 	if PlayerIsRunning = 0 then LD2_SetPlayerlAni 21 '- legs still/standing/not-moving
 
@@ -1215,7 +1241,7 @@ SUB ScenePortal
   Mobs_Add Barney.x - 32, 143, BOSS2
   LD2_SetBossBar BOSS2
   'FirstBoss = 1
-  LD2_SetAccessLevel 0
+  Player_SetAccessLevel NOACCESS
   LD2_PlayMusic mscBOSS
  
   BarneyIsThere = 0
@@ -1291,7 +1317,7 @@ SUB SceneWeaponRoom2
   BarneyPoint = 0
   LarryPos = 0
   BarneyPos = 0
-  LD2_SetXShift 0
+  Map_SetXShift 0
 
   Barney.x = 48
   Barney.y = 144
@@ -1417,7 +1443,7 @@ sub Rooms_DoRooftop (player as PlayerType)
                     LD2_PlaySound Sounds.keypadGranted
                     inputPinResponse.text = "Access Granted"
                     inputPinResponse.text_color = 56
-                    LD2_SetTempAccess YELLOWACCESS
+                    Player_SetTempAccess YELLOWACCESS
                 else
                     LD2_PlaySound Sounds.keypadDenied
                     inputPinResponse.text = "Invalid PIN - Access Denied"
@@ -1482,14 +1508,14 @@ sub SceneCheck (player as PlayerType)
 	
     if CurrentRoom = Rooms.Lobby then
         if Player_NotItem(ItemIds.ScenePortal) and (player.x <= 1400) then
-            SceneLobby
+            'SceneLobby
         end if
         if Player_NotItem(ItemIds.SceneTheEnd) and (player.x >= 1600) then
             SceneTheEnd '- the end
         end if
 	end if
 
-	if Player_NotItem(ItemIds.SceneGoo) and (CurrentRoom = Rooms.VentControl) and (player.x <= 768) then '(player.x <= 754) then
+	if Player_NotItem(ItemIds.SceneGoo) and (CurrentRoom = Rooms.VentControl) and (player.x <= 760) then '(player.x <= 754) then
         SceneGoo
     end if
     if Player_HasItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.SceneGooGone) and (CurrentRoom <> Rooms.VentControl) then
@@ -1736,7 +1762,7 @@ SUB Start
     'LD2_LoadBitmap DATA_DIR+"gfx/origback.bmp", 2, 0
     CurrentRoom = 14
     Player_SetItemQty ItemIds.CurrentRoom, CurrentRoom
-    LD2_LoadMap "14th.ld2", LD2_isTestMode()
+    Map_Load "14th.ld2", LD2_isTestMode()
     
     IF LD2_isTestMode() THEN
       SceneNo = -1
@@ -1764,9 +1790,11 @@ sub NewGame
     player.y = 144
     player.is_visible = 1
     Player_SetItemQty ItemIds.Lives, 3
+    Player_SetItemQty ItemIds.Hp, MAXLIFE
     
-    LD2_InitPlayer player
-    LD2_SetXShift 0
+    Player_Init player
+    
+    Player_SetWeapon ItemIds.Fist '// must be called after Player_Init()
     
     if LD2_isTestMode() then
         Player_AddAmmo ItemIds.ShotgunAmmo, 99
@@ -1792,6 +1820,7 @@ sub NewGame
     end if
     
     GenerateRoofCode
+    Map_SetXShift 0
     
 end sub
 
@@ -1856,7 +1885,7 @@ sub SceneOpenElevatorDoors()
     mapX = int(ex / 16)
     mapY = int(ey / 16)
     
-    LD2_ShowPlayer
+    Player_Unhide
     
     LD2_PutTile mapX, mapY, TileIds.ElevatorBehindDoor, 1
     LD2_PutTile mapX+1, mapY, TileIds.ElevatorBehindDoor, 1

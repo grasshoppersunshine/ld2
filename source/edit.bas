@@ -277,10 +277,10 @@
         end if
     end if
 
-    IF CurrentTile < 0 THEN CurrentTile = 0
-    IF CurrentTile > 159 THEN CurrentTile = 159
+    IF CurrentTile < 0 THEN CurrentTile = 199
+    IF CurrentTile > 199 THEN CurrentTile = 199
     IF CurrentTileL < 0 THEN CurrentTileL = 0
-    IF CurrentTileL > 39 THEN CurrentTileL = 39
+    IF CurrentTileL > 40 THEN CurrentTileL = 40
     IF CurrentTileO < 0 THEN CurrentTileO = 0
     IF CurrentTileO > 39 THEN CurrentTileO = 39
     IF Cursor.x < 0 THEN Cursor.x = 0
@@ -336,6 +336,9 @@
     IF Ani > 9 THEN Ani = 1
 
   LOOP
+    
+    FreeCommon
+    end
 
 SUB Init
 
@@ -348,6 +351,8 @@ SUB Init
   'LD2E_LoadBitmap "gfx\back1.bmp", 2
     
     dim i as integer
+    
+    InitCommon
     
     LD2_InitVideo "LD2 Editor", SCREEN_W, SCREEN_H, SCREEN_FULL
     
@@ -416,7 +421,7 @@ SUB LoadMap (filename as string)
       GET #1, , _byte
      
       IF ft <> "[LD2L-V0.45]" THEN
-        Notice !"ERROR!$$ * Invalid File Tag"
+        Notice !"ERROR!$$ * Invalid File Tag$$"+ft
         return
       END IF
 
@@ -657,7 +662,7 @@ SUB SaveMap (filename as string)
     dim x as integer
     dim y as integer
     
-    dim v as short
+    dim v as ubyte
     dim _word as short
     
     dim shortFilename as string
@@ -758,8 +763,8 @@ SUB SaveMap (filename as string)
 
       FOR y = 0 TO 12
         FOR x = 0 TO 200
-            _word = EditMap(x, y)
-          PUT #1, , _word
+            v = EditMap(x, y)
+          PUT #1, , v
           
         NEXT x
         v = 13: PUT #1, , v
@@ -771,8 +776,8 @@ SUB SaveMap (filename as string)
 
       FOR y = 0 TO 12
         FOR x = 0 TO 200
-            _word = LightMap1(x, y): put #1, , _word
-            _word = LightMap2(x, y): put #1, , _word
+            v = LightMap1(x, y): put #1, , v
+            v = LightMap2(x, y): put #1, , v
           'PUT #1, , LightMap1(x, y)
           'PUT #1, , LightMap2(x, y)
         NEXT x
@@ -785,8 +790,8 @@ SUB SaveMap (filename as string)
 
       FOR y = 0 TO 12
         FOR x = 0 TO 200
-            _word = AniMap(x, y)
-            PUT #1, , _word
+            v = AniMap(x, y)
+            PUT #1, , v
             
         NEXT x
         v = 13: PUT #1, , v

@@ -483,16 +483,22 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 		LD2_RefreshScreen
         PullEvents
 		
-        IF keypress(KEY_TAB) or keypress(KEY_ESCAPE) THEN
+        IF keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseRB() or mouseMB() THEN
             EXIT DO
         END IF
-        if keypress(KEY_E) and LD2_isTestMode() then
-            exit do
-        end if
         
         '- TODO: hold down for one second, then scroll down with delay
         current = selectedRoom
-        IF keypress(KEY_UP) THEN
+        if keypress(KEY_1) or keypress(KEY_KP_1) then
+            for i = 0 to numFloors - 1
+                if floors(i).floorNo = 1 then
+                    LD2_PlaySound Sounds.uiArrows
+                    selectedRoom = (numFloors - i - 1) 
+                    exit for
+                end if
+            next i
+        end if
+        IF keypress(KEY_UP) or keypress(KEY_W) or mouseWheelUp() THEN
             selectedRoom = selectedRoom + 1
             if selectedRoom <= numFloors - 1 then
                 while (selectedRoom <= numFloors-1)
@@ -510,7 +516,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
                 LD2_PlaySound Sounds.uiArrows
             END IF
         END IF
-        IF keypress(KEY_DOWN) THEN
+        IF keypress(KEY_DOWN) or keypress(KEY_S) or mouseWheelDown() THEN
             selectedRoom = selectedRoom - 1
             if selectedRoom >= 0 then
                 while (selectedRoom >= 0)
@@ -528,7 +534,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
                 LD2_PlaySound Sounds.uiArrows
             END IF
         END IF
-        IF keypress(KEY_ENTER) or keypress(KEY_SPACE) THEN
+        IF keypress(KEY_ENTER) or keypress(KEY_SPACE) or mouseLB() THEN
             LD2_PlaySound Sounds.uiSelect
             Player_SetItemQty ItemIds.CurrentRoom, selectedRoom
             doLoadMap = 1
@@ -537,6 +543,11 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 	LOOP
 	
 	WaitForKeyup(KEY_TAB)
+    WaitForKeyup(KEY_ESCAPE)
+    WaitForKeyup(KEY_E)
+    while mouseLB(): PullEvents: wend
+    while mouseRB(): PullEvents: wend
+    while mouseMB(): PullEvents: wend
     
     LD2_PlaySound Sounds.uiMenu
 	
@@ -567,8 +578,8 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
     counterStep = abs(currentRoomId-selectedRoom)/25
     IF doLoadMap THEN
         LD2_FadeOut 3
-		LD2_LoadMap selectedFilename
-        LD2_HidePlayer
+		Map_Load selectedFilename
+        Player_Hide
         LD2_PlayMusic mscELEVATOR
         LD2_InitElement @eMessage, elevatorText, 31
         eMessage.y = 60
@@ -686,10 +697,14 @@ SUB Look (item AS InventoryType)
 	
 	DO
         PullEvents
-		IF keypress(KEY_ENTER) or keypress(KEY_TAB) or keypress(KEY_ESCAPE) THEN
+		IF keypress(KEY_ENTER) or keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseLB() or mouseRB() or mouseMB() THEN
 			EXIT DO
         END IF
 	LOOP
+    
+    while mouseLB(): PullEvents: wend
+    while mouseRB(): PullEvents: wend
+    while mouseMB(): PullEVents: wend
     
     LD2_RestoreElements
 	
@@ -765,9 +780,11 @@ SUB StatusScreen
         PullEvents
         
         Inventory_GetItemBySlot(selected, selectedInventorySlot)
-
-        IF keypress(KEY_TAB) or keypress(KEY_ESCAPE) THEN
+        
+        IF keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseRB() or mouseMB() THEN
             IF action > -1 THEN
+                while mouseRB(): PullEvents: wend
+                while mouseMB(): PullEvents: wend
                 LD2_PlaySound Sounds.uiCancel
                 action = -1
             ELSE
@@ -776,7 +793,7 @@ SUB StatusScreen
         END IF
             
         '- TODO: hold down for one second, then scroll down with delay
-        IF keypress(KEY_UP) THEN
+        IF keypress(KEY_UP) or keypress(KEY_W) or (action = -1 and mouseWheelUp()) THEN
             if action >= 0 then
                 LD2_PlaySound Sounds.uiCancel
                 action = -1
@@ -793,7 +810,7 @@ SUB StatusScreen
                 END IF
             end if
         END IF
-        IF keypress(KEY_DOWN) THEN
+        IF keypress(KEY_DOWN) or keypress(KEY_S) or (action =-1 and mouseWheelDown()) THEN
             if action >= 0 then
                 LD2_PlaySound Sounds.uiCancel
                 action = -1
@@ -810,7 +827,7 @@ SUB StatusScreen
                 END IF
             end if
         END IF
-        IF keypress(KEY_LEFT) THEN
+        IF keypress(KEY_LEFT) or (action >= 0 and mouseWheelDown()) THEN
             if action = -1 then
                 LD2_PlaySound Sounds.uiSubmenu
                 action = 0
@@ -824,7 +841,7 @@ SUB StatusScreen
                 END IF
             end if
         END IF
-        IF keypress(KEY_RIGHT) THEN
+        IF keypress(KEY_RIGHT) or (action >= 0 and mouseWheelUp()) THEN
             if action = -1 then
                 LD2_PlaySound Sounds.uiSubmenu
                 action = 0
@@ -838,7 +855,8 @@ SUB StatusScreen
                 END IF
             end if
         END IF
-        if keypress(KEY_ENTER) or keypress(KEY_SPACE) then
+        if keypress(KEY_ENTER) or keypress(KEY_SPACE) or mouseLB() then
+            while mouseLB(): PullEvents: wend
             if mixMode then
                 Mix mixItem, selected
                 mixMode = 0
@@ -883,6 +901,10 @@ SUB StatusScreen
 	
 	WaitForKeyup(KEY_TAB)
     WaitForKeyup(KEY_ESCAPE)
+    WaitForKeyup(KEY_E)
+    while mouseLB(): PullEvents: wend
+    while mouseRB(): PullEvents: wend
+    while mouseMB(): PullEvents: wend
     
     LD2_PlaySound Sounds.uiMenu
 	
@@ -1010,11 +1032,15 @@ SUB ShowResponse (response AS STRING, textColor as integer = -1)
         LD2_RenderElement @labelResponse
         LD2_RefreshScreen
         PullEvents
-        IF keypress(KEY_ENTER) THEN
+        IF keypress(KEY_ENTER) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseLB() or mouseRB() or mouseMB() THEN
             LD2_PlaySound Sounds.uiArrows
             EXIT DO
         END IF
     LOOP
+    
+    while mouseLB(): PullEvents: wend
+    while mouseRB(): PullEvents: wend
+    while mouseMB(): PullEvents: wend
 
 END SUB
 

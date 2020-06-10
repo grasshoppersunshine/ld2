@@ -16,6 +16,11 @@ declare sub WaitForKeyup (code as integer = -1)
 declare sub PullEvents ()
 declare function mouseX() as integer
 declare function mouseY() as integer
+declare function mouseRelX() as integer
+declare function mouseRelY() as integer
 declare function mouseLB() as integer
 declare function mouseRB() as integer
+declare function mouseMB() as integer
 declare function mouseWheelY() as integer
+declare function mouseWheelUp() as integer
+declare function mouseWheelDown() as integer

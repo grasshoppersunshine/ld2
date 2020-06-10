@@ -177,8 +177,11 @@ function doArgs(args as ArgsType, pathToFbc as string, title as string = "", reb
         print title+" "+s+args.getPaddedPath()+chr(13);
         commandLine = pathToFbc+" "+args.getArgString()
         if fileChanged then
-            if shell(commandLine) = -1 then
+            dim rv as integer
+            if shell(commandLine) = 1 then
                 print "ERROR while running fbc with: "+commandLine
+                print "Exiting"
+                end
             end if
         end if
         write #1, path, datetime
