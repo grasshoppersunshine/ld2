@@ -26,3 +26,9 @@ MAGNUM         , Magnum        , Magnum
 WALKIETALKIE   , Walkie-Talkie , Walkie-Talkie
 MACHINEGUNAMMO , Clip          , Machine-Gun Clip
 EXTRALIFE      , Extra Life    , Extra Life
+ACTIVE410      , Active 410    , Execute "SceneGooGone" Scene
+NOVAHEART      , Nova Heart    , Nova Heart
+BLOCKOFDOOM    , Block of Doom , Block of Doom
+POWEREDARMOR   , Powered Armor , Powered Armor
+QUADDAMAGE     , Quad Damage   , Quad Damage
+ELEVATORMENU   , Elevator Menu , Elevator Menu

@@ -24,6 +24,7 @@ enum TileIds
     ElevatorSign2Left    = 27
     ElevatorSign2Right   = 28
     Grass                = 107
+    GraySquare           = 32
     PortalTopLeft        = 110
     PortalTopRight       = 111
     PortalBottomLeft     = 112
@@ -83,21 +84,27 @@ enum ItemIds
     PistolLoaded     = 30
     MachineGunLoaded = 31
     MagnumLoaded     = 32
+    NovaHeart        = 60
+    BlockOfDoom      = 61
+    PoweredArmor     = 62
+    QuadDamage       = 63
+    DamageMod        = 64
+    Active410        = 70
+    ElevatorMenu     = 71
     '=======================================
     CurrentRoom          = 90
     BossRooftopBegin     = 91
     BossRooftopEnd       = 92
     BossPortalBegin      = 93
     BossPortalEnd        = 94
-    BossKilledId         = 99
     SceneIntro           = 101
     SceneJanitor         = 102
     SceneJanitorDies     = 103
     SceneElevator        = 104
-    SceneWeaponsLocker1  = 105
-    SceneWeaponsLocker2  = 106
-    SceneWeaponsLocker3  = 107
-    SceneWheresSteve     = 108
+    SceneWeapons1        = 105
+    SceneWeapons2        = 106
+    SceneWeapons3        = 107
+    SceneSteveGone       = 108
     SceneGoo             = 109
     SceneGooGone         = 110
     SceneRooftopGotCard  = 111
@@ -141,6 +148,7 @@ CONST EXTRALIFE = 27
 
 CONST AUTH = 50
 CONST TEMPAUTH = 51
+'const DAMAGEMOD = 64
 'CONST NUMLIVES = 52
 'CONST NUMINVSLOTS = 53
 
@@ -313,6 +321,7 @@ enum Sounds
     boom
     outofammo
     reload
+    quad
     '// rooftop
     keypadInput
     keypadGranted
@@ -356,16 +365,17 @@ end enum
 CONST EXITGAME      = &h01
 CONST TESTMODE      = &h02
 CONST DEBUGMODE     = &h04
-CONST PROFILEMODE   = &h08
-CONST NOSOUND       = &H10
-CONST NOMIX         = &h20
-CONST SKIPOPENING   = &h40
-CONST BOSSKILLED    = &H80
-CONST GOTITEM       = &h100
-CONST MAPISLOADED   = &h200
-CONST FADEIN        = &h400
-CONST CLASSICMODE   = &h800
-CONST PLAYERDIED    = &h1000
+CONST NOSOUND       = &h08
+CONST NOMIX         = &h10
+CONST SKIPOPENING   = &h20
+CONST MAPISLOADED   = &h40
+CONST CLASSICMODE   = &h80
+CONST PLAYERDIED    = &h100
+CONST GOTITEM       = &h200
+CONST ELEVATORMENU  = &h400
+CONST MUSICFADEIN   = &h800
+CONST MUSICFADEOUT  = &h1000
+CONST MUSICCHANGE   = &h2000
 
 '======================
 '= SCENE POSES
@@ -444,13 +454,28 @@ enum ChatBoxes
     Trooper              = 74
 end enum
 
+enum Guides
+    Activate410    =  780
+    SceneElevator  = 1500
+    SceneJanitor   = 1160
+    SceneGoo       =  760
+    SceneLobby     = 1400
+    ScenePortal    =  300
+    SceneTheEnd    = 1600
+    SceneVentCrawl = 1240
+    SceneWeapons1  =  400
+    SceneWeapons2  =  420
+    SceneWeapons3  =   80
+    SceneSteveGone =  300
+end enum
+
 '======================
 '= SCENE MODES
 '======================
 CONST MODEOFF = 0
 CONST LETTERBOX = 1
 
-declare sub LD2_UseItem (id as integer, qty as integer)
+declare sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as integer)
 declare sub LD2_LookItem (id as integer, byref desc as string)
 declare sub AddSound (id as integer, filepath as string, loops as integer = 0)
 declare sub RetraceDelay (qty as integer)

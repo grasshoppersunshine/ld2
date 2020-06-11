@@ -90,6 +90,12 @@ type BoxType
     padRgt as integer
 end type
 
+enum LayerIds
+    Tile = 1
+    LightFg = 2
+    LightBg = 3
+end enum
+
 declare sub Doors_Add ()
 declare sub Doors_Animate ()
 declare sub Doors_Update(id as integer)
@@ -100,14 +106,16 @@ declare sub Guts_Add (gutsId as integer, x as integer, y as integer, qty as inte
 declare sub Guts_Animate ()
 declare sub Guts_Draw ()
 
-declare sub Items_Add (x as integer, y as integer, id as integer, mobId as integer = 0)
-declare sub Items_Draw ()
-declare function Items_Pickup () as integer
+declare sub MapItems_Add (x as integer, y as integer, id as integer)
+declare sub MapItems_Draw ()
+declare function MapItems_Pickup () as integer
 
 declare sub Map_Load (filename as string, skipMobs as integer = 0)
 declare sub Map_LockElevator ()
 declare sub Map_UnlockElevator ()
 declare sub Map_SetXShift (x as integer)
+declare sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer = LayerIds.Tile)
+declare sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
 
 declare sub Mobs_Add (x as integer, y as integer, id as integer)
 declare sub Mobs_Generate  (forceNumMobs as integer = 0, forceMobType as integer = 0)
@@ -115,6 +123,7 @@ declare sub Mobs_Animate ()
 declare sub Mobs_Draw ()
 declare sub Mobs_Kill (mob as Mobile)
 declare sub Mobs_KillAll ()
+declare sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
 
 declare sub Stats_Draw ()
 
@@ -131,6 +140,7 @@ declare function Player_HasItem(itemId as integer) as integer
 declare function Player_NotItem(itemId as integer) as integer
 declare sub Player_AddItem(itemId as integer, qty as integer = 1)
 declare sub Player_SetItemQty(itemId as integer, qty as integer)
+declare sub Player_SetItemMaxQty(itemId as integer, qty as integer)
 declare function Player_AddAmmo (weaponId as integer, qty as integer) as integer
 declare function Player_AtElevator () as integer
 declare sub Player_SetFlip (flipped as integer)
@@ -142,11 +152,13 @@ declare sub Player_Unhide ()
 DECLARE SUB Player_Init (p AS PlayerType)
 declare function Player_LookUp () as integer
 declare function Player_SetWeapon (itemId as integer) as integer
+declare sub Player_SetDamageMod (factor as integer)
 DECLARE function Player_Shoot (is_repeat as integer = 0) as integer
 declare function Player_ShootRepeat() as integer
 declare sub Player_SetAccessLevel (accessLevel as integer)
 declare sub Player_SetTempAccess (accessLevel as integer)
 declare function Player_GetCollisionBox() as BoxType
+declare function Player_GetGotItem() as integer
 
 
 DECLARE FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
@@ -170,7 +182,6 @@ DECLARE FUNCTION LD2_isDebugMode () as integer
 DECLARE SUB LD2_ProcessEntities ()
 DECLARE SUB LD2_PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
 DECLARE SUB LD2_PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, BufferNum AS INTEGER)
-DECLARE SUB LD2_PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
 declare sub LD2_RenderBackground(height as double)
 DECLARE SUB LD2_RenderFrame ()
 DECLARE SUB LD2_SetPlayerlAni (Num AS INTEGER)
@@ -197,8 +208,6 @@ DECLARE FUNCTION LD2_HasFlag (flag AS INTEGER) as integer
 DECLARE FUNCTION LD2_NotFlag (flag AS INTEGER) as integer
 DECLARE SUB LD2_SetFlag (flag AS INTEGER)
 DECLARE SUB LD2_ClearFlag (flag AS INTEGER)
-DECLARE SUB LD2_SetFlagData (datum AS INTEGER)
-DECLARE FUNCTION LD2_GetFlagData () as integer
 
 DECLARE SUB LD2_PopText (Message AS STRING)
 DECLARE SUB LD2_WriteText (Text AS STRING)

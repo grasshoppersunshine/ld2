@@ -98,6 +98,7 @@
   declare sub SceneCheck (player as PlayerType)
   declare sub BossCheck (player as PlayerType)
   declare sub FlagsCheck (player as PlayerType)
+  declare sub ItemsCheck (player as PlayerType)
   declare sub GenerateRoofCode ()
   
 '======================
@@ -105,14 +106,13 @@
 '======================
   
   DECLARE SUB PutRestOfSceners ()
-  DECLARE SUB ScenePortal ()
-  DECLARE SUB SceneWeaponRoom ()
-  DECLARE SUB SceneWeaponRoom2 ()
 
   
   DECLARE SUB GetPose (pose AS PoseType, poseId AS INTEGER)
   declare sub UpdateLarryPos ()
   DECLARE SUB UpdatePose (target AS PoseType, pose AS PoseType)
+    
+    declare sub BeforeMobKill (mob as Mobile ptr)
   
   '- have walk-talky in inventory that you can look/use/(drop?)
   
@@ -158,6 +158,8 @@
   const KEYPAD_ENTRY_TEXT = "Enter in the 4-digit PIN:"
 
   dim shared CustomActions(3) as ActionItem
+  dim shared SceneCallback as sub()
+  dim shared NextMusicId as integer
   
   Start
   END
@@ -230,56 +232,110 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
 	GetCharacterPose poseTalking, characterId, talkingPoseId
     UpdatePose renderPose, poseTalking
     
-    LD2_WriteText caption
-	
-    cursor = 1
-	DO
-		cursor = INSTR(cursor, caption, " ")
-		IF cursor THEN
-			WHILE MID(caption, cursor, 1) = " ": cursor = cursor + 1: WEND
-			words = words + 1
-        ELSE
-            EXIT DO
-		END IF
-	LOOP
-    IF (words = 0) AND (LEN(caption) > 0) THEN '- trim caption?
-        words = 1
-    END IF
-    
-    FOR n = 0 TO words - 1
-        
-		poseTalking.nextFrame
-        UpdatePose renderPose, poseTalking
-        
-        RenderScene 0
-        if chatBox then
-            LD2_putFixed 0, 180, chatBox+1, idScene, renderPose.getFlip()
+    'cursor = 1
+	'DO
+	'	cursor = INSTR(cursor, caption, " ")
+	'	IF cursor THEN
+	'		WHILE MID(caption, cursor, 1) = " ": cursor = cursor + 1: WEND
+	'		words = words + 1
+    '    ELSE
+    '        EXIT DO
+	'	END IF
+	'LOOP
+    'IF (words = 0) AND (LEN(caption) > 0) THEN '- trim caption?
+    '    words = 1
+    'END IF
+    dim text as string
+    text = caption
+    caption = ""
+    for n = 1 to len(text)
+        if mid(text, n, 3) = "..." then
+            caption += "@...#"
+            n += 2
+        else
+            caption += mid(text, n, 1)
         end if
-        LD2_RefreshScreen
-        RetraceDelay 3
-        
+    next n
+    
+    dim noSpeak as integer
+    dim frame as integer
+    dim chattime as double
+    caption = trim(caption)
+    if right(caption, 1) = "#" then caption = left(caption, len(caption)-1)
+    frame = iif(left(caption, 1)<>"@",1, 0)
+    if frame = 1 then
         poseTalking.nextFrame
         UpdatePose renderPose, poseTalking
+    end if
+    chattime = timer
+    FOR n = 1 to len(caption)
+        
+		if mid(caption, n, 1) = "@" then
+            noSpeak = 1
+            caption = left(caption, n-1) + right(caption, len(caption)-n)
+            n -= 1
+        end if
+        if mid(caption, n, 1) = "#" then
+            noSpeak = 0
+            caption = left(caption, n-1) + right(caption, len(caption)-n)
+            n -= 1
+        end if
+        
+        if (noSpeak = 0) or (frame = 1) then
+            if (timer-chattime) >= 0.06 then
+                poseTalking.nextFrame
+                frame += 1
+                if frame > 1 then frame = 0
+                UpdatePose renderPose, poseTalking
+                chattime = timer
+            end if
+        end if
         
         RenderScene 0
         if chatBox then
-            LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+            LD2_putFixed 0, 180, chatBox+frame, idScene, renderPose.getFlip()
         end if
         LD2_RefreshScreen
-        RetraceDelay 3
         
+        LD2_WriteText left(caption, n)
         LD2_PlaySound Sounds.dialog
-		
-        IF keyboard(KEY_SPACE) THEN EXIT FOR
-		IF keyboard(KEY_ENTER) THEN escapeFlag = 1: EXIT FOR
-		RetraceDelay 1
         
+        if keyboard(KEY_SPACE) then exit for
+		if keyboard(KEY_ENTER) then escapeFlag = 1: exit for
+        'if WaitSecondsUntilKey(0.01) then exit for
 	NEXT n
+    
+    LD2_WriteText caption
+    poseTalking.firstFrame
+    UpdatePose renderPose, poseTalking
+    RenderScene 0
+    if chatBox then
+        LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+    end if
+    LD2_RefreshScreen
+    
+    WaitForKeyup(KEY_SPACE)
 
-	DO
+    dim timestamp as double
+    timestamp = timer
+	do
         PullEvents
-		IF keyboard(KEY_ENTER) THEN escapeFlag = 1: EXIT DO
-	LOOP UNTIL keyboard(KEY_SPACE)
+        if (timer - timestamp) >= 0.15 then
+            if right(caption, 1) <> "_" then
+                caption += "_"
+            else
+                caption = left(caption, len(caption)-1)
+            end if
+            LD2_WriteText caption
+            RenderScene 0
+            if chatBox then
+                LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+            end if
+            LD2_RefreshScreen
+            timestamp = timer
+        end if
+		if keyboard(KEY_ENTER) then escapeFlag = 1: exit do
+	loop until keyboard(KEY_SPACE)
 
     WaitForKeyup(KEY_SPACE)
 	WaitForKeyup(KEY_ENTER)
@@ -650,13 +706,28 @@ sub LoadSounds ()
     AddSound Sounds.keypadGranted, "kp-granted.wav"
     AddSound Sounds.keypadDenied , "kp-denied.wav"
     
+    AddSound Sounds.quad, "quad.wav"
+    
 end sub
 
 sub DoAction(actionId as integer, itemId as integer = 0)
     
+    dim runVal as double
+    dim jumpVal as double
     dim player as PlayerType
     dim success as integer
+    dim playQuad as integer
     static soundTimer as double
+    
+    runVal = 1
+    jumpVal = 1.5
+    if Player_HasItem(ItemIds.PoweredArmor) then
+        runVal = 1.5
+        jumpVal = 2.2
+    end if
+    if Player_HasItem(ItemIds.QuadDamage) then
+        playQuad = 1
+    end if
     
     select case actionId
     case ActionIds.Crouch
@@ -666,11 +737,11 @@ sub DoAction(actionId as integer, itemId as integer = 0)
             LD2_PlaySound Sounds.equip
         end if
     case ActionIds.Jump
-        if Player_Jump(1.5) then
+        if Player_Jump(jumpVal) then
             LD2_PlaySound Sounds.jump
         end if
     case ActionIds.JumpRepeat
-        if Player_JumpRepeat(1.5) then
+        if Player_JumpRepeat(jumpVal) then
             LD2_PlaySound Sounds.jump
         end if
     case ActionIds.JumpDown
@@ -680,20 +751,20 @@ sub DoAction(actionId as integer, itemId as integer = 0)
         if Player_LookUp() then
         end if
     case ActionIds.PickUpItem
-        if Items_Pickup() then
+        if MapItems_Pickup() then
             LD2_PlaySound Sounds.pickup
         end if
     case ActionIds.RunRight
-        if Player_Move(1) then
+        if Player_Move(runVal) then
         end if
     case ActionIds.RunLeft
-        if Player_Move(-1) then
+        if Player_Move(-runVal) then
         end if
     case ActionIds.StrafeRight
-        if Player_Move(1, 0) then
+        if Player_Move(runVal, 0) then
         end if
     case ActionIds.StrafeLeft
-        if Player_Move(-1, 0) then
+        if Player_Move(-runVal, 0) then
         end if
     case ActionIds.Shoot, ActionIds.ShootRepeat
         if actionId = ActionIds.Shoot then
@@ -715,6 +786,9 @@ sub DoAction(actionId as integer, itemId as integer = 0)
             case DESERTEAGLE
                 LD2_PlaySound Sounds.deserteagle
             end select
+            if playQuad then
+                LD2_PlaySound Sounds.quad
+            end if
         elseif success = -1 then
             if (timer - soundTimer) > 0.5 then
                 LD2_PlaySound Sounds.outofammo
@@ -727,15 +801,14 @@ end sub
 
 sub StartFloorMusic(roomId as integer)
     
-    dim roomTracks(5) as integer
+    dim roomTracks(4) as integer
     
     roomTracks(0) = mscROOM0
     'roomTracks(1) = mscROOM1
-    roomTracks(1) = mscROOM2
-    roomTracks(2) = mscROOM3
-    roomTracks(3) = mscROOM4
-    roomTracks(4) = mscROOM5
-    roomTracks(5) = mscWANDERING
+    roomTracks(1) = mscROOM3
+    roomTracks(2) = mscROOM4
+    roomTracks(3) = mscROOM5
+    roomTracks(4) = mscWANDERING
     
     select case roomId
     case Rooms.Basement
@@ -783,8 +856,8 @@ SUB Main
   DO
     
     IF LD2_HasFlag(MAPISLOADED) THEN
-		LD2_SetFlag FADEIN
-		LD2_ClearFlag MAPISLOADED
+		'// play music here
+        LD2_ClearFlag MAPISLOADED
 	END IF
     
     PullEvents
@@ -799,6 +872,7 @@ SUB Main
     
     SceneCheck player
     BossCheck player
+    ItemsCheck player
     
     if CurrentRoom = Rooms.Rooftop then
         Rooms_DoRooftop player
@@ -854,15 +928,6 @@ SUB Main
     if mouseRelX() >  115 then Player_SetFlip 0
     
     if LD2_isTestMode() then
-        if keyboard(KEY_TAB) then
-            EStatusScreen CurrentRoom
-            if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
-                CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
-                StartFloorMusic CurrentRoom
-                SceneOpenElevatorDoors
-            end if
-            Player_Unhide
-        end if
         if keypress(KEY_R) or ((mouseRB() > 0) and newReload) then
             Player_AddAmmo ItemIds.ShotgunAmmo, 99
             Player_AddAmmo ItemIds.PistolAmmo, 99
@@ -998,6 +1063,7 @@ function DoScene (sceneId as string) as integer
     end if
     
     LD2_WriteText ""
+    RenderScene
     
     return escaped
     
@@ -1012,7 +1078,7 @@ sub RenderScene (visible as integer = 1)
     
 end sub
 
-SUB ScenePortal
+SUB ScenePortalBak
 
   LD2_SetSceneMode LETTERBOX
 
@@ -1254,119 +1320,6 @@ SUB ScenePortal
 
 END SUB
 
-SUB SceneWeaponRoom
-
-  LD2_SetSceneMode LETTERBOX
-  UpdateLarryPos
-
-  SceneNo = 0
-  Larry.y = 144
-  LarryIsThere = 1
-  BarneyIsThere = 1
-  LarryPoint = 1
-  BarneyPoint = 0
-  LarryPos = 0
-  BarneyPos = 0
-
-  Barney.x = 388
-  Barney.y = 144
-
-  DIM x AS INTEGER
-  dim escaped as integer
-  
-  IF SCENE_Init("SCENE-WEAPONROOM-1A") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-  LD2_WriteText ""
-
-  '- Barney runs to the left off the screen
-  BarneyTalking = 1
-  FOR x = Barney.x TO Barney.x - 160 STEP -1
-	LD2_RenderFrame
-   
-	PutRestOfSceners
-
-	LD2_put x, 144, 54 - ((x MOD 20) \ 4), idSCENE, 1
-	LD2_put x, 144, 45, idSCENE, 1
-   
-	LD2_RefreshScreen
-
-  NEXT x
-  BarneyTalking = 0
-
-  SteveGoneScene = 1
-  RoofScene = 3
-  LD2_SetSceneMode MODEOFF
-  LarryIsThere = 0
-  BarneyIsThere = 0
-
-END SUB
-
-SUB SceneWeaponRoom2
-
-  LD2_SetSceneMode LETTERBOX
-  UpdateLarryPos
-
-  SceneNo = 0
-  Larry.y = 144
-  LarryIsThere = 1
-  BarneyIsThere = 1
-  LarryPoint = 1
-  BarneyPoint = 0
-  LarryPos = 0
-  BarneyPos = 0
-  Map_SetXShift 0
-
-  Barney.x = 48
-  Barney.y = 144
-
-  DIM x AS INTEGER
-  dim escaped as integer
-
-  IF SCENE_Init("SCENE-WEAPONROOM-2A") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-  LD2_WriteText ""
-  
-  '- Barney runs to the right off the screen
-  BarneyTalking = 1
-  FOR x = Barney.x TO Barney.x + SCREEN_W
-	LD2_RenderFrame
-  
-	PutRestOfSceners
-
-	LD2_put x, 144, 50 + ((x MOD 20) \ 4), idSCENE, 0
-	LD2_put x, 144, 45, idSCENE, 0
-  
-	LD2_RefreshScreen
-
-  NEXT x
-  BarneyTalking = 0
-
-  Barney.x = 2000
-
-  LarryPoint = 0
-  IF SCENE_Init("SCENE-WEAPONROOM-2B") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-  LD2_WriteText ""
-
-  Player_SetFLip 0
-
-  SteveGoneScene = 1
-  RoofScene = 4
-  LD2_SetSceneMode MODEOFF
-  LarryIsThere = 0
-  BarneyIsThere = 0
-
-END SUB
-
 sub Rooms_DoRooftop (player as PlayerType)
     
     static inputPin as ElementType
@@ -1479,51 +1432,71 @@ sub SceneCheck (player as PlayerType)
         Scene1
     end if
     
+    if SceneCallback <> 0 then
+        SceneCallback()
+        SceneCallback = 0
+    end if
+    
     if CurrentRoom = Rooms.LarrysOffice then
         if Player_NotItem(ItemIds.SceneJanitor) then
             LD2_put 1196, 144, POSEJANITOR, idSCENE, 0
-            if player.x >= 1160 then
+            if player.x >= Guides.SceneJanitor then
                 Scene3 '// larry meets janitor
                 Scene4 '// rockmonster eats janitor
             end if
         end if
-        if Player_NotItem(ItemIds.SceneElevator) and player.x >= 1500 then
+        if Player_NotItem(ItemIds.SceneElevator) and player.x >= Guides.SceneElevator then
             Scene5 '// barney saves larry from rockmonster
         end if
-        if Player_NotItem(ItemIds.SceneWeaponsLocker1) then
+        if Player_NotItem(ItemIds.SceneWeapons1) then
             LD2_put 162, 144, 121, idSCENE, 1 '// steve
             LD2_put 178, 144, 120, idSCENE, 1 '// passed out
         end if
-        if Player_HasItem(ItemIds.SceneElevator) and Player_NotItem(ItemIds.SceneWeaponsLocker1) then
+        if Player_HasItem(ItemIds.SceneElevator) and Player_NotItem(ItemIds.SceneWeapons1) then
+            '// ??????
         end if
     end if
     if CurrentRoom = Rooms.WeaponsLocker then
-        if Player_NotItem(ItemIds.SceneWeaponsLocker1) then
+        if Player_NotItem(ItemIds.SceneWeapons1) then
             LD2_put 368, 144, BARNEYEXITELEVATOR, idSCENE, 0
-            if player.x <= 400 then
+            if player.x <= Guides.SceneWeapons1 then
                 Scene7 '// barney explaining the situation to larry
             end if
         end if
     end if
 	
     if CurrentRoom = Rooms.Lobby then
-        if Player_NotItem(ItemIds.ScenePortal) and (player.x <= 1400) then
+        if Player_NotItem(ItemIds.ScenePortal) and (player.x <= Guides.SceneLobby) then
             'SceneLobby
         end if
-        if Player_NotItem(ItemIds.SceneTheEnd) and (player.x >= 1600) then
+        if Player_NotItem(ItemIds.SceneTheEnd) and (player.x >= Guides.SceneTheEnd) then
             SceneTheEnd '- the end
         end if
 	end if
 
-	if Player_NotItem(ItemIds.SceneGoo) and (CurrentRoom = Rooms.VentControl) and (player.x <= 760) then '(player.x <= 754) then
-        SceneGoo
-    end if
-    if Player_HasItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.SceneGooGone) and (CurrentRoom <> Rooms.VentControl) then
+    if Player_NotItem(ItemIds.SceneGooGone) and (CurrentRoom = Rooms.VentControl) then
+        if player.x <= Guides.Activate410 then
+            if Player_HasItem(ItemIds.Chemical410) then
+                Player_SetItemQty ItemIds.Active410, 1
+            end if
+        end if
+        if player.x <= Guides.SceneGoo then
+            if Player_NotItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.Chemical410) then
+                SceneGoo
+            end if
+        else
+            Player_SetItemQty ItemIds.Active410, 0
+        end if
+    elseif Player_HasItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.Chemical410) and (CurrentRoom <> Rooms.VentControl) then
         Player_SetItemQty ItemIds.SceneGoo, 0
     end if
     
+    if Player_HasItem(ItemIds.YellowCard) and Player_NotItem(ItemIds.SceneRooftopGotCard) and Player_HasItem(ItemIds.BossRooftopEnd) and (CurrentRoom = Rooms.Rooftop) then
+        SceneRooftopGotCard
+    end if
+    
     if Player_NotItem(ItemIds.ScenePortal) and (CurrentRoom = Rooms.PortalRoom) then
-        if player.x <= 300 then
+        if player.x <= Guides.ScenePortal then
             ScenePortal
         else
             LD2_put 260, 144, 12, idSCENE, 0
@@ -1535,7 +1508,7 @@ sub SceneCheck (player as PlayerType)
     end if
 
     if Player_NotItem(ItemIds.SceneVentCrawl) and Player_HasItem(ItemIds.SceneBarneyPlan) then
-        if player.x >= 1240 then
+        if player.x >= Guides.SceneVentCrawl then
             SceneVentCrawl
         else
             LD2_put 400, 144, 12, idSCENE, 1
@@ -1553,33 +1526,49 @@ sub SceneCheck (player as PlayerType)
     end if
     
     if (CurrentRoom = Rooms.WeaponsLocker) then
-        if Player_NotItem(ItemIds.SceneWeaponsLocker2) and Player_HasItem(ItemIds.SceneRooftopGotCard) then
+        if Player_NotItem(ItemIds.SceneWeapons2) and Player_HasItem(ItemIds.SceneRooftopGotCard) then
             LD2_put 388, 144, 50, idSCENE, 0
             LD2_put 388, 144, 45, idSCENE, 0
-            if player.x <= 420 then
-                SceneWeaponRoom
+            if player.x <= Guides.SceneWeapons2 then
+                SceneWeapons2
             end if
         end if
-        if Player_NotItem(ItemIds.SceneWeaponsLocker3) and Player_HasItem(ItemIds.SceneWeaponsLocker2) then
+        if Player_NotItem(ItemIds.SceneWeapons3) and Player_HasItem(ItemIds.SceneWeapons2) then
             LD2_put 48, 144, 50, idSCENE, 0
             LD2_put 48, 144, 45, idSCENE, 0
-            if player.x <= 80 then
-                SceneWeaponRoom2
+            if player.x <= Guides.SceneWeapons3 then
+                SceneWeapons3
             end if
         end if
     end if
     
-    if Player_NotItem(ItemIds.SceneWheresSteve) and Player_HasItem(ItemIds.SceneWeaponsLocker1) then
-        if (CurrentRoom = Rooms.LarrysOffice) and (player.x <= 300) then
+    if Player_NotItem(ItemIds.SceneSteveGone) and Player_HasItem(ItemIds.SceneWeapons1) then
+        if (CurrentRoom = Rooms.LarrysOffice) and (player.x <= Guides.SceneSteveGone) then
             SceneSteveGone
         end if
     end if
     
-    if LD2_HasFlag(GOTITEM) and (LD2_GetFlagData = YELLOWCARD) then
-		if RoofScene = 0 then
-			SceneRooftopGotCard
-		end if
-    end if
+end sub
+
+sub BeforeMobKill (mob as Mobile ptr)
+    
+    select case mob->id
+    case BOSS1
+        LD2_SetBossBar 0
+        LD2_SetFlag MUSICFADEOUT
+        MapItems_Add mob->x, mob->y, YELLOWCARD
+        Player_AddItem ItemIds.BossRooftopEnd
+    case BOSS2
+        Player_SetAccessLevel REDACCESS
+        LD2_SetFlag MUSICCHANGE
+        NextMusicId = mscWANDERING
+    case TROOP1, TROOP2
+        if int(5*rnd(1)) = 0 then
+            LD2_PlaySound Sounds.troopDie
+        end if
+    case ROCKMONSTER
+        LD2_PlaySound Sounds.rockDie
+    end select
     
 end sub
 
@@ -1600,13 +1589,6 @@ sub BossCheck (player as PlayerType)
         'end if
     end if
     
-    if LD2_HasFlag(BOSSKILLED) and (Player_GetItemQty(ItemIds.BossKilledId) = BOSS1) then
-		Items_Add 0, 0, YELLOWCARD, BOSS1
-		LD2_SetBossBar 0
-		LD2_ClearFlag BOSSKILLED
-        Player_AddItem ItemIds.BossRooftopEnd
-	end if
-    
 end sub
 
 sub FlagsCheck (player as PlayerType)
@@ -1615,12 +1597,49 @@ sub FlagsCheck (player as PlayerType)
     dim item as InventoryType
     
     if LD2_HasFlag(GOTITEM) then
-        itemId = LD2_GetFlagData
-        Inventory_RefreshNames
-        Inventory_GetItem item, itemId
-        LD2_SetNotice "Found "+item.shortName
         LD2_ClearFlag GOTITEM
+        itemId = Player_GetGotItem()
+        LD2_SetNotice "Found "+Inventory_GetShortName(itemId)
 	end if
+    if LD2_HasFlag(ELEVATORMENU) then
+        LD2_ClearFlag ELEVATORMENU
+        EStatusScreen CurrentRoom
+        if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
+            CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
+            StartFloorMusic CurrentRoom
+            SceneOpenElevatorDoors
+            if GooScene = 1 then GooScene = 0
+        end if
+        Player_Unhide
+    end if
+    
+end sub
+
+sub ItemsCheck (player as PlayerType)
+    
+    static novatime as double
+    static doomtime as double
+    
+    if Player_HasItem(ItemIds.NovaHeart) then
+        if (timer - novatime) >= 0.25 then
+            Player_AddItem ItemIds.HP, 1
+            novatime = timer
+        end if
+    end if
+    if Player_HasItem(ItemIds.BlockOfDoom) then
+        if (timer - doomtime) >= 0.75 then
+            Player_AddAmmo ItemIds.ShotgunAmmo, 1
+            Player_AddAmmo ItemIds.PistolAmmo, 1
+            Player_AddAmmo ItemIds.MachineGunAmmo, 1
+            Player_AddAmmo ItemIds.MagnumAmmo, 1
+            doomtime = timer
+        end if
+    end if
+    if Player_HasItem(ItemIds.PoweredArmor) then
+    end if
+    if Player_HasItem(ItemIds.QuadDamage) then
+        Player_SetDamageMod 3.0
+    end if
     
 end sub
 
@@ -1702,7 +1721,7 @@ SUB Start
     END IF
     
     LD2_Init
-    LD2_SetMusicVolume 1.0
+    LD2_SetMusicVolume 0.75
     LD2_SetSoundVolume 0.75
     LoadSounds
     
@@ -1794,6 +1813,7 @@ sub NewGame
     
     Player_Init player
     
+    Player_SetItemMaxQty ItemIds.HP, 100
     Player_SetWeapon ItemIds.Fist '// must be called after Player_Init()
     
     if LD2_isTestMode() then
@@ -1802,23 +1822,26 @@ sub NewGame
         Player_AddAmmo ItemIds.MachineGunAmmo, 99
         Player_AddAmmo ItemIds.MagnumAmmo, 99
         Player_SetItemQty ItemIds.Lives, 99
+        LD2_AddToStatus(ItemIds.ElevatorMenu, 1)
         LD2_AddToStatus(ItemIds.Redcard, 1)
-        LD2_AddToStatus(ItemIds.Medikit50, 1)
-        LD2_AddToStatus(ItemIds.Shotgun, 1)
         LD2_AddToStatus(ItemIds.Pistol, 1)
-        LD2_AddToStatus(ItemIds.MysteryMeat, 1)
-        LD2_AddToStatus(ItemIds.Chemical409, 1)
-        LD2_AddToStatus(ItemIds.JanitorNote, 1)
+        LD2_AddToStatus(ItemIds.NovaHeart, 1)
+        LD2_AddToStatus(ItemIds.BlockOfDoom, 1)
+        LD2_AddToStatus(ItemIds.QuadDamage, 1)
+        LD2_AddToStatus(ItemIds.PoweredArmor, 1)
+        'LD2_AddToStatus(ItemIds.Chemical410, 1)
         Player_SetItemQty ItemIds.SceneIntro, 1
         Player_SetItemQty ItemIds.SceneJanitor, 1
         Player_SetItemQty ItemIds.SceneElevator, 1
-        Player_SetItemQty ItemIds.SceneWeaponsLocker1, 1
-        Player_SetItemQty ItemIds.SceneWheresSteve, 1
+        Player_SetItemQty ItemIds.SceneWeapons1, 1
+        Player_SetItemQty ItemIds.SceneSteveGone, 1
+        Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
         LD2_PlayMusic mscWANDERING
     else
         LD2_AddToStatus(GREENCARD, 1)
     end if
     
+    Mobs_SetBeforeKillCallback @BeforeMobKill
     GenerateRoofCode
     Map_SetXShift 0
     
@@ -1840,7 +1863,7 @@ SUB UpdatePose (target AS PoseType, pose AS PoseType)
 	
 END SUB
 
-sub LD2_UseItem (id as integer, qty as integer)
+sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as integer)
     
     dim qtyUnused as integer
     
@@ -1858,7 +1881,11 @@ sub LD2_UseItem (id as integer, qty as integer)
         Player_AddItem id, qty
         LD2_PlaySound Sounds.useExtraLife
     case ItemIds.Chemical410
-        SceneGooGone
+        SceneCallback = @SceneGooGone
+        exitMenu = 1
+    case ItemIds.ElevatorMenu
+        LD2_SetFlag(ELEVATORMENU)
+        exitMenu = 1
     end select
     
 end sub
@@ -1887,8 +1914,8 @@ sub SceneOpenElevatorDoors()
     
     Player_Unhide
     
-    LD2_PutTile mapX, mapY, TileIds.ElevatorBehindDoor, 1
-    LD2_PutTile mapX+1, mapY, TileIds.ElevatorBehindDoor, 1
+    Map_PutTile mapX, mapY, TileIds.ElevatorBehindDoor, 1
+    Map_PutTile mapX+1, mapY, TileIds.ElevatorBehindDoor, 1
 
     '- open elevator doors
     dim i as integer
@@ -1900,8 +1927,8 @@ sub SceneOpenElevatorDoors()
         PullEvents
     NEXT x
 
-    LD2_PutTile mapX-1, mapY, TileIds.ElevatorDoorLeft, 1
-    LD2_PutTile mapx+2, mapY, TileIds.ElevatorDoorRight, 1
+    Map_PutTile mapX-1, mapY, TileIds.ElevatorDoorLeft, 1
+    Map_PutTile mapx+2, mapY, TileIds.ElevatorDoorRight, 1
     
 end sub
 

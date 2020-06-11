@@ -29,6 +29,7 @@ declare function Inventory_GetUseItem() as integer
 declare function Inventory_GetUseQty() as integer
 declare function Inventory_GetUseMessage() as string
 declare function Inventory_GetUseItemDiscard() as integer
+declare function Inventory_GetShortName(id as integer) as string
 
 CONST INVENTORYMAXSIZE = 99
 CONST InventoryErr_OUTOFBOUNDS = -101

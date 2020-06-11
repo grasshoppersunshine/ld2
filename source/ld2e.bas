@@ -123,7 +123,6 @@
   DECLARE SUB ProcessDoors ()
   DECLARE SUB RefreshPlayerAccess ()
   DECLARE SUB SaveItems (filename AS STRING)
-  DECLARE SUB SetFloor (x AS INTEGER, y AS INTEGER, blocked AS INTEGER)
   DECLARE SUB SetPlayerState (state AS INTEGER)
   
   DECLARE SUB GetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
@@ -191,6 +190,7 @@
   DIM SHARED Doors      (MAXDOORS) AS DoorType
   DIM SHARED Guts       (MAXGUTS) AS GutsIncorporated
   DIM SHARED Inventory  (MAXINVENTORY) AS INTEGER
+  DIM SHARED InventoryMax  (MAXINVENTORY) AS INTEGER
   DIM SHARED InvSlots   (MAXINVSLOTS) AS INTEGER
   DIM SHARED WentToRoom (MAXFLOORS) AS INTEGER  
   
@@ -231,6 +231,8 @@
   DIM SHARED GameNoticeMsg AS STRING
   DIM SHARED GameNoticeExpire AS SINGLE
   
+  dim shared GotItemId as integer
+  
   DIM SHARED GAME_RevealText AS STRING
 
   DIM SHARED BitmapSeg   AS INTEGER
@@ -238,6 +240,7 @@
   DIM SHARED BitmapPitch AS INTEGER
   
   dim shared Mobs as MobileCollection
+  dim shared Mobs_BeforeKillCallback as sub(mob as Mobile ptr)
   
   dim shared ElementCount as integer
   dim shared RenderElements(64) as ElementType ptr
@@ -1339,10 +1342,8 @@ SUB Map_Load (Filename AS STRING, skipMobs as integer = 0)
         GET #MapFile, c, _byte: c = c + 1
         GET #MapFile, c, _byte: c = c + 1
         FOR x = 0 TO 200
-          IF x < MAPW THEN
-            'DEF SEG = VARSEG(LightMapBg(0)): POKE (x + y * MAPW), 0: DEF SEG
-            LightMapBg(x, y) = 0
-          END IF
+          LightMapBg(x, y) = 0
+          LightMapFg(x, y) = 0
           GET #MapFile, c, _byte: c = c + 1
           IF x < MAPW THEN
             'DEF SEG = VARSEG(TileMap(0)): t = PEEK (x + y * MAPW): DEF SEG
@@ -1411,7 +1412,7 @@ SUB Map_Load (Filename AS STRING, skipMobs as integer = 0)
   CLOSE #MapFile
 
     if skipMobs = 0 then
-        select case CurrentRoom
+        select case Inventory(ItemIds.CurrentRoom)
         case Rooms.Rooftop, Rooms.PortalRoom, Rooms.WeaponsLocker, Rooms.Lobby, Rooms.Basement
         case else
             Mobs_Generate
@@ -1787,17 +1788,17 @@ sub Doors_Update(id as integer)
     doorIsMoving = (Doors(id).ani > 0) and (Doors(id).ani < 4)
     
     if doorIsMoving then
-        LD2_PutTile Doors(id).mapX, Doors(id).mapY, DOOROPEN + Doors(id).ani, 1
+        Map_PutTile Doors(id).mapX, Doors(id).mapY, DOOROPEN + Doors(id).ani, 1
     elseif doorIsOpen then
-        LD2_PutTile Doors(id).mapX, Doors(id).mapY, DOORBACK, 1
-        SetFloor Doors(id).mapX, Doors(id).mapY, 0
+        Map_PutTile Doors(id).mapX, Doors(id).mapY, DOORBACK, 1
+        Map_SetFloor Doors(id).mapX, Doors(id).mapY, 0
     else
         if Doors(id).accessLevel = WHITEACCESS then
-            LD2_PutTile Doors(id).mapX, Doors(id).mapY, DOORW, 1
+            Map_PutTile Doors(id).mapX, Doors(id).mapY, DOORW, 1
         else
-            LD2_PutTile Doors(id).mapX, Doors(id).mapY, DOOR0 + Doors(id).accessLevel, 1
+            Map_PutTile Doors(id).mapX, Doors(id).mapY, DOOR0 + Doors(id).accessLevel, 1
         end if
-        SetFloor Doors(id).mapX, Doors(id).mapY, 1
+        Map_SetFloor Doors(id).mapX, Doors(id).mapY, 1
     end if
     
 end sub
@@ -1912,42 +1913,6 @@ sub LD2_putTextCol (x as integer, y as integer, text as string, col as integer, 
   next n
 
 end sub
-
-SUB LD2_PutTile (x AS INTEGER, y AS INTEGER, Tile AS INTEGER, Layer AS INTEGER)
-
-  '- Put a tile on the given layer
-  '-------------------------------
-  
-  'DIM m AS INTEGER
-  'm = (x + y * MAPW)
-
-  SELECT CASE Layer
-  CASE 1
-    'DEF SEG = VARSEG(TileMap(0))
-    'POKE VARPTR(TileMap(0))+m, Tile
-    'DEF SEG = VARSEG(MixMap(0))
-    'POKE VARPTR(MixMap(0))+m, Tile
-    TileMap(x, y) = Tile
-    MixMap(x, y) = Tile
-  CASE 2
-    'DEF SEG = VARSEG(LightMapFg(0))
-    'POKE VARPTR(LightMapFg(0))+m, Tile
-    LightMapFg(x, y) = Tile
-  CASE 3
-    'DEF SEG = VARSEG(LightMapBg(0))
-    'POKE VARPTR(LightMapBg(0))+m, Tile
-    LightMapBg(x, y) = Tile
-  END SELECT
-
-END SUB
-
-SUB SetFloor(x AS INTEGER, y AS INTEGER, is_blocked AS INTEGER)
-
-  'SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
-  'PokeBitmap x, y, blocked
-  FloorMap(x, y) = is_blocked
-
-END SUB
 
 SUB LD2_RenderFrame
 
@@ -2166,7 +2131,7 @@ SUB LD2_RenderFrame
   
   Mobs_Draw
   Player_Draw
-  Items_Draw
+  MapItems_Draw
   Guts_Draw
   
   IF Lighting1 THEN '// dynamic lighting
@@ -2288,20 +2253,31 @@ SUB LD2_RenderFrame
     NEXT y
   END IF
  
-  '- Draw the text
-  '-------------------
-    dim e as ElementType
+    static textCaption as ElementType
+    if textCaption.y = 0 then
+        LD2_InitElement @textCaption, "", 31
+        textCaption.x = 20
+        textCaption.y = 180
+        textCaption.w = 300
+        textCaption.background_alpha = 0
+    end if
     if len(SceneCaption) then
-        LD2_InitElement @e, SceneCaption, 31
-        e.x = 20
-        e.y = 180
-        e.w = 300
-        e.text_spacing = 1.4
-        LD2_RenderElement @e
+        textCaption.text = SceneCaption
+        LD2_RenderElement @textCaption
+    end if
+    
+    static labelNotice as ElementType
+    if labelNotice.y = 0 then
+        LD2_InitElement @labelNotice, "", 31, ElementFlags.AlignTextRight
+        labelNotice.y = 170
+        labelNotice.w = SCREEN_W-12
+        labelNotice.padding_x = 6
+        labelNotice.background_alpha = 0
     end if
     
   IF TIMER < GameNoticeExpire THEN
-    LD2_PutText SCREEN_W-6-LEN(GameNoticeMsg)*6, 170, GameNoticeMsg, 1
+    labelNotice.text = GameNoticeMsg
+    LD2_RenderElement @labelNotice
   END IF
   
 END SUB
@@ -2337,18 +2313,6 @@ SUB LD2_ClearFlag (flag AS INTEGER)
     GameFlags = (GameFlags OR flag) XOR flag
     
 END SUB
-
-SUB LD2_SetFlagData (datum AS INTEGER)
-    
-    GameFlagsData = datum
-    
-END SUB
-
-FUNCTION LD2_GetFlagData() as integer
-    
-    return GameFlagsData
-    
-END FUNCTION
 
 SUB LD2_ClearMobs
 
@@ -2412,29 +2376,43 @@ sub Map_UnlockElevator
     
 end sub
 
-sub Items_Add (x as integer, y as integer, id as integer, mobId as integer = 0)
-    dim mob as Mobile
+sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer = LayerIds.Tile)
+    
+    select case layer
+    case LayerIds.Tile
+        TileMap(x, y) = Tile
+        MixMap(x, y) = Tile
+    case LayerIds.LightFg
+        LightMapFg(x, y) = Tile
+    case LayerIds.LightBg
+        LightMapBg(x, y) = Tile
+    end select
+    
+END SUB
+
+sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
+    
+    FloorMap(x, y) = isBlocked
+    
+end sub
+
+sub MapItems_Add (x as integer, y as integer, id as integer)
     dim n as integer
     if NumItems >= MAXITEMS then exit sub
-    if mobId > 0 then
-        Mobs.getMob mob, mobId
-        x = mob.x
-        y = mob.y
-    end if
     n = NumItems: NumItems += 1
     Items(n).x = x
     Items(n).y = y
     Items(n).id = id
 end sub
 
-sub Items_Draw ()
+sub MapItems_Draw ()
   dim n as integer
   for n = 0 to NumItems-1
     SpritesObject.putToScreen(int(Items(n).x - XShift), Items(n).y, Items(n).id)
   next n
 end sub
 
-function Items_Pickup () as integer
+function MapItems_Pickup () as integer
     if Player.state = JUMPING then
         Player.is_lookingdown = 1
         return 0
@@ -2452,9 +2430,9 @@ function Items_Pickup () as integer
     for i = 0 TO NumItems-1
         if int(Player.x + 8) >= Items(i).x and int(Player.x + 8) <= Items(i).x + 16 then
             if LD2_AddToStatus(Items(i).id, 1) = 0 then
-                LD2_SetFlag GOTITEM
-                LD2_SetFlagData Items(i).id
                 success = 1
+                LD2_SetFlag GOTITEM
+                GotItemId = items(i).id
                 for n = i to NumItems - 2
                     Items(n) = Items(n + 1)
                 next n
@@ -2484,27 +2462,19 @@ SUB Mobs_Add (x AS INTEGER, y AS INTEGER, id AS INTEGER)
 
 END SUB
 
+sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
+    
+    Mobs_BeforeKillCallback = callback
+    
+end sub
+
 sub Mobs_Kill (mob as Mobile)
 
     dim i as integer
-
-    select case mob.id
-    case BOSS1
-        LD2_SetFlag BOSSKILLED
-        Player_SetItemQty ItemIds.BossKilledId, BOSS1
-        LD2_StopMusic
-    case BOSS2
-        LD2_SetFlag BOSSKILLED
-        Player_SetItemQty ItemIds.BossKilledId, BOSS2
-        LD2_PlayMusic mscWANDERING
-        Inventory(AUTH) = REDACCESS
-    case TROOP1, TROOP2
-        if int(5*rnd(1)) = 0 then
-            LD2_PlaySound Sounds.troopDie
-        end if
-    case ROCKMONSTER
-        LD2_PlaySound Sounds.rockDie
-    end select
+    
+    if Mobs_BeforeKillCallback <> 0 then
+        Mobs_BeforeKillCallback(@mob)
+    end if
 
     Guts_Add GutsIds.Gibs, mob.x + 8, mob.y + 8, 3+int(4*rnd(1))
     for i = 0 to 4
@@ -2534,48 +2504,8 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
     dim n as integer
     dim i as integer
     dim mobType as integer
-    dim minMobs as integer
-    dim maxMobs as integer
     dim numMobs as integer
     dim numFloors as integer
-    
-    select case CurrentRoom
-    case Rooms.ResearchLab
-        minMobs = 5
-        maxMobs = 20
-    case Rooms.UpperOffice4, Rooms.UpperOffice3
-        minMobs = 5
-        maxMobs = 12
-    case Rooms.UpperOffice2, Rooms.UpperOffice1
-        minMobs = 3
-        maxMobs = 7
-    case Rooms.UpperStorage, Rooms.LowerStorage
-        minMobs = 3
-        maxMobs = 7
-    case Rooms.VentControl
-        minMobs = 9
-        maxMobs = 15
-    case Rooms.LowerOffice4, Rooms.LowerOffice3
-        minMobs = 5
-        maxMobs = 12
-    case Rooms.LowerOffice2
-        minMobs = 0
-        maxMobs = 0
-    case Rooms.LowerOffice1
-        minMobs = 5
-        maxMobs = 12
-    case Rooms.RecRoom
-        minMobs = 9
-        maxMobs = 30
-    case Rooms.MeetingRoom, Rooms.DebriefRoom, Rooms.RestRoom
-        minMobs = 0
-        maxMobs = 4
-    case Rooms.LunchRoom
-        minMobs = 3
-        maxMobs = 9
-    end select
-    
-    numMobs = int((maxMobs+1-minMobs)*rnd(1))+minMobs
     
     numFloors = 0
     for y = 0 to MAPH-2
@@ -2586,7 +2516,7 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
         next x
     next y
     
-    numMobs = int(numFloors / 5)
+    numMobs = int(numFloors / 15)
     
     if forceNumMobs > 0 then
         numMobs = forceNumMobs
@@ -3325,17 +3255,17 @@ sub Player_Animate()
     
     '- check if Player is at elevator
     if (Elevator.isLocked = 0) and Elevator.isClosed and atElevator then
-        LD2_PutTile Elevator.mapX - 1, Elevator.mapY, TileIds.ElevatorDoorLeft, 1
-        LD2_PutTile Elevator.mapX + 0, Elevator.mapY, TileIds.ElevatorBehindDoor, 1
-        LD2_PutTile Elevator.mapX + 1, Elevator.mapY, TileIds.ElevatorBehindDoor, 1
-        LD2_PutTile Elevator.mapX + 2, Elevator.mapY, TileIds.ElevatorDoorRight, 1
+        Map_PutTile Elevator.mapX - 1, Elevator.mapY, TileIds.ElevatorDoorLeft, 1
+        Map_PutTile Elevator.mapX + 0, Elevator.mapY, TileIds.ElevatorBehindDoor, 1
+        Map_PutTile Elevator.mapX + 1, Elevator.mapY, TileIds.ElevatorBehindDoor, 1
+        Map_PutTile Elevator.mapX + 2, Elevator.mapY, TileIds.ElevatorDoorRight, 1
         Elevator.isOpen = 1
         Elevator.isClosed = 0
     elseif Elevator.isOpen and (atElevatorFar = 0) then
-        LD2_PutTile Elevator.mapX - 1, Elevator.mapY, Elevator.tileToLeft, 1
-        LD2_PutTile Elevator.mapX + 0, Elevator.mapY, TileIds.ElevatorDoorLeft, 1
-        LD2_PutTile Elevator.mapX + 1, Elevator.mapY, TileIds.ElevatorDoorRight, 1
-        LD2_PutTile Elevator.mapX + 2, Elevator.mapY, Elevator.tileToRight, 1
+        Map_PutTile Elevator.mapX - 1, Elevator.mapY, Elevator.tileToLeft, 1
+        Map_PutTile Elevator.mapX + 0, Elevator.mapY, TileIds.ElevatorDoorLeft, 1
+        Map_PutTile Elevator.mapX + 1, Elevator.mapY, TileIds.ElevatorDoorRight, 1
+        Map_PutTile Elevator.mapX + 2, Elevator.mapY, Elevator.tileToRight, 1
         Elevator.isOpen = 0
         Elevator.isClosed = 1
     end if
@@ -3418,9 +3348,9 @@ function Player_Jump (amount as double, is_repeat as integer = 0) as integer
         return 0
     end if
 
-    IF Player.weapon = FIST THEN
+    'IF Player.weapon = FIST THEN
         Amount = Amount * 1.1
-    END IF
+    'END IF
 
     IF CheckPlayerFloorHit() AND Player.vy >= 0 THEN
         Player.vy = -Amount
@@ -3675,12 +3605,24 @@ end function
 sub Player_AddItem(itemId as integer, qty as integer = 1)
     
     Inventory(itemId) += qty
+    if (InventoryMax(itemId) > 0) and (Inventory(itemId) > InventoryMax(itemId)) then
+        Inventory(itemId) = InventoryMax(itemId)
+    end if
     
 end sub
 
 sub Player_SetItemQty(itemId as integer, qty as integer)
     
     Inventory(itemId) = qty
+    if (InventoryMax(itemId) > 0) and (Inventory(itemId) > InventoryMax(itemId)) then
+        Inventory(itemId) = InventoryMax(itemId)
+    end if
+    
+end sub
+
+sub Player_SetItemMaxQty(itemId as integer, maxQty as integer)
+    
+    InventoryMax(itemId) = maxQty
     
 end sub
 
@@ -3773,6 +3715,12 @@ function Player_SetWeapon (itemId as integer) as integer
   
 end function
 
+sub Player_SetDamageMod (factor as integer)
+    
+    Inventory(ItemIds.DamageMod) = factor
+    
+end sub
+
 sub Player_SetAccessLevel (accessLevel as integer)
 
     Inventory(AUTH) = accessLevel
@@ -3800,6 +3748,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     dim contactX as integer
     dim contactY as integer
     dim damage as integer
+    dim damageMod as integer
     dim fireY as integer
     dim x as integer
     dim y as integer
@@ -3818,7 +3767,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     if Player.weapon = ItemIds.Magnum     and Inventory(ItemIds.MagnumAmmo)     = 0 then return -1
 
     timeSinceLastShot = (timer - timestamp)
-
+    
     select case Player.weapon
     case ItemIds.Shotgun
         
@@ -3862,6 +3811,9 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         return 0
         
     end select
+    
+    damageMod = iif(Inventory(ItemIds.DamageMod) > 0, Inventory(ItemIds.DamageMod), 1)
+    damage *= damageMod
     
     Player.is_shooting = 1
     timestamp = timer
@@ -4056,6 +4008,12 @@ function Player_GetCollisionBox() as BoxType
     box.padRgt = SPRITE_W-(x+w)
     
     return box
+    
+end function
+
+function Player_GetGotItem() as integer
+    
+    return GotItemId
     
 end function
 
@@ -4496,7 +4454,7 @@ sub LD2_RenderElement(e as ElementType ptr)
     
     x = e->x+e->padding_x+e->border_width: y = e->y+e->padding_y+e->border_width
     if e->text_is_centered then x += int((e->w-textWidth)/2) '- center for each line break -- todo
-    if e->text_align_right then x = (e->x+e->padding_x*2+e->border_width+e->w)-textWidth-e->padding_x
+    if e->text_align_right then x = (e->x+e->padding_x+e->border_width+e->w)-textWidth
     fx = x: fy = y
 
     idx = 0

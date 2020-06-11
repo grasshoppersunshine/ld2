@@ -20,6 +20,9 @@ declare function SceneGooGo () as integer
 declare function SceneGooGoneGo() as integer
 declare function SceneSteveGoneGo () as integer
 declare function SceneRooftopGotCardGo() as integer
+declare function SceneWeapons2Go() as integer
+declare function SceneWeapons3Go() as integer
+declare function ScenePortalGo() as integer
 
 declare sub Scene1EndConditions ()
 declare sub Scene3EndConditions ()
@@ -33,7 +36,57 @@ declare sub SceneTheEndEndConditions ()
 declare sub SceneGooEndConditions ()  
 declare sub SceneGooGoneEndConditions ()
 declare sub SceneSteveGoneEndConditions ()
-declare sub SceneRooftopGotCardEndConditions()
+declare sub SceneRooftopGotCardEndConditions ()
+declare sub SceneWeapons2EndConditions ()
+declare sub SceneWeapons3EndConditions ()
+declare sub ScenePortalEndConditions ()
+
+function PanPose(pose as PoseType ptr, vx as integer, vy as integer, secondsPerMapSquare as double=1.0, secondsPerFrame as double=1.0) as integer
+    
+    dim timestamp as double
+    dim timemove as double
+    dim length as integer
+    dim dx as double
+    dim dy as double
+    dim m as double
+    dim x as double
+    dim y as double
+    dim i as integer
+    
+    dx = vx
+    dy = vy
+    m = sqr(dx*dx+dy*dy): if m = 0 then return 0
+    length = int(m)
+    dx /= m
+    dy /= m
+    
+    secondsPerMapSquare *= 0.2667 '- 16/60
+    'dx *= secondsPerMapSquare
+    'dy *= secondsPerMapSquare
+    
+    timestamp = timer
+    timemove = timer
+    x = pose->getX()+0.5
+    y = pose->getY()+0.5
+    for i = 0 to length
+        pose->setX int(x)
+        pose->setY int(y)
+        RenderScene
+        if (timer - timestamp) >= secondsPerFrame then
+            pose->nextFrame()
+            timestamp = timer
+        end if
+        if (timer - timemove) >= secondsPerMapSquare then
+            x += dx
+            y += dy
+            timemove = timer
+        end if
+        if keyboard(KEY_ENTER) or keyboard(KEY_ESCAPE) then return 1
+    next i
+    
+    return 0
+    
+end function
 
 
 sub Scene1 ()
@@ -297,7 +350,7 @@ sub Scene4EndConditions()
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneJanitorDies, 1
     
-    LD2_PutTile 13, 8, 19, 3
+    Map_PutTile 13, 8, 19, 3
     Mobs_Add 208, 144, ROCKMONSTER
     Map_LockElevator
     
@@ -346,7 +399,7 @@ function Scene4Go() as integer
 
     '- Rockmonster busts through window and eats the janitor/doctor
     '--------------------------------------------------------------
-    LD2_PutTile 13, 8, 19, 3
+    Map_PutTile 13, 8, 19, 3
     
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Crashing
     RockmonsterPose.setX 208
@@ -443,8 +496,8 @@ sub Scene5EndConditions()
         Player_SetItemQty ItemIds.CurrentRoom, Rooms.WeaponsLocker
     end if
     
-    LD2_PutTile 44, 9, 16, 1: LD2_PutTile 45, 9, 16, 1
-    LD2_PutTile 43, 9, 14, 1: LD2_PutTile 46, 9, 15, 1
+    Map_PutTile 44, 9, 16, 1: Map_PutTile 45, 9, 16, 1
+    Map_PutTile 43, 9, 14, 1: Map_PutTile 46, 9, 15, 1
     
     Player_SetXY 720, 144
     Player_SetFlip 1
@@ -534,7 +587,7 @@ function Scene5Go() as integer
     BarneyPose.setFlip 1
     AddPose @BarneyPose
     
-    LD2_PutTile 92, 7, 16, 1: LD2_PutTile 93, 7, 16, 1
+    Map_PutTile 92, 7, 16, 1: Map_PutTile 93, 7, 16, 1
     
     '- open elevator doors
     dim i as integer
@@ -546,7 +599,7 @@ function Scene5Go() as integer
         if keyboard(KEY_ENTER) then return 1
     NEXT i
 
-    LD2_PutTile 91, 7, 14, 1: LD2_PutTile 94, 7, 15, 1
+    Map_PutTile 91, 7, 14, 1: Map_PutTile 94, 7, 15, 1
     
     RenderScene
     RetraceDelay 80
@@ -617,7 +670,7 @@ function Scene5Go() as integer
     AddPose @LarryPose
     AddPose @BarneyPose
     
-    LD2_PutTile 44, 9, 16, 1: LD2_PutTile 45, 9, 16, 1
+    Map_PutTile 44, 9, 16, 1: Map_PutTile 45, 9, 16, 1
     
     '- open elevator doors
     FOR i = 1 TO 16
@@ -628,7 +681,7 @@ function Scene5Go() as integer
         if keyboard(KEY_ENTER) then return 1
     NEXT i
     
-    LD2_PutTile 43, 9, 14, 1: LD2_PutTile 46, 9, 15, 1
+    Map_PutTile 43, 9, 14, 1: Map_PutTile 46, 9, 15, 1
     
     RenderScene
     RetraceDelay 80
@@ -676,7 +729,7 @@ sub Scene7EndConditions()
     
     ClearPoses
     LD2_SetSceneMode MODEOFF
-    Player_SetItemQty ItemIds.SceneWeaponsLocker1, 1
+    Player_SetItemQty ItemIds.SceneWeapons1, 1
     
 end sub
 
@@ -708,7 +761,7 @@ function Scene7Go() as integer
     
     Player_SetItemQty ItemIds.CurrentRoom,  7
     
-    Player_SetItemQty ItemIds.SceneWeaponsLocker1, 1
+    Player_SetItemQty ItemIds.SceneWeapons1, 1
     
     return 0
 
@@ -989,6 +1042,8 @@ sub SceneGooGoneEndConditions
     ClearPoses
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneGooGone, 1
+    Player_SetXY Player_GetX(), 144
+    Player_SetFlip 1
     
 end sub
 
@@ -997,7 +1052,7 @@ function SceneGooGoneGo () as integer
     dim LarryPose as PoseType
     LD2_SetSceneMode LETTERBOX
     
-    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.LookingUp
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
     LarryPose.setX Player_GetX(): LarryPose.setY 144
     LarryPose.setFlip 1
     
@@ -1005,6 +1060,31 @@ function SceneGooGoneGo () as integer
     AddPose @LarryPose
     RenderScene
     WaitSeconds 1.0
+    
+    dim x as integer
+    dim y as integer
+    dim n as integer
+    x = 46
+    for y = 9 to 4 step -1
+        for n = 0 to 2
+            Map_PutTile x, y, TileIds.AlienWallBurningUp+n, 1
+            RenderScene
+            WaitSeconds 0.10
+        next n
+        Map_PutTile x, y, TileIds.GraySquare, 1
+        Map_SetFloor x, y, 0
+        if y = 8 then
+            GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.LookingUp
+        end if
+    next y
+    
+    RenderScene
+    WaitSeconds 1.5
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
+    RenderScene
+    WaitSeconds 1.5
+    
+    '46, 9 to 46,4
     
     return 0
     
@@ -1027,7 +1107,7 @@ sub SceneSteveGoneEndConditions
     
     ClearPoses
     LD2_SetSceneMode MODEOFF
-    Player_SetItemQty ItemIds.SceneWheresSteve, 1
+    Player_SetItemQty ItemIds.SceneSteveGone, 1
     
 end sub
 
@@ -1091,8 +1171,153 @@ function SceneRooftopGotCardGo() as integer
     AddPose @LarryPose
     AddPose @BarneyPose
     
+    RenderScene
+    WaitSeconds 1.0
+    
     if DoScene("SCENE-ROOFTOP-GOT-CARD") then return 1
+    
+    WaitSeconds 1.0
     
     return 0
 
+end function
+
+sub SceneWeapons2
+    
+    if SceneWeapons2Go() then
+        LD2_FadeOut 2
+        SceneWeapons2EndConditions
+        RenderScene 0
+        LD2_FadeIn 2
+    else
+        SceneWeapons2EndConditions
+    end if
+    
+end sub
+
+sub SceneWeapons2EndConditions
+    
+    ClearPoses
+    LD2_SetSceneMode MODEOFF
+    Player_SetItemQty ItemIds.SceneWeapons2, 1
+    Player_SetXY Player_GetX(), 144
+    Player_SetFlip 1
+    
+end sub
+
+function SceneWeapons2Go() as integer
+    
+    dim Larry as PoseType
+    dim Barney as PoseType
+    dim bx as integer
+    dim x as integer
+    dim n as integer
+    
+    LD2_SetSceneMode LETTERBOX
+    
+    GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
+    GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Talking
+    ClearPoses
+    AddPose @Larry
+    AddPose @Barney
+
+    Larry.setX Player_GetX(): Larry.setY 144
+    Larry.setFlip 1
+    Barney.setX 388: Barney.setY 144
+    Barney.setFlip 0
+    
+    RenderScene
+    
+    if DoScene("SCENE-WEAPONS2") then return 1
+    
+    '// Barney runs to the left off the screen
+    GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Walking
+    Barney.setFlip 1
+    if PanPose(@Barney, -160, 0, 5.0, 0.15) then return 1
+    
+    return 0
+    
+end function
+
+sub SceneWeapons3
+    
+    if SceneWeapons3Go() then
+        LD2_FadeOut 2
+        SceneWeapons3EndConditions
+        RenderScene 0
+        LD2_FadeIn 2
+    else
+        SceneWeapons3EndConditions
+    end if
+    
+end sub
+
+sub SceneWeapons3EndConditions
+    
+    ClearPoses
+    LD2_SetSceneMode MODEOFF
+    Player_SetItemQty ItemIds.SceneWeapons3, 1
+    Player_SetXY Player_GetX(), 144
+    Player_SetFlip 0
+    
+end sub
+
+function SceneWeapons3Go() as integer
+    
+    dim Larry as PoseType
+    dim Barney as PoseType
+    dim n as integer
+    
+    LD2_SetSceneMode LETTERBOX
+    
+    GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
+    GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Talking
+    ClearPoses
+    AddPose @Larry
+    AddPose @Barney
+    
+    Larry.setX Player_GetX(): Larry.setY 144: Larry.setFlip 1
+    Barney.setX 48: Barney.setY 144: Barney.setFlip 0
+    
+    Map_SetXShift 0
+    RenderScene
+    
+    if DoScene("SCENE-WEAPONS3") then return 1
+    
+    GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Walking
+    if PanPose(@Barney, SCREEN_W, 0, 5.0, 0.15) then return 1
+    RemovePose @Barney
+    
+    Larry.setFlip 0
+    if DoScene("SCENE-FOREVIL") then return 1
+    
+end function
+
+sub ScenePortal
+    
+    if ScenePortalGo() then
+        LD2_FadeOut 2
+        ScenePortalEndConditions
+        RenderScene 0
+        LD2_FadeIn 2
+    else
+        ScenePortalEndConditions
+    end if
+    
+end sub
+
+sub ScenePortalEndConditions
+    
+    ClearPoses
+    LD2_SetSceneMode MODEOFF
+    Player_SetItemQty ItemIds.SceneGoo, 1
+    Player_SetXY Player_GetX(), 144
+    Player_SetFlip 1
+    
+end sub
+
+function ScenePortalGo () as integer
+    
+    return 0
+    
 end function

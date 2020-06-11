@@ -25,4 +25,8 @@ PISTOL         , "A great balance of fire power and efficiency.\Comes in handy.\
 DESERTEAGLE    , "This handgun packs a punch.\ \Fire-Power: 6\ \Firing-Rate: Slow"
 WALKIETALKIE   , "A two-way radio. I can use this to contact Barney."
 EXTRALIFE      , "Gives me an extra life if I use it."
-
+NOVAHEART      , "Regenerates health at a swift pace."
+BLOCKOFDOOM    , "Replenishes ammunition for the current weapon in hand."
+POWEREDARMOR   , "Provides increased speed and agility. Reduces damage dealt by enemies and explosions."
+QUADDAMAGE     , "Multiplies damage dealt from weapons by a factor of four."
+ELEVATORMENU   , "Access the elevator menu regardless of location."

@@ -1,6 +1,7 @@
 #include once "inc/inventory.bi"
 
 DECLARE SUB LoadSids (filename AS STRING)
+DECLARE SUB LoadShortNames (filename as string)
 
 type UseType
     dim toUse as string
@@ -13,6 +14,7 @@ end type
 
 REDIM SHARED InventoryItems(0) AS InventoryType
 REDIM SHARED ItemSids(0) AS STRING
+redim shared ItemShortNames(0) as string
 DIM SHARED InventorySize AS INTEGER
 dim shared VisibleSize as integer
 
@@ -155,6 +157,7 @@ FUNCTION Inventory_Init (size AS INTEGER, sizeVisible as integer = -1) as intege
             InventoryItems(i).visible = iif(i < sizeVisible, 1, 0)
         NEXT i
         LoadSids "tables/items.txt"
+        LoadShortNames "tables/names.txt"
     ELSE
         IF size <= 0 THEN
             return InventoryErr_INVALIDSIZE
@@ -219,9 +222,9 @@ SUB Inventory_RefreshNames
         found = 0
         SEEK ItemsFile, 1
         DO WHILE NOT EOF(ItemsFile)
-            INPUT #ItemsFile, sid: IF EOF(ItemsFile) THEN EXIT DO
-            INPUT #ItemsFile, shortName: IF EOF(ItemsFile) THEN EXIT DO
-            INPUT #ItemsFile, longName: IF EOF(ItemsFile) THEN EXIT DO
+            INPUT #ItemsFile, sid
+            INPUT #ItemsFile, shortName
+            INPUT #ItemsFile, longName
             id = Inventory_SidToItemId(sid)
             IF item = id THEN
                 found = 1
@@ -235,8 +238,8 @@ SUB Inventory_RefreshNames
             InventoryItems(i).slot = i
         ELSE
             InventoryItems(i).id = item
-            InventoryItems(i).shortName = "Item ID: " + LTRIM(STR(id))
-            InventoryItems(i).longName = "Item ID: " + LTRIM(STR(id))
+            InventoryItems(i).shortName = "Item ID: " + LTRIM(STR(item))
+            InventoryItems(i).longName = "Item ID: " + LTRIM(STR(item))
             InventoryItems(i).slot = i
         END IF
     NEXT i
@@ -309,6 +312,36 @@ SUB LoadSids (filename AS STRING)
     
 END SUB
 
+SUB LoadShortNames (filename as string)
+    
+    DIM ItemsFile AS INTEGER
+    DIM sid AS STRING
+    DIM shortName AS STRING
+    DIM longName AS STRING
+    dim max as integer
+    dim id as integer
+    
+    max = 0
+    ItemsFile = FREEFILE
+    OPEN DATA_DIR+filename FOR INPUT AS ItemsFile
+    DO WHILE NOT EOF(ItemsFile)
+        INPUT #ItemsFile, sid, shortName, longName
+        max += 1
+    LOOP
+    redim ItemShortNames(max) as string
+    SEEK ItemsFile, 1
+    DO WHILE NOT EOF(ItemsFile)
+        INPUT #ItemsFile, sid, shortName, longName
+        id = Inventory_SidToItemId(sid)
+        if id >= 0 then
+            ItemShortNames(id) = ucase(trim(shortName))
+        end if
+    LOOP
+    CLOSE ItemsFile
+    
+END SUB
+
+
 function Inventory_Use (itemId as integer) as integer
 
     dim _data as UseType
@@ -344,7 +377,7 @@ function Inventory_Use (itemId as integer) as integer
             if toUseId = itemId then
                 UseItemDiscard = iif(lcase(_data.discard) = "discard" ,1 ,0)
                 select case ucase(_data.useCommand)
-                case "ADD"
+                case "ADD", "USE"
                     UseItemId = Inventory_SidToItemId(_data.item)
                     UseItemQty = val(_data.itemQty)
                     UseItemMessage = _data.message
@@ -398,6 +431,15 @@ function Inventory_GetUseItemDiscard() as integer
     return UseItemDiscard
     
 end function 
+
+function Inventory_GetShortName(id as integer) as string
+    dim bound as integer
+    bound = UBOUND(ItemShortNames)
+    if id >= 0 and id <= bound then
+        return ItemShortNames(id)
+    end if
+    return "OUT OF BOUNDS"
+end function
 
 FUNCTION Inventory_Mix(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS STRING) as integer
     

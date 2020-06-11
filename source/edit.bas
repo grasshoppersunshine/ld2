@@ -136,7 +136,7 @@
     
     LD2_outline Cursor.x, Cursor.y, 16, 16, 15, 1
     putText mapFilename, SCREEN_W-len(mapFilename)*FONT_W-1, 2
-    putText "Shift "+str(XScroll), 2, FONT_H*34.5
+    putText "XY "+str(int(Cursor.x/16)+XScroll)+" "+str(int(Cursor.y/16)), 2, FONT_H*34.5
     putText "Layer "+str(activeLayer)+" ["+activeLayerString+"]", 2, FONT_H*36.5
     putText "Animations "+iif(Animation, "ON", "OFF"), 2, FONT_H*38.5
     LD2_RefreshScreen

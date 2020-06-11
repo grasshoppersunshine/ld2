@@ -11,12 +11,13 @@ DECLARE SUB Drop (item AS InventoryType)
 DECLARE SUB BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elementHeading as ElementType ptr, elementBorder as ElementType ptr)
 DECLARE SUB Look (item AS InventoryType)
 DECLARE SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
+declare function canMix (itemId as integer) as integer
 DECLARE SUB RefreshStatusScreen ()
 DECLARE SUB ShowResponse (response AS STRING, textColor as integer = -1)
-DECLARE SUB UseItem (item AS InventoryType)
+declare function UseItem (item AS InventoryType) as integer
 
 DIM SHARED selectedInventorySlot AS INTEGER
-dim shared UseItemCallback as sub(id as integer, qty as integer)
+dim shared UseItemCallback as sub(byval id as integer, byval qty as integer, byref exitMenu as integer)
 dim shared LookItemCallback as sub(id as integer, byref description as string)
 
 const DATA_DIR = "data/"
@@ -27,7 +28,7 @@ const STATUS_DIALOG_COLOR = 66
 const STATUS_COLOR_SUCCESS = 56
 const STATUS_COLOR_DENIED = 232
 
-sub STATUS_SetUseItemCallback(callback as sub(id as integer, qty as integer))
+sub STATUS_SetUseItemCallback(callback as sub(byval id as integer, byval qty as integer, byref exitMenu as integer))
     
     UseItemCallback = callback
     
@@ -300,15 +301,38 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     
 end sub
 
+function canMix (itemId as integer) as integer
+    
+    dim message as string
+    
+    select case itemId
+    case ItemIds.NOTHING
+        message = "Not Mixable."
+    case ItemIds.ELEVATORMENU
+        message = "The fuck is wrong with you?"
+    case else
+        return 1
+    end select
+    
+    LD2_CopyBuffer 2, 1
+    RenderStatusScreen
+    LD2_PlaySound Sounds.uiDenied
+    ShowResponse message, STATUS_COLOR_DENIED
+
+    return 0
+    
+end function
+
 SUB Drop (item AS InventoryType)
     
-    if item.id = ItemIds.NOTHING then
-        LD2_PlaySound Sounds.uiDenied
-        RefreshStatusScreen
-        LD2_CopyBuffer 2, 1
-        RenderStatusScreen
-        ShowResponse "Not possible.", STATUS_COLOR_DENIED
-    else
+    dim message as string
+    
+    select case item.id
+    case ItemIds.NOTHING
+        message = "Not happening."
+    case ItemIds.ElevatorMenu
+        message = "Not happening."
+    case else
         LD2_PlaySound Sounds.drop
         LD2_Drop item.id
         LD2_ClearInventorySlot item.slot
@@ -316,7 +340,14 @@ SUB Drop (item AS InventoryType)
         LD2_CopyBuffer 2, 1
         RenderStatusScreen
         ShowResponse "Dropped " + trim(item.shortName), STATUS_COLOR_SUCCESS
-    end if
+        exit sub
+    end select
+    
+    LD2_PlaySound Sounds.uiDenied
+    RefreshStatusScreen
+    LD2_CopyBuffer 2, 1
+    RenderStatusScreen
+    ShowResponse message, STATUS_COLOR_DENIED
     
 END SUB
 
@@ -729,6 +760,7 @@ SUB RefreshStatusScreen
     Inventory_AddHidden(ItemIds.PistolLoaded    , Player_GetItemQty(ItemIds.PistolAmmo    ))
     Inventory_AddHidden(ItemIds.MachineGunLoaded, Player_GetItemQty(ItemIds.MachineGunAmmo))
     Inventory_AddHidden(ItemIds.MagnumLoaded    , Player_GetItemQty(ItemIds.MagnumAmmo    ))
+    Inventory_AddHidden(ItemIds.Active410       , Player_GetItemQty(ItemIds.Active410     ))
     Inventory_RefreshNames
     
 END SUB
@@ -864,7 +896,9 @@ SUB StatusScreen
             elseif action > -1 then
                 select case action
                 case 0  '- USE
-                    UseItem selected
+                    if UseItem(selected) then
+                        exit do
+                    end if
                     action = -1
                 case 1  '- LOOK
                     LD2_PlaySound Sounds.uiSelect
@@ -872,12 +906,7 @@ SUB StatusScreen
                     action = -1
                     LD2_PlaySound Sounds.uiSubmenu
                 case 2  '- MIX
-                    if selected.id = ItemIds.NOTHING then
-                        LD2_CopyBuffer 2, 1
-                        RenderStatusScreen
-                        LD2_PlaySound Sounds.uiDenied
-                        ShowResponse "Not Mixable.", STATUS_COLOR_DENIED
-                    else
+                    if canMix(selected.id) then
                         mixMode = 1
                         mixItem = selected
                         mixSlot = selectedInventorySlot
@@ -902,6 +931,7 @@ SUB StatusScreen
 	WaitForKeyup(KEY_TAB)
     WaitForKeyup(KEY_ESCAPE)
     WaitForKeyup(KEY_E)
+    WaitForKeyup(KEY_ENTER)
     while mouseLB(): PullEvents: wend
     while mouseRB(): PullEvents: wend
     while mouseMB(): PullEvents: wend
@@ -921,7 +951,7 @@ SUB StatusScreen
 	
 end sub
 
-SUB UseItem (item AS InventoryType)
+function UseItem (item AS InventoryType) as integer
 
     dim id as integer
     dim qty as integer
@@ -929,7 +959,9 @@ SUB UseItem (item AS InventoryType)
     dim success as integer
     dim discard as integer
     dim textColor as integer
+    dim exitMenu as integer
     
+    exitMenu = 0
     if item.id = ItemIds.NOTHING then
         message = "Not usable."
     else
@@ -945,7 +977,7 @@ SUB UseItem (item AS InventoryType)
             RefreshStatusScreen
         end if
         if UseItemCallback <> 0 then
-            UseItemCallback(id, qty)
+            UseItemCallback(id, qty, exitMenu)
         else
             message = "ERROR - No callback for UseItem"
         end if
@@ -955,11 +987,15 @@ SUB UseItem (item AS InventoryType)
         textColor = STATUS_COLOR_DENIED
     end if
     
-    LD2_CopyBuffer 2, 1
-    RenderStatusScreen
-    ShowResponse message, textColor
+    if exitMenu = 0 then
+        LD2_CopyBuffer 2, 1
+        RenderStatusScreen
+        ShowResponse message, textColor
+    end if
+    
+    return exitMenu
 	
-END SUB
+end function
 
 SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
     

@@ -105,13 +105,13 @@ SCENE-3A
     I use this mop to suck diseases out of people.
     
     LARRY
-    This is NO time to be sarcastic!
+    This is no time to be sarcastic!
     My friend is sick, passed out on the floor...
-    ...after drinking a cola from the vending machine.
+    ... after drinking a cola from the vending machine.
     He needs help!
     
     JANITOR
-    The vending machine? That hasn't been maintained in ages!
+    The vending machine? That hasn't been checked in ages!
     In fact, those colas are...
     ...
     
@@ -119,7 +119,7 @@ SCENE-3A
     ...
     
     JANITOR
-    ...are brand new! I just changed them out today.
+    ... are brand new! I just changed them out today.
     Yes, sir!
     
     LARRY
@@ -127,7 +127,7 @@ SCENE-3A
     
     JANITOR
     ...
-    Well...I was only being sarcastic about the mop.
+    Well... I was only being sarcastic about the mop.
     I am a doctor.
     
     LARRY
@@ -135,8 +135,8 @@ SCENE-3A
     #What, now you'll tell me you completed your degree today as well?
     
     JANITOR
-    Heh...well...
-    ...I used to be a doctor. Long story...
+    Heh... well...
+    I used to be a doctor... Long story.
     
     LARRY
     Good enough.
@@ -172,7 +172,7 @@ SCENE-3D
     
     JANITOR
     Ok...
-    Here...take my mop.
+    Here... take my mop.
     You go call for help.
     I'll see what I can do.
     
@@ -205,12 +205,12 @@ SCENE-5B
     LARRY
     Oh yeah...
     I was gonna get that to you...
-    ...but...
+    ... but...
     
     BARNEY
     Forget about it.
     We have bigger problems to worry about...
-    ...like getting out of here alive.
+    ... like getting out of here alive.
     
     LARRY
     What?!
@@ -230,7 +230,7 @@ SCENE-5B2
     LARRY
     Oh yeah...
     I was gonna get that to you...
-    ...but...
+    ... but...
     
     BARNEY
     Is that a mop you're holding?
@@ -256,7 +256,7 @@ SCENE-7A
     OK, Larry, now listen up!
     This floor is where all the weapons are stored.
     You've fought these creatures before...
-    ...so I think you know what you need.
+    ... so I think you know what you need.
     
     LARRY
     I do.
@@ -291,7 +291,7 @@ SCENE-7A
     We have limited firepower.
     We are low on ammunition. This room doesn't have much of that.
     The room behind me has much more.
-    But...it requires a yellow access card to get inside.
+    But... it requires a yellow access card to get inside.
     
     LARRY
     Damn!
@@ -324,7 +324,8 @@ SCENE-STEVE-GONE
     
     LARRY
     Huh?
-    Where's Steve?
+    Steve's gone!
+    Where did he go?
 
 END
 
@@ -334,14 +335,14 @@ SCENE-ROOFTOP-GOT-CARD
     Barney, come in.
     
     BARNEY_RADIO
-    Yea, Larry, I'm here, over.
+    Yes, Larry? I'm here, over.
     
     LARRY_RADIO
-    I've found a code-yellow access card.
+    I've found a yellow access card.
     
     BARNEY_RADIO
     Great!
-    Okay, meet me in the weapon's locker, over.
+    OK. Meet me in the weapons locker, over.
     
     LARRY_RADIO
     I copy that.
@@ -355,7 +356,7 @@ SCENE-FLASHLIGHT-1A
     Where am I?
     !!!
     Steve!
-    Your alive!
+    You're alive!
     
     STEVE
     Yep.
@@ -567,7 +568,7 @@ SCENE-FLASHLIGHT-2B
     
     STEVE
     Oh...
-    Okay...
+    OK...
     
     LARRY
     This yellow card will help you get around the...
@@ -737,7 +738,95 @@ SCENE-PORTAL-1F
 
 END
 
-SCENE-WEAPONROOM-1A
+SCENE-WEAPONS2
+    
+    BARNEY
+    Larry!
+    
+    LARRY
+    Hey, Barney.
+    
+    BARNEY
+    Glad to see you're still alive.
+    I had my doubts, but I knew you'd pull through.
+    
+    LARRY
+    That doesn't make sense. You're contradicting yourself.
+    
+    BARNEY
+    Meh... Learn to take a compliment.
+    ...
+    You got the yellow access card?
+    Let me have it so I can make a copy.
+    
+    LARRY
+    Wait a minute...
+    
+    BARNEY
+    ...
+    
+    LARRY
+    How do I know if you'll use this card for good...
+    ... or for evil?
+    
+    BARNEY
+    What are you talking about?
+    
+    LARRY
+    You know...
+    ... just in general.
+    
+    BARNEY
+    ...
+    *Sigh*
+    Would you stop messin' around?
+    Give me the card, Larry.
+    
+    LARRY
+    Hmm... OK.
+    
+    BARNEY
+    Now copying.
+    
+    LARRY
+    Isn't that illegal?
+    
+    BARNEY
+    ...
+    
+    LARRY
+    ...
+    
+    BARNEY
+    I suppose we're partners in crime now.
+    
+    LARRY
+    Hey! Not me, pal.
+    I'm not the one making a copy of a high-clearance security card.
+    
+    BARNEY
+    Association.
+    
+    LARRY
+    ...
+    
+    BARNEY
+    Association, Larry. Guilty by Association.
+    
+    LARRY
+    ...
+    Damn!
+    
+    BARNEY
+    And... copying complete!
+    Here's your card back.
+    
+    BARNEY
+    Now, let's head into the back room and grab some stuff.
+    
+END
+
+SCENE-WEAPONS2A
     
     BARNEY
     Larry!
@@ -758,97 +847,84 @@ SCENE-WEAPONROOM-1A
     Let me have it so I can make a copy.
     
     LARRY
-    Wait a minute.
-    How do I know if you'll use this card for good?
-    Or for evil?
+    ...
     
     BARNEY
-    ...
-    ...
-    Give me the card, Larry.
+    Why are you hesitating?
     
     LARRY
-    Hmm...
-    Okay.
+    Well...
+    I sort of... kind of... don't have the card.
     
     BARNEY
-    Now copying...
+    What?!
+    But you just had it?
     
     LARRY
-    Hey...
-    Isn't that illegal?
+    Yeah...
+    ...and now I don't.
     
     BARNEY
     ...
-    
-    LARRY
-    ...
-    
-    BARNEY
-    Copying complete!
-    Here's your card back.
-    Now, let's head into the back room...
-    and grab some stuff.
+    Larry!
+    We needed that card!
     
 END
 
-SCENE-WEAPONROOM-2A
+SCENE-WEAPONS3
     
     BARNEY
     Look what I got!
     
     LARRY
     Hey!
-    That's not fair.
-    I found the yellow card...
-    so I should be entitled to first pick.
+    I found the yellow card. Why do you get first pick?
     
     BARNEY
-    Entitled?
-    You were entitled to die before I stepped out...
-    of the elevator and saved your life.
+    Because I saved your life back at the elevator, remember?
     
     LARRY
     ...
+    That...
+    Um...
+    That... is a very good reason, actually.
     
     BARNEY
-    Meanwhile, our next job is to find...
-    a code-red access card.
+    Anyway...
+    The yellow card will open more doors for you.
+    But we're still trapped inside the building.
+    Only the red access card can get us into the lobby...
+    ... where we can make our escape.
     
     LARRY
-    What?!
-    Are you crazy?
-    It was hard enough to find a yellow one.
-    And you copied it before we went in so you...
-    could rush in and have the first pick.
-    I knew you'd use the card for evil!
+    Right.
     
     BARNEY
-    Oh, will you stop whining and get with it?
-    
-    LARRY
-    ...
-    
-    BARNEY
-    Now, let's find that red card.
+    Let's keep searching.
+    Find the red card. Then radio me.
     
 END
 
-SCENE-WEAPONROOM-2B
+SCENE-FOREVIL
     
     LARRY
-    Tst!
-    I knew he would use the card for evil.
-    Oh well...
-    There should be lots of cool weapons in here.
+    Heh...
+    Find a red access card he says...
+    That shouldn't be too difficult.
+    
+    #lights flicker and go out
+    #Larry ... Damn!
     
 END
 
 SCENE-LOBBY
     
     LARRY
-    Hmmm...
-    I better find steve before I leave...
+    Hmm...
+    I can't leave Steve here...by himself.
+    ...
+    I gotta go back and get him!
+    
     
     NARRATOR
     Larry Heads Back To The Weapons Locker
@@ -856,6 +932,23 @@ SCENE-LOBBY
 END
 
 SCENE-THEEND
+    
+    LARRY
+    ...
+    Fresh air...
+    Finally...
+    ...
+    We're all in danger again...
+    The aliens know how to get here.
+    They'll build another portal.
+    ...
+    Maybe Barney was right...
+    They won't stop...
+    We might be doomed after all...
+    
+END
+
+SCENE-THEENDCLASSIC
     
     LARRY
     hmm...
@@ -867,29 +960,6 @@ SCENE-THEEND
     ...probably with his friend, matt...
     many stories ended tonight...
     ...but mine lives on...
-    
-END
-
-SCENE-SURVIVOR-1A
-    
-    LARRY
-    Barney! Come in, over.
-    
-    BARNEY
-    Yep
-    
-    LARRY
-    I found a survivor.
-    I think we need to set up a shelter for him...
-    and for any others we might come across.
-    
-    BARNEY
-    Good idea.
-    Let's use the Sky Room.
-    Have all survivors group there for protection.
-    
-    LARRY
-    Acknowledged, over.
     
 END
 
@@ -961,24 +1031,6 @@ SCENE-DONUT-C
     LARRY [takesbitofdoughnut]
     ...
     Damn! That is one good doughnut. [stickyfingerlightswitchresinthing]
-    
-END
-
-SCENE-BASEMENT-1A
-    
-    SCIENTISTA and SCIENTISTB
-    [runs to door]
-    
-    SCIENTISTA
-    Hey!
-    Open the door!
-    Let us out!
-    
-    SCIENTISTB
-    You can't just open the door.
-    You need to vent the radiation from the room first.
-    ...
-    Hurry!
     
 END
 
