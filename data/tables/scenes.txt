@@ -352,42 +352,78 @@ END
 SCENE-FLASHLIGHT-1A
     
     LARRY
-    Woah...
+    Huh?
     Where am I?
     !!!
-    Steve!
-    You're alive!
+    Steve! You're alive!
     
     STEVE
-    Yep.
+    Feeling better too.
+    ...
+    I don't know how I ended up here.
+    I remember drinking the cola...
+    ... then I felt very weak.
+    After falling to the floor, I passed out completely.
+    The next thing I knew... I was here, coming out of a daze.
+    Was very nauseous too... I threw up all over the place.
+    Felt much better after that.
+    
+    LARRY
+    ...
+    
+    STEVE
+    I was looking for a way out when I heard a noise...
+    ... sort of like a metal door creaking shut.
+    I sneaked over to see what it was.
+    That's when I found you lying, face down, on the floor.
+    
+    STEVE
+    ...
     What do you remember?
     
     LARRY
     Uh...
-    I was in a dark room...
+    I was exploring a floor that's been vacant and empty for ages.
     
     STEVE
-    And?
+    Ooh! Was it the 13th floor?
     
     LARRY
-    I was going to do something...
-    Then something hit my head...
-    and I woke up here.
+    ...
+    No...
+    ... It was not the 13th floor.
     
     STEVE
-    Strange...
-    I woke up here too after I drank the cola.
+    Oh...
+    ... Be cool if it was.
     
     LARRY
+    Right... Anyway...
+    I was in a dark area, pitch black. I brought a flashlight with me.
+    Just as I turned it on, I got clubbed in the back of the head with something.
+    
+    STEVE
+    Ouch!
+    
+    LARRY
+    ... And now I'm here.
+    
+    STEVE
+    We're caught in the middle of something serious here.
+    
+    LARRY
+    Yes. I'm aware.
+    ...
     Do you know about the aliens?
     
     STEVE
     What?!
     
     LARRY
-    The buildings been invaded by them.
+    The building's been overrun with them.
     
     STEVE
+    !!!
     Not more aliens!
     
     LARRY
@@ -396,16 +432,32 @@ SCENE-FLASHLIGHT-1A
     STEVE
     ...
     
-    LARRY
-    ...
-    
     STEVE
-    But where are we?
+    But who brought us here?
+    Why did they keep us alive?
     
     LARRY
     I don't know.
+    It doesn't seem like their way. Alien's have no reason to keep us alive.
+    
+    STEVE
+    Unless they want to torture us.
+    
+    LARRY
+    ...
+    Wait... What?!
+    
+    STEVE
+    You know...
+    ... for killing their supreme leader.
+    Make us die slowly... Suffer...
+    
+    LARRY
+    Mother of God!
+    We need to get out of here!
+    ...
     I don't recognize this part of the building...
-    if we are in the building.
+    ... or if we are in the same building.
     Hmm...
     I still have my walky-talky.
 
@@ -414,73 +466,115 @@ END
 SCENE-FLASHLIGHT-1B
     
     LARRY_RADIO
-    Barney...come in...
-    Are you there? over...
+    Barney... come in...
+    Are you there? Over.
 
 END
 
 SCENE-FLASHLIGHT-1C
     
     BARNEY_RADIO
-    Hehehe...
+    Sorry, Larry.
     
     LARRY_RADIO
     Huh?
     
     BARNEY_RADIO
-    This building's mine now.
+    You were getting too close to the truth.
+    I had to act.
     
     LARRY_RADIO
     !!!
     What?!
     
     BARNEY_RADIO
-    It's too bad for you, Larry.
-    I was thinking of letting you in on the deal...
-    but I knew you would be too stubborn.
+    Initially, I was thinking of letting you in on the deal...
+    ... but you're too stubborn. You would never go for it.
     
     LARRY_RADIO
     What deal?
     
     BARNEY_RADIO
-    The aliens have technology far superior to us...
-    It's only a matter of time before the earth...
-    is taken over and ruled by then.
-    So they contacted us for helping them make...
-    that happen faster.
+    The aliens have technology far superior to ours.
+    It's only a matter of time before the earth is taken over by them.
+    They contacted us to make that happen faster...
+    ... in exchange for sanctuary when they seize the planet.
     
     LARRY_RADIO
-    Barney! You traitor!
+    Barney, I don't believe you! You wouldn't do this!
     
     BARNEY_RADIO
-    Hehehe...
-    I told you I would tell you what was going on.
+    ...
     
     LARRY_RADIO
-    What did you do to help the aliens, Barney!
+    Barney... what did you do?
+    ...
+    Barney?
+    What did you do for them, Barney?
     
     BARNEY_RADIO
-    Me and some friends built a portal for them...
-    A portal that directly leads from our world...
-    to theirs, and their world to ours.
+    We had our scientists and engineers join forces with theirs.
+    Together, they designed and built a space portal.
+    A gateway that links our worlds together.
+    Spacheships are no longer required. Space travel is obsolete.
+    Just step through the portal... and you're there.
+    
+    LARRY_RADIO
+    No... you're yanking my chain. That's impossible!
+    
+    BARNEY_RADIO
+    Don't you see?
+    See what happens when we work together?
+    We can accomplish the impossible.
     
     LARRY_RADIO
     You're mad!
     
     BARNEY_RADIO
-    Mad!
-    I'll tell you what's mad...
-    Mad is believing that we can stop these...
-    high-tech aliens from invading our planet.
+    !!!
+    Mad?!
+    ...
+    I'll tell you what's mad!
+    Mad is believing that we can stop this highly advanced civilization from overthrowing us.
+    Our planet doesn't stand a chance.
     
     LARRY_RADIO
     Our planet?!
-    You've betrayed this planet.
+    You've betrayed this planet!
     
     BARNEY_RADIO
-    I saved it is what.
-    Now, since I've got you trapped in there...
-    There's no one that can stop me now.
+    I saved it is what!
+    
+    LARRY_RADIO
+    ...
+    What about us?
+    What happens to us?
+    
+    BARNEY_RADIO
+    You will be taken prisoner and stand trial for your crimes.
+    
+    LARRY_RADIO
+    Crimes? ...
+    Making an illegal copy of a yellow access card?
+    
+    BARNEY_RADIO
+    ...
+    No, you idiot! 
+    For executing the Supreme Leader, Sir Master Sire, Zeu Xenophobos.
+    
+    LARRY_RADIO
+    ... Come again?
+    
+    BARNEY_RADIO
+    You'll be found guilty... and it will not be an easy death.
+    
+    LARRY_RADIO
+    Was this part of the deal too, capturing us?
+    
+    BARNEY_RADIO
+    Unfortunately.
+    Now... since I have you locked up in there...
+    ... I need to get back to business.
     Hehehe...
     
     LARRY_RADIO
@@ -495,17 +589,16 @@ SCENE-FLASHLIGHT-1D
     What do we do?
     
     LARRY
-    First, we should find a way out of here.
-    
-    STEVE
-    We can't.
-    
-    LARRY
-    What?
+    First, we find a way out of here.
     
     STEVE
     I've searched everywhere...
-    There's no way out...
+    There's no way out.
+    
+    LARRY
+    ...
+    I'm not convinced.
+    I'm going to have a look around.
 
 END
 
@@ -530,64 +623,132 @@ SCENE-FLASHLIGHT-2B
     What?
     
     LARRY
-    I thought you said you looked everywhere...
+    I thought you said you looked everywhere?
     
     STEVE
     Uh...
-    I thought I did...
+    I thought I did.
     
     LARRY
     Whatever...
     Room 7 is the weapon's locker.
-    Here's a copy of a code-yellow access card.
+    Here's a copy of a yellow access card.
     
     STEVE
     ...
-    And?
+    And why would I need that?
     
     LARRY
-    Sorry...you've been stuck in a room all this
-    time. You aren't aware.
+    Sorry...
+    You've been stuck in a room all this time. You aren't aware.
     
     STEVE
-    Ah jeez! I don't need more bad news.
-    I thought you already gave me the bad news!
-    Aliens are inside the building. Check.
-    ...
-    What else is there worth noting?
+    What now?
     
     LARRY
-    We're trapped inside with them.
+    We're trapped inside the building.
     
     STEVE
     !!!
 
     LARRY
-    The lobby doors are set to code-red.
-    We're not leaving until we find a red card.
+    The doors to the lobby are code-red locked.
+    We're not leaving until we find a red access card.
     
     STEVE
-    Oh...
-    OK...
-    
-    LARRY
-    This yellow card will help you get around the...
-    building, through green, blue, and yellow doors.
-    
-    STEVE
-    Cool!
     ...
-    Here's something I found...
-    Look's like it's half of a card.
+    But there's aliens.
     
     LARRY
-    Thanks...
-    We've got to find the code-red access card...
-    before barney does.
-    He needs it for something...
-    And I'm guessing he wants it for the room above.
-    Let's go.
-
+    ...
+    Yep...
+    
+    STEVE
+    ...
+    Suddenly, being stuck in that room back there doesn't sound all that bad.
+    
+    LARRY
+    ...
+    
+    STEVE
+    You know what?
+    I'm gonna go ahead and crawl back through the vent there and...
+    
+    LARRY
+    No!
+    Wait!
+    
+    STEVE
+    ...
+    I was just joking.
+    
+    LARRY
+    ...
+    Take this with you...
+    ... in case anything else comes inside.
+    
+    STEVE
+    What?
+    
+    LARRY
+    You're right.
+    It's serious out here.
+    You could die.
+    
+    STEVE
+    Don't give me the "it's too dangerous" talk again.
+    
+    LARRY
+    You choose.
+    I'll come back for you once I find the red card, or another way out.
+    ...
+    Or follow me and help me search for the card.
+    
+    STEVE
+    ...
+    
+    LARRY
+    I understand if you want to go back. Don't feel bad about it.
+    I have training. I signed up for this.
+    You were just a visitor tonight.
+    Just...don't let it be your pride that chooses for you.
+    
+    STEVE
+    ...
+    OK.
+    Perhaps I take the safer route this time.
+    
+    LARRY
+    Cool.
+    I'll come back for you.
+    
+    STEVE
+    Just... don't die.
+    ...
+    Here's something I found that you might be able to use...
+    Look's like it's half of an access card.
+    
+    LARRY
+    Thanks.
+    ...
+    #I need to find the red access card before barney does.
+    #He needs it for something...
+    #And I'm guessing that "something" is in the room above.
+    #
+    #STEVE
+    #You mean "something" like an intergalatic space portal...
+    #... that Barney just literally explained to us, like, a few minutes ago?
+    #
+    #LARRY
+    #Yeah...
+    #... something like that.
+    #...
+    It was good to see you again.
+    I hope next time it won't be in the middle of a war zone.
+    
+    STEVE
+    Word.
+    
 END
 
 SCENE-PORTAL-1A
@@ -599,143 +760,173 @@ END
 
 SCENE-PORTAL-1B
     
-    BARNEY
-    Hello, Larry...
+    LARRY
+    Steve!
     
     STEVE
-    Larry!
-    It's a trap!
-    
-    LARRY
-    Thanks, Steve...
-    but it's kinda late for that.
+    Sorry, Larry...
+    They found me.
     
     BARNEY
-    I see you managed to escape and find a red card.
+    You missed it, Larry. We just closed the portal... finally.
     
     LARRY
-    Glad to see that you found one too.
+    What?!
+    You mean... it's been open this whole time?
     
     BARNEY
-    Yep...
-    Steve also found one.
-    
-    STEVE
-    Plus 1 for me!
+    How do you think the aliens got here in the first place?
     
     LARRY
-    Talk about the timing.
+    Uh... huh...
+    What did you do, lock yourself out?
     
     BARNEY
-    It's a shame I was here first.
-    Now I can finally reopen this portal.
+    ...
+    Unfortunately.
+    There was a malfunction. We cleared the area.
+    Then I realized I didn't have my card on me.
+    The entire ordeal was an accident.
+    ...
+    I do appreciate the help with finding the access cards.
     
     LARRY
-    Reopen?
+    Yeah... you're not welcome.
+    You're science expiriment got most of us killed tonight.
     
     BARNEY
-    Hahaha!!!
-    Larry, you still make me laugh.
-    How do you think the aliens got here in the
-    first place?
-    
-    LARRY
-    *Shrugs*
-    
-    BARNEY
-    Anyway...
-    It's good to get one last laugh in.
-    One last laugh before you meet your fate.
+    I know...
+    I'm not happy about it either. I lost friends as well.
+    ...
+    This was all about sending you and Steve through the portal.
+    None of the other trouble was meant to happen.
     
     LARRY
     Sorry, pal...
-    It'll be your last laugh.
-    Like...ever...
-    
-    STEVE
-    Yeah! You tell him, Larry!
-    
-    LARRY
-    *Face palm*
+    That's on you.
     
     BARNEY
-    That's a bold statement coming from you.
-    More like desperate considering your position.
+    I need to finish this, or all their deaths will be meaningless.
+    We're so close now...
     ...
-    Now...let's get back to more serious matters.
+    Drop the weapon, Larry.
+    You're not getting out of this one.
+    
+    LARRY
+    You know me well enough to know that's not going to happen.
+    
+    BARNEY
+    *Sigh*
+    There's only one thing standing between you and me, Larry.
+    
+    LARRY
     ...
-    Because now...
-    It's time to die!
-
+    
+    BARNEY
+    ... and that...
+    ... is Steve...
+    
+    STEVE
+    Huh?
+    
+    LARRY
+    Barney! ... You wouldn't?
+    
+    BARNEY
+    I'm done talking.
+    Come with me willingly, or Steve dies.
+    
+    STEVE
+    !!!
+    
+    LARRY
+    Barney, you don't want to do this.
+    
+    BARNEY
+    You're right. I don't.
+    But this is the only way to get you through the portal.
+    ...
+    Barrax!
+    
+    TROOPER
+    Sir!
+    
+    BARNEY
+    Open the portal.
+    It's time to send these two through.
+    
+    TROOPER
+    ...
+    No.
+    
+    BARNEY
+    No?
+    What do you mean, no?
+    
+    TROOPER
+    He killed Supreme Leader, Master Sire Xenophobos!
+    Now he gets a trial?
+    !!!
+    This is ludicrous!
+    
+    BARNEY
+    Barrax! Holster your weapon, now!
+    Don't be a fool! You're system will execute you for this.
+    
+    TROOPER
+    I live for Master Xenophobos!
+    
+    BARNEY
+    They *will* die.
+    They are already guilty. The trial is just a sham.
+    The chance of that turning around is zero.
+    
+    TROOPER
+    There's always a slim chance that things will go awry.
+    ... No.
+    I'm not giving him the chance.
+    
+    BARNEY
+    NO!!!
+    
 END
 
 SCENE-PORTAL-1C
     
     LARRY
-    Steve!
-    Barney! That was uncalled for!
+    !!!
+    Steve!!!
     
     BARNEY
-    It dosen't matter if it was uncalled for...
-    You two looked too much alike...
-    I couldn't take it anymore!
+    Barrax! You killed us all!
+    YEEOOOWWW AHHH!!!
     
-    LARRY
-    That's it, Barney!
-    
-    BARNEY
-    I'm gonna save you, Larry...
-    Your going to live to see this alien world...
-    that you've been fighting for so long.
-    
-    LARRY
-    Why didn't you kill me before?
-    
-    BARNEY
-    Uh...
-    I kind of...locked myself out...
-    So I needed help finding access cards.
-    Anyway...
-
 END
 
 SCENE-PORTAL-1D
     
     BARNEY
-    Open the portal to the jungle area.
-    
-    TROPPER
-    Are you mad?!
-    You just can't open up a portal to the middle...
-    of the jungle!
-    
-    BARNEY
-    Oh, shut up!
-    I can do what I want!
-
-END
-
-SCENE-PORTAL-1E
-
-    LARRY
-    Jeez, man!
-
-END
-
-SCENE-PORTAL-1F
+    Oops...
     
     LARRY
-    Stop killing!
+    Oops?
     
     BARNEY
-    You shut up!
-    Or I'll kill you too!
-    Now...
-    Let's open this portal...
+    I shot the controls...
+    That started the countdown.
+    I don't know what's coming through that portal.
     
     NARRATOR
     The Portal Opens...
+    
+END
 
+SCENE-PORTAL-1E
+    
+    LARRY
+    No way...
+    You gotta be kidding me...
+    
 END
 
 SCENE-WEAPONS2
@@ -815,6 +1006,7 @@ SCENE-WEAPONS2
     
     LARRY
     ...
+    Oh...
     Damn!
     
     BARNEY
@@ -1080,4 +1272,7 @@ SCENE-PITCH-BLACK
     LARRY_RADIO
     I'm not alone down here!
     
+END
+
+LAUNDRY-CHUTE
 END

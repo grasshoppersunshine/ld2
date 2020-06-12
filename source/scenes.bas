@@ -127,11 +127,11 @@ function Scene1Go () as integer
 
 	GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
 	GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Talking
-	LarryPose.setFlip 0
-	StevePose.setFlip 1
+	LarryPose.isFlipped = 0
+	StevePose.isFlipped = 1
 
-	LarryPose.setX  92: LarryPose.setY 144
-	StevePose.setX 124: StevePose.setY 144
+	LarryPose.x =  92: LarryPose.y =  144
+	StevePose.x = 124: StevePose.y =  144
 	
 	ClearPoses
 	AddPose @LarryPose
@@ -153,9 +153,9 @@ function Scene1Go () as integer
 
     '- Steve walks to soda machine
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Walking
-    StevePose.setFlip 0
+    StevePose.isFlipped = 0
     for x = 124 to 152
-        StevePose.setX x
+        StevePose.x = x
         'StevePose.btmMod = int(x mod 6)
         StevePose.nextFrame
         RenderScene
@@ -164,7 +164,7 @@ function Scene1Go () as integer
         if keyboard(KEY_ENTER) then return 1
     next x
 
-    StevePose.setX 152
+    StevePose.x = 152
     StevePose.firstFrame
     'StevePose.btmMod = 0
     RenderScene
@@ -174,7 +174,7 @@ function Scene1Go () as integer
 
     '- Steve kicks the soda machine
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Kicking
-    StevePose.setFlip 1 '- can DoScene update the flipped value from script file?
+    StevePose.isFlipped = 1 '- can DoScene update the flipped value from script file?
     for i = 0 to 3
         'StevePose.btmMod = i
         RenderScene
@@ -215,7 +215,7 @@ function Scene1Go () as integer
     '// Steve looks ill
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Surprised
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Sick
-    StevePose.setX 170
+    StevePose.x = 170
     RenderScene
 
     RetraceDelay 80
@@ -282,17 +282,17 @@ function Scene3Go () as integer
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
     GetCharacterPose JanitorPose, CharacterIds.Janitor, PoseIds.Talking
-    LarryPose.setFlip 0
-    JanitorPose.setFlip 1
+    LarryPose.isFlipped = 0
+    JanitorPose.isFlipped = 1
     
-    LarryPose.setX Player_GetX(): LarryPose.setY 144
-    JanitorPose.setX 1196: JanitorPose.setY 144
+    LarryPose.x = Player_GetX(): LarryPose.y =  144
+    JanitorPose.x = 1196: JanitorPose.y =  144
     
     ClearPoses
     AddPose @LarryPose
     AddPose @JanitorPose
     
-    Player_SetXY LarryPose.getX(), LarryPose.getY()
+    Player_SetXY LarryPose.x, LarryPose.y
     
     RenderScene
 
@@ -305,17 +305,17 @@ function Scene3Go () as integer
     'LD2_PlaySound Sounds.scare
     if DoScene("SCENE-3B") then return 1 '// They rush to Steve!
 
-    JanitorPose.setX 224: JanitorPose.setY 144
-    LarryPose.setX 240: LarryPose.setY 144
-    JanitorPose.setFlip 1
-    LarryPose.setFlip 1
+    JanitorPose.x = 224: JanitorPose.y =  144
+    LarryPose.x = 240: LarryPose.y =  144
+    JanitorPose.isFlipped = 1
+    LarryPose.isFlipped = 1
     
-    Player_SetXY LarryPose.getX(), LarryPose.getY()
+    Player_SetXY LarryPose.x, LarryPose.y
     Player_SetFlip LarryPose.getFlip()
     Map_SetXShift 0
     
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.PassedOut
-    StevePose.setX 170: StevePose.setY 144: StevePose.setFlip 1
+    StevePose.x = 170: StevePose.y =  144: StevePose.isFlipped = 1
     AddPose @StevePose
     
     RenderScene
@@ -351,7 +351,7 @@ sub Scene4EndConditions()
     Player_SetItemQty ItemIds.SceneJanitorDies, 1
     
     Map_PutTile 13, 8, 19, 3
-    Mobs_Add 208, 144, ROCKMONSTER
+    Mobs_Add 208, 144, MobIds.Rockmonster
     Map_LockElevator
     
     LD2_SetMusicVolume 1.0
@@ -373,7 +373,7 @@ function Scene4Go() as integer
     LD2_SetMusicVolume 1.0
 
     AddSound Sounds.shatter, "splice/glassbreak.wav"
-    AddSound Sounds.slurp  , "slurp.wav"
+    AddSound Sounds.slurp  , "rock-slurp.wav"
     AddSound Sounds.scream , "scream.wav"
     AddSound Sounds.chew1, "splice/chew0.wav"
     AddSound Sounds.chew2, "splice/chew1.wav"
@@ -383,9 +383,9 @@ function Scene4Go() as integer
     GetCharacterPose JanitorPose, CharacterIds.Janitor, PoseIds.Talking
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.PassedOut
     
-    LarryPose.setX 240: LarryPose.setY 144: LarryPose.setFlip 1
-    JanitorPose.setX 224: JanitorPose.setY 144: JanitorPose.setFlip 1
-    StevePose.setX 170: StevePose.setY 144: StevePose.setFlip 1
+    LarryPose.x = 240: LarryPose.y =  144: LarryPose.isFlipped = 1
+    JanitorPose.x = 224: JanitorPose.y =  144: JanitorPose.isFlipped = 1
+    StevePose.x = 170: StevePose.y =  144: StevePose.isFlipped = 1
 
     AddPose @LarryPose
     AddPose @JanitorPose
@@ -402,14 +402,14 @@ function Scene4Go() as integer
     Map_PutTile 13, 8, 19, 3
     
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Crashing
-    RockmonsterPose.setX 208
+    RockmonsterPose.x = 208
     AddPose @RockmonsterPose
 
     dim mobY as single
     dim startedMusic as integer
     startedMusic = 0
     for mobY = 128 to 144 step .37
-        RockmonsterPose.setY int(mobY)
+        RockmonsterPose.y =  int(mobY)
         RenderScene
         RetraceDelay 1
         if (startedMusic = 0) and (mobY >= 133) then
@@ -419,7 +419,7 @@ function Scene4Go() as integer
         if keyboard(KEY_ENTER) then return 1
     next mobY
     
-    RockmonsterPose.setY 144
+    RockmonsterPose.y =  144
     WaitSeconds 0.1
     
     dim i as integer
@@ -436,15 +436,15 @@ function Scene4Go() as integer
 
     GetCharacterPose JanitorPose, CharacterIds.Janitor, PoseIds.Tongue
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Tongue
-    JanitorPose.setFlip 0
+    JanitorPose.isFlipped = 0
     RenderScene
     LD2_PlaySound Sounds.slurp
     RetraceDelay 85
     LD2_PlaySound Sounds.scream
 
     dim x as integer
-    for x = JanitorPose.getX() to 210 step -1
-        JanitorPose.setX int(x)
+    for x = JanitorPose.x to 210 step -1
+        JanitorPose.x = int(x)
         RenderScene
         RetraceDelay 1
         if keyboard(KEY_ENTER) then return 1
@@ -520,7 +520,7 @@ function Scene5Go() as integer
     AddSound Sounds.snarl   , "splice/snarl.wav"
 
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.setX 1500: LarryPose.setY 112
+    LarryPose.x = 1500: LarryPose.y =  112
     
     ClearPoses
     AddPose @LarryPose
@@ -535,7 +535,7 @@ function Scene5Go() as integer
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Charging
     AddPose @RockmonsterPose
     
-    LarryPose.setFlip 1
+    LarryPose.isFlipped = 1
     
     '- rockmonster runs towards Larry
     dim x as integer
@@ -544,8 +544,8 @@ function Scene5Go() as integer
     y = 144: addy = -2
     FOR x = 1260 TO 1344
         
-        RockmonsterPose.setX x
-        RockmonsterPose.setY int(y)
+        RockmonsterPose.x = x
+        RockmonsterPose.y =  int(y)
         'RockmonsterPose.btmMod = 1 + int((x mod 20) / 4)
         if (x and 3) = 3 then RockmonsterPose.nextFrame
         
@@ -559,8 +559,8 @@ function Scene5Go() as integer
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Jumping
     FOR x = 1344 TO 1440
         
-        RockmonsterPose.setX x
-        RockmonsterPose.setY int(y)
+        RockmonsterPose.x = x
+        RockmonsterPose.y =  int(y)
         y = y + addy
         addy = addy + .04
         
@@ -574,8 +574,8 @@ function Scene5Go() as integer
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Surprised
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Still
-    'RockmonsterPose.setX 1440
-    RockmonsterPose.setY 112
+    'RockmonsterPose.x = 1440
+    RockmonsterPose.y =  112
     
     RenderScene
     RetraceDelay 80
@@ -583,8 +583,8 @@ function Scene5Go() as integer
     '- Barney comes out and shoots at rockmonster
     '--------------------------------------------
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.FacingScreen
-    BarneyPose.setX 1480: BarneyPose.setY 112
-    BarneyPose.setFlip 1
+    BarneyPose.x = 1480: BarneyPose.y =  112
+    BarneyPose.isFlipped = 1
     AddPose @BarneyPose
     
     Map_PutTile 92, 7, 16, 1: Map_PutTile 93, 7, 16, 1
@@ -614,7 +614,7 @@ function Scene5Go() as integer
     FOR n = 1 TO 40
         
         BarneyPose.nextFrame
-        RockmonsterPose.setX int(rx)
+        RockmonsterPose.x = int(rx)
     
         rx = rx - .4
         
@@ -647,7 +647,7 @@ function Scene5Go() as integer
     
     RetraceDelay 40
     
-    BarneyPose.setFlip 0
+    BarneyPose.isFlipped = 0
     
     if DoScene("SCENE-5B") then return 1
     
@@ -664,8 +664,8 @@ function Scene5Go() as integer
     
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Talking
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.setX  46 * 16 - 16: LarryPose.setY  144
-    BarneyPose.setX 45 * 16 - 16: BarneyPose.setY 144
+    LarryPose.x =  46 * 16 - 16: LarryPose.y =   144
+    BarneyPose.x = 45 * 16 - 16: BarneyPose.y =  144
     
     AddPose @LarryPose
     AddPose @BarneyPose
@@ -691,14 +691,14 @@ function Scene5Go() as integer
     if DoScene("SCENE-5C") then return 1
     
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Walking
-    BarneyPose.setFlip 1
+    BarneyPose.isFlipped = 1
 
     '- Barney runs to the left off the screen
     '----------------------------------------
     dim fx as single
     fx = 0
-    FOR x = BarneyPose.getX() TO BarneyPose.getX() - 180 STEP -1
-        BarneyPose.setX x
+    FOR x = BarneyPose.x TO BarneyPose.x - 180 STEP -1
+        BarneyPose.x = x
         fx = fx + .1
         if fx = 1 then
             BarneyPose.nextFrame
@@ -742,9 +742,9 @@ function Scene7Go() as integer
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Talking
-    LarryPose.setX Player_GetX(): LarryPose.setY 144
-    BarneyPose.setX 368: BarneyPose.setY 144
-    LarryPose.setFlip 1
+    LarryPose.x = Player_GetX(): LarryPose.y =  144
+    BarneyPose.x = 368: BarneyPose.y =  144
+    LarryPose.isFlipped = 1
     
     ClearPoses
     AddPose @LarryPose
@@ -795,27 +795,38 @@ function SceneBarneyPlanGo() as integer
     dim StevePose as PoseType
     dim BarneyPose as PoseType
     
+    LD2_cls 1, 0
+    LD2_RefreshScreen
+    
     Player_SetItemQty ItemIds.CurrentRoom, 20
     Map_Load "20th.ld2"
     LD2_ClearMobs
     LD2_SetSceneMode LETTERBOX
     
-    Map_SetXShift 300
-    Player_SetXY 20, 144
+    Map_SetXShift 250 '300
+    Player_SetXY 320, 144
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.setX Player_GetX(): LarryPose.setY Player_GetY()
-    LarryPose.setFlip 0
+    LarryPose.x = Player_GetX(): LarryPose.y =  Player_GetY()
+    LarryPose.isFlipped = 0
     
-    GetCharacterPose StevePose, CharacterIds.Larry, PoseIds.Talking
-    StevePose.setX 400: StevePose.setY 144
-    StevePose.setFlip 1
+    GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Talking
+    StevePose.x = 400: StevePose.y =  144
+    StevePose.isFlipped = 1
     
     ClearPoses
     AddPose @LarryPose
     AddPose @StevePose
+    
+    LD2_RenderFrame
+	RenderPoses
+    LD2_FadeIn 1
+    LD2_SetMusicVolume 0
+    FadeInMusic mscROOM5
 
     if DoScene("SCENE-FLASHLIGHT-1A") then return 1
+    
+    FadeOutMusic
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Radio
     if DoScene("SCENE-FLASHLIGHT-1B") then return 1
@@ -823,8 +834,12 @@ function SceneBarneyPlanGo() as integer
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
     BarneyPose.setHidden 1
     AddPose @BarneyPose
+    FadeInMusic mscTRUTH
     if DoScene("SCENE-FLASHLIGHT-1C") then return 1
     
+    FadeOutMusic
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
+    FadeInMusic mscROOM5
     RemovePose @BarneyPose
     if DoScene("SCENE-FLASHLIGHT-1D") then return 1
     
@@ -866,8 +881,8 @@ function SceneVentCrawlGo() as integer
     LD2_SetSceneMode LETTERBOX
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.setX Player_getX(): LarryPose.setY 144
-    LarryPose.setFlip 0
+    LarryPose.x = Player_getX(): LarryPose.y =  144
+    LarryPose.isFlipped = 0
     
     ClearPoses
     AddPose @LarryPose
@@ -875,11 +890,11 @@ function SceneVentCrawlGo() as integer
     if DoScene("SCENE-FLASHLIGHT-2A") then return 1
     
     Map_SetXShift 1400
-    LarryPose.setX 1420: LarryPose.setY 144
+    LarryPose.x = 1420: LarryPose.y =  144
     
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Talking
-    StevePose.setX 1450: StevePose.setY 144
-    StevePose.setFlip 1
+    StevePose.x = 1450: StevePose.y =  144
+    StevePose.isFlipped = 1
     AddPose @StevePose
     
     if DoScene("SCENE-FLASHLIGHT-2B") then return 1
@@ -917,8 +932,8 @@ function SceneLobbyGo() as integer
     LD2_SetSceneMode LETTERBOX
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.setX Player_GetX(): LarryPose.setY 48
-    LarryPose.setFlip 1
+    LarryPose.x = Player_GetX(): LarryPose.y =  48
+    LarryPose.isFlipped = 1
     
     ClearPoses
     AddPose @LarryPose
@@ -957,8 +972,8 @@ function SceneTheEndGo () as integer
     LD2_SetSceneMode LETTERBOX
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.setX Player_GetX(): LarryPose.setY 144
-    LarryPose.setFlip 0
+    LarryPose.x = Player_GetX(): LarryPose.y =  144
+    LarryPose.isFlipped = 0
     
     ClearPoses
     AddPose @LarryPose
@@ -970,7 +985,7 @@ function SceneTheEndGo () as integer
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Walking
     px = Player_GetX()
     for x = px to px + 200
-        LarryPose.setX x
+        LarryPose.x = x
         LarryPose.nextFrame
         RenderScene
         RetraceDelay 3
@@ -1011,8 +1026,8 @@ function SceneGooGo() as integer
     LD2_SetSceneMode LETTERBOX
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.LookingUp
-    LarryPose.setX Player_GetX(): LarryPose.setY 144
-    LarryPose.setFlip 1
+    LarryPose.x = Player_GetX(): LarryPose.y =  144
+    LarryPose.isFlipped = 1
     
     ClearPoses
     AddPose @LarryPose
@@ -1053,8 +1068,8 @@ function SceneGooGoneGo () as integer
     LD2_SetSceneMode LETTERBOX
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.setX Player_GetX(): LarryPose.setY 144
-    LarryPose.setFlip 1
+    LarryPose.x = Player_GetX(): LarryPose.y =  144
+    LarryPose.isFlipped = 1
     
     ClearPoses
     AddPose @LarryPose
@@ -1117,8 +1132,8 @@ function SceneSteveGoneGo() as integer
     LD2_SetSceneMode LETTERBOX
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.setX Player_GetX(): LarryPose.setY 144
-    LarryPose.setFlip 1
+    LarryPose.x = Player_GetX(): LarryPose.y =  144
+    LarryPose.isFlipped = 1
     
     ClearPoses
     AddPose @LarryPose
@@ -1163,8 +1178,8 @@ function SceneRooftopGotCardGo() as integer
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Radio
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
     
-    LarryPose.setX Player_GetX: LarryPose.setY 144
-    LarryPose.setFlip 0
+    LarryPose.x = Player_GetX: LarryPose.y =  144
+    LarryPose.isFlipped = 0
     BarneyPose.setHidden 1
     
     ClearPoses
@@ -1221,10 +1236,10 @@ function SceneWeapons2Go() as integer
     AddPose @Larry
     AddPose @Barney
 
-    Larry.setX Player_GetX(): Larry.setY 144
-    Larry.setFlip 1
-    Barney.setX 388: Barney.setY 144
-    Barney.setFlip 0
+    Larry.x = Player_GetX(): Larry.y =  144
+    Larry.isFlipped = 1
+    Barney.x = 388: Barney.y =  144
+    Barney.isFlipped = 0
     
     RenderScene
     
@@ -1232,7 +1247,7 @@ function SceneWeapons2Go() as integer
     
     '// Barney runs to the left off the screen
     GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Walking
-    Barney.setFlip 1
+    Barney.isFlipped = 1
     if PanPose(@Barney, -160, 0, 5.0, 0.15) then return 1
     
     return 0
@@ -1276,8 +1291,8 @@ function SceneWeapons3Go() as integer
     AddPose @Larry
     AddPose @Barney
     
-    Larry.setX Player_GetX(): Larry.setY 144: Larry.setFlip 1
-    Barney.setX 48: Barney.setY 144: Barney.setFlip 0
+    Larry.x = Player_GetX(): Larry.y =  144: Larry.isFlipped = 1
+    Barney.x = 48: Barney.y =  144: Barney.isFlipped = 0
     
     Map_SetXShift 0
     RenderScene
@@ -1288,8 +1303,8 @@ function SceneWeapons3Go() as integer
     if PanPose(@Barney, SCREEN_W, 0, 5.0, 0.15) then return 1
     RemovePose @Barney
     
-    Larry.setFlip 0
-    if DoScene("SCENE-FOREVIL") then return 1
+    Larry.isFlipped = 0
+    'if DoScene("SCENE-FOREVIL") then return 1
     
 end function
 
@@ -1310,13 +1325,178 @@ sub ScenePortalEndConditions
     
     ClearPoses
     LD2_SetSceneMode MODEOFF
-    Player_SetItemQty ItemIds.SceneGoo, 1
+    Player_SetItemQty ItemIds.ScenePortal, 1
     Player_SetXY Player_GetX(), 144
     Player_SetFlip 1
+    
+    LD2_ClearMobs
+    Mobs_Add 208, 143, MobIds.Boss2
+    LD2_SetBossBar MobIds.Boss2
+    Player_SetAccessLevel NOACCESS
+    LD2_PlayMusic mscBOSS
+    LD2_SetMusicVolume 1.0
     
 end sub
 
 function ScenePortalGo () as integer
+    
+    dim Larry as PoseType
+    dim Barney as PoseType
+    dim Steve as PoseType
+    dim Trooper as PoseType
+    dim Boss2 as PoseType
+    dim n as integer
+    dim x as double
+    
+    LD2_SetSceneMode LETTERBOX
+    
+    GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
+    GetCharacterPose Steve, CharacterIds.Steve, PoseIds.Talking
+    GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Talking
+    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Talking
+    GetCharacterPose Boss2, CharacterIds.Boss2, PoseIds.Standing
+    ClearPoses
+    AddPose @Larry
+    AddPose @Steve
+    AddPose @Barney
+    AddPose @Trooper
+    
+    Larry.x = Player_GetX(): Larry.y =  144: Larry.isFlipped = 1
+    Steve.x   = 260: Steve.y   = 144: Steve.isFlipped  = 0
+    Barney.x  = 240: Barney.y  = 144: Barney.isFlipped = 0
+    Trooper.x = 200: Trooper.y = 144: Trooper.isFlipped = 0
+    
+    if DoScene("SCENE-PORTAL-1A") then return 1
+    
+    FadeOutMusic 1.5
+    LD2_PlayMusic mscPORTAL
+    FadeInMusic 1.5
+    if DoScene("SCENE-PORTAL-1B") then return 1
+    
+    GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Surprised
+    GetCharacterPose Steve, CharacterIds.Steve, PoseIds.GettingShot
+    GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Shooting
+    x = Steve.x
+    
+    FadeOutMusic 1.5
+    LD2_StopMusic
+    LD2_SetMusicVolume 1.0
+    LD2_PlayMusic mscUHOH
+    
+    for n = 0 to 69
+        
+        PullEvents
+        
+        Barney.setFrame (n and 1)
+        Steve.setFrame int(n / 20)
+        Steve.x = int(x)
+        x += 0.4
+        
+        if (n and 1) then
+            LD2_PlaySound Sounds.MachineGun
+        end if
+        RenderScene
+        WaitSeconds 0.05
+        
+        if keypress(KEY_ENTER) then return 1
+        
+    next n
+    
+    Barney.firstFrame
+    RemovePose @Steve
+    LD2_PlaySound Sounds.splatter
+    Guts_Add GutsIds.Gibs, int(x + 8), 144, 8, 1
+    Guts_Add GutsIds.Gibs, int(x + 8), 144, 8, -1
+    for n = 0 to 299
+        PullEvents
+        RenderScene
+        if keypress(KEY_ENTER) then return 1
+    next n
+    
+    GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
+    GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Talking
+    if DoScene("SCENE-PORTAL-1C") then return 1
+    
+    GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Shooting
+    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.GettingShot
+    Barney.isFlipped = 1
+    
+    x = Trooper.x
+    
+    LD2_PlayMusic mscUHOH
+    for n = 0 to 39
+        
+        PullEvents
+        
+        Barney.setFrame (n and 1)
+        Trooper.x = int(x)
+        x -= 0.4
+        
+        RenderScene
+        
+        if keypress(KEY_ENTER) then return 1
+        
+    next n
+    
+    Barney.firstFrame
+    RemovePose @Trooper
+    LD2_PlaySound Sounds.splatter
+    Guts_Add GutsIds.Gibs, int(x + 8), 144, 8, 1
+    Guts_Add GutsIds.Gibs, int(x + 8), 144, 8, -1
+    for n = 0 to 299
+        PullEvents
+        RenderScene
+        if keypress(KEY_ENTER) then return 1
+    next n
+    
+    GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
+    GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Shooting
+
+    if DoScene("SCENE-PORTAL-1D") then return 1 '// the portal opens
+    
+    GetCharacterPose Boss2, CharacterIds.Boss2, PoseIds.Standing
+    AddPose @Boss2
+    Boss2.x = Barney.x-32: Boss2.y = Barney.y-16: Boss2.isFlipped = 0
+    Trooper.x = 184
+    
+    '- Giant monster makes sushi out of barney
+    GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Surprised
+    GetCharacterPose Barney, CharacterIds.Barney, PoseIds.GettingKilled
+    
+    LD2_PlayMusic mscUHOH
+    
+    RenderScene
+    RetraceDelay 80
+    for n = 0 to 2
+        Barney.nextFrame
+        RenderScene
+        RetraceDelay 40
+        PullEvents
+        if keypress(KEY_ENTER) then return 1
+    next n
+    
+    for n = 0 to 19
+        PullEvents
+        RenderScene
+        Barney.setFrame 4 + (n and 1)
+        RenderScene
+        RetraceDelay 10
+    next n
+    
+    Barney.lastFrame
+    x = Barney.x
+    Guts_Add GutsIds.Gibs, int(x + 8), Barney.y - 16, 8, 1
+    Guts_Add GutsIds.Gibs, int(x + 8), Barney.y - 16, 8, -1
+    for n = 0 to 299
+        PullEvents
+        RenderScene
+        if keypress(KEY_ENTER) then return 1
+    next n
+    
+    GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
+    if DoScene("SCENE-PORTAL-1E") then return 1 '// what the hell is that thing?
+    
+    WaitSeconds 1.0
     
     return 0
     

@@ -200,17 +200,25 @@ sub RemovePose (pose as PoseType ptr)
     dim n as integer
     dim i as integer
     
+    '//NOT good for pointers referencing poses
+    'for n = 0 to NumPoses-1
+    '    if Poses(n)->getId() = pose->getId() then
+    '        for i = n to NumPoses-2
+    '            Poses(i) = Poses(i+1)
+    '        next i
+    '        n -= 1
+    '    end if
+    'next n
+    '
+    'NumPoses -= 1
+    'redim preserve Poses(NumPoses) as PoseType ptr
+    
     for n = 0 to NumPoses-1
         if Poses(n)->getId() = pose->getId() then
-            for i = n to NumPoses-2
-                Poses(i) = Poses(i+1)
-            next i
-            n -= 1
+            Poses(n)->setHidden 1
+            exit for
         end if
     next n
-    
-    NumPoses -= 1
-    redim preserve Poses(NumPoses) as PoseType ptr
     
 end sub
 
@@ -335,10 +343,11 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
             timestamp = timer
         end if
 		if keyboard(KEY_ENTER) then escapeFlag = 1: exit do
-	loop until keyboard(KEY_SPACE)
+	loop until keyboard(KEY_SPACE) or mouseLB()
 
     WaitForKeyup(KEY_SPACE)
 	WaitForKeyup(KEY_ENTER)
+    while mouseLB(): PullEvents: wend
     
     return escapeFlag
     
@@ -545,7 +554,12 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 		case PoseIds.Sick
 			pose.addSprite 26: pose.addSprite 117: pose.takeSnapshot
             pose.addSprite 26: pose.addSprite 118: pose.takeSnapshot
-		END SELECT
+        case PoseIds.GettingShot
+            pose.addSprite 7: pose.takeSnapshot
+            pose.addSprite 8: pose.takeSnapshot
+            pose.addSprite 9: pose.takeSnapshot
+            pose.addSprite 10: pose.takeSnapshot
+		end select
 	CASE CharacterIds.Barney
         SELECT CASE poseId
 		CASE PoseIds.Talking
@@ -564,6 +578,54 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 		case PoseIds.Radio
             pose.addSprite 50: pose.addSprite 45: pose.takeSnapshot
             pose.addSprite 50: pose.addSprite 46: pose.takeSnapshot
+        case PoseIds.GettingKilled
+            pose.addSprite 76, -32, -16
+            pose.addSprite 77, -16, -16
+            pose.addSprite 78, -32,   0
+            pose.addSprite 79, -16,   0
+            pose.addSprite 50,   0,   0, 1
+            pose.addSprite 46,   0,   0, 1
+            pose.takeSnapshot()
+            pose.addSprite 80, -32, -16
+            pose.addSprite 81, -16, -16
+            pose.addSprite 82,   0, -16
+            pose.addSprite 83, -32,   0
+            pose.addSprite 84, -16,   0
+            pose.addSprite 85,   0,   0
+            pose.takeSnapshot()
+            pose.addSprite 86, -32, -16
+            pose.addSprite 87, -16, -16
+            pose.addSprite 88,   0, -16
+            pose.addSprite 89, -32,   0
+            pose.addSprite 90, -16,   0
+            pose.addSprite 91,   0,   0
+            pose.takeSnapshot()
+            pose.addSprite 86, -32, -16
+            pose.addSprite 87, -16, -16
+            pose.addSprite 92,   0, -16
+            pose.addSprite 89, -32,   0
+            pose.addSprite 90, -16,   0
+            pose.addSprite 93,   0,   0
+            pose.takeSnapshot()
+            pose.addSprite 86, -32, -16
+            pose.addSprite 87, -16, -16
+            pose.addSprite 92,   0, -16
+            pose.addSprite 89, -32,   0
+            pose.addSprite 94, -16,   0
+            pose.addSprite 95,   0,   0
+            pose.takeSnapshot()
+            pose.addSprite 86, -32, -16
+            pose.addSprite 96, -16, -16
+            pose.addSprite 97,   0, -16
+            pose.addSprite 89, -32,   0
+            pose.addSprite 98, -16,   0
+            pose.addSprite 99,   0,   0
+            pose.takeSnapshot()
+            pose.addSprite 76, -32, -16
+            pose.addSprite 77, -16, -16
+            pose.addSprite 78, -32,   0
+            pose.addSprite 79, -16,   0
+            pose.takeSnapshot()
         end select
 	CASE CharacterIds.Janitor
         SELECT CASE poseId
@@ -578,6 +640,8 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 		CASE PoseIds.Talking
             pose.addSprite 73: pose.takeSnapshot
 			pose.addSprite 72: pose.takeSnapshot
+        case PoseIds.GettingShot
+            pose.addSprite 73: pose.takeSnapshot
 		END SELECT
     case CharacterIds.Rockmonster
         select case poseId
@@ -602,6 +666,15 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
             pose.addSprite 6: pose.takeSnapshot
         case PoseIds.Jumping
             pose.addSprite 119: pose.takeSnapshot
+        end select
+    case CharacterIds.Boss2
+        select case poseId
+        case PoseIds.Standing
+            pose.addSprite 76,  0,  0
+            pose.addSprite 77, 16,  0
+            pose.addSprite 78,  0,  16
+            pose.addSprite 79, 16,  16
+            pose.takeSnapshot()
         end select
 	END SELECT
 	
@@ -658,47 +731,45 @@ sub LoadSounds ()
     AddSound Sounds.titleSelect, "ui-arrows.wav"
     AddSound Sounds.titleStart , "start.wav"
     
-    AddSound Sounds.pickup , "pickup.wav"
-    AddSound Sounds.drop   , "drop.wav"
-    AddSound Sounds.equip  , "reload.wav"
+    AddSound Sounds.pickup , "item-pickup.wav"
+    AddSound Sounds.drop   , "item-drop.wav"
     
     AddSound Sounds.blood1 , "splice/blood1.wav"
     AddSound Sounds.blood2 , "splice/blood0.wav"
     AddSound Sounds.splatter, "splice/bloodexplode2.wav"
     
-    AddSound Sounds.doorup     , "doorup.wav"
-    AddSound Sounds.doordown   , "doordown.wav"
+    AddSound Sounds.doorup     , "door-up.wav"
+    AddSound Sounds.doordown   , "door-down.wav"
     
-    AddSound Sounds.shotgun    , "shotgun.wav"
-    AddSound Sounds.pistol     , "pistol.wav"
-    AddSound Sounds.machinegun , "machinegun.wav"
-    AddSound Sounds.deserteagle, "deagle.wav"
+    AddSound Sounds.shotgun    , "shoot-shotgun.wav"
+    AddSound Sounds.pistol     , "shoot-pistol.wav"
+    AddSound Sounds.machinegun , "shoot-machinegun.wav"
+    AddSound Sounds.deserteagle, "shoot-deagle.wav"
+    AddSound Sounds.outofammo  , "shoot-outofammo.wav"
+    AddSound Sounds.reload     , "shoot-reload.wav"
+    AddSound Sounds.equip      , "shoot-reload.wav"
     
-    AddSound Sounds.laugh       , "recorded/laugh.wav"
-    AddSound Sounds.machinegun2 , "machinegun.wav"
-    AddSound Sounds.pistol2     , "pistol.wav"
+    AddSound Sounds.machinegun2 , "shoot-machinegun.wav"
+    AddSound Sounds.pistol2     , "shoot-pistol.wav"
     
-    AddSound Sounds.footstep, "recorded/footstep12.wav"
-    AddSound Sounds.kick   , "kick.wav"
-    AddSound Sounds.jump   , "jump.wav"
-    AddSound Sounds.punch  , "punch.wav"
+    AddSound Sounds.footstep , "larry-step.wav"
+    AddSound Sounds.jump     , "larry-jump.wav"
+    AddSound Sounds.punch    , "larry-punch.wav"
+    AddSound Sounds.larryHurt, "larry-hurt.wav"
+    AddSound Sounds.larryDie , "larry-die.wav"
     
-    AddSound Sounds.outofammo, "outofammo.wav"
-    AddSound Sounds.reload, "reload.wav"
+    AddSound Sounds.laugh     , "troop-laugh.wav"
+    AddSound Sounds.troopHurt0, "maybe/splice/alienhurt0.ogg"
+    AddSound Sounds.troopHurt1, "maybe/splice/alienhurt1.ogg"
+    AddSound Sounds.troopHurt2, "recorded/bleh.wav"
+    AddSound Sounds.troopDie  , "splice/fuck.wav"
     
     AddSound Sounds.useMedikit  , "use-medikit.wav"
     AddSound Sounds.useExtraLife, "use-extralife.wav"
     
-    AddSound Sounds.troopHurt0, "maybe/splice/alienhurt0.ogg"
-    AddSound Sounds.troopHurt1, "maybe/splice/alienhurt1.ogg"
-    AddSound Sounds.troopHurt2, "recorded/bleh.wav"
-    AddSound Sounds.troopDie, "splice/fuck.wav"
-    AddSound Sounds.rockHurt, "rockland.wav"
-    AddSound Sounds.rockJump, "rockjump.wav"
-    AddSound Sounds.rockDie, "splice/snarl.wav"
-    
-    AddSound Sounds.larryHurt, "maybe/splice/larryhurt0.ogg"
-    AddSound Sounds.larryDie, "maybe/splice/larryhurt1.ogg"
+    AddSound Sounds.rockHurt, "rock-land.wav"
+    AddSound Sounds.rockJump, "rock-jump.wav"
+    AddSound Sounds.rockDie , "rock-die.wav"
     
     AddSound Sounds.boom, "boom.wav"
     
@@ -896,6 +967,10 @@ SUB Main
         WaitForKeyup(KEY_L)
 	end if
     
+    if keyboard(KEY_Y) then
+        SceneBarneyPlan
+    end if
+    
     PlayerIsRunning = 0
     if keyboard(KEY_LSHIFT) or keyboard(KEY_KP_0) then
         if keyboard(KEY_RIGHT) or keyboard(KEY_D) then doAction ActionIds.StrafeRight: PlayerIsRunning = 1
@@ -1077,248 +1152,6 @@ sub RenderScene (visible as integer = 1)
     if visible then LD2_RefreshScreen
     
 end sub
-
-SUB ScenePortalBak
-
-  LD2_SetSceneMode LETTERBOX
-
-  Larry.y = 144
-  Steve.x = 260: Steve.y = 144
-
-
-  TrooperIsThere = 1
-  TrooperPoint = 0
-  TrooperPos = 0
-  Trooper.x = 200
-  Trooper.y = 144
-  TrooperTalking = 0
-  LarryIsThere = 1
-  SteveIsThere = 1
-  LarryPoint = 1
-  StevePoint = 0
-  LarryPos = 0
-  StevePos = 0
-  BarneyIsThere = 1
-  Barney.x = 240
-  Barney.y = 144
-  BarneyPos = 0
-
-  dim escaped as integer
-  IF SCENE_Init("SCENE-PORTAL-1A") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-  
-  LD2_FadeOutMusic
-  IF SCENE_Init("SCENE-PORTAL-1B") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-
-  LD2_PlaySound 16
-  dim rx as single
-  rx = Steve.x
-
-  LD2_WriteText ""
-
-  dim n as integer
-  FOR n = 1 TO 80
-  
-	LD2_RenderFrame
-	LD2_put Trooper.x, Trooper.y, 72, idSCENE, 0
-   
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-  
-	LD2_put Barney.x, Barney.y, 50, idSCENE, 0
-	LD2_put Barney.x, Barney.y, 46 + (n AND 1), idSCENE, 0
-   
-	LD2_put INT(rx), 144, 7 + (n \ 20), idSCENE, 0
-   
-	rx = rx + .4
-  
-	LD2_RefreshScreen
-
-  NEXT n
-
-  Guts_Add rx + 8, 144, 8, 1
-  Guts_Add rx + 8, 144, 8, -1
-
-  SteveIsThere = 0
-  FOR n = 1 TO 200
-	Guts_Animate
-	LD2_RenderFrame
-   
-	LD2_put Trooper.x, Trooper.y, 72, idSCENE, 0
-   
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
- 
-	LD2_put Barney.x, Barney.y, 50, idSCENE, 0
-	LD2_put Barney.x, Barney.y, 45, idSCENE, 0
-   
-	LD2_RefreshScreen
-  NEXT n
-  
-  IF SCENE_Init("SCENE-PORTAL-1C") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-  
-  BarneyPoint = 1
-  IF SCENE_Init("SCENE-PORTAL-1D") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-  
-  LD2_WriteText ""
-  LD2_PlaySound 16
-  rx = Trooper.x
-
-  FOR n = 1 TO 40
- 
-	LD2_RenderFrame
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
- 
-	LD2_put Barney.x, Barney.y, 50, idSCENE, 1
-	LD2_put Barney.x, Barney.y, 46 + (n AND 1), idSCENE, 1
-   
-	LD2_put INT(rx), 144, 73, idSCENE, 0
-  
-	rx = rx - .4
- 
-	LD2_RefreshScreen
-
-  NEXT n
-
-  Guts_Add rx + 8, 144, 8, 1
-  Guts_Add rx + 8, 144, 8, -1
-
-  TrooperIsThere = 0
-  FOR n = 1 TO 200
-	Guts_Animate
-	LD2_RenderFrame
-   
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-
-	LD2_put Barney.x, Barney.y, 50, idSCENE, 1
-	LD2_put Barney.x, Barney.y, 45, idSCENE, 1
-   
-	LD2_RefreshScreen
-  NEXT n
-  
-  IF SCENE_Init("SCENE-PORTAL-1E") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-  
-  BarneyPoint = 0
-  IF SCENE_Init("SCENE-PORTAL-1F") THEN
-	DO WHILE SCENE_ReadLine()
-	  escaped = DoDialogue(): IF escaped THEN EXIT DO
-	LOOP
-  END IF
-
-  LD2_PlaySound 16
-  LD2_WriteText ""
-  '- Giant monster makes sushi out of barney
-	LD2_RenderFrame
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-	LD2_put Barney.x - 32, 128, 76, idSCENE, 0
-	LD2_put Barney.x - 16, 128, 77, idSCENE, 0
-	LD2_put Barney.x - 32, 144, 78, idSCENE, 0
-	LD2_put Barney.x - 16, 144, 79, idSCENE, 0
-	LD2_put Barney.x, Barney.y, 46, idSCENE, 1
-	LD2_put Barney.x, Barney.y, 50, idSCENE, 1
-	LD2_RefreshScreen
-	RetraceDelay 80
-   
-	LD2_RenderFrame
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-	LD2_put Barney.x - 32, 128, 80, idSCENE, 0
-	LD2_put Barney.x - 16, 128, 81, idSCENE, 0
-	LD2_put Barney.x, 128, 82, idSCENE, 0
-	LD2_put Barney.x - 32, 144, 83, idSCENE, 0
-	LD2_put Barney.x - 16, 144, 84, idSCENE, 0
-	LD2_put Barney.x, 144, 85, idSCENE, 0
-	LD2_RefreshScreen
-	RetraceDelay 40
-   
-	LD2_RenderFrame
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-	LD2_put Barney.x - 32, 128, 86, idSCENE, 0
-	LD2_put Barney.x - 16, 128, 87, idSCENE, 0
-	LD2_put Barney.x, 128, 88, idSCENE, 0
-	LD2_put Barney.x - 32, 144, 89, idSCENE, 0
-	LD2_put Barney.x - 16, 144, 90, idSCENE, 0
-	LD2_put Barney.x, 144, 91, idSCENE, 0
-	LD2_RefreshScreen
-	RetraceDelay 40
-
-	LD2_RenderFrame
-	LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-	LD2_put Barney.x - 32, 128, 86, idSCENE, 0
-	LD2_put Barney.x - 16, 128, 87, idSCENE, 0
-	LD2_put Barney.x, 128, 92, idSCENE, 0
-	LD2_put Barney.x - 32, 144, 89, idSCENE, 0
-	LD2_put Barney.x - 16, 144, 90, idSCENE, 0
-	LD2_put Barney.x, 144, 93, idSCENE, 0
-	LD2_RefreshScreen
-	RetraceDelay 40
-
-	FOR n = 1 TO 20
-	  LD2_RenderFrame
-	  LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	  LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-	  LD2_put Barney.x - 32, 128, 86, idSCENE, 0
-	  LD2_put Barney.x - 16, 128, 87, idSCENE, 0
-	  LD2_put Barney.x, 128, 92, idSCENE, 0
-	  LD2_put Barney.x - 32, 144, 89, idSCENE, 0
-	  LD2_put Barney.x - 16, 144, 94, idSCENE, 0
-	  LD2_put Barney.x, 144, 95, idSCENE, 0
-	  LD2_RefreshScreen
-	  RetraceDelay 10
-   
-	  LD2_RenderFrame
-	  LD2_put Larry.x, Larry.y, 1, idSCENE, 1
-	  LD2_put Larry.x, Larry.y, 3, idSCENE, 1
-	  LD2_put Barney.x - 32, 128, 86, idSCENE, 0
-	  LD2_put Barney.x - 16, 128, 96, idSCENE, 0
-	  LD2_put Barney.x, 128, 97, idSCENE, 0
-	  LD2_put Barney.x - 32, 144, 89, idSCENE, 0
-	  LD2_put Barney.x - 16, 144, 98, idSCENE, 0
-	  LD2_put Barney.x, 144, 99, idSCENE, 0
-	  LD2_RefreshScreen
-	  RetraceDelay 10
-	NEXT n
-
-  LD2_ClearMobs
-  Mobs_Add Barney.x - 32, 143, BOSS2
-  LD2_SetBossBar BOSS2
-  'FirstBoss = 1
-  Player_SetAccessLevel NOACCESS
-  LD2_PlayMusic mscBOSS
- 
-  BarneyIsThere = 0
-  LarryPos = 0
- 
-  LD2_WriteText ""
-  LarryIsThere = 0
-  BarneyIsThere = 0
-  LD2_SetSceneMode MODEOFF
-
-END SUB
 
 sub Rooms_DoRooftop (player as PlayerType)
     
@@ -1553,20 +1386,20 @@ end sub
 sub BeforeMobKill (mob as Mobile ptr)
     
     select case mob->id
-    case BOSS1
+    case MobIds.Boss1
         LD2_SetBossBar 0
         LD2_SetFlag MUSICFADEOUT
         MapItems_Add mob->x, mob->y, YELLOWCARD
         Player_AddItem ItemIds.BossRooftopEnd
-    case BOSS2
+    case MobIds.Boss2
         Player_SetAccessLevel REDACCESS
         LD2_SetFlag MUSICCHANGE
         NextMusicId = mscWANDERING
-    case TROOP1, TROOP2
+    case MobIds.Troop1, MobIds.Troop2
         if int(5*rnd(1)) = 0 then
             LD2_PlaySound Sounds.troopDie
         end if
-    case ROCKMONSTER
+    case MobIds.Rockmonster
         LD2_PlaySound Sounds.rockDie
     end select
     

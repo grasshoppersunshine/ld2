@@ -8,13 +8,14 @@ sub PoseFrame.truncate()
     
 end sub
 
-sub PoseFrame.addSprite(idx as integer, x as integer = 0, y as integer = 0)
+sub PoseFrame.addSprite(idx as integer, x as integer = 0, y as integer = 0, flipped as integer = 0)
     
     dim atom as PoseAtom
     
     atom.idx = idx
     atom.x = x
     atom.y = y
+    atom.is_flipped = flipped
     
     this._numAtoms += 1
     redim preserve this._atoms(this._numAtoms-1) as PoseAtom
@@ -48,6 +49,30 @@ function PoseFrame.getNextSprite() as PoseAtom ptr
     
 end function
 
+property PoseType.x() as integer
+    return this._x
+end property
+
+property PoseType.x(newX as integer)
+    this._x = newX
+end property
+
+property PoseType.y() as integer
+    return this._y
+end property
+
+property PoseType.y(newY as integer)
+    this._y = newY
+end property
+
+property PoseType.isFlipped() as integer
+    return this._flipped
+end property
+
+property PoseType.isFlipped(flipped as integer)
+    this._flipped = flipped
+end property
+
 sub PoseType.setId(id as integer)
     this._id = id
 end sub
@@ -64,16 +89,16 @@ function PoseType.getSpriteSetId() as integer
     return this._spritesetId
 end function
 
-sub PoseType.setX(x as integer)
-    this._x = x
+sub PoseType.setX(xv as integer)
+    this._x = xv
 end sub
 
 function PoseType.getX() as integer
     return this._x
 end function
 
-sub PoseType.setY(y as integer)
-    this._y = y
+sub PoseType.setY(yv as integer)
+    this._y = yv
 end sub
 
 function PoseType.getY() as integer
@@ -96,9 +121,9 @@ function PoseType.isHidden() as integer
     return this._hidden
 end function
 
-sub PoseType.addSprite(idx as integer, x as integer = 0, y as integer = 0)
+sub PoseType.addSprite(idx as integer, xv as integer = 0, yv as integer = 0, flipped as integer = 0)
     
-    this._newFrame.addSprite idx, x, y
+    this._newFrame.addSprite idx, xv, yv, flipped
     
 end sub
 
@@ -138,6 +163,14 @@ end sub
 sub PoseType.lastFrame()
     
     this._frameIndex = this._numFrames - 1
+    
+end sub
+
+sub PoseType.setFrame(index as integer)
+    
+    if index >= 0 and index < this._numFrames then
+        this._frameIndex = index
+    end if
     
 end sub
 

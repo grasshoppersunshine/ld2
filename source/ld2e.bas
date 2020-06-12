@@ -844,6 +844,8 @@ SUB LD2_Init
     AddMusic mscUHOH     , DATA_DIR+"sound/music/uhoh.ogg", 0
     AddMusic mscMARCHoftheUHOH, DATA_DIR+"sound/music/march.ogg", 1
     AddMusic mscELEVATOR , DATA_DIR+"sound/music/goingup.ogg", 0
+    AddMusic mscBOSS     , DATA_DIR+"sound/orig/boss.ogg", 1
+    AddMusic mscPORTAL   , DATA_DIR+"sound/music/portal.ogg", 1
     
     AddMusic mscBASEMENT , DATA_DIR+"sound/msplice/basement.wav", 1
     AddMusic mscWIND0    , DATA_DIR+"sound/msplice/wind0.wav", 1
@@ -865,7 +867,7 @@ SUB LD2_Init
     'AddMusic mscINTROCLASSIC , DATA_DIR+"2002/sfx/intro.mp3", 0
     'AddMusic mscWANDERCLASSIC, DATA_DIR+"2002/sfx/creepy.mp3", 1
     'AddMusic mscUHOHCLASSIC  , DATA_DIR+"2002/sfx/uhoh.mp3", 0
-    'AddMusic mscBOSSCLASSIC  , DATA_DIR+"2002/sfx/boss.mp3", 1
+    AddMusic mscBOSSCLASSIC  , DATA_DIR+"sound/orig/boss.ogg", 1
     AddMusic mscINTROCLASSIC , DATA_DIR+"sound/orig/intro.ogg", 0
     AddMusic mscWANDERCLASSIC, DATA_DIR+"sound/orig/creepy,ogg", 1
     'AddMusic mscUHOHCLASSIC  , DATA_DIR+"2002/sfx/uhoh.mp3", 0
@@ -932,11 +934,11 @@ SUB LD2_Init
   LD2_cls
   
   '- add method for LD2_addmobtype, move these to LD2_bas
-  Mobs.AddType ROCKMONSTER
-  Mobs.AddType TROOP1
-  Mobs.AddType TROOP2
-  Mobs.AddType BLOBMINE
-  Mobs.AddType JELLYBLOB
+  Mobs.AddType MobIds.Rockmonster
+  Mobs.AddType MobIds.Troop1
+  Mobs.AddType MobIds.Troop2
+  Mobs.AddType MobIds.BlobMine
+  Mobs.AddType MobIds.JellyBlob
   
 'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
 
@@ -1707,9 +1709,15 @@ SUB LD2_PopText (Message AS STRING)
     LD2_PutText ((SCREEN_W - LEN(Message) * FONT_W) / 2), 60, Message, 0
     
     LD2_UpdateScreen
-   
-    WaitForKeydown(KEY_SPACE)
+    
+    do
+        PullEvents
+        if keypress(KEY_SPACE) or keypress(KEY_ENTER) or mouseLB() then exit do
+    loop
+    
     WaitForKeyup(KEY_SPACE)
+    WaitForKeyup(KEY_ENTER)
+    while mouseLB(): PullEvents: wend
 
 END SUB
 
@@ -2536,15 +2544,15 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
             n = int(100*rnd(1))
             select case n
             case 0 to 14
-                mobType = ROCKMONSTER
+                mobType = MobIds.Rockmonster
             case 20 to 49
-                mobType = TROOP1
+                mobType = MobIds.Troop1
             case 50 to 79
-                mobType = TROOP2
+                mobType = MobIds.Troop2
             case 15 to 19, 80 to 89
-                mobType = BLOBMINE
+                mobType = MobIds.BlobMine
             case 90 to 99
-                mobType = JELLYBLOB
+                mobType = MobIds.JellyBlob
             end select
         end if
         Mobs_Add x * 16, y * 16, mobType
@@ -2574,7 +2582,7 @@ sub Mobs_Animate()
    
     SELECT CASE mob.id
      
-    CASE ROCKMONSTER
+    CASE MobIds.Rockmonster
         
         SELECT CASE mob.state
         CASE SPAWNED
@@ -2623,7 +2631,7 @@ sub Mobs_Animate()
 
         END SELECT
         
-    CASE BLOBMINE
+    CASE MobIds.BlobMine
         
         SELECT CASE mob.state
         CASE SPAWNED
@@ -2672,7 +2680,7 @@ sub Mobs_Animate()
             
         END SELECT
         
-    CASE TROOP1
+    CASE MobIds.Troop1
         
         SELECT CASE mob.state
         CASE SPAWNED
@@ -2776,7 +2784,7 @@ sub Mobs_Animate()
         
         END SELECT
     
-    CASE TROOP2
+    CASE MobIds.Troop2
         
         SELECT CASE mob.state
         CASE SPAWNED
@@ -2877,7 +2885,7 @@ sub Mobs_Animate()
         
         END SELECT
        
-    CASE JELLYBLOB
+    CASE MobIds.JellyBlob
         
         SELECT CASE mob.state
         CASE SPAWNED
@@ -2939,7 +2947,7 @@ sub Mobs_Animate()
             
         END SELECT
         
-    CASE BOSS1
+    CASE MobIds.Boss1
 
         if mob.life = -99 then
             mob.life = 100
@@ -2977,7 +2985,7 @@ sub Mobs_Animate()
             end if
         end if
    
-    CASE BOSS2
+    CASE MobIds.Boss2
 
         IF mob.life = -99 THEN
           mob.life = 100
@@ -3033,14 +3041,14 @@ sub Mobs_Animate()
 
     IF CheckMobWallHit(mob) THEN
       mob.x = ox
-      IF mob.id = TROOP1 THEN mob.counter = 0
-      IF mob.id = TROOP2 THEN mob.counter = 0
+      IF mob.id = MobIds.Troop1 THEN mob.counter = 0
+      IF mob.id = MobIds.Troop2 THEN mob.counter = 0
     END IF
    
     IF CheckMobFloorHit(mob) = 0 THEN
       mob.y = mob.y + mob.velocity
       mob.velocity = mob.velocity + Gravity
-        if mob.id = JELLYBLOB then mob.velocity = 0
+        if mob.id = MobIds.JellyBlob then mob.velocity = 0
       IF mob.velocity > 3 THEN mob.velocity = 3
       IF CheckMobFloorHit(mob) THEN
         IF mob.velocity >= 0 THEN
@@ -3080,7 +3088,7 @@ sub Mobs_Draw()
         x = int(mob.x - XShift)
         y = int(mob.y)
         sprite = int(mob.ani)
-        if mob.id <> BOSS2 then
+        if mob.id <> MobIds.Boss2 then
             SpritesEnemy.putToScreenEx(x, y, sprite, mob.flip)
         else
             cos180 = cos((mob.ani+180)*torad)
@@ -3115,9 +3123,9 @@ sub Mobs_Draw()
         next x
         id = ShowLife
         Mobs.GetMob mob, id
-        if ShowLife = BOSS1 then LD2_putFixed 272, 180, 40, idENEMY, 1
-        if ShowLife = BOSS2 then LD2_putFixed 270 - 3, 180, 76, idSCENE, 0
-        if ShowLife = BOSS2 then LD2_putFixed 270 + 13, 180, 77, idSCENE, 0
+        if ShowLife = MobIds.Boss1 then LD2_putFixed 272, 180, 40, idENEMY, 1
+        if ShowLife = MobIds.Boss2 then LD2_putFixed 270 - 3, 180, 76, idSCENE, 0
+        if ShowLife = MobIds.Boss2 then LD2_putFixed 270 + 13, 180, 77, idSCENE, 0
         LD2_PutText 288, 184, str(mob.life), 1
     end if
 end sub

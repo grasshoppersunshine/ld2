@@ -188,16 +188,16 @@ CONST REDACCESS    = 5
 '======================
 '= ENTITIES
 '======================
-CONST ROCKMONSTER = 300
-CONST TROOP1 = 301
-CONST TROOP2 = 302
-CONST BLOBMINE = 303
-CONST JELLYBLOB = 304
-CONST BOSS1 = 305
-CONST BOSS2 = 306
-'CONST MINIROCK    = 306
-'CONST TROOP3      = 307
-'CONST PLANT       = 308
+enum MobIds
+    Rockmonster = 1
+    Troop1
+    Troop2
+    Blobmine
+    Jellyblob
+    Plant
+    Boss1
+    Boss2
+end enum
 
 '======================
 '= SPRITE SETS
@@ -238,6 +238,7 @@ const mscROOM5     = 28
 const mscSMALLROOM0 = 29
 const mscSMALLROOM1 = 30
 const mscTRUTH      = 31
+const mscPORTAL     = 32
 
 const mscINTROCLASSIC = 101
 const mscTHEMECLASSIC = 102
@@ -410,6 +411,7 @@ enum CharacterIds
     Rockmonster
     Steve
     Trooper
+    Boss2
 end enum
 
 enum PoseIds
@@ -417,6 +419,7 @@ enum PoseIds
     Chewing
     Crashing
     FacingScreen
+    GettingKilled
     GettingShot
     GettingSoda
     Jumping
@@ -425,6 +428,7 @@ enum PoseIds
     Radio
     Sick
     Shooting
+    Standing
     Still
     Surprised
     Talking
