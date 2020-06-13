@@ -6,6 +6,7 @@ sub VideoSprites.init(v as Video ptr, w as integer = 0, h as integer = 0)
     this._w = w
     this._h = h
     this._transparentColor = -1
+    this._count = 0
     
 end sub
 
@@ -81,6 +82,8 @@ sub VideoSprites.load(filename as string)
             ox += this._w
         wend
     close #1
+    
+    this._count = n
     
     SDL_SetRenderTarget( this._renderer, NULL )
     
@@ -160,3 +163,9 @@ sub VideoSprites.setAlphaMod(a as integer)
     SDL_SetTextureAlphaMod(this._data, a)
     
 end sub
+
+function VideoSprites.getCount() as integer
+    
+    return this._count
+    
+end function

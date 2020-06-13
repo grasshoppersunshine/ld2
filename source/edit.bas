@@ -7,6 +7,63 @@
     #include once "modules/inc/keys.bi"
     #include once "inc/ld2.bi"
     #include once "file.bi"
+
+type PointType
+    x as integer
+    y as integer
+end type
+
+type BoundsType
+    top as integer
+    lft as integer
+    rgt as integer
+    btm as integer
+end type
+
+type PointContained
+    _point as PointType
+    _bounds as BoundsType
+    declare sub setBounds(top as integer, lft as integer, btm as integer, rgt as integer)
+    declare property x () as integer
+    declare property y () as integer
+    declare property x (nx as integer)
+    declare property y (ny as integer)
+end type
+
+sub PointContained.setBounds(top as integer, lft as integer, rgt as integer, btm as integer)
+    
+    this._bounds.top = top
+    this._bounds.lft = lft
+    this._bounds.rgt = rgt
+    this._bounds.btm = btm
+    
+end sub
+
+property PointContained.x() as integer
+    return this._point.x
+end property
+
+property PointContained.y() as integer
+    return this._point.y
+end property
+
+property PointContained.x(nx as integer)
+    this._point.x = nx
+    if this._point.x < this._bounds.lft then
+        this._point.x = this._bounds.lft
+    elseif this._point.x > this._bounds.rgt then
+        this._point.x = this._bounds.rgt
+    end if
+end property
+
+property PointContained.y(ny as integer)
+    this._point.y = ny
+    if this._point.y < this._bounds.top then
+        this._point.y = this._bounds.top
+    elseif this._point.y > this._bounds.btm then
+        this._point.y = this._bounds.btm
+    end if
+end property
     
     declare sub Init()
     declare sub LoadMap (filename as string)
@@ -22,6 +79,7 @@
     declare sub showHelp ()
     declare sub GenerateSky()
     declare sub Notice(message as string)
+    declare sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointContained, bgcolor as integer = 18)
     
     dim shared SpritesLarry as VideoSprites
     dim shared SpritesTile as VideoSprites
@@ -48,10 +106,8 @@
 
   DIM SHARED NumItems AS INTEGER
 
-  TYPE tCursor
-    x AS INTEGER
-    y AS INTEGER
-  END TYPE: DIM Cursor AS tCursor
+  
+  DIM Cursor AS PointType
 
   DIM XScroll AS INTEGER
   DIM CurrentTile AS INTEGER
@@ -73,10 +129,10 @@
     const DATA_DIR = "data/"
 
   Init
-
-  CurrentTile = 40
+  
+  CurrentTile  = 1
   CurrentTileL = 1
-  CurrentTileO = 0
+  CurrentTileO = 1
     
     dim shared Ani as double
     dim shared Animation as integer
@@ -119,13 +175,15 @@
     showLayer4  = 1
     showLayer5  = 1
     
+    dim cursors(3) as PointContained
+    
     dim res_x as integer, res_y as integer
     screeninfo res_x, res_y
     
-    dim mx as integer, my as integer
-    dim mx_prev as integer, my_prev as integer
+    dim m as PointContained
+    m.setBounds(0, 0, SCREEN_W-SPRITE_W, SCREEN_H-SPRITE_H)
+    
     dim mw as integer
-    dim mw_prev as integer
 
   DO
 
@@ -160,24 +218,29 @@
         wkeyup = 0
     end if
 
-    'DO
-    '  key$ = INKEY$
-    'LOOP WHILE key$ = "" AND Animation% = 0
     PullEvents
     
-    mx_prev = mx: my_prev = my
-    mx = int(mouseX()*(SCREEN_W/res_x))
-    my = int(mouseY()*(SCREEN_H/res_Y))
-    mw_prev = mw
+    m.x = (m.x + mouseRelX()*0.3)
+    m.y = (m.y + mouseRelY()*0.3)
     mw = mouseWheelY()
     
-    if (mx <> mx_prev) or (my <> my_prev) then
-        Cursor.x = int(mx/16)*16: Cursor.y = int(my/16)*16
-    end if
+    cursor.x = int(m.x/SPRITE_W)*SPRITE_W
+    cursor.y = int(m.y/SPRITE_H)*SPRITE_H
 
-    if keyboard(KEY_ESCAPE) then exit do
+    if keypress(KEY_ESCAPE) then exit do
     
-    if keyboard(KEY_H) then showHelp
+    if keypress(KEY_H) then showHelp
+    
+    if keypress(KEY_TAB) then
+        select case activeLayer
+        case 1
+            SpriteSelectScreen @spritesTile, currentTile, cursors(0)
+        case 2, 3
+            SpriteSelectScreen @spritesLight, currentTileL, cursors(1), 27
+        case 4
+            SpriteSelectScreen @spritesObject, currentTileO, cursors(2)
+        end select
+    end if
    
     if keyboard(KEY_LSHIFT) then
         if keyboard(KEY_RIGHT) or keyboard(KEY_D) then XScroll += 1: wkeyup = -1
@@ -194,14 +257,14 @@
     if keyboard(KEY_UP  ) then Cursor.y = Cursor.y - 16: wkeyup = KEY_UP
     if keyboard(KEY_W   ) then Cursor.y = Cursor.y - 16: wkeyup = KEY_W
 
-    if keyboard(KEY_RBRACKET) or ((mw-mw_prev) > 0) then
+    if keyboard(KEY_RBRACKET) or (mw > 0) then
         if activeLayer = 1 then CurrentTile = CurrentTile + 1
         if activeLayer = 2 then CurrentTileL = CurrentTileL + 1
         if activeLayer = 3 then CurrentTileL = CurrentTileL + 1
         if activeLayer = 4 then CurrentTileO = CurrentTileO + 1
         wkeyup = KEY_RBRACKET
     end if
-    if keyboard(KEY_LBRACKET) or ((mw-mw_prev) < 0) then
+    if keyboard(KEY_LBRACKET) or (mw < 0) then
         if activeLayer = 1 then CurrentTile = CurrentTile - 1
         if activeLayer = 2 then CurrentTileL = CurrentTileL - 1
         if activeLayer = 3 then CurrentTileL = CurrentTileL - 1
@@ -254,7 +317,7 @@
         if activeLayer = 4 then RemoveItem mapX, mapY
     end if
     
-    if keyboard(KEY_TAB) or keyboard(KEY_C) or mouseRB() then
+    if keyboard(KEY_C) or mouseRB() then
         if activeLayer = 1 then CurrentTile = EditMap(mapX, mapY)
         if activeLayer = 2 then CurrentTileL = LightMap2(mapX, mapY)
         if activeLayer = 3 then CurrentTileL = LightMap1(mapX, mapY)
@@ -277,12 +340,12 @@
         end if
     end if
 
-    IF CurrentTile < 0 THEN CurrentTile = 199
-    IF CurrentTile > 199 THEN CurrentTile = 199
-    IF CurrentTileL < 0 THEN CurrentTileL = 0
-    IF CurrentTileL > 40 THEN CurrentTileL = 40
-    IF CurrentTileO < 0 THEN CurrentTileO = 0
-    IF CurrentTileO > 39 THEN CurrentTileO = 39
+    IF CurrentTile < 0 THEN CurrentTile = SpritesTile.getCount()-1
+    IF CurrentTile > SpritesTile.getCount()-1 THEN CurrentTile = SpritesTile.getCount()-1
+    IF CurrentTileL < 0 THEN CurrentTileL = SpritesLight.getCount()-1
+    IF CurrentTileL > SpritesLight.getCount()-1 THEN CurrentTileL = SpritesLight.getCount()-1
+    IF CurrentTileO < 0 THEN CurrentTileO = SpritesObject.getCount()-1
+    IF CurrentTileO > SpritesObject.getCount()-1 THEN CurrentTileO = SpritesObject.getCount()-1
     IF Cursor.x < 0 THEN Cursor.x = 0
     IF Cursor.x > 304 THEN Cursor.x = 304
     IF Cursor.y < 0 THEN Cursor.y = 0
@@ -1046,5 +1109,84 @@ sub Notice(message as string)
     WaitForKeyup(KEY_ENTER)
     WaitForKeydown(KEY_ENTER)
     return
+    
+end sub
+
+sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointContained, bgcolor as integer = 18)
+
+    dim grid as PointType
+    dim column as integer
+    dim page as integer
+    dim add as integer
+    dim top as integer
+    dim lft as integer
+    dim x as integer, y as integer
+    dim n as integer
+    
+    dim hovered as integer
+    
+    cursor.setBounds(0, 0, SCREEN_W-SPRITE_W*1.5, SCREEN_H-SPRITE_H*3.0)
+    
+    do
+        PullEvents
+        
+        cursor.x = (cursor.x + mouseRelX()*0.3)
+        cursor.y = (cursor.y + mouseRelY()*0.3)
+        grid.x = int(cursor.x / SPRITE_W)*SPRITE_W+SPRITE_W*0.5
+        grid.y = int(cursor.y / SPRITE_H)*SPRITE_H+SPRITE_H*0.5
+        
+        LD2_cls 1, bgcolor
+        hovered = -1
+        column = 0
+        lft = SPRITE_W*0.5: top = SPRITE_H*0.5
+        x = lft: y = top
+        for n = 0 to sprites->getCount()
+            sprites->putToScreen(x, y, n)
+            if n = selected then
+                LD2_outline x, y, SPRITE_W, SPRITE_H, 15, 1
+            end if
+            if x = grid.x and y = grid.y then
+                hovered = n
+            end if
+            x += SPRITE_W
+            if ((n+1) mod 9) = 0 then
+                x = lft
+                y += SPRITE_H
+            end if
+            if (y > (SCREEN_H-SPRITE_H*3.0)) and (column = 0) then
+                column += 1
+                lft = 10.5*SPRITE_W
+                x = lft
+                y = top
+            end if
+        next n
+        
+        LD2_outline grid.x, grid.y, SPRITE_W, SPRITE_H, 15, 1
+        
+        putText "Selected "+str(selected), 2, FONT_H*36
+        putText "Hovered  "+iif(hovered >= 0, str(hovered), ""), 2, FONT_H*37.5
+        
+        LD2_RefreshScreen
+        
+        add = 0
+        if keypress(KEY_LEFT)  then add = iif(selected mod 9 = 0, -82, -1)
+        if keypress(KEY_RIGHT) then add = iif(selected mod 9 = 8,  82,  1)
+        if keypress(KEY_UP)    then add = iif(selected mod 90 < 10, 0, -9)
+        if keypress(KEY_DOWN)  then add = iif(selected mod 90 > 80, 0,  9)
+        
+        if (add <> 0) and (selected+add >= 0) and (selected+add < sprites->getCount()) then
+            selected += add
+        end if
+        
+        if mouseLB() or keypress(KEY_SPACE) then
+            selected = hovered
+        end if
+        
+        if keypress(KEY_H) then showHelp
+        
+        if keypress(KEY_TAB) or keypress(KEY_ESCAPE) then
+            exit do
+        end if
+    loop
     
 end sub
