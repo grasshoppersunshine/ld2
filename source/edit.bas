@@ -8,6 +8,9 @@
     #include once "inc/ld2.bi"
     #include once "file.bi"
 
+    const FONT_W = 7
+    const FONT_h = 5
+
 type PointType
     x as integer
     y as integer
@@ -71,7 +74,7 @@ end property
     declare sub LoadSprites (filename as string, spriteSetId as integer)
     declare sub DoMapPostProcessing ()
     declare sub postProcessTile(x as integer, y as integer)
-    declare sub putText (text as string, x as integer, y  as integer)
+    declare sub putText (text as string, x as integer, y  as integer, fontw as integer = FONT_W)
     declare function inputText (text as string, currentVal as string = "") as string
     declare sub PlaceItem(x as integer, y as integer, id as integer)
     declare sub RemoveItem(x as integer, y as integer)
@@ -123,8 +126,7 @@ end property
     const SCREEN_H = 200
     const SPRITE_W = 16
     const SPRITE_H = 16
-    const FONT_W = 7
-    const FONT_h = 5
+    
 
     const DATA_DIR = "data/"
 
@@ -140,8 +142,6 @@ end property
     Ani = 1
     Animation = 0
 
-  'ani! = 1
-  'Animation% = 0
     
     dim shared LightPalette as Palette256
 
@@ -155,9 +155,6 @@ end property
     dim mapY as integer
     dim filename as string
     
-    dim wkeyup as integer
-    dim wkeyup_prev as integer
-    dim wkeyup_seconds as double
     dim mapFilename as string
     dim activeLayer as integer
     dim activeLayerString as string
@@ -199,33 +196,15 @@ end property
     putText "Animations "+iif(Animation, "ON", "OFF"), 2, FONT_H*38.5
     LD2_RefreshScreen
     LD2_CopyBuffer 2, 1
-    'WaitSeconds 0.05
     
-    if (wkeyup = 0) or (wkeyup <> wkeyup_prev) then
-        wkeyup_seconds = 0.35
-    end if
-    
-    wkeyup_prev = wkeyup
-    
-    if wkeyup > 0 then
-        'WaitForkeyup(wkeyup)
-        WaitSecondsUntilKeyup(wkeyup_seconds, wkeyup)
-        wkeyup_seconds = 0.04
-        wkeyup = 0
-    end if
-    if wkeyup = -1 then
-        WaitSeconds 0.05
-        wkeyup = 0
-    end if
-
     PullEvents
     
     m.x = (m.x + mouseRelX()*0.3)
     m.y = (m.y + mouseRelY()*0.3)
     mw = mouseWheelY()
     
-    cursor.x = int(m.x/SPRITE_W)*SPRITE_W
-    cursor.y = int(m.y/SPRITE_H)*SPRITE_H
+    if (keyboard(KEY_Y) = 0) then cursor.x = int(m.x/SPRITE_W)*SPRITE_W
+    if (keyboard(KEY_X) = 0) then cursor.y = int(m.y/SPRITE_H)*SPRITE_H
 
     if keypress(KEY_ESCAPE) then exit do
     
@@ -243,66 +222,61 @@ end property
     end if
    
     if keyboard(KEY_LSHIFT) then
-        if keyboard(KEY_RIGHT) or keyboard(KEY_D) then XScroll += 1: wkeyup = -1
-        if keyboard(KEY_LEFT) or keyboard(KEY_A) then XScroll -= 1: wkeyup = -1
+        if keypress(KEY_RIGHT) or keyboard(KEY_D) then XScroll += 1
+        if keypress(KEY_LEFT ) or keyboard(KEY_A) then XScroll -= 1
     else
-        if keyboard(KEY_RIGHT) then Cursor.x = Cursor.x + 16: wkeyup = KEY_RIGHT
-        if keyboard(KEY_D    ) then Cursor.x = Cursor.x + 16: wkeyup = KEY_D
-        if keyboard(KEY_LEFT ) then Cursor.x = Cursor.x - 16: wkeyup = KEY_LEFT
-        if keyboard(KEY_A    ) then Cursor.x = Cursor.x - 16: wkeyup = KEY_A
+        if keypress(KEY_RIGHT) or keypress(KEY_D) then m.x = m.x + 16
+        if keypress(KEY_LEFT ) or keypress(KEY_A) then m.x = m.x - 16
     end if
     
-    if keyboard(KEY_DOWN) then Cursor.y = Cursor.y + 16: wkeyup = KEY_DOWN
-    if keyboard(KEY_S   ) then Cursor.y = Cursor.y + 16: wkeyup = KEY_S
-    if keyboard(KEY_UP  ) then Cursor.y = Cursor.y - 16: wkeyup = KEY_UP
-    if keyboard(KEY_W   ) then Cursor.y = Cursor.y - 16: wkeyup = KEY_W
+    if keypress(KEY_DOWN) then m.y = m.y + 16
+    if keypress(KEY_S   ) then m.y = m.y + 16
+    if keypress(KEY_UP  ) then m.y = m.y - 16
+    if keypress(KEY_W   ) then m.y = m.y - 16
 
-    if keyboard(KEY_RBRACKET) or (mw > 0) then
+    if keypress(KEY_RBRACKET) or (mw > 0) then
         if activeLayer = 1 then CurrentTile = CurrentTile + 1
         if activeLayer = 2 then CurrentTileL = CurrentTileL + 1
         if activeLayer = 3 then CurrentTileL = CurrentTileL + 1
         if activeLayer = 4 then CurrentTileO = CurrentTileO + 1
-        wkeyup = KEY_RBRACKET
     end if
-    if keyboard(KEY_LBRACKET) or (mw < 0) then
+    if keypress(KEY_LBRACKET) or (mw < 0) then
         if activeLayer = 1 then CurrentTile = CurrentTile - 1
         if activeLayer = 2 then CurrentTileL = CurrentTileL - 1
         if activeLayer = 3 then CurrentTileL = CurrentTileL - 1
         if activeLayer = 4 then CurrentTileO = CurrentTileO - 1
-        wkeyup = KEY_LBRACKET
     end if
     
-    if keyboard(KEY_Q) then
+    if keypress(KEY_Q) then
       IF Animation = 0 THEN
         Animation = 1
       ELSE
         Animation = 0
       END IF
-        wkeyup = KEY_TILDA
     END IF
     
     mapX = Cursor.x \ 16 + XScroll
     mapY = Cursor.y \ 16
     
     if keyboard(KEY_LSHIFT) then
-        if keyboard(KEY_1) then AniMap(mapX, mapY) = 0
-        if keyboard(KEY_2) then AniMap(mapX, mapY) = 1
-        if keyboard(KEY_3) then AniMap(mapX, mapY) = 2
-        if keyboard(KEY_4) then AniMap(mapX, mapY) = 3
+        if keypress(KEY_1) then AniMap(mapX, mapY) = 0
+        if keypress(KEY_2) then AniMap(mapX, mapY) = 1
+        if keypress(KEY_3) then AniMap(mapX, mapY) = 2
+        if keypress(KEY_4) then AniMap(mapX, mapY) = 3
     elseif keyboard(KEY_CTRL) then
-        if keyboard(KEY_1) then showLayer1 = iif(showLayer1, 0, 1): wkeyup = KEY_1
-        if keyboard(KEY_2) then showLayer2 = iif(showLayer2, 0, 1): wkeyup = KEY_2
-        if keyboard(KEY_3) then showLayer3 = iif(showLayer3, 0, 1): wkeyup = KEY_3
-        if keyboard(KEY_4) then showLayer4 = iif(showLayer4, 0, 1): wkeyup = KEY_4
-        if keyboard(KEY_5) then showLayer5 = iif(showLayer5, 0, 1): wkeyup = KEY_5
+        if keypress(KEY_1) then showLayer1 = iif(showLayer1, 0, 1)
+        if keypress(KEY_2) then showLayer2 = iif(showLayer2, 0, 1)
+        if keypress(KEY_3) then showLayer3 = iif(showLayer3, 0, 1)
+        if keypress(KEY_4) then showLayer4 = iif(showLayer4, 0, 1)
+        if keypress(KEY_5) then showLayer5 = iif(showLayer5, 0, 1)
     else
-        if keyboard(KEY_1) then activeLayer = 1
-        if keyboard(KEY_2) then activeLayer = 2
-        if keyboard(KEY_3) then activeLayer = 3
-        if keyboard(KEY_4) then activeLayer = 4
+        if keypress(KEY_1) then activeLayer = 1
+        if keypress(KEY_2) then activeLayer = 2
+        if keypress(KEY_3) then activeLayer = 3
+        if keypress(KEY_4) then activeLayer = 4
     end if
     
-    if keyboard(KEY_SPACE) or keyboard(KEY_V) or mouseLB() then
+    if keypress(KEY_SPACE) or keypress(KEY_V) or mouseLB() then
         if activeLayer = 1 then EditMap(mapX, mapY) = CurrentTile
         if activeLayer = 2 then LightMap2(mapX, mapY) = CurrentTileL
         if activeLayer = 3 then LightMap1(mapX, mapY) = CurrentTileL
@@ -310,28 +284,28 @@ end property
         NoSaveMap(mapX, mapY) = 0
     end if
     
-    if keyboard(KEY_DELETE) or keyboard(KEY_BACKSPACE) then
+    if keypress(KEY_DELETE) or keypress(KEY_BACKSPACE) then
         if activeLayer = 1 then EditMap(mapX, mapY) = 0
         if activeLayer = 2 then LightMap2(mapX, mapY) = 0
         if activeLayer = 3 then LightMap1(mapX, mapY) = 0
         if activeLayer = 4 then RemoveItem mapX, mapY
     end if
     
-    if keyboard(KEY_C) or mouseRB() then
+    if keypress(KEY_C) or mouseRB() then
         if activeLayer = 1 then CurrentTile = EditMap(mapX, mapY)
         if activeLayer = 2 then CurrentTileL = LightMap2(mapX, mapY)
         if activeLayer = 3 then CurrentTileL = LightMap1(mapX, mapY)
         if activeLayer = 4 then CUrrentTileO = GetItem(mapX, mapY)
     end if
    
-    if keyboard(KEY_F2) then
+    if keypress(KEY_F2) then
         filename = trim(inputText("Save Filename: ", ""))
         if filename <> "" then
             SaveMap DATA_DIR+"rooms/"+filename
             mapFilename = filename
         end if
     end if
-    if keyboard(KEY_L) then
+    if keypress(KEY_L) then
         filename = trim(inputText("Load Filename: ", ""))
         if filename <> "" then
             SaveMap DATA_DIR+"rooms/autosave.ld2"
@@ -353,8 +327,8 @@ end property
     IF XScroll < 0 THEN XScroll = 0
     IF XScroll > 181 THEN XScroll = 181
    
-    if keyboard(KEY_T) then swap TraceOn, TraceOff: wkeyup = KEY_T
-    if keyboard(KEY_LSHIFT) and keyboard(KEY_BACKSLASH) then swap L2TraceOn, L2TraceOff: wkeyup = KEY_BACKSLASH
+    if keypress(KEY_T) then swap TraceOn, TraceOff
+    if keyboard(KEY_LSHIFT) and keypress(KEY_BACKSLASH) then swap L2TraceOn, L2TraceOff
     IF TraceOn THEN EditMap(Cursor.x \ 16 + XScroll, Cursor.y \ 16) = CurrentTile
     IF L2TraceOn THEN LightMap2(Cursor.x \ 16 + XScroll, Cursor.y \ 16) = CurrentTileL
 
@@ -627,6 +601,8 @@ sub DoMapPostProcessing ()
     dim x as integer
     dim y as integer
     
+    return
+    
     for y = 0 to 12
         for x = 0 to 200
             NoSaveMap(x, y) = EditMap(x, y)
@@ -877,17 +853,27 @@ SUB SaveMap (filename as string)
 
 END SUB
 
-sub putText (text as string, x as integer, y  as integer)
+sub putText (text as string, x as integer, y  as integer, fontw as integer = FONT_W)
 
     dim n as integer
 
     text = ucase(text)
     
     for n = 1 to len(text)
-        if mid(text, n, 1) <> " " then
-            SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, asc(mid(text, n, 1)) - 32)
+        if fontw < FONT_W then
+            if (n and 1) = 0 then
+                SpritesFont.setColorMod(255, 255, 255)
+            else
+                SpritesFont.setColorMod(208, 208, 208)
+            end if
         end if
+        if mid(text, n, 1) <> " " then
+            SpritesFont.putToScreen(x, y, asc(mid(text, n, 1)) - 32)
+        end if
+        x += fontw
     next n
+    
+    SpritesFont.setColorMod(255, 255, 255)
     
 end sub
 
@@ -1021,16 +1007,16 @@ sub showHelp ()
     lineHeight = FONT_H*2
     
     putText "Help", lft, top: top += lineHeight*1.65
-    putText "Move Cursor........Arrow Keys or W,A,S,D", lft, top: top += lineHeight
-    putText "Scroll Map.........SHIFT+(LEFT or RIGHT)", lft, top: top += lineHeight
-    putText "Switch Layer.......1, 2, 3, 4", lft, top: top += lineHeight
-    putText "* Select...........<  [  > <  ]  >", lft, top: top += lineHeight
-    putText "* Place............SPACE or V", lft, top: top += lineHeight
-    putText "* Copy.............TAB or C", lft, top: top += lineHeight
-    putText "* Remove...........DELETE or BACKSPACE", lft, top: top += lineHeight
-    putText "* Animation Loop...SHIFT+(1, 2, 3, 4)", lft, top: top += lineHeight
-    putText "Preview Animation..Q (On / Off)", lft, top: top += lineHeight
-    putText "Load / Save........L / F2", lft, top
+    putText "Move Cursor........Arrow Keys or W,A,S,D", lft, top, 6: top += lineHeight
+    putText "Scroll Map.........SHIFT+(LEFT or RIGHT)", lft, top, 6: top += lineHeight
+    putText "Switch Layer.......1, 2, 3, 4", lft, top, 6: top += lineHeight
+    putText "* Select...........<  [  > <  ]  >", lft, top, 6: top += lineHeight
+    putText "* Place............SPACE or V", lft, top, 6: top += lineHeight
+    putText "* Copy.............TAB or C", lft, top, 6: top += lineHeight
+    putText "* Remove...........DELETE or BACKSPACE", lft, top, 6: top += lineHeight
+    putText "* Animation Loop...SHIFT+(1, 2, 3, 4)", lft, top, 6: top += lineHeight
+    putText "Preview Animation..Q (On / Off)", lft, top, 6: top += lineHeight
+    putText "Load / Save........L / F2", lft, top, 6
     
     putText "Press ENTER to return", lft, SCREEN_H-padding-FONT_H*2
     
