@@ -9,7 +9,12 @@ data/sound/recorded
 data/sound/splice
 data/sound/msplice
 
+data/gfx/tmp.bmp
+
 *mptm.autosave.*
 autosave.ld2
 
 data/gfx/pp256
+
+source/test.bas
+

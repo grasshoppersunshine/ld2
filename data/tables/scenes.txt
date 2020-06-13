@@ -754,7 +754,7 @@ END
 SCENE-PORTAL-1A
     
     LARRY
-    Huh!
+    Huh?!
 
 END
 
@@ -768,7 +768,8 @@ SCENE-PORTAL-1B
     They found me.
     
     BARNEY
-    You missed it, Larry. We just closed the portal... finally.
+    You missed out, Larry. We just closed the portal.
+    It's quite amazing when it's activated.
     
     LARRY
     What?!
@@ -786,19 +787,16 @@ SCENE-PORTAL-1B
     Unfortunately.
     There was a malfunction. We cleared the area.
     Then I realized I didn't have my card on me.
-    The entire ordeal was an accident.
-    ...
-    I do appreciate the help with finding the access cards.
+    I do appreciate the help finding access cards, though.
     
     LARRY
-    Yeah... you're not welcome.
-    You're science expiriment got most of us killed tonight.
+    Yeah...
+    ... you're not welcome.
+    Your science experiment got almost everyone killed.
     
     BARNEY
-    I know...
-    I'm not happy about it either. I lost friends as well.
-    ...
-    This was all about sending you and Steve through the portal.
+    I know... I'm not pleased about it either.
+    This was only about delivering you and Steve to the aliens.
     None of the other trouble was meant to happen.
     
     LARRY
@@ -806,11 +804,15 @@ SCENE-PORTAL-1B
     That's on you.
     
     BARNEY
-    I need to finish this, or all their deaths will be meaningless.
-    We're so close now...
-    ...
+    I need to finish this, or all their deaths are for nothing.
+    We're so close...
+    
+END
+
+SCENE-PORTAL-1CA
+    
+    BARNEY
     Drop the weapon, Larry.
-    You're not getting out of this one.
     
     LARRY
     You know me well enough to know that's not going to happen.
@@ -820,14 +822,18 @@ SCENE-PORTAL-1B
     There's only one thing standing between you and me, Larry.
     
     LARRY
-    ...
+    ???
     
     BARNEY
     ... and that...
-    ... is Steve...
+    ... is Steve.
+    
+END
+
+SCENE-PORTAL-1CB
     
     STEVE
-    Huh?
+    What?!
     
     LARRY
     Barney! ... You wouldn't?
@@ -837,7 +843,7 @@ SCENE-PORTAL-1B
     Come with me willingly, or Steve dies.
     
     STEVE
-    !!!
+    *GASP*
     
     LARRY
     Barney, you don't want to do this.
@@ -861,51 +867,110 @@ SCENE-PORTAL-1B
     
     BARNEY
     No?
+    
+    BARNEY [face left]
     What do you mean, no?
     
     TROOPER
-    He killed Supreme Leader, Master Sire Xenophobos!
-    Now he gets a trial?
-    !!!
-    This is ludicrous!
+    They killed the Supreme Leader!
+    Now they get a trial?!
+    I won't give them the chance!
     
     BARNEY
-    Barrax! Holster your weapon, now!
-    Don't be a fool! You're system will execute you for this.
+    Barrax!
+    Don't be a fool! The trial is just for show.
+    They *don't* have a chance.
+    Holster your weapon, now!
+    ...
     
     TROOPER
-    I live for Master Xenophobos!
-    
-    BARNEY
-    They *will* die.
-    They are already guilty. The trial is just a sham.
-    The chance of that turning around is zero.
-    
-    TROOPER
-    There's always a slim chance that things will go awry.
-    ... No.
-    I'm not giving him the chance.
-    
-    BARNEY
-    NO!!!
+    ...
+    Yes... sir.
     
 END
 
-SCENE-PORTAL-1C
-    
-    LARRY
-    !!!
-    Steve!!!
+SCENE-PORTAL-1CC
     
     BARNEY
-    Barrax! You killed us all!
-    YEEOOOWWW AHHH!!!
+    Phew!
+    
+    BARNEY [face right]
+    Now, let's get back to it.
+    
+    STEVE [face right]
+    Larry, what was his name again?
+    
+    LARRY
+    Whose?
+    
+    STEVE
+    The Surpreme Leader.
+    
+    LARRY
+    Oh...
+    ... Xenophobe, I think.
+    
+    STEVE
+    Xenophobe? Like... as in a phobia of aliens?
+    
+    LARRY
+    Yeah... it doesn't make sense, I know.
+    
+    TROOPER
+    Ahem!
+    
+    BARNEY [face left]
+    STEVE [face left]
+    
+    TROOPER
+    It is *not* Xenophobe. That was the short term, but only phonetically.
+    His full name is Sire Zeu Xenophobos!
+    
+    STEVE
+    ...
+    *Was* his full name.
+    
+    TROOPER
+    You dare insult the Supreme Leader?
+    
+END
+
+SCENE-PORTAL-1CD
+    
+    STEVE
+    Hard to hurt someone's feelings who's dead, don't you think?
+    
+    STEVE_LAUGHING [face right]
+    Ahahahaha!
+    Am I right?
     
 END
 
 SCENE-PORTAL-1D
     
+    LARRY
+    Steve!!!
+    
+    BARNEY [face left]
+    Barrax!
+    You killed us all!
+    
+    TROOPER
+    No one disrespects the Supreme Leader!
+    No one.
+    
     BARNEY
+    Your Supreme Leader leader can burn in Hell!!!
+    
+END
+
+SCENE-PORTAL-1E
+    
+    BARNEY
+    HUZZAAAH!!!
+    
+    BARNEY
+    ...
     Oops...
     
     LARRY
@@ -921,10 +986,9 @@ SCENE-PORTAL-1D
     
 END
 
-SCENE-PORTAL-1E
+SCENE-PORTAL-1F
     
     LARRY
-    No way...
     You gotta be kidding me...
     
 END

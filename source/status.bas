@@ -439,25 +439,29 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
     menuBorder.w = fontW
     menuBorder.h = SCREEN_H
     
+    dim listFloors as ElementType
+    LD2_InitElement @listFloors, "", 31
+    listFloors.y = fontH * 3
+    
     for i = 0 to numFloors-1
         floorStr = iif(len(floors(i).filename), ltrim(str(floors(i).floorNo)), "")
         LD2_InitElement @menuNumbers(i), floorStr, 31, ElementFlags.MonospaceText or ElementFlags.AlignTextRight
-        menuNumbers(i).parent = @menuWindow
+        menuNumbers(i).parent = @listFloors
         menuNumbers(i).w = fontW * 2
         menuNumbers(i).h = FONT_H
         menuNumbers(i).padding_y = 1
         menuNumbers(i).x = fontW
-        menuNumbers(i).y = fontH * 4 + fontH * i
+        menuNumbers(i).y = fontH * i
         menuNumbers(i).text_color = 182
         menuNumbers(i).background = 177
         LD2_InitElement @menuLabels(i), floors(i).label, 31
-        menuLabels(i).parent = @menuWindow
+        menuLabels(i).parent = @listFloors
         menuLabels(i).w = 156 - fontW * 5 - 3
         menuLabels(i).h = FONT_H
         menuLabels(i).padding_x = 3
         menuLabels(i).padding_y = 1
         menuLabels(i).x = fontW * 4 - 5
-        menuLabels(i).y = fontH * 4 + fontH * i
+        menuLabels(i).y = fontH * i
         menuLabels(i).text_color = 31
     next i
 	
@@ -483,8 +487,16 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
         LD2_AddElement @menuLabels(i)
     next i
 	
+    dim roomStart as integer
+    dim roomEnd as integer
+    
 	DO
-		FOR i = 0 TO numFloors - 1
+        roomStart = 0
+        roomEnd = numFloors-1
+        if selectedRoom <= 9 then
+            listFloors.y = fontH * 3 - (9-selectedRoom)*fontH
+        end if
+		FOR i = roomStart TO roomEnd
 		
 			floorNo = floors(i).floorNo
 			filename = floors(i).filename
@@ -1181,12 +1193,12 @@ function STATUS_DialogYesNo(message as string) as integer
     dialog.w = pixels * modw * 2
     dialog.h = pixels * modh * 2
     title.x = dialog.x + fontW
-    title.y = dialog.y + fontH
-    optionYes.y = halfY-fontH*1.5
+    title.y = fontH
+    optionYes.y = fontH*4.5
     optionYes.padding_x = fontW: optionYes.padding_y = 2
     optionYes.background = 68
     optionYes.text_is_monospace = 1
-    optionNo.y  = halfY+fontW*0.5
+    optionNo.y  = fontH*6.5
     optionNo.padding_x = fontW: optionNo.padding_y = 2
     optionNo.text_is_monospace = 1
     optionYes.background = 70

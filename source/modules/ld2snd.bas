@@ -1,13 +1,15 @@
 #include once "inc/sdlsnd.bi"
 #include once "inc/ld2snd.bi"
 
-DIM SHARED LD2musicList(32) AS LD2MusicData
+DIM SHARED LD2musicList(64) AS LD2MusicData
 DIM SHARED LD2musicListCount AS INTEGER
 DIM SHARED LD2soundEnabled AS INTEGER
 dim shared LD2soundMusicTargetVolume as double = -1
 dim shared LD2soundMusicVolumeChangeSpeed as double
 dim shared LoopMusic as integer
 dim shared SoundErrorMsg as string
+dim shared MaxMusicVolume as double = 1.0
+dim shared MaxSoundVolume as double = 1.0
 
 function LD2_GetSoundInfo() as string
     
@@ -78,11 +80,11 @@ function LD2_FadeInMusic (speed as double = 1.0) as integer
     
     if LD2soundEnabled = 0 then return 0
     
-    delay = speed / 10
+    delay = speed / 100
     
     if (timer - lastTime) >= delay then
         v = SOUND_GetMusicVolume()
-        v += 0.10
+        v += 0.01
         if v > 1.0 then v = 1.0
         SOUND_SetMusicVolume v
         lastTime = timer
@@ -100,11 +102,11 @@ function LD2_FadeOutMusic (speed as double = 1.0) as integer
     
     if LD2soundEnabled = 0 then return 0
     
-    delay = speed / 10
+    delay = speed / 100
     
     if (timer - lastTime) >= delay then
         v = SOUND_GetMusicVolume()
-        v -= 0.10
+        v -= 0.01
         if v < 0.0 then v = 0.0
         SOUND_SetMusicVolume v
         lastTime = timer
@@ -196,7 +198,18 @@ end function
 
 sub LD2_SetMusicVolume(v as double)
     
-    SOUND_SetMusicVolume v
+    SOUND_SetMusicVolume iif(v > MaxMusicVolume, MaxMusicVolume, v)
+    
+end sub
+
+sub LD2_SetMusicMaxVolume(v as double)
+    
+    MaxMusicVolume = v
+    v = SOUND_GetMusicVolume()
+    if v > MaxMusicVolume then
+        v = MaxMusicVolume
+        SOUND_SetMusicVolume v
+    end if
     
 end sub
 
@@ -208,7 +221,18 @@ end function
 
 sub LD2_SetSoundVolume(v as double)
     
-    SOUND_SetSoundVolume v
+    SOUND_SetSoundVolume iif(v > MaxSoundVolume, MaxSoundVolume, v)
+    
+end sub
+
+sub LD2_SetSoundMaxVolume(v as double)
+    
+    MaxSoundVolume = v
+    v = SOUND_GetSoundVolume()
+    if v > MaxSoundVolume then
+        v = MaxSoundVolume
+        SOUND_SetSoundVolume v
+    end if
     
 end sub
 

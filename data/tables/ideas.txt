@@ -1,0 +1,17 @@
+laundry shoot / vent shaft that drops you down to a lower floor
+express elevator
+laundry room
+breezeway to parking garage
+blow-through floor
+central freight elevator
+antechambers
+circuit breakers
+pipes
+load-bearing columns/walls
+ventilation shafts
+louvers
+radio towers
+command center
+network operation center (NOC)
+tactical operation center (TOC)
+security operation center (SOC)

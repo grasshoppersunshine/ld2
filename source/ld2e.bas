@@ -781,7 +781,7 @@ SUB LD2_Init
   
   'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
     
-    PRINT "Larry the Dinosaur II v1.1.68"
+    PRINT "Larry the Dinosaur II v1.1.88"
     if LD2_hasFlag(CLASSICMODE) then
         print "STARTING CLASSIC (2002) MODE"
     end if
@@ -2158,7 +2158,7 @@ SUB LD2_RenderFrame
           m = FloorMap(mapX, mapY)
           l = LightMapFg(mapx, mapY)
           IF l THEN
-            if (m = 0) and Player.is_shooting and ((Player.uAni-Player.stillAni) < 1.5) and (abs(playerMapX-mapX) <= 3) and (abs(playerMapY-mapY) <= 2) then
+            if (m = 0) and Player.is_shooting and (Player.weapon <> FIST) and ((Player.uAni-Player.stillAni) < 1.5) and (abs(playerMapX-mapX) <= 3) and (abs(playerMapY-mapY) <= 2) then
                 
             else
                 'LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
@@ -3450,6 +3450,9 @@ function Player_Fall() as integer
         else
             Player.y = FallContactPointY - box.padTop + 1
         end if
+        if Player.vy > 1.5 then
+            LD2_PlaySound Sounds.land
+        end if
         Player.vy = 0
         Player.is_lookingdown = 0
         if Player.moved = 0 then
@@ -4373,6 +4376,7 @@ sub LD2_RenderElement(e as ElementType ptr)
     dim lft as integer, rgt as integer
     dim top as integer, btm as integer
     dim pixels as integer
+    dim relY as integer
     
     dim _word as string
     dim printWord as integer
@@ -4389,6 +4393,10 @@ sub LD2_RenderElement(e as ElementType ptr)
     
     if e->parent = 0 then
         if e->background = -1 then e->background = 0
+    end if
+    relY = LD2_GetParentY(e)
+    if e->y + relY < relY then
+        exit sub
     end if
     
     text = ucase(e->text)
@@ -4435,12 +4443,12 @@ sub LD2_RenderElement(e as ElementType ptr)
     totalHeight = e->h+e->padding_y+e->border_width
     
     if e->is_centered_x then e->x = int((SCREEN_W-totalWidth)/2)
-    if e->is_centered_y then e->y = int((SCREEN_H-totalHeight)/2)
+    if e->is_centered_y then e->y = int((SCREEN_H-totalHeight)/2) '- parentH
     
     if e->border_width > 0 then
 
         lft = e->x
-        top = e->y
+        top = e->y + relY
         rgt = lft+e->w+e->padding_x*2+e->border_width
         btm = top+e->h+e->padding_y*2+e->border_width
         
@@ -4451,7 +4459,7 @@ sub LD2_RenderElement(e as ElementType ptr)
 
     end if
 
-    x = e->x+e->border_width: y = e->y+e->border_width
+    x = e->x+e->border_width: y = e->y+e->border_width+relY
     w = e->w+e->padding_x*2: h = e->h+e->padding_y*2
     
     if e->background >= 0 then
@@ -4460,7 +4468,7 @@ sub LD2_RenderElement(e as ElementType ptr)
     end if
     SpritesFont.setAlphaMod(int(e->text_alpha * 255))
     
-    x = e->x+e->padding_x+e->border_width: y = e->y+e->padding_y+e->border_width
+    x = e->x+e->padding_x+e->border_width: y = e->y+e->padding_y+e->border_width+relY
     if e->text_is_centered then x += int((e->w-textWidth)/2) '- center for each line break -- todo
     if e->text_align_right then x = (e->x+e->padding_x+e->border_width+e->w)-textWidth
     fx = x: fy = y
@@ -4581,6 +4589,21 @@ function LD2_GetParentBackround(e as ElementType ptr) as integer
         end if
     else
         return 0
+    end if
+    
+end function
+
+function LD2_GetParentY(e as ElementType ptr, y as integer = -999999) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        if y = -999999 then y = 0
+        y += LD2_GetParentY(parent, y)
+        return y
+    else
+        return iif(y = -999999, 0, e->y)
     end if
     
 end function

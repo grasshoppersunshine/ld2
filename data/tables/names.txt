@@ -32,3 +32,4 @@ BLOCKOFDOOM    , Block of Doom , Block of Doom
 POWEREDARMOR   , Powered Armor , Powered Armor
 QUADDAMAGE     , Quad Damage   , Quad Damage
 ELEVATORMENU   , Elevator Menu , Elevator Menu
+ADHESIVE       , Adhesive      , Synthetic Adhesive

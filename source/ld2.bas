@@ -95,6 +95,7 @@
   declare sub LoadSounds ()
   declare sub SceneOpenElevatorDoors()
   declare sub Rooms_DoRooftop (player as PlayerType)
+  declare sub Rooms_DoBasement (player as PlayerType)
   declare sub SceneCheck (player as PlayerType)
   declare sub BossCheck (player as PlayerType)
   declare sub FlagsCheck (player as PlayerType)
@@ -166,6 +167,7 @@
 
 sub GlobalControls()
     
+    exit sub 
     if keyboard(KEY_ESCAPE) then
     end if
     
@@ -460,6 +462,10 @@ FUNCTION DoDialogue() as integer
         characterId = CharacterIds.Steve
         poseId = PoseIds.Sick
         chatBox = ChatBoxes.SteveSick
+    CASE "STEVE_LAUGHING"
+        characterId = CharacterIds.Steve
+        poseId = PoseIds.Laughing
+        chatBox = ChatBoxes.SteveLaughing
 	CASE "BARNEY"
         characterId = CharacterIds.Barney
         poseId = PoseIds.Talking
@@ -554,6 +560,9 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 		case PoseIds.Sick
 			pose.addSprite 26: pose.addSprite 117: pose.takeSnapshot
             pose.addSprite 26: pose.addSprite 118: pose.takeSnapshot
+        case PoseIds.Laughing
+            pose.addSprite 136: pose.addSprite 137, 0, -1: pose.takeSnapshot
+            pose.addSprite 136: pose.addSprite 138, 0, -1: pose.takeSnapshot
         case PoseIds.GettingShot
             pose.addSprite 7: pose.takeSnapshot
             pose.addSprite 8: pose.takeSnapshot
@@ -638,10 +647,16 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 	CASE CharacterIds.Trooper
         SELECT CASE poseId
 		CASE PoseIds.Talking
-            pose.addSprite 73: pose.takeSnapshot
-			pose.addSprite 72: pose.takeSnapshot
+            pose.addSprite 72: pose.takeSnapshot
+			pose.addSprite 73: pose.takeSnapshot
+        case PoseIds.Angry
+            pose.addSprite 141: pose.takeSnapshot
+            pose.addSprite 142: pose.takeSnapshot
+        case PoseIds.Shooting
+            pose.addSprite 143: pose.takeSnapshot
+            pose.addSprite 144: pose.takeSnapshot
         case PoseIds.GettingShot
-            pose.addSprite 73: pose.takeSnapshot
+            pose.addSprite 145: pose.takeSnapshot
 		END SELECT
     case CharacterIds.Rockmonster
         select case poseId
@@ -729,7 +744,6 @@ sub LoadSounds ()
     
     AddSound Sounds.titleReveal, "ui-submenu.wav"
     AddSound Sounds.titleSelect, "ui-arrows.wav"
-    AddSound Sounds.titleStart , "start.wav"
     
     AddSound Sounds.pickup , "item-pickup.wav"
     AddSound Sounds.drop   , "item-drop.wav"
@@ -749,35 +763,35 @@ sub LoadSounds ()
     AddSound Sounds.reload     , "shoot-reload.wav"
     AddSound Sounds.equip      , "shoot-reload.wav"
     
-    AddSound Sounds.machinegun2 , "shoot-machinegun.wav"
-    AddSound Sounds.pistol2     , "shoot-pistol.wav"
-    
     AddSound Sounds.footstep , "larry-step.wav"
     AddSound Sounds.jump     , "larry-jump.wav"
+    AddSound Sounds.land     , "larry-land.wav"
     AddSound Sounds.punch    , "larry-punch.wav"
     AddSound Sounds.larryHurt, "larry-hurt.wav"
     AddSound Sounds.larryDie , "larry-die.wav"
     
-    AddSound Sounds.laugh     , "troop-laugh.wav"
-    AddSound Sounds.troopHurt0, "maybe/splice/alienhurt0.ogg"
-    AddSound Sounds.troopHurt1, "maybe/splice/alienhurt1.ogg"
-    AddSound Sounds.troopHurt2, "recorded/bleh.wav"
-    AddSound Sounds.troopDie  , "splice/fuck.wav"
-    
-    AddSound Sounds.useMedikit  , "use-medikit.wav"
-    AddSound Sounds.useExtraLife, "use-extralife.wav"
+    AddSound Sounds.laugh      , "troop-laugh.wav"
+    AddSound Sounds.troopHurt0 , "maybe/splice/alienhurt0.ogg"
+    AddSound Sounds.troopHurt1 , "maybe/splice/alienhurt1.ogg"
+    AddSound Sounds.troopHurt2 , "recorded/bleh.wav"
+    AddSound Sounds.troopDie   , "splice/fuck.wav"
+    AddSound Sounds.machinegun2, "shoot-machinegun.wav"
+    AddSound Sounds.pistol2    , "shoot-pistol.wav"
     
     AddSound Sounds.rockHurt, "rock-land.wav"
     AddSound Sounds.rockJump, "rock-jump.wav"
     AddSound Sounds.rockDie , "rock-die.wav"
     
-    AddSound Sounds.boom, "boom.wav"
-    
     AddSound Sounds.keypadInput  , "kp-input.wav"
     AddSound Sounds.keypadGranted, "kp-granted.wav"
     AddSound Sounds.keypadDenied , "kp-denied.wav"
     
+    AddSound Sounds.useMedikit  , "use-medikit.wav"
+    AddSound Sounds.useExtraLife, "use-extralife.wav"
+    
+    AddSound Sounds.boom, "boom.wav"
     AddSound Sounds.quad, "quad.wav"
+    AddSound Sounds.titleStart , "start.wav"
     
 end sub
 
@@ -874,6 +888,8 @@ sub StartFloorMusic(roomId as integer)
     
     dim roomTracks(4) as integer
     
+    'return
+    
     roomTracks(0) = mscROOM0
     'roomTracks(1) = mscROOM1
     roomTracks(1) = mscROOM3
@@ -894,8 +910,8 @@ sub StartFloorMusic(roomId as integer)
         LD2_PlayMusic mscSMALLROOM0
     case Rooms.LowerStorage, Rooms.UpperStorage
         LD2_PlayMusic mscSMALLROOM1
-    case Rooms.Unknown
-        LD2_PlayMusic mscTRUTH
+    'case Rooms.Unknown
+    '    LD2_PlayMusic mscTRUTH
     case else
         LD2_PlayMusic roomTracks(int(roomId mod (ubound(roomTracks)+1)))
     end select
@@ -948,6 +964,9 @@ SUB Main
     if CurrentRoom = Rooms.Rooftop then
         Rooms_DoRooftop player
     end if
+    if CurrentRoom = ROoms.Basement then
+        Rooms_DoBasement player
+    end if
 
 	LD2_RefreshScreen
 	LD2_CountFrame
@@ -966,10 +985,6 @@ SUB Main
         LD2_SwapLighting
         WaitForKeyup(KEY_L)
 	end if
-    
-    if keyboard(KEY_Y) then
-        SceneBarneyPlan
-    end if
     
     PlayerIsRunning = 0
     if keyboard(KEY_LSHIFT) or keyboard(KEY_KP_0) then
@@ -1109,7 +1124,7 @@ SUB RenderPoses ()
         do while sprite <> 0
             x = pose->getX() + sprite->x
             y = pose->getY() + sprite->y
-            LD2_put x, y, sprite->idx, pose->getSpriteSetId(), pose->getFlip()
+            LD2_put x, y, sprite->idx, pose->getSpriteSetId(), iif(sprite->is_flipped, 1, pose->getFlip())
             sprite = frame->getNextSprite()
         loop
         'IF pose->isSpeaking THEN
@@ -1153,6 +1168,51 @@ sub RenderScene (visible as integer = 1)
     
 end sub
 
+sub Rooms_DoBasement (player as PlayerType)
+    
+    static inputPin as ElementType
+    static inputPinResponse as ElementType
+    static messagetimer as double
+    static first as integer = 1
+    static leftKeypad as integer
+    dim atKeypad as integer
+    
+    if first then
+        
+        first = 0
+        
+        LD2_InitElement @inputPin, KEYPAD_ENTRY_TEXT, 31, ElementFlags.CenterX
+        inputPin.y = 170
+        inputPin.background_alpha = 0
+        
+        LD2_InitElement @inputPinResponse, "", 31, ElementFlags.CenterText
+        inputPinResponse.y = 180
+        inputPinResponse.background_alpha = 0
+        
+    end if
+    
+    atKeypad  = (player.x >= 1056 and player.x <= 1088) '// 66 to 68
+    
+    if (atKeypad and (timer - messageTimer > 5.0)) and leftKeypad then
+        inputPin.text = "Environment Room Locked"
+        inputPinResponse.text = "Hazardous Contaminates Detected\\Area Must Be Ventilated"
+        inputPinResponse.w = SCREEN_W
+        inputPinResponse.text_color = 232
+        if leftKeypad then LD2_PlaySound Sounds.keypadDenied
+        leftKeypad = 0
+        messageTimer = timer
+    end if
+    if (atKeypad = 0) then
+        leftKeypad = 1
+    end if
+    
+    if (timer - messageTimer < 5.0) then
+        LD2_RenderElement @inputPin
+        LD2_RenderElement @inputPinResponse
+    end if
+    
+end sub
+
 sub Rooms_DoRooftop (player as PlayerType)
     
     static inputPin as ElementType
@@ -1183,7 +1243,7 @@ sub Rooms_DoRooftop (player as PlayerType)
         
     end if
     
-    atKeypad  = (player.x >= 1376 and player.x <= 1408)
+    atKeypad  = (player.x >= 1376 and player.x <= 1408) '// 86 to 88
     hasAccess = (Player_GetAccessLevel() >= YELLOWACCESS)
     keyCount  = len(keyInput)
     
@@ -1410,16 +1470,15 @@ sub BossCheck (player as PlayerType)
     static bossMusicStarted as integer
     
     if Player_NotItem(ItemIds.SceneRooftopGotCard) and (CurrentRoom = Rooms.Rooftop) then
-        if (player.x <= 700) and Player_NotItem(ItemIds.BossRooftopBegin) then
+        if (player.x <= 888) and Player_NotItem(ItemIds.BossRooftopBegin) then
             Mobs_Add 500, 144, BOSS1
             LD2_SetBossBar BOSS1
             Player_AddItem ItemIds.BossRooftopBegin
-            LD2_PlayMusic mscBOSS
+        elseif (player.x <= 1300) and (bossMusicStarted = 0) then
+            bossMusicStarted = 1
+            LD2_SetFlag MUSICCHANGE
+            NextMusicId = mscBOSS
         end if
-        'elseif (player.x <= 1300) and (bossMusicStarted = 0) then
-        '    bossMusicStarted = 1
-        '    LD2_PlayMusic mscBOSS
-        'end if
     end if
     
 end sub
@@ -1428,6 +1487,8 @@ sub FlagsCheck (player as PlayerType)
     
     dim itemId as integer
     dim item as InventoryType
+    static musictimer as double
+    static musicdelay as double
     
     if LD2_HasFlag(GOTITEM) then
         LD2_ClearFlag GOTITEM
@@ -1445,7 +1506,31 @@ sub FlagsCheck (player as PlayerType)
         end if
         Player_Unhide
     end if
+    if LD2_HasFlag(MUSICCHANGE) or LD2_HasFlag(MUSICFADEOUT) then
+        if LD2_FadeOutMusic(3.0) = 0 then
+            if LD2_HasFlag(MUSICCHANGE) then
+                LD2_StopMusic
+                musicdelay = 1.5
+                musictimer = timer
+                LD2_ClearFlag MUSICCHANGE
+            end if
+            LD2_ClearFlag MUSICFADEOUT
+        end if
+    end if
+    if LD2_HasFlag(MUSICFADEIN) then
+        if LD2_FadeInMusic(3.0) then
+            LD2_ClearFlag MUSICFADEIN
+        end if
+    end if
     
+    if musicdelay > 0 then
+        if (timer - musictimer) >= musicdelay then
+            LD2_SetMusicVolume 1.0
+            LD2_PlayMusic NextMusicId
+            musicdelay = 0
+        end if
+    end if
+
 end sub
 
 sub ItemsCheck (player as PlayerType)
@@ -1554,8 +1639,10 @@ SUB Start
     END IF
     
     LD2_Init
-    LD2_SetMusicVolume 0.75
-    LD2_SetSoundVolume 0.75
+    LD2_SetMusicMaxVolume 1.00
+    LD2_SetSoundMaxVolume 0.25
+    LD2_SetMusicVolume 1.0
+    LD2_SetSoundVolume 1.0
     LoadSounds
     
     if LD2_HasFlag(CLASSICMODE) then
@@ -1668,8 +1755,8 @@ sub NewGame
         Player_SetItemQty ItemIds.SceneElevator, 1
         Player_SetItemQty ItemIds.SceneWeapons1, 1
         Player_SetItemQty ItemIds.SceneSteveGone, 1
-        Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
-        LD2_PlayMusic mscWANDERING
+        'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
+        'LD2_PlayMusic mscWANDERING
     else
         LD2_AddToStatus(GREENCARD, 1)
     end if

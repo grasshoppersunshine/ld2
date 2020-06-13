@@ -1,4 +1,6 @@
 MYSTERYMEAT    , CHEMICAL409, CHEMICAL410, "Mixed two items: Now have CHEMICAL 410"
 FLASHLIGHTNOBAT, BATTERIES  , FLASHLIGHT , "Mixed two items: Now have WORKING FLASHLIGHT"
+WHITECARD1     , WHITECARD2 , WHITECARD  , "Not able to combine. Pieces won't hold together."
 WHITECARD1     , WHITECARD2 , WHITECARD  , "Mixed two items: Now have WHITE CARD"
+WHITECARD1     , GLUE       , WHITECARDG1, "Mixed two items: Now have PRIMED WHITE CARD"
 

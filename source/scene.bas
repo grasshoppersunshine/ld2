@@ -184,7 +184,7 @@ FUNCTION SCENE_ReadLine() as integer
         SELECT CASE UCASE(row)
             CASE "NARRATOR", "LARRY", "STEVE", "BARNEY", "JANITOR", "TROOPER"
                 SetSpeakerId row
-            case "STEVE_SICK"
+            case "STEVE_SICK", "STEVE_LAUGHING"
                 SetSpeakerId row
             case "LARRY_LOOKINGUP", "LARRY_THINKING", "LARRY_THINKING_TALKING"
                 SetSpeakerId row

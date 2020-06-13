@@ -24,6 +24,8 @@ declare function LD2_FadeInMusic (speed as double = 1.0) as integer
 declare function LD2_FadeOutMusic (speed as double = 1.0) as integer
 declare function LD2_GetMusicVolume() as double
 declare sub LD2_SetMusicVolume(v as double)
+declare sub LD2_SetMusicMaxVolume(v as double)
 declare function LD2_GetSoundVolume() as double
 declare sub LD2_SetSoundVolume(v as double)
+declare sub LD2_SetSoundMaxVolume(v as double)
 declare sub LD2_Sound_Update()

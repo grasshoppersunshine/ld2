@@ -227,6 +227,7 @@ declare function LD2_GetRootParent() as ElementType ptr
 declare function LD2_GetFontWidthWithSpacing(spacing as double = 1.2) as integer
 declare function LD2_GetFontHeightWithSpacing (spacing as double = 1.4) as integer
 declare function LD2_GetElementTextWidth (e as ElementType ptr) as integer
+declare function LD2_GetParentY(e as ElementType ptr, y as integer = -999999) as integer
 enum ElementFlags
     CenterX = &h01
     CenterY = &h02

@@ -254,6 +254,7 @@ const mscENDINGCLASSIC = 106
 enum Sounds
     footstep = 1
     jump
+    land
     kick
     punch
     '//
@@ -316,6 +317,11 @@ enum Sounds
     '// scene 5
     splatter
     snarl
+    '// portal scene
+    noScream
+    stevePain0
+    stevePain1
+    stevePain2
     '// misc
     startgame
     dialog
@@ -415,7 +421,8 @@ enum CharacterIds
 end enum
 
 enum PoseIds
-    Charging = 1
+    Angry = 1
+    Charging
     Chewing
     Crashing
     FacingScreen
@@ -424,6 +431,7 @@ enum PoseIds
     GettingSoda
     Jumping
     Kicking
+    Laughing
     PassedOut
     Radio
     Sick
@@ -452,6 +460,7 @@ enum ChatBoxes
     LarryRadio           = 68
     Steve                = 39
     SteveSick            = 115
+    SteveLaughing        = 139
     Barney               = 43
     BarneyRadio          = 70
     Janitor              = 41
