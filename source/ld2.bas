@@ -310,9 +310,9 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
         LD2_WriteText left(caption, n)
         LD2_PlaySound Sounds.dialog
         
-        if keyboard(KEY_SPACE) then exit for
-		if keyboard(KEY_ENTER) then escapeFlag = 1: exit for
-        'if WaitSecondsUntilKey(0.01) then exit for
+        PullEvents
+        if keypress(KEY_SPACE) or mouseLB() then exit for
+		if keypress(KEY_ENTER) then escapeFlag = 1: exit for
 	NEXT n
     
     LD2_WriteText caption
@@ -325,6 +325,7 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
     LD2_RefreshScreen
     
     WaitForKeyup(KEY_SPACE)
+    while mouseLB(): PullEvents: wend
 
     dim timestamp as double
     timestamp = timer
@@ -344,8 +345,8 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
             LD2_RefreshScreen
             timestamp = timer
         end if
-		if keyboard(KEY_ENTER) then escapeFlag = 1: exit do
-	loop until keyboard(KEY_SPACE) or mouseLB()
+		if keypress(KEY_ENTER) then escapeFlag = 1: exit do
+	loop until keypress(KEY_SPACE) or mouseLB()
 
     WaitForKeyup(KEY_SPACE)
 	WaitForKeyup(KEY_ENTER)
@@ -466,6 +467,10 @@ FUNCTION DoDialogue() as integer
         characterId = CharacterIds.Steve
         poseId = PoseIds.Laughing
         chatBox = ChatBoxes.SteveLaughing
+    CASE "STEVE_DYING"
+        characterId = CharacterIds.Steve
+        poseId = PoseIds.Dying
+        chatBox = ChatBoxes.SteveDying
 	CASE "BARNEY"
         characterId = CharacterIds.Barney
         poseId = PoseIds.Talking
@@ -568,6 +573,9 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
             pose.addSprite 8: pose.takeSnapshot
             pose.addSprite 9: pose.takeSnapshot
             pose.addSprite 10: pose.takeSnapshot
+        case PoseIds.Dying
+            pose.addSprite 160: pose.takeSnapshot
+            pose.addSprite 161: pose.takeSnapshot
 		end select
 	CASE CharacterIds.Barney
         SELECT CASE poseId
@@ -723,9 +731,17 @@ end sub
 
 sub AddSound (id as integer, filepath as string, loops as integer = 0)
     
-    if LD2_isDebugMode() then LD2_Debug "AddSound ("+str(id)+", "+filepath+","+str(loops)+" )"
+    LD2_LogDebug "AddSound ("+str(id)+", "+filepath+","+str(loops)+" )"
     
     LD2_AddSound id, DATA_DIR+"sound/"+filepath, loops
+    
+end sub
+
+sub AddMusic (id as integer, filepath as string, loopmusic as integer)
+    
+    LD2_LogDebug "AddMusic ("+str(id)+", "+filepath+","+str(loopmusic)+" )"
+    
+    LD2_AddMusic id, filepath, loopmusic
     
 end sub
 
@@ -795,6 +811,43 @@ sub LoadSounds ()
     
 end sub
 
+sub LoadMusic ()
+    
+    
+    AddMusic Tracks.Boss      , DATA_DIR+"sound/orig/boss.ogg"    , 1
+    AddMusic Tracks.Chase     , DATA_DIR+"sound/music/march.ogg"  , 1
+    AddMusic Tracks.Elevator  , DATA_DIR+"sound/music/goingup.ogg", 0
+    AddMusic Tracks.Intro     , DATA_DIR+"sound/orig/intro.ogg"   , 0
+    AddMusic Tracks.Opening   , DATA_DIR+"sound/orig/creepy.ogg"  , 1
+    AddMusic Tracks.Uhoh      , DATA_DIR+"sound/music/uhoh.ogg"   , 0
+    AddMusic Tracks.Wandering , DATA_DIR+"sound/music/creepy.ogg" , 1
+
+    AddMusic Tracks.Wind1     , DATA_DIR+"sound/msplice/wind0.wav"   , 1
+    AddMusic Tracks.Wind2     , DATA_DIR+"sound/msplice/wind1.wav"   , 1
+    AddMusic Tracks.Ambient1  , DATA_DIR+"sound/msplice/room1.wav"   , 1
+    AddMusic Tracks.Ambient2  , DATA_DIR+"sound/msplice/room5.wav"   , 1
+    AddMusic Tracks.Ambient3  , DATA_DIR+"sound/msplice/basement.wav", 1
+    AddMusic Tracks.Ambient4  , DATA_DIR+"sound/msplice/room7.wav"   , 1
+    AddMusic Tracks.SmallRoom1, DATA_DIR+"sound/msplice/smallroom0.wav", 1
+    AddMusic Tracks.SmallRoom2, DATA_DIR+"sound/msplice/smallroom1.wav", 1
+    
+    AddMusic Tracks.Portal, DATA_DIR+"sound/music/portal.ogg"      , 1
+    AddMusic Tracks.Truth , DATA_DIR+"sound/msplice/thetruth.wav"  , 1
+
+    AddMusic Tracks.BossClassic     , DATA_DIR+"sound/orig/boss.ogg"  , 1
+    AddMusic Tracks.EndingClassic   , DATA_DIR+"2002/sfx/ending.mod"  , 0
+    AddMusic Tracks.IntroClassic    , DATA_DIR+"sound/orig/intro.ogg" , 0
+    AddMusic Tracks.ThemeClassic    , DATA_DIR+"2002/sfx/intro.mod"   , 0
+    AddMusic Tracks.WanderingClassic, DATA_DIR+"sound/orig/creepy,ogg", 1
+    '// need to update SDL_Mixer for mp3 support
+    '// also, linking with newer DLLs causes game to crash before initialization error handling (no error message)
+    'AddMusic Tracks.IntroClassic    , DATA_DIR+"2002/sfx/intro.mp3" , 0
+    'AddMusic Tracks.WanderingClassic, DATA_DIR+"2002/sfx/creepy.mp3", 1
+    'AddMusic Tracks.UhohClassic     , DATA_DIR+"2002/sfx/uhoh.mp3"  , 0
+    'AddMusic Tracks.BossClassic     , DATA_DIR+"2002/sfx/boss.mp3"  , 1
+    
+end sub
+
 sub DoAction(actionId as integer, itemId as integer = 0)
     
     dim runVal as double
@@ -804,11 +857,11 @@ sub DoAction(actionId as integer, itemId as integer = 0)
     dim playQuad as integer
     static soundTimer as double
     
-    runVal = 1
+    runVal = 1.12
     jumpVal = 1.5
     if Player_HasItem(ItemIds.PoweredArmor) then
-        runVal = 1.5
-        jumpVal = 2.2
+        runVal = 1.45
+        jumpVal = 1.85 '2.2
     end if
     if Player_HasItem(ItemIds.QuadDamage) then
         playQuad = 1
@@ -884,39 +937,38 @@ sub DoAction(actionId as integer, itemId as integer = 0)
     
 end sub
 
-sub StartFloorMusic(roomId as integer)
+function GetFloorMusicId(roomId as integer) as integer
     
-    dim roomTracks(4) as integer
+    dim roomTracks(5) as integer
+    dim trackId as integer
     
-    'return
-    
-    roomTracks(0) = mscROOM0
-    'roomTracks(1) = mscROOM1
-    roomTracks(1) = mscROOM3
-    roomTracks(2) = mscROOM4
-    roomTracks(3) = mscROOM5
-    roomTracks(4) = mscWANDERING
+    roomTracks(0) = Tracks.Ambient1
+    roomTracks(1) = Tracks.Ambient2
+    roomTracks(2) = Tracks.Ambient3
+    roomTracks(3) = Tracks.Ambient4
+    roomTracks(4) = Tracks.Wandering
+    roomTracks(5) = Tracks.Portal
     
     select case roomId
-    case Rooms.Basement
-        LD2_PlayMusic mscBASEMENT
     case Rooms.LarrysOffice
-        LD2_PlayMusic mscWANDERING
-    case Rooms.SkyRoom
-        LD2_PlayMusic mscWIND0
-    case Rooms.Rooftop, Rooms.VentControl
-        LD2_PlayMusic mscWIND1
+        trackId = Tracks.Wandering
+    case Rooms.SkyRoom, Rooms.VentControl
+        trackId = Tracks.Wind1
+    case Rooms.Rooftop
+        trackId = Tracks.Wind2
     case Rooms.DebriefRoom
-        LD2_PlayMusic mscSMALLROOM0
+        trackId = Tracks.SmallRoom1
     case Rooms.LowerStorage, Rooms.UpperStorage
-        LD2_PlayMusic mscSMALLROOM1
-    'case Rooms.Unknown
-    '    LD2_PlayMusic mscTRUTH
+        trackId = Tracks.SmallRoom2
+    case Rooms.ResearchLab
+        trackId = Tracks.Portal
     case else
-        LD2_PlayMusic roomTracks(int(roomId mod (ubound(roomTracks)+1)))
+        trackId = roomTracks(int(roomId mod (ubound(roomTracks)+1)))
     end select
     
-end sub
+    return trackId
+    
+end function
 
 SUB Main
   
@@ -1048,7 +1100,7 @@ SUB Main
         EStatusScreen CurrentRoom
         if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
             CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
-            StartFloorMusic CurrentRoom
+            LD2_PlayMusic GetFloorMusicId(CurrentRoom)
             SceneOpenElevatorDoors
             if GooScene = 1 then GooScene = 0
         end if
@@ -1454,7 +1506,7 @@ sub BeforeMobKill (mob as Mobile ptr)
     case MobIds.Boss2
         Player_SetAccessLevel REDACCESS
         LD2_SetFlag MUSICCHANGE
-        NextMusicId = mscWANDERING
+        NextMusicId = Tracks.Wandering
     case MobIds.Troop1, MobIds.Troop2
         if int(5*rnd(1)) = 0 then
             LD2_PlaySound Sounds.troopDie
@@ -1477,7 +1529,7 @@ sub BossCheck (player as PlayerType)
         elseif (player.x <= 1300) and (bossMusicStarted = 0) then
             bossMusicStarted = 1
             LD2_SetFlag MUSICCHANGE
-            NextMusicId = mscBOSS
+            NextMusicId = Tracks.Boss
         end if
     end if
     
@@ -1500,7 +1552,7 @@ sub FlagsCheck (player as PlayerType)
         EStatusScreen CurrentRoom
         if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
             CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
-            StartFloorMusic CurrentRoom
+            LD2_PlayMusic GetFloorMusicId(CurrentRoom)
             SceneOpenElevatorDoors
             if GooScene = 1 then GooScene = 0
         end if
@@ -1556,7 +1608,7 @@ sub ItemsCheck (player as PlayerType)
     if Player_HasItem(ItemIds.PoweredArmor) then
     end if
     if Player_HasItem(ItemIds.QuadDamage) then
-        Player_SetDamageMod 3.0
+        Player_SetDamageMod 4.0
     end if
     
 end sub
@@ -1644,6 +1696,7 @@ SUB Start
     LD2_SetMusicVolume 1.0
     LD2_SetSoundVolume 1.0
     LoadSounds
+    LoadMusic
     
     if LD2_HasFlag(CLASSICMODE) then
         SCENE_SetScenesFile "2002/tables/scenes.txt"
@@ -1747,7 +1800,7 @@ sub NewGame
         LD2_AddToStatus(ItemIds.Pistol, 1)
         LD2_AddToStatus(ItemIds.NovaHeart, 1)
         LD2_AddToStatus(ItemIds.BlockOfDoom, 1)
-        LD2_AddToStatus(ItemIds.QuadDamage, 1)
+        'LD2_AddToStatus(ItemIds.QuadDamage, 1)
         LD2_AddToStatus(ItemIds.PoweredArmor, 1)
         'LD2_AddToStatus(ItemIds.Chemical410, 1)
         Player_SetItemQty ItemIds.SceneIntro, 1

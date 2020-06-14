@@ -504,7 +504,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 			
 			floorStr = LTRIM(STR(floorNo))
 			
-			IF (numFloors - i - 1) = selectedRoom THEN
+			IF floorNo = selectedRoom THEN
                 menuNumbers(i).background = 19: menuNumbers(i).text_color = 188
                 menuLabels(i).background = 70: menuLabels(i).text_color = 31
 				selectedFilename = filename
@@ -623,7 +623,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
         LD2_FadeOut 3
 		Map_Load selectedFilename
         Player_Hide
-        LD2_PlayMusic mscELEVATOR
+        LD2_PlayMusic Tracks.Elevator
         LD2_InitElement @eMessage, elevatorText, 31
         eMessage.y = 60
         eMessage.is_centered_x = 1

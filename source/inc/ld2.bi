@@ -4,9 +4,9 @@ enum TileIds
     AlienWallBottom      = 85
     AlienWallMiddle      = 86
     AlienWallBurningUp   = 87
-    BehindDoor           = 52
     Crate                = 95
     DoorActivated        = 101
+    DoorBehind           = 52
     DoorOpening          = 102
     DoorGreen            = 90
     DoorBlue             = 91
@@ -216,37 +216,38 @@ CONST idBOSS2 = 409
 '======================
 '= MUSIC
 '======================
-CONST mscWANDERING = 10
-CONST mscINTRO     = 11
-CONST mscBOSS      = 12
-CONST mscTHEME     = 13
-CONST mscENDING    = 14
-CONST mscUHOH      = 15
-CONST mscMARCHoftheUHOH = 16
-CONST mscTITLE     = 17
-const mscOPENING   = 18
-const mscELEVATOR  = 19
-const mscBASEMENT  = 20
-const mscWIND0     = 21
-const mscWIND1     = 22
-const mscROOM0     = 23
-const mscROOM1     = 24
-const mscROOM2     = 25
-const mscROOM3     = 26
-const mscROOM4     = 27
-const mscROOM5     = 28
-const mscSMALLROOM0 = 29
-const mscSMALLROOM1 = 30
-const mscTRUTH      = 31
-const mscPORTAL     = 32
-
-const mscINTROCLASSIC = 101
-const mscTHEMECLASSIC = 102
-const mscWANDERCLASSIC = 103
-const mscUHOHCLASSIC = 104
-const mscBOSSCLASSIC = 105
-const mscENDINGCLASSIC = 106
-
+enum Tracks
+    Boss = 1
+    Chase
+    Elevator
+    Ending
+    Intro
+    Opening
+    Title
+    Theme
+    Uhoh
+    Wandering
+    '// rooms
+    Wind1
+    Wind2
+    Ambient1
+    Ambient2
+    Ambient3
+    Ambient4
+    Ambient5
+    SmallRoom1
+    SmallRoom2
+    '// scenes
+    Portal
+    Truth
+    '// 2002
+    BossClassic
+    EndingClassic
+    IntroClassic
+    ThemeClassic
+    WanderingClassic
+    UhohClassic
+end enum
 
 '==============================================
 '= SFX
@@ -425,6 +426,7 @@ enum PoseIds
     Charging
     Chewing
     Crashing
+    Dying
     FacingScreen
     GettingKilled
     GettingShot
@@ -461,6 +463,7 @@ enum ChatBoxes
     Steve                = 39
     SteveSick            = 115
     SteveLaughing        = 139
+    SteveDying           = 162
     Barney               = 43
     BarneyRadio          = 70
     Janitor              = 41
@@ -469,6 +472,7 @@ end enum
 
 enum Guides
     Activate410    =  780
+    Floor          =  144
     SceneElevator  = 1500
     SceneJanitor   = 1160
     SceneGoo       =  760
@@ -490,6 +494,7 @@ CONST LETTERBOX = 1
 
 declare sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as integer)
 declare sub LD2_LookItem (id as integer, byref desc as string)
+declare sub AddMusic (id as integer, filepath as string, loopmusic as integer)
 declare sub AddSound (id as integer, filepath as string, loops as integer = 0)
 declare sub RetraceDelay (qty as integer)
 
@@ -504,3 +509,5 @@ declare sub RenderPoses ()
 
 declare function FadeInMusic(id as integer = -1, seconds as double = 3.0) as integer
 declare function FadeOutMusic(seconds as double = 3.0) as integer
+
+declare function GetFloorMusicId(roomId as integer) as integer

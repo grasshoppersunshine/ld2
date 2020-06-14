@@ -819,7 +819,7 @@ SCENE-PORTAL-1CA
     
     BARNEY
     *Sigh*
-    There's only one thing standing between you and me, Larry.
+    Then there's only one thing standing between you and me, Larry.
     
     LARRY
     ???
@@ -866,7 +866,7 @@ SCENE-PORTAL-1CB
     No.
     
     BARNEY
-    No?
+    ... No?
     
     BARNEY [face left]
     What do you mean, no?
@@ -923,7 +923,7 @@ SCENE-PORTAL-1CC
     STEVE [face left]
     
     TROOPER
-    It is *not* Xenophobe. That was the short term, but only phonetically.
+    It is *not* Xenophobe. That was the short name, but only phonetically.
     His full name is Sire Zeu Xenophobos!
     
     STEVE
@@ -941,8 +941,38 @@ SCENE-PORTAL-1CD
     Hard to hurt someone's feelings who's dead, don't you think?
     
     STEVE_LAUGHING [face right]
-    Ahahahaha!
+    Ahhahahaha!
     Am I right?
+    
+END
+
+SCENE-PORTAL-1CE
+    
+    BARNEY [face right]
+    
+    STEVE_DYING
+    ...
+    
+    BARNEY [face left]
+    TROOPER
+    No one disrespects the Supreme Leader!
+    
+    BARNEY [face right]
+    
+END
+
+SCENE-PORTAL-1CF
+    
+    STEVE_DYING
+    ...
+    ... Larry...
+    
+    LARRY
+    ...
+    
+    STEVE_DYING
+    ...
+    ... Jesus wept...
     
 END
 
@@ -1311,8 +1341,9 @@ SCENE-GOO
     
     LARRY_THINKING_TALKING
     It's solified into a dense, crystal-like structure.
-    Perhaps a chemical from the lab could dissolve this...thing.
-    ...but I don't have access to that floor.
+    # seems like I can't get through
+    Perhaps a chemical from the lab could dissolve this... thing.
+    ... but I don't have access to that floor.
     
     LARRY_LOOKINGUP
     ...

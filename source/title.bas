@@ -64,7 +64,7 @@ SUB TITLE_Opening
     
     DIM e AS ElementType
     
-    LD2_PlayMusic mscOPENING
+    LD2_PlayMusic Tracks.Opening
     WaitSecondsUntilKey(2.0)
     
     LD2_cls
@@ -114,7 +114,7 @@ sub TITLE_Menu_Classic
     WaitSeconds CLASSIC_LOADBMP_DELAY
     LD2_RefreshScreen
     
-    LD2_PlayMusic mscTHEMECLASSIC
+    LD2_PlayMusic Tracks.ThemeClassic
     do
         PullEvents
         if keyboard(KEY_1) or keyboard(KEY_KP_1) then
@@ -200,7 +200,7 @@ sub TITLE_Intro_Classic
     LD2_cls: LD2_cls 1, 0
     LD2_StopMusic
     WaitSeconds 0.6667
-    LD2_PlayMusic mscINTROCLASSIC
+    LD2_PlayMusic Tracks.IntroClassic
     WaitSeconds 3.0 '- change to fade-in music, 0 to 50 and increments of 5 every 0.3 seconds
     
   LD2_RefreshScreen
@@ -274,7 +274,7 @@ SUB TITLE_Intro
     LD2_CopyBuffer 2, 1
     LD2_FadeInWhileNoKey 1
     LD2_SetMusicVolume 0.0
-    LD2_PlayMusic mscINTRO
+    LD2_PlayMusic Tracks.Intro
     while LD2_FadeInMusic(3.0)
         PullEvents
         if keyboard(KEY_ENTER) then
@@ -406,7 +406,7 @@ SUB TITLE_Intro
     heading.text_color = 31
     
     LD2_SetMusicVolume 1.0
-    LD2_PlayMusic mscELEVATOR
+    LD2_PlayMusic Tracks.Elevator
     
     LD2_RenderElement @title
     LD2_FadeIn 2
@@ -567,7 +567,7 @@ SUB TITLE_Ad
   Message(9) = ""
   Message(10) = "Smell ya later"
   
-  LD2_PlayMusic mscWANDERING
+  LD2_PlayMusic Tracks.Wandering
   IF WaitSecondsUntilKey(5.5) = 0 THEN
       FOR i = 1 TO 11
 
@@ -613,7 +613,7 @@ SUB TITLE_TheEnd
     
     IF LD2_isDebugMode() THEN LD2_Debug "TITLE_TheEnd"
     
-    LD2_PlayMusic mscENDING
+    LD2_PlayMusic Tracks.Ending
     LD2_PopText "THE END"
     TITLE_ShowCredits
     
@@ -691,7 +691,7 @@ SUB TITLE_AdTwo
   Message(4) = ""
   Message(5) = "I'll tell you what's mad..."
   
-  LD2_PlayMusic mscWANDERING
+  LD2_PlayMusic Tracks.Wandering
   IF WaitSecondsUntilKey(5.5) = 0 THEN
       
       a = 0

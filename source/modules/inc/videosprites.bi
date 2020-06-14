@@ -20,7 +20,7 @@ public:
     declare sub loadBmp(filename as string)
     declare sub setTransparentColor(c as integer)
     declare sub putToScreen(x as integer, y as integer, spriteNum as integer = 0)
-    declare sub putToScreenEx(x as integer, y as integer, spriteNum as integer, flipHorizontal as integer = 0, rotateAngle as double = 0)
+    declare sub putToScreenEx(x as integer, y as integer, spriteNum as integer, flipHorizontal as integer = 0, rotateAngle as double = 0, crop as SDL_RECT ptr = 0)
     declare sub setColorMod(r as integer, g as integer, b as integer)
     declare sub setAlphaMod(a as integer)
     declare function getCount() as integer

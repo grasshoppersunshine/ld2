@@ -41,6 +41,47 @@ declare sub SceneWeapons2EndConditions ()
 declare sub SceneWeapons3EndConditions ()
 declare sub ScenePortalEndConditions ()
 
+function ContinueAfterSeconds(seconds as double) as integer
+    dim pausetime as double
+    pausetime = timer
+    while (timer-pausetime) <= seconds
+        PullEvents : RenderScene
+        if keypress(KEY_ENTER) then return 1
+    wend
+    return 0
+end function
+
+function ContinueAfterSlowMo(seconds as double) as integer
+    dim pausetime as double
+    pausetime = timer
+    while (timer-pausetime) <= seconds
+        PullEvents : RenderScene
+        WaitSeconds 0.0333
+        if keypress(KEY_ENTER) then return 1
+    wend
+    return 0
+end function
+
+function continueWithBlood(seconds as double, x as integer, y as integer, radius as integer, delay as double) as integer
+    dim pausetime as double
+    dim bloodtime as double
+    dim i as integer
+    pausetime = timer
+    bloodtime = timer
+    while (timer-pausetime) <= seconds
+        if (timer-bloodtime) >= delay then
+            for i = 0 to 4
+                Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+                Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+            next i
+            bloodtime = timer
+        end if
+        PullEvents : RenderScene
+        if keypress(KEY_ENTER) then return 1
+    wend
+    return 0
+end function
+
 function PanPose(pose as PoseType ptr, vx as integer, vy as integer, secondsPerMapSquare as double=1.0, secondsPerFrame as double=1.0) as integer
     
     dim timestamp as double
@@ -141,7 +182,7 @@ function Scene1Go () as integer
 	RenderPoses
     LD2_FadeIn 2
 
-	FadeInMusic mscWANDERING
+	FadeInMusic Tracks.Wandering
 	
     dim escaped as integer
     dim x as integer
@@ -355,7 +396,7 @@ sub Scene4EndConditions()
     Map_LockElevator
     
     LD2_SetMusicVolume 1.0
-    LD2_PlayMusic mscMARCHoftheUHOH
+    LD2_PlayMusic Tracks.Chase
     
 end sub
 
@@ -413,7 +454,7 @@ function Scene4Go() as integer
         RenderScene
         RetraceDelay 1
         if (startedMusic = 0) and (mobY >= 133) then
-            LD2_PlayMusic mscUHOH
+            LD2_PlayMusic Tracks.Uhoh
             startedMusic = 1
         end if
         if keyboard(KEY_ENTER) then return 1
@@ -753,7 +794,7 @@ function Scene7Go() as integer
     RenderScene
     RetraceDelay 40
     
-    FadeInMusic mscWANDERING
+    FadeInMusic GetFloorMusicId(Rooms.WeaponsLocker)
     
     if DoScene("SCENE-7A") then return 1
     
@@ -822,7 +863,7 @@ function SceneBarneyPlanGo() as integer
 	RenderPoses
     LD2_FadeIn 1
     LD2_SetMusicVolume 0
-    FadeInMusic mscROOM5
+    FadeInMusic Tracks.Ambient5
 
     if DoScene("SCENE-FLASHLIGHT-1A") then return 1
     
@@ -834,12 +875,12 @@ function SceneBarneyPlanGo() as integer
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
     BarneyPose.setHidden 1
     AddPose @BarneyPose
-    FadeInMusic mscTRUTH
+    FadeInMusic Tracks.Truth
     if DoScene("SCENE-FLASHLIGHT-1C") then return 1
     
     FadeOutMusic
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    FadeInMusic mscROOM5
+    FadeInMusic Tracks.Ambient5
     RemovePose @BarneyPose
     if DoScene("SCENE-FLASHLIGHT-1D") then return 1
     
@@ -1333,7 +1374,7 @@ sub ScenePortalEndConditions
     Mobs_Add 208, 143, MobIds.Boss2
     LD2_SetBossBar MobIds.Boss2
     Player_SetAccessLevel NOACCESS
-    LD2_PlayMusic mscBOSS
+    LD2_PlayMusic Tracks.Boss
     LD2_SetMusicVolume 1.0
     
 end sub
@@ -1345,6 +1386,7 @@ function ScenePortalGo () as integer
     dim Steve as PoseType
     dim Trooper as PoseType
     dim Boss2 as PoseType
+    dim pausetime as double
     dim i as integer
     dim n as integer
     dim x as double
@@ -1372,32 +1414,31 @@ function ScenePortalGo () as integer
     Barney.x  = 240: Barney.y  = 144: Barney.isFlipped = 0
     Trooper.x = 200: Trooper.y = 144: Trooper.isFlipped = 0
     
-    if DoScene("SCENE-PORTAL-1A") then return 1
-    if DoScene("SCENE-PORTAL-1B") then return 1
+    'if DoScene("SCENE-PORTAL-1A") then return 1
+    'if DoScene("SCENE-PORTAL-1B") then return 1
     
     FadeOutMusic 1.5
     LD2_StopMusic
-    if DoScene("SCENE-PORTAL-1CA") then return 1
+    'if DoScene("SCENE-PORTAL-1CA") then return 1
     
     LD2_SetMusicVolume 1.0
-    LD2_PlayMusic mscPORTAL
+    'LD2_PlayMusic mscPORTAL
     Steve.isFlipped = 1
-    if DoScene("SCENE-PORTAL-1CB") then return 1
+    'if DoScene("SCENE-PORTAL-1CB") then return 1
     
-    FadeOutMusic 1.5
-    LD2_StopMusic
+    'FadeOutMusic 1.5
+    'LD2_StopMusic
     if DoScene("SCENE-PORTAL-1CC") then return 1
     
     GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Angry
     GetCharacterPose Steve, CharacterIds.Steve, PoseIds.Laughing
     if DoScene("SCENE-PORTAL-1CD") then return 1
     
-    Trooper.nextFrame
     for n = 0 to 11
         PullEvents
         Steve.setFrame (n and 1)
         RenderScene
-        WaitSeconds 0.15
+        if ContinueAfterSeconds(0.13) then return 1
         if keypress(KEY_ENTER) then return 1
     next n
     
@@ -1407,7 +1448,52 @@ function ScenePortalGo () as integer
     x = Steve.x
     
     LD2_SetMusicVolume 1.0
-    LD2_PlayMusic mscUHOH
+    
+    '// Shot 1
+    for n = 1 to 4
+        PullEvents
+        Trooper.setFrame (n and 1)
+        if (n and 1) = 1 then
+            for i = 0 to 4
+                Guts_Add GutsIds.Blood, int(x+7), int(Steve.y+7),  1, -rnd(1)*3
+                Guts_Add GutsIds.Blood, int(x+7), int(Steve.y+7),  1,  rnd(1)*5
+            next i
+            LD2_PlaySound Sounds.MachineGun
+        end if
+        RenderScene
+        if ContinueAfterSeconds(0.0333) then return 1
+        if keypress(KEY_ENTER) then return 1
+    next n
+    Trooper.firstFrame
+    if ContinueAfterSeconds(1.0) then return 1
+    
+    '// Shot 2
+    for n = 1 to 6
+        PullEvents
+        Trooper.setFrame (n and 1)
+        if (n and 1) = 1 then
+            for i = 0 to 4
+                Guts_Add GutsIds.Blood, int(x+7), int(Steve.y+7),  1, -rnd(1)*3
+                Guts_Add GutsIds.Blood, int(x+7), int(Steve.y+7),  1,  rnd(1)*5
+            next i
+            LD2_PlaySound Sounds.MachineGun
+        end if
+        RenderScene
+        if ContinueAfterSeconds(0.0333) then return 1
+        if keypress(KEY_ENTER) then return 1
+    next n
+    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Angry
+    GetCharacterPose Steve, CharacterIds.Steve, PoseIds.Dying
+    if ContinueWithBlood(2.0, Steve.x+7, Steve.y+7, 16, 0.5) then return 1
+    
+    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Talking
+    if DoScene("SCENE-PORTAL-1CE") then return 1
+    RenderScene
+    LD2_PlaySound Sounds.noScream
+    if ContinueAfterSeconds(1.0) then return 1
+    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Shooting
+    if ContinueAfterSeconds(0.5) then return 1
+    GetCharacterPose Steve, CharacterIds.Steve, PoseIds.GettingShot
     
     for n = 0 to 69
         
@@ -1432,24 +1518,33 @@ function ScenePortalGo () as integer
         if n = 40 then LD2_PlaySound Sounds.StevePain1
         if n = 60 then LD2_PlaySound Sounds.StevePain2
         RenderScene
-        WaitSeconds 0.0333
+        if ContinueAfterSlowMo(0.0333) then return 1
         
         if keypress(KEY_ENTER) then return 1
         
-        if n = 64 then LD2_PlaySound Sounds.noScream
+        'if n = 64 then LD2_PlaySound Sounds.noScream
         
     next n
     
-    Barney.firstFrame
+    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Angry
+    GetCharacterPose Steve, CharacterIds.Steve, PoseIds.Dying
+    if ContinueWithBlood(1.5, Steve.x+7, Steve.y+7, 16, 0.5) then return 1
+    
+    if DoScene("SCENE-PORTAL-1CF") then return 1
+    'LD2_PlaySound Sounds.noScream
+    LD2_PlayMusic Tracks.Uhoh
+    if ContinueWithBlood(4.0, Steve.x+7, Steve.y+7, 16, 0.5) then return 1
+    LD2_PlaySound Sounds.noScream
     RemovePose @Steve
     LD2_PlaySound Sounds.splatter
     Guts_Add GutsIds.Gibs, int(x + 8), 144, 8, 1
     Guts_Add GutsIds.Gibs, int(x + 8), 144, 8, -1
-    for n = 0 to 149
-        PullEvents
-        RenderScene
-        WaitSeconds 0.0333
-        if keypress(KEY_ENTER) then return 1
+    for n = 0 to 5
+        for i = 0 to 15
+            Guts_Add GutsIds.Blood, int(Steve.x+(32*rnd(1)-8)), int(Steve.y+(32*rnd(1)-8)),  1, -rnd(1)*3 '// iif(Player.flip = 0, -rnd(1)*3, -rnd(1)*5)
+            Guts_Add GutsIds.Blood, int(Steve.x+(32*rnd(1)-8)), int(Steve.y+(32*rnd(1)-8)),  1,  rnd(1)*5 '// iif(Player.flip = 0,  rnd(1)*5,  rnd(1)*3)
+        next i
+        if ContinueAfterSlowMo(0.5) then return 1
     next n
     
     GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
@@ -1463,73 +1558,7 @@ function ScenePortalGo () as integer
     
     x = Trooper.x
     
-    'LD2_PlayMusic mscUHOH
-    for n = 0 to 1
-        
-        PullEvents
-        
-        Barney.setFrame (n and 1)
-        Trooper.x = int(x)
-        x -= 0.2
-        
-        if (n and 7) = 0 then
-            for i = 0 to 4
-                Guts_Add GutsIds.Blood, int(x+7), int(Steve.y+7),  1, -rnd(1)*3
-                Guts_Add GutsIds.Blood, int(x+7), int(Steve.y+7),  1,  rnd(1)*5
-            next i
-        end if
-        
-        if (n and 1) then
-            LD2_PlaySound Sounds.MachineGun
-        end if
-        RenderScene
-        WaitSeconds 0.0333
-        
-        if keypress(KEY_ENTER) then return 1
-        
-    next n
-    for n = 0 to 25
-        PullEvents
-        RenderScene
-        WaitSeconds 0.0333
-        if n = 15 then LD2_PlaySound Sounds.noScream
-    next n
-    
-    for n = 0 to 9
-        
-        PullEvents
-        
-        Barney.setFrame (n and 1)
-        Trooper.x = int(x)
-        x -= 0.2
-        
-        if (n and 7) = 0 then
-            for i = 0 to 4
-                Guts_Add GutsIds.Blood, int(x+7), int(Steve.y+7),  1, -rnd(1)*3
-                Guts_Add GutsIds.Blood, int(x+7), int(Steve.y+7),  1,  rnd(1)*5
-            next i
-        end if
-        
-        if (n and 1) then
-            LD2_PlaySound Sounds.MachineGun
-        end if
-        RenderScene
-        WaitSeconds 0.0333
-        if (n and 0) then
-            WaitSeconds 0.4
-        end if
-        
-        if keypress(KEY_ENTER) then return 1
-        
-    next n
-    for n = 0 to 15
-        PullEvents
-        RenderScene
-        WaitSeconds 0.0333
-        if keypress(KEY_ENTER) then return 1
-        'if n = 15 then LD2_PlaySound Sounds.noScream
-    next n
-    'LD2_PlayMusic mscUHOH
+    LD2_PlayMusic Tracks.Uhoh
     for n = 0 to 89
         
         PullEvents
@@ -1549,7 +1578,7 @@ function ScenePortalGo () as integer
             LD2_PlaySound Sounds.MachineGun
         end if
         RenderScene
-        WaitSeconds 0.0333
+        if ContinueAfterSlowMo(0.0333) then return 1
         
         if keypress(KEY_ENTER) then return 1
         
@@ -1560,12 +1589,7 @@ function ScenePortalGo () as integer
     LD2_PlaySound Sounds.splatter
     Guts_Add GutsIds.Gibs, int(x + 8), 144, 8, 1
     Guts_Add GutsIds.Gibs, int(x + 8), 144, 8, -1
-    for n = 0 to 149
-        PullEvents
-        RenderScene
-        WaitSeconds 0.0333
-        if keypress(KEY_ENTER) then return 1
-    next n
+    if ContinueAfterSlowMo(4.0) then return 1
     
     GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
     GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Shooting
@@ -1577,24 +1601,22 @@ function ScenePortalGo () as integer
     GetCharacterPose Barney, CharacterIds.Barney, PoseIds.GettingKilled
     Barney.isFlipped = 0
     
-    LD2_PlayMusic mscUHOH
+    LD2_PlayMusic Tracks.Uhoh
     
     RenderScene
     RetraceDelay 80
     for n = 0 to 2
+        PullEvents
         Barney.nextFrame
         RenderScene
-        RetraceDelay 55
-        PullEvents
-        if keypress(KEY_ENTER) then return 1
+        if ContinueAfterSeconds(0.96) then return 1
     next n
     
     for n = 0 to 19
         PullEvents
-        RenderScene
         Barney.setFrame 4 + (n and 1)
         RenderScene
-        RetraceDelay 15
+        if ContinueAfterSeconds(0.33) then return 1
     next n
     
     x = Barney.x
@@ -1604,17 +1626,12 @@ function ScenePortalGo () as integer
     Boss2.x = Barney.x-32: Boss2.y = Barney.y-16: Boss2.isFlipped = 0
     AddPose @Boss2
     RemovePose @Barney
-    for n = 0 to 149
-        PullEvents
-        RenderScene
-        WaitSeconds 0.0333
-        if keypress(KEY_ENTER) then return 1
-    next n
+    if ContinueAfterSlowMo(4.0) then return 1
     
     GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
     'if DoScene("SCENE-PORTAL-1F") then return 1 '// you gotta be kiddin' me
     
-    WaitSeconds 1.0
+    WaitSeconds 0.5
     
     return 0
     

@@ -203,6 +203,8 @@ function SOUND_AddSound (id as integer, filename as string, maxChannels as integ
         Mix_VolumeChunk(GLOBAL_Sounds(n).sfxId, int(GLOBAL_SoundVolume*GLOBAL_Sounds(n).volume))
         
         return 0
+    else
+        GLOBAL_SoundErrorMsg = *Mix_GetError()
     end if
 
 end function

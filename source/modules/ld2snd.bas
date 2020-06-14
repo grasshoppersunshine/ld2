@@ -68,7 +68,10 @@ SUB LD2_AddSound (id as integer, filename as string, loops as integer=0, volume 
     dim maxChannels as integer
     
     maxChannels = 4
-    SOUND_AddSound id, filename, maxChannels, loops, volume
+    if SOUND_AddSound(id, filename, maxChannels, loops, volume) then
+        SoundErrorMsg = SOUND_GetErrorMsg()
+        print SoundErrorMsg
+    end if
     
 END SUB 
 

@@ -113,7 +113,6 @@
 '======================
 '= PRIVATE METHODS
 '======================
-  DECLARE SUB AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
   DECLARE FUNCTION CheckMobFloorHit (mob AS Mobile) as integer
   DECLARE FUNCTION CheckMobWallHit (mob AS Mobile) as integer
   DECLARE FUNCTION CheckPlayerFloorHit () as integer
@@ -225,9 +224,7 @@
   DIM SHARED Lighting1 AS INTEGER '- infront of player
   DIM SHARED Lighting2 AS INTEGER '- behind player
   
-  DIM SHARED GameArgs AS STRING
   DIM SHARED GameFlags AS INTEGER
-  DIM SHARED GameFlagsData AS INTEGER
   DIM SHARED GameNoticeMsg AS STRING
   DIM SHARED GameNoticeExpire AS SINGLE
   
@@ -335,14 +332,6 @@ function Player_AddAmmo (weaponId as integer, qty as integer) as integer
     return qtyUnused
 
 end function
-
-SUB AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
-    
-    IF LD2_isDebugMode() THEN LD2_Debug "AddMusic ("+STR(id)+", "+filepath+","+STR(loopmusic)+" )"
-    
-    LD2_AddMusic id, filepath, loopmusic
-    
-END SUB
 
 FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
     
@@ -733,55 +722,43 @@ SUB RefreshPlayerAccess
 
 END SUB
 
-SUB LD2_Init
-  
-  DIM bytesToInts AS INTEGER
-  DIM bitsToInts AS INTEGER
-  DIM _word AS STRING
-
-  GameArgs    = COMMAND
-  GameArgs    = UCASE(LTRIM(RTRIM(GameArgs)))
-  
-  DIM i AS INTEGER
-  FOR i = 1 TO LEN(GameArgs)
-    IF (MID(GameArgs, i, 1) <> " ") THEN
-      _word = _word + MID(GameArgs, i, 1)
-    END IF
-    IF LEN(_word) AND ((MID(GameArgs, i, 1) = " ") OR (i = LEN(GameArgs))) THEN
-      SELECT CASE _word
-        CASE "TEST"
-          LD2_SetFlag TESTMODE
-        CASE "DEBUG"
-          LD2_SetFlag DEBUGMODE
-        CASE "PROFILE"
-          'LD2_SetFlag PROFILEMODE
-        CASE "LOG"
-        CASE "INFO"
-        CASE "PATH"
-        CASE "NOSOUND", "NS"
-          LD2_SetFlag NOSOUND
-        CASE "NOMIX"
-          LD2_SetFlag NOMIX
-        CASE "SKIP"
-          LD2_SetFlag SKIPOPENING
-        case "CLASSIC"
-          LD2_SetFlag CLASSICMODE
-      END SELECT
-      _word = ""
-    END IF
-  NEXT i
-  
-  IF LD2_isDebugMode() THEN
-    LD2_Debug "!debugstart!"
-    LD2_Debug "LD2_Init"
-  END IF
-  
-  'TIMER ON
-  RANDOMIZE TIMER
-  
-  'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
+sub LD2_Init
     
-    PRINT "Larry the Dinosaur II v1.1.88"
+    dim arg as string
+    dim i as integer
+    
+    i = 1
+    do
+        arg = lcase(command(i))
+        if len(arg) = 0 then
+            exit do
+        end if
+        select case arg
+        case "test"
+          LD2_SetFlag TESTMODE
+        case "debug"
+          LD2_SetFlag DEBUGMODE
+        case "nosound", "ns"
+          LD2_SetFlag NOSOUND
+        case "nomix"
+          LD2_SetFlag NOMIX
+        case "skip"
+          LD2_SetFlag SKIPOPENING
+        case "classic"
+          LD2_SetFlag CLASSICMODE
+        end select
+        i += 1
+    loop
+    
+    if LD2_isDebugMode() then
+        LD2_Debug "!debugstart!"
+        LD2_Debug "LD2_Init"
+    end if
+    
+    randomize timer
+    
+    print "Larry the Dinosaur II v1.1.88"
+    
     if LD2_hasFlag(CLASSICMODE) then
         print "STARTING CLASSIC (2002) MODE"
     end if
@@ -815,86 +792,41 @@ SUB LD2_Init
         FontFile    = DATA_DIR+"gfx/font.put"
     end if
     
+    '///////////////////////////////////////////////////////////////////
     Animation   = 1
     Lighting1   = 1
     Lighting2   = 1
     Gravity     = 0.06
     XShift      = 0
-  '--------------------------------------------
-  
-  NumItems = 0
-  NumDoors = 0
-  NumGuts = 0
-  NumInvSlots = 8
+    '///////////////////////////////////////////////////////////////////
+    NumItems = 0
+    NumDoors = 0
+    NumGuts = 0
+    NumInvSlots = 8
+    '///////////////////////////////////////////////////////////////////
     
-  IF LD2_NotFlag(NOSOUND) THEN
-    
-    PRINT "Initializing sound...  ("+LD2_GetSoundInfo()+")"
-    WaitSeconds 0.3333
+    if LD2_NotFlag(NOSOUND) then
 
-    if LD2_InitSound(1) <> 0 then
-        print "SOUND ERROR! "+LD2_GetSoundErrorMsg()
-        end
+        print "Initializing sound...  ("+LD2_GetSoundInfo()+")"
+        WaitSeconds 0.3333
+
+        if LD2_InitSound(1) <> 0 then
+            print "SOUND ERROR! "+LD2_GetSoundErrorMsg()
+            end
+        end if
+    
+    else
+        LD2_InitSound 0
     end if
     
-    'AddMusic mscTITLE    , DATA_DIR+"sound/title.ogg", 1
-    AddMusic mscWANDERING, DATA_DIR+"sound/music/creepy.ogg", 1
-    AddMusic mscOPENING  , DATA_DIR+"sound/orig/creepy.ogg", 1
-    AddMusic mscINTRO    , DATA_DIR+"sound/orig/intro.ogg", 0
-    AddMusic mscUHOH     , DATA_DIR+"sound/music/uhoh.ogg", 0
-    AddMusic mscMARCHoftheUHOH, DATA_DIR+"sound/music/march.ogg", 1
-    AddMusic mscELEVATOR , DATA_DIR+"sound/music/goingup.ogg", 0
-    AddMusic mscBOSS     , DATA_DIR+"sound/orig/boss.ogg", 1
-    AddMusic mscPORTAL   , DATA_DIR+"sound/music/portal.ogg", 1
+    '///////////////////////////////////////////////////////////////////
     
-    AddMusic mscBASEMENT , DATA_DIR+"sound/msplice/basement.wav", 1
-    AddMusic mscWIND0    , DATA_DIR+"sound/msplice/wind0.wav", 1
-    AddMusic mscWIND1    , DATA_DIR+"sound/msplice/wind1.wav", 1
-    AddMusic mscROOM0    , DATA_DIR+"sound/msplice/room1.wav", 1 'good
-    AddMusic mscROOM1    , DATA_DIR+"sound/msplice/room3.wav", 1 'maybe
-    AddMusic mscROOM2    , DATA_DIR+"sound/msplice/room4.wav", 1 'too loud
-    AddMusic mscROOM3    , DATA_DIR+"sound/msplice/room5.wav", 1
-    'AddMusic mscROOM4    , DATA_DIR+"sound/msplice/room6.wav", 1 'too boring
-    AddMusic mscROOM4    , DATA_DIR+"sound/msplice/basement.wav", 1
-    AddMusic mscROOM5    , DATA_DIR+"sound/msplice/room7.wav", 1
-    AddMusic mscSMALLROOM0, DATA_DIR+"sound/msplice/smallroom0.wav", 1
-    AddMusic mscSMALLROOM1, DATA_DIR+"sound/msplice/smallroom1.wav", 1
-    AddMusic mscTRUTH     , DATA_DIR+"sound/msplice/thetruth.wav", 1
+    print "Initializing video...  ("+LD2_GetVideoInfo()+")"
     
-    AddMusic mscTHEMECLASSIC , DATA_DIR+"2002/sfx/intro.mod", 0
-    '- need to update SDL_Mixer for mp3 support
-    '- also, linking with newer DLLs causes game to crash before initialization error handling (no error message)
-    'AddMusic mscINTROCLASSIC , DATA_DIR+"2002/sfx/intro.mp3", 0
-    'AddMusic mscWANDERCLASSIC, DATA_DIR+"2002/sfx/creepy.mp3", 1
-    'AddMusic mscUHOHCLASSIC  , DATA_DIR+"2002/sfx/uhoh.mp3", 0
-    AddMusic mscBOSSCLASSIC  , DATA_DIR+"sound/orig/boss.ogg", 1
-    AddMusic mscINTROCLASSIC , DATA_DIR+"sound/orig/intro.ogg", 0
-    AddMusic mscWANDERCLASSIC, DATA_DIR+"sound/orig/creepy,ogg", 1
-    'AddMusic mscUHOHCLASSIC  , DATA_DIR+"2002/sfx/uhoh.mp3", 0
-    'AddMusic mscBOSSCLASSIC  , DATA_DIR+"2002/sfx/boss.mp3", 1
-    AddMusic mscENDINGCLASSIC, DATA_DIR+"2002/sfx/ending.mod", 0
-    
-    
-    'AddSound sfxGROWL  , DATA_DIR+"sound/splice/growl2.ogg"
-    'AddSound sfxSCARE  , DATA_DIR+"sound/splice/scare0.ogg"
-    'AddSound sfxAMBIENT, DATA_DIR+"sound/splice/ambient0.ogg"
-    'AddSound sfxCHEW1  , DATA_DIR+"sound/splice/chew0.ogg"
-    'AddSound sfxCHEW2  , DATA_DIR+"sound/splice/chew1.ogg"
-    'AddSound sfxSODAOPEN, DATA_DIR+"sound/splice/sodacanopen.ogg"
-    'AddSound sfxSODADROP, DATA_DIR+"sound/splice/sodacandrop.ogg"
-    'AddSound sfxMENU    , DATA_DIR+"sound/orig/equip.wav"
-    
-  ELSE
-    
-    LD2_InitSound 0
-    
-  END IF
-  
-  PRINT "Initializing video...  ("+LD2_GetVideoInfo()+")"
-  if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL) <> 0 then
-    print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
-    end
-  end if
+    if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL) <> 0 then
+        print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
+        end
+    end if
     WaitSeconds 0.3333
     
     if LD2_HasFlag(CLASSICMODE) then
@@ -904,47 +836,45 @@ SUB LD2_Init
     end if
   
     LD2_CreateLightPalette @LightPalette
-    'for i = 0 to 11
-    '    'LightPalette.setRGBA(i, 0, 0, 0, iif(i*54 < 255, i*54, 255))
-    '    LightPalette.setRGBA(i, 0, 0, 0, iif(i*32 < 255, i*32, 255))
-    'next i
-  
-  PRINT "Loading sprites..."
-  WaitSeconds 0.3333
-  
-  LoadSprites LarryFile  , idLARRY  
-  LoadSprites TilesFile  , idTILE
-  LoadSprites LightFile  , idLIGHT
-  LoadSprites EnemiesFile, idENEMY
-  LoadSprites GutsFile   , idGUTS
-  LoadSprites SceneFile  , idSCENE
-  LoadSprites ObjectsFile, idOBJECT
-  LoadSprites BossFile   , idBOSS
-  LoadSprites FontFile   , idFONT
-
-  LD2_InitLayer DATA_DIR+"gfx/mountains.bmp", @LayerMountains, SpriteFlags.Transparent
-  LD2_InitLayer DATA_DIR+"gfx/foliage.bmp", @LayerFoliage, SpriteFlags.Transparent
-  LD2_InitLayer DATA_DIR+"gfx/grass.bmp", @LayerGrass, SpriteFlags.Transparent
-  LD2_InitLayer DATA_DIR+"gfx/clouds.bmp", @LayerClouds, SpriteFlags.Transparent
-  
-  Mobs.Init
-  
+    
+    '///////////////////////////////////////////////////////////////////
+    
+    print "Loading sprites..."
+    WaitSeconds 0.3333
+    
+    LoadSprites LarryFile  , idLARRY  
+    LoadSprites TilesFile  , idTILE
+    LoadSprites LightFile  , idLIGHT
+    LoadSprites EnemiesFile, idENEMY
+    LoadSprites GutsFile   , idGUTS
+    LoadSprites SceneFile  , idSCENE
+    LoadSprites ObjectsFile, idOBJECT
+    LoadSprites BossFile   , idBOSS
+    LoadSprites FontFile   , idFONT
+    
+    LD2_InitLayer DATA_DIR+"gfx/mountains.bmp", @LayerMountains, SpriteFlags.Transparent
+    LD2_InitLayer DATA_DIR+"gfx/foliage.bmp", @LayerFoliage, SpriteFlags.Transparent
+    LD2_InitLayer DATA_DIR+"gfx/grass.bmp", @LayerGrass, SpriteFlags.Transparent
+    LD2_InitLayer DATA_DIR+"gfx/clouds.bmp", @LayerClouds, SpriteFlags.Transparent
+    
+    '///////////////////////////////////////////////////////////////////
+    
+    Mobs.Init
+    
     print "Starting game..."
     WaitSeconds 0.3333
-  LD2_cls
-  
-  '- add method for LD2_addmobtype, move these to LD2_bas
-  Mobs.AddType MobIds.Rockmonster
-  Mobs.AddType MobIds.Troop1
-  Mobs.AddType MobIds.Troop2
-  Mobs.AddType MobIds.BlobMine
-  Mobs.AddType MobIds.JellyBlob
-  
-'nil% = keyboard(-1) '- TODO -- where does keyboard stop working?
-
-  IF LD2_isDebugMode() THEN LD2_Debug "LD2_Init SUCCESS"
-  
-END SUB
+    LD2_cls
+    
+    '// add method for LD2_addmobtype, move these to LD2_bas
+    Mobs.AddType MobIds.Rockmonster
+    Mobs.AddType MobIds.Troop1
+    Mobs.AddType MobIds.Troop2
+    Mobs.AddType MobIds.BlobMine
+    Mobs.AddType MobIds.JellyBlob
+    
+    LD2_LogDebug "LD2_Init SUCCESS"
+    
+end sub
 
 SUB LD2_GenerateSky()
     
@@ -1298,6 +1228,7 @@ SUB Map_Load (Filename AS STRING, skipMobs as integer = 0)
             Doors(NumDoors).mapX = x
             Doors(NumDoors).mapY = y
             Doors(NumDoors).accessLevel = GREENACCESS + (ASC(_byte) - 90)
+            TileMap(x, y) = 1
             NumDoors = NumDoors + 1
           END IF
           IF ASC(_byte) = 106 THEN
@@ -1457,33 +1388,6 @@ SUB Map_Load (Filename AS STRING, skipMobs as integer = 0)
   
   LD2_SetFlag MAPISLOADED
 
-    if LD2_hasFlag(CLASSICMODE) = 0 then
-        for y = 1 to 11
-            for x = 1 to 199
-                if x > Elevator.mapX + 4 then
-                    LightMapFg(x, y) = 0
-                    LightMapBg(x, y) = 0
-                end if
-                if TileMap(x, y) = 81 and TileMap(x, y+1) = 1 and TileMap(x-1, y+1) = 81 then
-                    TileMap(x, y) = 120
-                    TileMap(x, y+1) = 122
-                    TileMap(x-1, y+1) = 124
-                    continue for
-                end if
-                if TileMap(x, y) = 81 and TileMap(x, y+1) = 1 then
-                    TileMap(x, y) = 120
-                    TileMap(x, y+1) = 121
-                    continue for
-                end if
-                if TileMap(x, y) = 81 and TileMap(x+1, y) = 1 then
-                    TileMap(x, y) = 124
-                    TileMap(x+1, y) = 123
-                    continue for    
-                end if
-            next x
-        next y
-    end if
-    
     Mobs_Animate '- let them go through their initial "spawned" state
   
 END SUB
@@ -1787,6 +1691,31 @@ SUB Doors_Animate
     
 end sub
 
+sub Doors_Draw()
+    
+    dim crop as SDL_Rect
+    dim doorIsMoving as integer
+    dim offset as integer
+    dim x as integer, y as integer
+    dim n as integer
+    
+    crop.w = SPRITE_W
+    for n = 0 to NumDoors-1
+        doorIsMoving = (Doors(n).ani > 0) and (Doors(n).ani < 4)
+        offset = int(Doors(n).ani * Doors(n).ani)
+        if offset > 16 then offset = 16
+        x = int(Doors(n).x) - int(XShift)
+        y = int(Doors(n).y)
+        crop.y = offset: crop.h = SPRITE_H-offset
+        if doorIsMoving then
+            SpritesTile.putToScreenEx x, y, DOOR0 + Doors(n).accessLevel + 11, 0, 0, @crop
+        else
+            SpritesTile.putToScreenEx x, y, DOOR0 + Doors(n).accessLevel, 0, 0, @crop
+        end if
+    next n
+    
+end sub
+
 sub Doors_Update(id as integer)
     
     dim doorIsOpen as integer
@@ -1796,16 +1725,16 @@ sub Doors_Update(id as integer)
     doorIsMoving = (Doors(id).ani > 0) and (Doors(id).ani < 4)
     
     if doorIsMoving then
-        Map_PutTile Doors(id).mapX, Doors(id).mapY, DOOROPEN + Doors(id).ani, 1
+        'Map_PutTile Doors(id).mapX, Doors(id).mapY, TileIds.DoorOpening + Doors(id).ani, 1
     elseif doorIsOpen then
-        Map_PutTile Doors(id).mapX, Doors(id).mapY, DOORBACK, 1
+        'Map_PutTile Doors(id).mapX, Doors(id).mapY, TileIds.DoorBehind, 1
         Map_SetFloor Doors(id).mapX, Doors(id).mapY, 0
     else
-        if Doors(id).accessLevel = WHITEACCESS then
-            Map_PutTile Doors(id).mapX, Doors(id).mapY, DOORW, 1
-        else
-            Map_PutTile Doors(id).mapX, Doors(id).mapY, DOOR0 + Doors(id).accessLevel, 1
-        end if
+        'if Doors(id).accessLevel = WHITEACCESS then
+        '    Map_PutTile Doors(id).mapX, Doors(id).mapY, DOORW, 1
+        'else
+        '    Map_PutTile Doors(id).mapX, Doors(id).mapY, DOOR0 + Doors(id).accessLevel, 1
+        'end if
         Map_SetFloor Doors(id).mapX, Doors(id).mapY, 1
     end if
     
@@ -1819,6 +1748,7 @@ sub Doors_Open (id as integer)
     
     if doorIsClosed then
         LD2_PlaySound Sounds.doorup
+        LD2_PlaySound Sounds.keypadGranted
     end if
     
     Doors(id).anicount = DOOROPENSPEED
@@ -2139,6 +2069,7 @@ SUB LD2_RenderFrame
   
   Mobs_Draw
   Player_Draw
+  Doors_Draw
   MapItems_Draw
   Guts_Draw
   
@@ -3140,7 +3071,6 @@ sub Player_Animate()
         LD2_PlaySound Sounds.larryDie
         Inventory(ItemIds.Lives) -= 1
         if Inventory(ItemIds.Lives) <= 0 then
-            LD2_PlayMusic mscUHOH
             LD2_PopText "Game Over"
             LD2_ShutDown
         else
