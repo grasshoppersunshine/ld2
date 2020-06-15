@@ -1,0 +1,24 @@
+Nearing The End of The Cretaceous Period...
+Aliens failed to conquer the world.
+Those who survived went into hiding.
+They persuaded some dinosaurs to defect.
+With their help, they built a portal...
+To bring reinforcements from their homeworld.
+They were stopped.
+For now...
+Delta Code Presents
+Larry the Dinosaur II
+Programming and Level Design\ \ \ Joseph King
+Story and Characters\ \ \Joseph King
+Testing\ \ \Conrad Hart\ \Lester Chaykin\ \Claire Redfield
+Music and Sound Design\ \ \Joseph King
+Special Thanks\ \ \ChipTone\ \PixelPLUS 256\ \Modplug Tracker
+Special Thanks\ \ \Freebasic Programming Language\ \Simple DirectMedia Layer (SDL)\ \SDL Mixer\ \Geany IDE
+Special Thanks\ \ \Fans of the 2002 original
+Movie References\ \ \Event Horizon (1997)\ \Hellraiser (1987)\ \The Matrix (1999)
+Game References\ \ \Tomb Raider (1996)\ \Resident Evil (1996)\ \Resident Evil 2 (1998)
+Game References Cont.\ \ \Flashback: The Quest for Identity (1992)\ \Fade to Black (1995)\ \Another World (1991)
+Copyright (c) 2002, 2020\ \ \All Rights Reserved
+Rest In Peace\ \ \Steve\ \Matt\ \Barney ???
+
+Thanks for Playing
