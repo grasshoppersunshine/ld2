@@ -265,6 +265,7 @@ args.add "modules/palette256.bas"  , "-lib -x lib/libpalette256.a"  , "lib/libpa
 args.add "modules/video.bas"       , "-lib -x lib/libvideo.a"       , "lib/libvideo.a"
 args.add "modules/videobuffer.bas" , "-lib -x lib/libvideobuffer.a" , "lib/libvideobuffer.a"
 args.add "modules/videosprites.bas", "-lib -x lib/libvideosprites.a", "lib/libvideosprites.a"
+args.add "modules/elements.bas"    , "-lib -x lib/libelements.a"    , "lib/libelements.a"
 args.add "modules/ld2gfx.bas"      , "-lib -x lib/libld2gfx.a"      , "lib/libld2gfx.a"
 args.add "modules/sdlsnd.bas"      , "-lib -x lib/libsdlsnd.a"      , "lib/libsdlsnd.a"
 args.add "modules/ld2snd.bas"      , "-lib -x lib/libld2snd.a"      , "lib/libld2snd.a"
