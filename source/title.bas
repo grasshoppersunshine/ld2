@@ -149,7 +149,7 @@ SUB TITLE_Menu
     LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
     LD2_FadeIn 3, 15
     
-    LD2_PlaySound Sounds.titleReveal
+    'LD2_PlaySound Sounds.titleReveal
     
     'WaitSeconds(0.25)
     'LD2_PlayMusic mscTHEME
@@ -179,6 +179,12 @@ SUB TITLE_Menu
           LD2_PlaySound Sounds.titleSelect
           EXIT DO
         END IF
+        if keyboard(KEY_7) then
+            LD2_GenerateSky
+            TITLE_TheEnd
+            LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
+            LD2_FadeIn 3, 15
+        end if
     LOOP
     WaitSeconds 0.15
     LD2_FadeOut 2
@@ -552,7 +558,7 @@ SUB TITLE_Ad
   
   textColor = 57
   backColor = 48
-  
+  '//Dinosaurs were well at war and lowly in spirits.
   LD2_CLS 0, backColor
   LD2_FadeOut 1, backColor
   
@@ -609,7 +615,133 @@ SUB TITLE_Ad
   
 END SUB
 
-SUB TITLE_TheEnd
+sub TITLE_TheEnd
+    
+    LD2_LogDebug "TITLE_TheEnd"
+
+    dim file as integer
+    dim text as string
+    dim x as integer
+    dim y as integer
+    dim n as integer
+    dim e as ElementType
+    dim a as double
+
+    LD2_CLS 0, 0
+    while LD2_FadeOutMusic(0.5): PullEvents: wend
+    LD2_StopMusic
+
+    WaitSecondsUntilKey(1.0)
+    if keyboard(KEY_ENTER) then
+        LD2_FadeOut 2
+    end if
+    
+    LD2_CopyBuffer 2, 1
+    LD2_FadeInWhileNoKey 1
+    WaitSecondsUntilKey(1.5)
+    LD2_SetMusicVolume 1.0
+    LD2_PlayMusic Tracks.Ending
+    WaitSecondsUntilKey(1.0)
+    if keyboard(KEY_ENTER) then
+        while LD2_FadeOutMusic(0.5): PullEvents: wend
+        LD2_FadeOut 2
+        exit sub
+    end if
+
+    dim state as integer
+    state = 0
+
+    LD2_InitElement @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.y = 60
+    e.background_alpha = 0.0
+    
+    file = FREEFILE
+    OPEN DATA_DIR+"tables/ending.txt" FOR INPUT AS file
+    
+  DO WHILE NOT EOF(File)
+    
+    LINE INPUT #File, text
+    
+    if state = 0 then
+        LD2_CopyBuffer 2, 1
+        'LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
+    end if
+    if state = 1 then LD2_CLS 1, 0
+    
+    e.text = ltrim(rtrim(text))
+    
+    FOR y = 0 TO 7
+        
+        
+        a = (1/255)*(255-((8-y)*54-1))
+        if a > 1.0 then a = 1.0
+        if a < 0.0 then a = 0.0
+        e.text_alpha = a
+        LD2_CopyBuffer 2, 1
+        'LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
+        LD2_RenderElement @e
+        
+        'LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
+        
+        LD2_RefreshScreen
+        IF WaitSecondsUntilKey(0.27) THEN EXIT DO
+        
+    NEXT y
+    
+    LD2_RenderElement @e
+    LD2_RefreshScreen
+    IF WaitSecondsUntilKey(3.3333) THEN EXIT DO
+    
+    'if instr(lcase(text), "larry the dinosaur ii") then
+    '    while LD2_FadeOutMusic(3.0)
+    '        PullEvents
+    '        if keyboard(KEY_ENTER) then
+    '            while LD2_FadeOutMusic(30.0): PullEvents: wend
+    '            LD2_FadeOut 2
+    '            exit sub
+    '        end if
+    '    wend
+    'end if
+    
+    FOR y = 0 TO 7
+        
+        if (state = 0) and instr(lcase(text), "all thanks") then
+            LD2_RenderElement @e
+            a = (y+1)*54-1
+            LD2_fillm 0, 0, SCREEN_W, SCREEN_H, 0, 1, iif(a > 255, 255, a)
+            LD2_RenderElement @e
+            if y = 7 then
+                state = 1
+                y = 0
+                LD2_cls 2, 0
+            end if
+        else
+            a = (1/255)*(255-((y+1)*54-1))
+            if a > 1.0 then a = 1.0
+            if a < 0.0 then a = 0.0
+            e.text_alpha = iif(a > 1.0, 1.0, a)
+            LD2_CopyBuffer 2, 1
+            LD2_RenderElement @e
+        end if
+        
+        LD2_RefreshScreen
+        if state = 1 then
+            LD2_FadeOut 3
+            exit for
+        else
+            IF WaitSecondsUntilKey(0.27) THEN EXIT DO
+        end if
+        
+    NEXT y
+    if state = 1 then state = 2
+    
+  LOOP
+  
+  while LD2_FadeOutMusic(0.5): PullEvents: wend
+  
+end sub
+
+SUB TITLE_TheEnd_Classic
     
     IF LD2_isDebugMode() THEN LD2_Debug "TITLE_TheEnd"
     

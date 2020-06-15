@@ -817,8 +817,10 @@ sub LoadMusic ()
     AddMusic Tracks.Boss      , DATA_DIR+"sound/orig/boss.ogg"    , 1
     AddMusic Tracks.Chase     , DATA_DIR+"sound/music/march.ogg"  , 1
     AddMusic Tracks.Elevator  , DATA_DIR+"sound/music/goingup.ogg", 0
+    AddMusic Tracks.Ending    , DATA_DIR+"sound/music/ending.ogg" , 1
     AddMusic Tracks.Intro     , DATA_DIR+"sound/orig/intro.ogg"   , 0
     AddMusic Tracks.Opening   , DATA_DIR+"sound/orig/creepy.ogg"  , 1
+    AddMusic Tracks.Title     , DATA_DIR+"sound/music/title.ogg"  , 1
     AddMusic Tracks.Uhoh      , DATA_DIR+"sound/music/uhoh.ogg"   , 0
     AddMusic Tracks.Wandering , DATA_DIR+"sound/music/creepy.ogg" , 1
 
@@ -1380,6 +1382,13 @@ sub SceneCheck (player as PlayerType)
     if SceneCallback <> 0 then
         SceneCallback()
         SceneCallback = 0
+    end if
+    
+    if Player_HasItem(ItemIds.SceneTheEnd) then
+        Player_SetItemQty ItemIds.SceneTheEnd, 0
+        LD2_SetFlag EXITGAME
+        LD2_FadeOut 1
+        TITLE_TheEnd
     end if
     
     if CurrentRoom = Rooms.LarrysOffice then

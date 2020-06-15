@@ -334,6 +334,9 @@ enum Sounds
     keypadInput
     keypadGranted
     keypadDenied
+    '// editor
+    editorPlace
+    editorCopy
 end enum
 
 '=======================
