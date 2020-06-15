@@ -147,7 +147,6 @@ FUNCTION Inventory_Init (size AS INTEGER, sizeVisible as integer = -1) as intege
     if sizeVisible = -1 then
         sizeVisible = size
     end if
-    
     IF (size > 0) AND (size <= INVENTORYMAXSIZE) THEN
         REDIM InventoryItems(size - 1) AS InventoryType
         InventorySize = size
@@ -326,7 +325,8 @@ SUB LoadShortNames (filename as string)
     OPEN DATA_DIR+filename FOR INPUT AS ItemsFile
     DO WHILE NOT EOF(ItemsFile)
         INPUT #ItemsFile, sid, shortName, longName
-        max += 1
+        id = Inventory_SidToItemId(sid)
+        if id > max then max = id
     LOOP
     redim ItemShortNames(max) as string
     SEEK ItemsFile, 1
