@@ -1692,16 +1692,14 @@ SUB Start
   DIM firstLoop AS INTEGER
   firstLoop = 1
   
-  DO
-    
-    IF Inventory_Init(16, 8) THEN
-      'PRINT Inventory_GetErrorMessage()
-      END
-    END IF
-    
+  do
+    if Inventory_Init(16, 8) then
+        print "Error intializing inventory!"
+        end
+    end if
     LD2_Init
     LD2_SetMusicMaxVolume 1.00
-    LD2_SetSoundMaxVolume 0.25
+    LD2_SetSoundMaxVolume 0.65
     LD2_SetMusicVolume 1.0
     LD2_SetSoundVolume 1.0
     LoadSounds
@@ -1807,10 +1805,11 @@ sub NewGame
         LD2_AddToStatus(ItemIds.ElevatorMenu, 1)
         LD2_AddToStatus(ItemIds.Redcard, 1)
         LD2_AddToStatus(ItemIds.Pistol, 1)
+        LD2_AddToStatus(ItemIds.MachineGun, 1)
         LD2_AddToStatus(ItemIds.NovaHeart, 1)
         LD2_AddToStatus(ItemIds.BlockOfDoom, 1)
         'LD2_AddToStatus(ItemIds.QuadDamage, 1)
-        LD2_AddToStatus(ItemIds.PoweredArmor, 1)
+        'LD2_AddToStatus(ItemIds.PoweredArmor, 1)
         'LD2_AddToStatus(ItemIds.Chemical410, 1)
         Player_SetItemQty ItemIds.SceneIntro, 1
         Player_SetItemQty ItemIds.SceneJanitor, 1

@@ -437,6 +437,7 @@ FUNCTION CheckPlayerFloorHit as integer
     dim contactY as integer
     dim xmod as integer
     dim ymod as integer
+    dim pvy as integer
     
     box = Player_GetCollisionBox()
     
@@ -447,6 +448,7 @@ FUNCTION CheckPlayerFloorHit as integer
         
         pointsToCheck(0).y = box.top: pointsToCheck(0).x = box.lft
         pointsToCheck(1).y = box.top: pointsToCheck(1).x = box.rgt
+        pvy = int(Player.vy)-1
         
         for n = 0 to 1
             x = pointsToCheck(n).x
@@ -465,6 +467,7 @@ FUNCTION CheckPlayerFloorHit as integer
         
         pointsToCheck(0).y = box.btm+1: pointsToCheck(0).x = box.lft
         pointsToCheck(1).y = box.btm+1: pointsToCheck(1).x = box.rgt
+        pvy = int(Player.vy)+1
         
         for n = 0 to 1
             x = pointsToCheck(n).x
@@ -480,7 +483,7 @@ FUNCTION CheckPlayerFloorHit as integer
             if (m >= 10) and (m <= 25) then
                 floorHeight = m - 10
                 ymod = (y and 15)
-                if ymod >= floorHeight and ymod <= (floorHeight+1) then
+                if ymod >= floorHeight and ymod <= (floorHeight+pvy) then
                     contactX = x
                     contactY = mapY * SPRITE_H + floorHeight
                     exit for
@@ -488,17 +491,17 @@ FUNCTION CheckPlayerFloorHit as integer
             end if
             if m = 30 then
                 ymod = (y and 15)
-                xmod = (x and 15)
-                if ymod >= (15-xmod) and ymod <= ((15-xmod)+1) then
+                xmod = 15-(x and 15)
+                if ymod >= xmod then 'and ymod <= (xmod+pvy) then
                     contactX = x
-                    contactY = mapY * SPRITE_H + (15-xmod)
+                    contactY = mapY * SPRITE_H + xmod
                     exit for
                 end if
             end if
             if m = 31 then
                 ymod = (y and 15)
                 xmod = (x and 15)
-                if ymod >= xmod and ymod <= (xmod+1) then
+                if ymod >= xmod then 'and ymod <= (xmod+pvy) then
                     contactX = x
                     contactY = mapY * SPRITE_H + xmod
                     exit for
@@ -560,8 +563,10 @@ FUNCTION CheckPlayerWallHit() as integer
     dim y as integer
     dim m as integer
     dim n as integer
+    dim pvx as integer
     
     box = Player_GetCollisionBox()
+    pvx = abs(int(Player.vx))+1
     
     if Player.vx >= 0 then
         
@@ -591,12 +596,12 @@ FUNCTION CheckPlayerWallHit() as integer
         if n = 1 then '// only check bottom
             if (m = 30) and (Player.vx > 0) then
                 ymod = (y and 15)
-                xmod = (x and 15)
-                if ymod >= (15-xmod) and ymod <= ((15-xmod)+1) then
+                xmod = 15-(x and 15)
+                if ymod >= xmod then ' and ymod <= (xmod+pvx) then
                     WallContactMapX = mapX
                     WallContactMapY = mapY
                     WallContactPointX = x
-                    WallContactPointY = mapY * SPRITE_H + (15-xmod)
+                    WallContactPointY = mapY * SPRITE_H + xmod
                     Player.y = WallContactPointY - SPRITE_H
                     return 0
                 end if
@@ -604,7 +609,7 @@ FUNCTION CheckPlayerWallHit() as integer
             if (m = 31) and (Player.vx < 0) then
                 ymod = (y and 15)
                 xmod = (x and 15)
-                if ymod >= xmod and ymod <= (xmod+1) then
+                if ymod >= xmod then 'and ymod <= (xmod+pvx) then
                     WallContactMapX = mapX
                     WallContactMapY = mapY
                     WallContactPointX = x
@@ -1002,7 +1007,7 @@ SUB SaveItems (filename AS STRING)
             PUT #OutFile, , roomItemCount
             FOR i = 0 TO NumItems-1
                 item = Items(i)
-                IF CurrentRoom = 7 THEN
+                IF roomId = 7 THEN
                     item.y = item.y + 4
                 END IF
                 PUT #OutFile, , item
@@ -1012,7 +1017,7 @@ SUB SaveItems (filename AS STRING)
             PUT #OutFile, , roomItemCount
             FOR i = 0 TO roomItemCount-1
                 GET #InFile, , item
-                IF CurrentRoom = 7 THEN
+                IF roomId = 7 THEN
                     item.y = item.y + 4
                 END IF
                 PUT #OutFile, , item
@@ -1243,18 +1248,30 @@ SUB Map_Load (Filename AS STRING, skipMobs as integer = 0)
           END IF
           FloorMap(x, y) = 0
           IF ASC(_byte) >= 80 AND ASC(_byte) <= 109 THEN FloorMap(x, y) = 1
-          if (asc(_byte) = 120) or (asc(_byte) = 124) or (asc(_byte) = 127) then FloorMap(x, y) = 1
+          'if (asc(_byte) = 120) or (asc(_byte) = 124) or (asc(_byte) = 127) then FloorMap(x, y) = 1
           if (asc(_byte) = 5) or (asc(_byte) = 6) then FloorMap(x, y) = 19
-          if (asc(_byte) = 155) then FloorMap(x, y) = 1
-          if (asc(_byte) = 156) then FloorMap(x, y) = 1
-          if (asc(_byte) = 157) then FloorMap(x, y) = 30
-          if (asc(_byte) = 158) then FloorMap(x, y) = 31
-          if (asc(_byte) = 159) then FloorMap(x, y) = 30
-          if (asc(_byte) = 160) then FloorMap(x, y) = 31
-          if (asc(_byte) = 161) then FloorMap(x, y) = 30
-          if (asc(_byte) = 162) then FloorMap(x, y) = 31
-          if (asc(_byte) = 163) then FloorMap(x, y) = 10
-          if (asc(_byte) = 164) then FloorMap(x, y) = 0
+            if (asc(_byte) = 120) then FloorMap(x, y) = 0
+            if (asc(_byte) = 145) then FloorMap(x, y) = 0
+          if (asc(_byte) = 160) then FloorMap(x, y) = 0
+          if (asc(_byte) = 161) then FloorMap(x, y) = 0
+          if (asc(_byte) = 162) then FloorMap(x, y) = 30
+          if (asc(_byte) = 163) then FloorMap(x, y) = 31
+          if (asc(_byte) = 164) then FloorMap(x, y) = 30
+          if (asc(_byte) = 165) then FloorMap(x, y) = 31
+          if (asc(_byte) = 166) then FloorMap(x, y) = 30
+          if (asc(_byte) = 167) then FloorMap(x, y) = 31
+          if (asc(_byte) = 168) then FloorMap(x, y) = 30
+          if (asc(_byte) = 169) then FloorMap(x, y) = 31
+          if (asc(_byte) = 170) then FloorMap(x, y) = 10
+          if (asc(_byte) = 171) then FloorMap(x, y) = 30
+          if (asc(_byte) = 172) then FloorMap(x, y) = 31
+          if (asc(_byte) = 173) then FloorMap(x, y) = 30
+          if (asc(_byte) = 174) then FloorMap(x, y) = 31
+          if (asc(_byte) = 175) then FloorMap(x, y) = 30
+          if (asc(_byte) = 176) then FloorMap(x, y) = 31
+          if (asc(_byte) = 177) then FloorMap(x, y) = 0
+          if (asc(_byte) = 178) then FloorMap(x, y) = 0
+          if (asc(_byte) = 179) then FloorMap(x, y) = 10
         NEXT x
       NEXT y
     
@@ -1853,344 +1870,144 @@ sub LD2_putTextCol (x as integer, y as integer, text as string, col as integer, 
 end sub
 
 SUB LD2_RenderFrame
+    
+    LD2_LogDebug "LD2_RenderFrame"
+    
+    Animation = Animation + .2
+    if Animation > 9 then Animation = 1
 
-  IF LD2_isDebugMode() THEN LD2_Debug "LD2_RenderFrame"
-
-  'DIM spriteIdx    AS INTEGER
-  'DIM lightIdx     AS INTEGER
-  'DIM tempIdx      AS INTEGER
-  'DIM segAniMap    AS INTEGER
-  'DIM segTileMap   AS INTEGER
-  'DIM segMixMap    AS INTEGER
-  'DIM segLightMapFg AS INTEGER
-  'DIM segLightMapBg AS INTEGER
-  'DIM segTile      AS INTEGER
-  'DIM segLight     AS INTEGER
-  'DIM segBuffer1   AS INTEGER
-  'DIM segBuffer2   AS INTEGER
-  
-  'DIM ptrTile  AS INTEGER
-  'DIM ptrMix   AS INTEGER
-  'DIM ptrLight AS INTEGER
-  'DIM ptrTemp  AS INTEGER
-  
-  'segAniMap    = VARSEG(AniMap(0))
-  'segTileMap   = VARSEG(TileMap(0))
-  'segMixMap    = VARSEG(MixMap(0))
-  'segLightMapFg = VARSEG(LightMapFg(0))
-  'segLightMapBg = VARSEG(LightMapBg(0))
-  'segTile      = VARSEG(sTile(0))
-  'segLight     = VARSEG(sLight(0))
-  'segBuffer1   = GetBufferSeg%(1)
-  'segBuffer2   = GetBufferSeg%(2)
-  
-  'DIM ptrTileMap   AS INTEGER
-  'DIM ptrMixMap    AS INTEGER
-  'DIM ptrAniMap    AS INTEGER
-  'DIM ptrLightMapFg AS INTEGER
-  'DIM ptrLightMapBg AS INTEGER
-  'DEF SEG = segTileMap  : ptrTileMap   = VARPTR(TileMap(0))  : DEF SEG
-  'DEF SEG = segMixMap   : ptrMixMap    = VARPTR(MixMap(0))   : DEF SEG
-  'DEF SEG = segAniMap   : ptrAniMap    = VARPTR(AniMap(0))   : DEF SEG
-  'DEF SEG = segLightMapFg: ptrLightMapFg = VARPTR(LightMapFg(0)): DEF SEG
-  'DEF SEG = segLightMapBg: ptrLightMapBg = VARPTR(LightMapBg(0)): DEF SEG
-
-  Animation = Animation + .2
-  IF Animation > 9 THEN Animation = 1
-
-  static rotation as double
-  rotation += 6
-  if rotation >= 360 then rotation = 0
-
-  ''LD2Scroll VARSEG(Buffer2(0))
-  'LD2copyFull segBuffer2, segBuffer1
-  LD2_CopyBuffer 2, 1
-  
-  LD2_RenderBackground (CurrentRoom+1)/24
-  
-  'DIM skipLight(20) AS INTEGER '// 20 = (24*13)/16(bits) (24bits to hold 20w -- leaving 4bits unused)
-  '
-  'SetBitmap VARSEG(skipLight(0)), VARPTR(skipLight(0)), 20
-  'dim skipLight(20, 13) as integer
-  
-  'IF LD2_isDebugMode() THEN LD2_Debug "LD2_RenderFrame -- hole punching for dynamic light"
-  
-  'DIM mob AS Mobile
-  'dim lft as integer
-  'dim rgt as integer
-  'dim ex as integer
-  'dim ey as integer
-  'lft = 0
-  'rgt = 19
-  'Mobs.resetNext
-  'DO WHILE Mobs.canGetNext()
-  '  Mobs.getNext mob
-  '  ex = INT(mob.x - XShift + (INT(XShift) AND 15)) \ 16
-  '  ey = INT(mob.y)\16
-  '  IF (ex >= lft) AND (ex <= rgt) THEN
-  '    'PokeBitmap (ex%+0), (ey%+0), 1
-  '    'PokeBitmap (ex%+1), (ey%+0), 1
-  '    'PokeBitmap (ex%+0), (ey%+1), 1
-  '    'PokeBitmap (ex%+1), (ey%+1), 1
-  '    skipLight(ex+0, ey+0) = 1
-  '    skipLight(ex+1, ey+0) = 1
-  '    skipLight(ex+0, ey+1) = 1
-  '    skipLight(ex+1, ey+1) = 1
-  '  END IF
-  'LOOP
-  'ex = INT(Player.x + (INT(XShift) AND 15)) \ 16
-  'ey = INT(Player.y)\16
-  'IF (ex >= lft) AND (ex <= rgt) THEN
-  '  'PokeBitmap (ex%+0), (ey%+0), 1
-  '  'PokeBitmap (ex%+1), (ey%+0), 1
-  '  'PokeBitmap (ex%+0), (ey%+1), 1
-  '  'PokeBitmap (ex%+1), (ey%+1), 1
-  '  skipLight(ex+0, ey+0) = 1
-  '  skipLight(ex+1, ey+0) = 1
-  '  skipLight(ex+0, ey+1) = 1
-  '  skipLight(ex+1, ey+1) = 1
-  'END IF
-  
-  'IF LD2_isDebugMode() THEN LD2_Debug "LD2_RenderFrame -- draw tile map and light map 2"
-
-  dim xp as integer, yp as integer
-  dim x as integer, y as integer
-  dim mapX as integer, mapY as integer
-  dim skipStaticLighting as integer
-  dim m as integer
-  dim a as integer
-  dim l as integer
+    static rotation as double
+    rotation += 6
+    if rotation >= 360 then rotation = 0
+    
+    LD2_CopyBuffer 2, 1
+    LD2_RenderBackground (CurrentRoom+1)/24
+    
+    dim xp as integer, yp as integer
+    dim x as integer, y as integer
+    dim mapX as integer, mapY as integer
+    dim skipStaticLighting as integer
+    dim m as integer
+    dim a as integer
+    dim l as integer
     
     dim playerMapX as integer, playerMapY as integer
     playerMapX = int((Player.x+7) / SPRITE_W)
     playerMapY = int((Player.y+7) / SPRITE_H)
-  
-  LD2_SetTargetBuffer 1
-  IF Lighting2 THEN '// background/window lighting
-    yp = 0
-    FOR y = 0 TO 12
-      xp = 0 - (INT(XShift) AND 15)
-      mapX = (int(XShift) \ 16)
-      mapY = y
-      'm  = ((INT(XShift) \ 16) + y * MAPW)
-      'mt = ptrTileMap  + m
-      'mx = ptrMixMap   + m
-      'ma = ptrAniMap   + m
-      'ml = ptrLightMap + m
-      FOR x = 0 TO 20 '// yes, 21 (+1 for hangover when scrolling)
-        '// draw mixed/shaded tile or standard tile (that will be shaded later -- because and entity is in its space -- dynamically shade the entity with it later)
-        'skipStaticLighting% = PeekBitmap%(x%, y%)
-        'skipStaticLighting = skipLight(x, y)
-        'IF skipStaticLighting THEN
-        '  DEF SEG = segTileMap: m% = PEEK(mt%): DEF SEG
-          m = TileMap(mapX, mapY)
-        'ELSE
-        '  DEF SEG = segMixMap : m% = PEEK(mx%): DEF SEG
-        '  m = MixMap(mapX, mapY)
-        'END IF
-        IF 0 then 'TransparentSprites(m) = 0 THEN
-          ''DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
-          a = (Animation mod (AniMap(mapX, mapY)+1))
-            
-          'LD2putf xp, yp, segTile, VARPTR(sTile(EPS * (m + a))), segBuffer1
-          SpritesTile.putToScreen(xp, yp, m+a)
-        ELSE
-          'DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
-          a = (Animation mod (AniMap(mapX, mapY)+1))
-          'LD2put xp%-1, yp%-1, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1, 0
-            if m = 3 then
-                SpritesTile.putToScreen(xp, yp, 1)
-                SpritesTile.putToScreenEx(xp, yp, 128+a, 0, int(rotation))
-            else
-                SpritesTile.putToScreen(xp, yp, m+a)
-            end if
-          '// background lighting (mostly for windows)
-          'DEF SEG = segLightMapBg: l% = PEEK(ml%): DEF SEG
-          l = LightMapBg(mapX, mapY)
-          IF l THEN
-            'if (m > 0) and Player.is_shooting and (abs(playerMapX-mapX) <= 3) and (abs(playerMapY-mapY) <= 3) then
-            'else
-                'LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
-                SpritesLight.putToScreen(xp, yp, l)
-            'end if
-          END IF
-        END IF
-        mapX += 1
-        xp = xp + 16
-        'mt% = mt% + 1
-        'mx% = mx% + 1
-        'ma% = ma% + 1
-        'ml% = ml% + 1
-      NEXT x
-      yp = yp + 16
-    NEXT y
-    'DEF SEG
-  ELSE
-    yp = 0
-    FOR y = 0 TO 12
-      xp = 0 - (INT(XShift) AND 15)
-      mapX = (int(XShift) \ 16)
-      mapY = y
-      'm%  = ((INT(XShift) \ 16) + y% * MAPW)
-      'mt% = ptrTileMap + m%
-      'mx% = ptrMixMap  + m%
-      'ma% = ptrAniMap  + m%
-      FOR x = 0 TO 20
-        '// draw mixed/shaded tile or standard tile (that will be shaded later -- because and entity is in its space -- dynamically shade the entity with it later)
-        'skipStaticLighting% = PeekBitmap%(x%, y%)
-        'skipStaticLighting = skipLight(x, y)
-        'IF skipStaticLighting THEN
-        '  DEF SEG = segTileMap: m% = PEEK(mt%): DEF SEG
-          m = TileMap(mapX, mapY)
-        'ELSE
-        '  DEF SEG = segMixMap : m% = PEEK(mx%): DEF SEG
-        '  m = MixMap(mapX, mapY)
-        '  m = TileMap(mapX, mapY)
-        'END IF
-        IF m THEN
-          ''DEF SEG = segAniMap : a% = (Animation MOD (PEEK(ma%) + 1)): DEF SEG
-          a = (Animation mod (AniMap(mapX, mapY)+1))
-          ''IF TransparentSprites(m%) THEN
-          ''  LD2put xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1, 0
-          ''ELSE
-          '  LD2putf xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1
-          SpritesTile.putToScreen(xp, yp, m+a)
-          ''END IF
-        END IF
-        mapX += 1
-        xp = xp + 16
-        'mt% = mt% + 1
-        'mx% = mx% + 1
-        'ma% = ma% + 1
-      NEXT x
-      yp = yp + 16
-    NEXT y
-  END IF
-  
-  Mobs_Draw
-  Player_Draw
-  Doors_Draw
-  MapItems_Draw
-  Guts_Draw
-  
-  IF Lighting1 THEN '// dynamic lighting
-    yp = 0
-    FOR y = 0 TO 12
-      xp = 0 - (INT(XShift) AND 15)
-      mapX = (INT(XShift) \ 16)
-      mapY = y
-      'm%  = ((INT(XShift) \ 16) + y% * MAPW)
-      'ml% = ptrLightMap + m%
-      FOR x = 0 TO 20 '// yes, 21 (+1 for hangover when scrolling)
-        'doDynamicLighting% = PeekBitmap%(x%, y%)
-        'doDynamicLighting = skipLight(x, y)
-        'IF doDynamicLighting THEN
-        '  'DEF SEG = segLightMapFg: l% = PEEK(ml%): DEF SEG
-          m = FloorMap(mapX, mapY)
-          l = LightMapFg(mapx, mapY)
-          IF l THEN
-            if (m = 0) and Player.is_shooting and (Player.weapon <> FIST) and ((Player.uAni-Player.stillAni) < 1.5) and (abs(playerMapX-mapX) <= 3) and (abs(playerMapY-mapY) <= 2) then
-                
-            else
-                'LD2putl xp%, yp%, segLight, VARPTR(sLight(EPS * l%)), segBuffer1
-                SpritesLight.putToScreen(xp, yp, l)
-            end if
-          END IF
-        'END IF
-        mapX += 1
-        xp = xp + 16
-        'ml% = ml% + 1
-      NEXT x
-      yp = yp + 16
-    NEXT y
-    'DEF SEG
-  END IF
-  
-  Stats_Draw
-  
-  
-  DIM revealText AS STRING
-  DIM rtext AS STRING
-  DIM contRevealLoop AS INTEGER
-  DIM rtextLft AS INTEGER
-  dim revealLength as integer
-  STATIC rticker AS DOUBLE
-  STATIC first AS INTEGER
-  IF first = 0 THEN
-    first = 1
-    rticker = 1
-  END IF
     
-    dim n as integer
-  
-  revealText = ""' "The cola dispenser that poisoned Steve. Best I not get anything from it."
-  IF LEN(revealText) THEN
-      IF LEN(revealText) > 35 THEN
-        rtextLft = (SCREEN_W-35*6)\2
-      ELSE
-        rtextLft = (SCREEN_W-LEN(revealText)*6)\2
-      END IF
-      
-      rticker = rticker + DELAYMOD*0.50
-      IF rticker > LEN(revealText) THEN
-        rticker = LEN(revealText)
-      ELSE
-        revealText = LEFT(revealText, INT(rticker))
-      END IF
-      
-      y = 66
-      revealLength = INT(rticker)
-      DO
-        contRevealLoop = 0
-        n = revealLength
-        IF n > 35 THEN n = 35
-        IF MID(revealText, n, 1) <> " " THEN
-          WHILE (MID(revealText, n, 1) <> " ") AND (n < LEN(revealText)): n = n + 1: WEND
-          n = n - 1
-        END IF
-        IF n > 35 THEN
-          n = 35
-          WHILE (MID(revealText, n, 1) <> " ") AND (n > 1): n = n - 1: WEND
-        END IF
-        IF n = LEN(revealText) THEN
-          rtext = revealText
-          revealText = ""
-          contRevealLoop = 0
-        ELSE
-          rtext = LTRIM(LEFT(revealText, n))
-          revealText = LTRIM(RIGHT(revealText, LEN(revealText)-n))
-          revealLength = revealLength - n
-          contRevealLoop = 1
-        END IF
-        'LD2_putTextCol rtextLft-1, y%  , rtext, 18, 1
-        LD2_putTextCol rtextLft  , y  , rtext, 15, 1
-        y = y + 8
-      LOOP WHILE contRevealLoop
-  END IF
-  
-  IF LD2_isDebugMode() THEN
-    LD2_putText 0, 48, "FPS: " + STR(FPS), 1
-    LD2_putText 0, 56, "PLX: " + STR(INT(Player.x)), 1
-    LD2_putText 0, 64, "XSH: " + STR(INT(XShift)), 1
-    LD2_putText 0, 72, "P-X: " + STR(INT(Player.x)), 1
-    LD2_putText 0, 80, "MOB: " + STR(Mobs.Count()), 1
-  END IF
-
-  '- Switch to letter box mode if in scene mode
-  IF SceneMode = LETTERBOX THEN
-    FOR y = 1 TO 2
-      FOR x = 1 TO 40
-        'LD2putf x% * 16 - 16, y% * 16 - 16, VARSEG(sTile(0)), VARPTR(sTile(0)), segBuffer1
-        SpritesOpaqueTile.putToScreen(x * 16 - 16, y * 16 - 16, 0)
-      NEXT x
-    NEXT y
-    FOR y = 12 TO 13
-      FOR x = 1 TO 40
-        'LD2putf x% * 16 - 16, y% * 16 - 16, VARSEG(sTile(0)), VARPTR(sTile(0)), segBuffer1
-        SpritesOpaqueTile.putToScreen(x * 16 - 16, y * 16 - 16, 0)
-      NEXT x
-    NEXT y
-  END IF
+    LD2_SetTargetBuffer 1
+    if Lighting2 then '// background/window lighting
+        yp = 0
+        for y = 0 to 12
+            xp = 0 - (int(XShift) and 15)
+            mapX = (int(XShift) \ 16)
+            mapY = y
+            for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
+                'skipStaticLighting = skipLight(x, y)
+                'IF skipStaticLighting THEN
+                    '  DEF SEG = segTileMap: m% = PEEK(mt%): DEF SEG
+                    m = TileMap(mapX, mapY)
+                'ELSE
+                '  m = MixMap(mapX, mapY)
+                'END IF
+                if 0 then 'TransparentSprites(m) = 0 THEN
+                    a = (Animation mod (AniMap(mapX, mapY)+1))
+                    SpritesTile.putToScreen(xp, yp, m+a)
+                else
+                    a = (Animation mod (AniMap(mapX, mapY)+1))
+                    if m = TileIds.SpinningFan then
+                        SpritesTile.putToScreen(xp, yp, 1)
+                        SpritesTile.putToScreenEx(xp, yp, m, 0, int(rotation))
+                    else
+                        SpritesTile.putToScreen(xp, yp, m+a)
+                    end if
+                    l = LightMapBg(mapX, mapY)
+                    if l then
+                        SpritesLight.putToScreen(xp, yp, l)
+                    end if
+                end if
+                mapX += 1
+                xp = xp + 16
+            next x
+            yp = yp + 16
+        next y
+    else
+        yp = 0
+        for y = 0 to 12
+            xp = 0 - (int(XShift) and 15)
+            mapX = (int(XShift) \ 16)
+            mapY = y
+            for x = 0 to 20
+            '// draw mixed/shaded tile or standard tile (that will be shaded later -- because and entity is in its space -- dynamically shade the entity with it later)
+            'skipStaticLighting% = PeekBitmap%(x%, y%)
+            'skipStaticLighting = skipLight(x, y)
+            'if skipStaticLighting then
+                m = TileMap(mapX, mapY)
+            'else
+            '    m = MixMap(mapX, mapY)
+            'end if
+            if m then
+                a = (Animation mod (AniMap(mapX, mapY)+1))
+                ''if TransparentSprites(m%) then
+                ''  LD2put xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1, 0
+                ''else
+                '  LD2putf xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1
+                    SpritesTile.putToScreen(xp, yp, m+a)
+                ''end if
+            end if
+            mapX += 1
+            xp = xp + 16
+            next x
+            yp = yp + 16
+        next y
+    end if
+    
+    Mobs_Draw
+    Player_Draw
+    Doors_Draw
+    MapItems_Draw
+    Guts_Draw
+    
+    dim playerIsLit as integer
+    playerIsLit = Player.is_shooting and (Player.weapon <> FIST) and ((Player.uAni-Player.stillAni) < 1.5)
+    if Lighting1 then '// foreground lighting
+        yp = 0
+        for y = 0 to 12
+            xp = 0 - (int(XShift) and 15)
+            mapX = (int(XShift) \ 16)
+            mapY = y
+            for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
+                l = LightMapFg(mapx, mapY)
+                if l then
+                    m = FloorMap(mapX, mapY)
+                    if (m = 0) and playerIsLit and (abs(playerMapX-mapX) <= 3) and (abs(playerMapY-mapY) <= 2) then
+                        '// skip
+                    else
+                        SpritesLight.putToScreen(xp, yp, l)
+                    end if
+                end if
+                mapX += 1
+                xp = xp + 16
+            next x
+            yp = yp + 16
+        next y
+    end if
+    
+    Stats_Draw
+    
+    if LD2_isDebugMode() then
+        LD2_putText 0, 48, "FPS: " + str(FPS), 1
+        LD2_putText 0, 56, "PLX: " + str(int(Player.x)), 1
+        LD2_putText 0, 64, "XSH: " + str(int(XShift)), 1
+        LD2_putText 0, 72, "P-X: " + str(int(Player.x)), 1
+        LD2_putText 0, 80, "MOB: " + str(Mobs.Count()), 1
+    end if
+    
+    '- Switch to letter box mode if in scene mode
+    if SceneMode = LETTERBOX then
+        LD2_fill 0, 0, SCREEN_W, SPRITE_H*2, 0, 1
+        LD2_fill 0, SPRITE_H*11, SCREEN_W, SPRITE_H*2, 0, 1
+    end if
  
     static textCaption as ElementType
     if textCaption.y = 0 then
@@ -2214,12 +2031,12 @@ SUB LD2_RenderFrame
         labelNotice.background_alpha = 0
     end if
     
-  IF TIMER < GameNoticeExpire THEN
-    labelNotice.text = GameNoticeMsg
-    LD2_RenderElement @labelNotice
-  END IF
-  
-END SUB
+    if timer < GameNoticeExpire then
+        labelNotice.text = GameNoticeMsg
+        LD2_RenderElement @labelNotice
+    end if
+    
+end sub
 
 FUNCTION LD2_HasFlag (flag AS INTEGER) as integer
     
@@ -2300,6 +2117,12 @@ END SUB
 sub Map_SetXShift (x as integer)
     
     XShift = x
+    if XShift < 0 then
+        XShift   = 0
+    end if
+    if (XShift > 2896) or (XShift > 2800) then
+        XShift = 2896
+    end if
     
 end sub
 
@@ -3064,6 +2887,8 @@ end sub
 sub Player_Animate()
     
     static falling as integer
+    static machineTimer as double
+    static pistolTimer as double
     dim prevX as double
     dim f as double
     
@@ -3115,17 +2940,39 @@ sub Player_Animate()
             Player.stillani = 1
         case MACHINEGUN
             Player.uAni = Player.uAni + .4
-            if Player.uAni >= 11 then Player.uAni = 8: Player.is_shooting = 0
-            Player.stillani = 8
+            if Player.uAni >= 11 then
+                Player.uAni = 10: Player.is_shooting = 0
+                Player.stillani = 8
+                machineTimer = timer
+            end if
         case PISTOL
             Player.uAni = Player.uAni + iif(Player.state = CROUCHING, 0.23, 0.19)
-            if Player.uAni >= 14 then Player.uAni = 11: Player.is_shooting = 0
-            Player.stillani = 11
+            if Player.uAni >= 14 then
+                Player.uAni = 13: Player.is_shooting = 0
+                Player.stillani = 13
+                pistolTimer = timer
+            end if
         case DESERTEAGLE
             Player.uAni = Player.uAni + .15
             if Player.uAni >= 18 then Player.uAni = 14: Player.is_shooting = 0
         Player.stillani = 14
         end select
+    else
+        if (machineTimer > 0) and ((timer-machineTimer) > 0.2) then
+            Player.uAni = 8
+            Player.stillAni = 8
+            machineTimer = 0
+        end if
+        if (pistolTimer > 0) and ((timer-pistolTimer) > 0.2) then
+            Player.uAni = 69
+            Player.stillAni = 69
+            pistolTimer = 0
+        end if
+        'select case Player.weapon
+        'case MACHINEGUN
+        '    Player.uAni = 8
+        '    Player.stillAni = 8
+        'end select
     end if
     
     select case Player.state
@@ -3177,6 +3024,9 @@ sub Player_Animate()
     if XShift < 0 then
         XShift   = 0
     end if
+    if (XShift > 2896) or (XShift > 2800) then
+        XShift = 2896
+    end if
     
     dim checkX as integer
     dim checkY as integer
@@ -3206,6 +3056,38 @@ sub Player_Animate()
         Map_PutTile Elevator.mapX + 2, Elevator.mapY, Elevator.tileToRight, 1
         Elevator.isOpen = 0
         Elevator.isClosed = 1
+    end if
+    
+    dim px as double
+    dim py as double
+    dim xs as double
+    if Player.y < -12 then
+        px = Player.x
+        py = Player.y
+        xs = XShift
+        Inventory(ItemIds.CurrentRoom) += 1
+        Map_Load str(Inventory(ItemIds.CurrentRoom))+"th.ld2"
+        Player.x = px
+        Player.y = py+(13*16)-4
+        XShift = xs
+    end if
+    if Player.y > 196 then
+        px = Player.x
+        py = Player.y
+        xs = XShift
+        Inventory(ItemIds.CurrentRoom) -= 1
+        Map_Load str(Inventory(ItemIds.CurrentRoom))+"th.ld2"
+        Player.x = px
+        Player.y = py-(13*16)+4
+        XShift = xs
+    end if
+    if Player.x < -12 then
+        Player.x += (16*201)-4
+        XShift = (16*201)-SCREEN_W
+    end if
+    if player.x > 3212 then
+        Player.x -= (16*201)+4
+        XShift = 0
     end if
     
 end sub
@@ -3252,13 +3134,17 @@ sub Player_Draw()
             else
                 if lan = 21 then '- legs still/standing-upright
                     if Player.weapon = PISTOL then
-                        SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, -2, 2), py, lan, Player.flip)
+                        SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 1, -1), py, lan, Player.flip)
                     else
                         SpritesLarry.putToScreenEx(px, py, lan, Player.flip)
                     end if
                 else
                     if Player.weapon = PISTOL then
-                        SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, -4, 4), py, lan, Player.flip)
+                        if Player.state = JUMPING then
+                            SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, -1, 1), py, lan, Player.flip)
+                        else
+                            SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, -1, 1), py, lan, Player.flip)
+                        end if
                     else
                         SpritesLarry.putToScreenEx(px+iif(Player.flip, 2, -2), py, lan, Player.flip)
                     end if
@@ -3267,6 +3153,10 @@ sub Player_Draw()
             end if
         end if
     end select
+    
+    'dim box as BoxType
+    'box = Player_GetCollisionBox()
+    'LD2_fillm int(box.lft-XShift), box.top, box.w, box.h, 4, 1, 100
     
 end sub
 
@@ -3344,13 +3234,12 @@ end function
 
 function Player_Fall() as integer
     
-    dim isFalling as integer
+    static isFalling as integer = 0
     dim fallingDown as integer
     dim box as BoxType
     dim f as double
     
     box = Player_GetCollisionBox()
-    isFalling = 0
     fallingDown = iif(Player.vy >= 0, 1, 0)
     f = DELAYMOD
     
@@ -3359,8 +3248,11 @@ function Player_Fall() as integer
         isFalling = 1
         if Player.weapon = FIST then
             Player.lAni = iif(Player.vy < -0.5, 48, 49)
+        elseif Player.weapon = PISTOL then
+            Player.lAni = 67 '66
+            Player.uAni = 68
         else
-            Player.lAni = 25
+            Player.lAni = 67
         end if
         Player.vy += Gravity*f
         if Player.vy > 3 then
@@ -3371,6 +3263,10 @@ function Player_Fall() as integer
             isFalling = 0
             if Player.weapon = FIST then
                 Player.lAni = 42
+            elseif Player.weapon = PISTOL then
+                Player.uAni = 69
+                Player.lAni = 24
+                Player.stillAni = 69
             else
                 Player.lAni = 24
             end if
@@ -3381,7 +3277,7 @@ function Player_Fall() as integer
             Player.y = FallContactPointY - box.padTop + 1
         end if
         if Player.vy > 1.5 then
-            LD2_PlaySound Sounds.land
+            'LD2_PlaySound Sounds.land
         end if
         Player.vy = 0
         Player.is_lookingdown = 0
@@ -3390,20 +3286,20 @@ function Player_Fall() as integer
         end if
     end if
     
-    if isFalling and (Player.moved = 0) then
-        if Player.vx > 0 then
-            Player.vx -= Gravity*f*0.5
-            if Player.vx < 0 then Player.vx = 0
-        end if
-        if Player.vx < 0 then
-            Player.vx += Gravity*f*0.5
-            if Player.vx > 0 then Player.vx = 0
-        end if
-        Player.x += Player.vx
-        if CheckPlayerWallHit() then
-            Player.x = WallContactPointX + iif(Player.vx > 0, -(box.w+box.padLft), -box.padLft+1)
-        end if
-    end if
+    'if isFalling and (Player.moved = 0) then
+    '    if Player.vx > 0 then
+    '        Player.vx -= Gravity*f*0.5
+    '        if Player.vx < 0 then Player.vx = 0
+    ''    end if
+    '    if Player.vx < 0 then
+    '        Player.vx += Gravity*f*0.5
+    '        if Player.vx > 0 then Player.vx = 0
+    '    end if
+    '    Player.x += Player.vx
+    '    if CheckPlayerWallHit() then
+    '        Player.x = WallContactPointX + iif(Player.vx > 0, -(box.w+box.padLft), -box.padLft+1)
+    '    end if
+    'end if
     
     return isFalling
     
@@ -3450,6 +3346,43 @@ function Player_Move (dx AS DOUBLE, canFlip as integer = 1) as integer
         dx *= 1.25
     end if
     
+    dim fromX as integer
+    dim toX as integer
+    dim hitWall as integer
+    dim px as double
+    dim bx as BoxType
+    Player.vx   = dx
+    box = Player_GetCollisionBox()
+    hitWall = 0
+    if dx > 0 then
+        fromX = int(box.rgt / SPRITE_W)
+        toX = int((box.rgt + dx) / SPRITE_W)
+        if toX > fromX then
+            px = Player.x
+            Player.x = fromX * SPRITE_W+box.padRgt
+            bx = Player_GetCollisionBox()
+            LD2_SetNotice str(bx.rgt)
+            if CheckPlayerWallHit() then
+                hitWall = 1
+            end if
+            Player.x = px
+        end if
+    else
+        fromX = int(box.lft / SPRITE_W)
+        toX = int((box.lft + dx) / SPRITE_W)
+        if toX < fromX then
+            px = Player.x
+            Player.x = fromX * SPRITE_W-box.padLft
+            bx = Player_GetCollisionBox()
+            LD2_SetNotice str(bx.lft)
+            if CheckPlayerWallHit() then
+                hitWall = 1
+            end if
+            Player.x = px
+        end if
+    end if
+    
+    if hitWall = 0 then
     if Player.weapon = FIST then
         Player.vx   = dx
         Player.x    = Player.x + dx
@@ -3480,8 +3413,13 @@ function Player_Move (dx AS DOUBLE, canFlip as integer = 1) as integer
             end select
         end if
     end if
+    end if
     
     if CheckPlayerWallHit() then
+        hitWall = 1
+    end if
+    
+    if hitWall then
         box = Player_GetCollisionBox()
         Player.x = WallContactPointX + iif(dx > 0, -(box.w+box.padLft), -box.padLft+1)
         Player.vx = 0
@@ -3649,7 +3587,7 @@ function Player_SetWeapon (itemId as integer) as integer
   IF itemId = FIST        THEN Player.uAni = 26: Player.stillani = Player.uAni
   IF itemId = SHOTGUN     THEN Player.uAni = 01: Player.stillani = Player.uAni
   IF itemId = MACHINEGUN  THEN Player.uAni = 08: Player.stillani = Player.uAni
-  IF itemId = PISTOL      THEN Player.uAni = 11: Player.stillani = Player.uAni
+  IF itemId = PISTOL      THEN Player.uAni = 69: Player.stillani = Player.uAni
   IF itemId = DESERTEAGLE THEN Player.uAni = 14: Player.stillani = Player.uAni
   
   return 1
@@ -3728,12 +3666,15 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         Inventory(ItemIds.PistolAmmo) -= 1
         damage = 2
         fireY = iif(Player.state = CROUCHING, 12, 5)
+        if Player.uAni = 68 or Player.uAni = 69 then Player.uAni = 11
         
     case ItemIds.MachineGun
         
+        if timeSinceLastShot < 0.12 then return 0
         Inventory(ItemIds.MachineGunAmmo) -= 1
         damage = 1
         fireY = iif(Player.state = CROUCHING, 7, 5)
+        Player.uAni = 8: Player.stillAni = 8
         
     case ItemIds.Magnum
         
@@ -3870,7 +3811,11 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             next n
             LD2_RenderFrame
             LD2_RefreshScreen
-            WaitSeconds 0.05
+            if Player.weapon = ItemIds.MachineGun then
+                WaitSeconds 0.025
+            else
+                WaitSeconds 0.05
+            end if
         end if
         
     elseif (Player.weapon = ItemIds.Fist) and (Player.uAni = Player.stillAni) then
@@ -3973,12 +3918,14 @@ sub Stats_Draw ()
         SpritesLarry.putToScreen(pad, pad+12, 45)
     case PISTOL
         SpritesLarry.putToScreen(pad, pad+12, 52)
+    case MACHINEGUN
+        SpritesLarry.putToScreen(pad, pad+12, 53)
     end select
     
     LD2_putTextCol pad+16, pad+3, str(Inventory(ItemIds.Hp)), 15, 1
     
     if Player.weapon = SHOTGUN     then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(SHELLS)), 15, 1
-    if Player.weapon = MACHINEGUN  then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(BULLETS)), 15, 1
+    if Player.weapon = MACHINEGUN  then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(ItemIds.MachineGunAmmo)), 15, 1
     if Player.weapon = PISTOL      then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(BULLETS)), 15, 1
     if Player.weapon = DESERTEAGLE then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(DEAGLES)), 15, 1
     if Player.weapon = FIST        then LD2_PutTextCol pad+16, pad+12+3, " INF", 15, 1
@@ -4306,6 +4253,7 @@ sub LD2_RenderElement(e as ElementType ptr)
     dim lft as integer, rgt as integer
     dim top as integer, btm as integer
     dim pixels as integer
+    dim maxpixels as integer
     dim relY as integer
     
     dim _word as string
@@ -4329,7 +4277,25 @@ sub LD2_RenderElement(e as ElementType ptr)
         exit sub
     end if
     
+    d = (FONT_H*e->text_height): textHeight = int(d)
+    d = (FONT_W*e->text_spacing)-FONT_W: textSpacing = int(d)
+    
     text = ucase(e->text)
+    
+    pixels = 0
+    maxpixels = 0
+    for n = 1 to len(text)
+        char = mid(text, n, 1)
+        if char = "\" then
+            if pixels > maxpixels then maxpixels = pixels
+            pixels = 0
+            continue for
+        end if
+        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32)) + iif(n < len(text), textSpacing, 0)
+    next n
+    if pixels > maxpixels then maxpixels = pixels
+    textWidth = maxpixels
+    
     newText = ""
     numLineBreaks = 0
     maxLineChars = 0
@@ -4355,15 +4321,6 @@ sub LD2_RenderElement(e as ElementType ptr)
         maxLineChars = len(newText)
     end if
     
-    d = (FONT_H*e->text_height): textHeight = int(d)
-    d = (FONT_W*e->text_spacing)-FONT_W: textSpacing = int(d)
-    
-    pixels = 0
-    for n = 1 to len(text)
-        char = mid(text, n, 1)
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32)) + iif(n < len(text), textSpacing, 0)
-    next n
-    textWidth = pixels
     if e->w = -1 then e->is_auto_width = 1
     if e->h = -1 then e->is_auto_height = 1
     if e->is_auto_width  then e->w = textWidth

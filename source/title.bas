@@ -641,7 +641,7 @@ sub TITLE_TheEnd
     WaitSecondsUntilKey(1.5)
     LD2_SetMusicVolume 1.0
     LD2_PlayMusic Tracks.Ending
-    WaitSecondsUntilKey(1.0)
+    WaitSecondsUntilKey(1.6667)
     if keyboard(KEY_ENTER) then
         while LD2_FadeOutMusic(0.5): PullEvents: wend
         LD2_FadeOut 2
@@ -737,7 +737,7 @@ sub TITLE_TheEnd
     
   LOOP
   
-  while LD2_FadeOutMusic(0.5): PullEvents: wend
+  while LD2_FadeOutMusic(3.0): PullEvents: wend
   
 end sub
 
