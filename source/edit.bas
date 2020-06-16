@@ -26,6 +26,11 @@ type PointType
     y as integer
 end type
 
+type PointDouble
+    x as double
+    y as double
+end type
+
 type BoundsType
     top as integer
     lft as integer
@@ -34,53 +39,103 @@ type BoundsType
 end type
 
 type PointContained
-    _point as PointType
+    _point as PointDouble
     _bounds as BoundsType
+    _crossedX as integer
+    _crossedY as integer
     declare sub setBounds(top as integer, lft as integer, btm as integer, rgt as integer)
-    declare property x () as integer
-    declare property y () as integer
-    declare property x (nx as integer)
-    declare property y (ny as integer)
+    declare function crossedX() as integer
+    declare function crossedY() as integer
+    declare property x () as double
+    declare property y () as double
+    declare property x (nx as double)
+    declare property y (ny as double)
 end type
-
 sub PointContained.setBounds(top as integer, lft as integer, rgt as integer, btm as integer)
-    
     this._bounds.top = top
     this._bounds.lft = lft
     this._bounds.rgt = rgt
     this._bounds.btm = btm
-    
 end sub
-
-property PointContained.x() as integer
+function PointContained.crossedX() as integer
+    return this._crossedX
+end function
+function PointContained.crossedY() as integer
+    return this._crossedY
+end function
+property PointContained.x() as double
     return this._point.x
 end property
-
-property PointContained.y() as integer
+property PointContained.y() as double
     return this._point.y
 end property
-
-property PointContained.x(nx as integer)
+property PointContained.x(nx as double)
     this._point.x = nx
     if this._point.x < this._bounds.lft then
         this._point.x = this._bounds.lft
+        this._crossedX = 1
     elseif this._point.x > this._bounds.rgt then
         this._point.x = this._bounds.rgt
+        this._crossedX = 1
+    else
+        this._crossedX = 0
     end if
 end property
-
-property PointContained.y(ny as integer)
+property PointContained.y(ny as double)
     this._point.y = ny
     if this._point.y < this._bounds.top then
         this._point.y = this._bounds.top
+        this._crossedY = 1
     elseif this._point.y > this._bounds.btm then
         this._point.y = this._bounds.btm
+        this._crossedY = 1
+    else
+        this._crossedY = 0
     end if
 end property
+
+type MapMeta
+    versionMajor as integer
+    versionMinor as integer
+    levelName as string
+    author as string
+    created as string
+    updated as string
+    comments as string
+    w as ubyte
+    h as ubyte
+    numItems as ubyte
+    numAnimated as ubyte
+end type
+
+type MapCell
+    tile as ubyte
+    lightBG as ubyte
+    lightFG as ubyte
+    animated as ubyte
+end type
+
+enum LayerIds
+    video = 0
+    tile
+    lightBG
+    lightFG
+    item
+end enum
+
+type LayerMeta
+    id as integer
+    sid as string
+    isVisible as integer
+end type
     
     declare sub Init()
     declare sub LoadMap (filename as string)
+    declare sub LoadMap045 (filename as string)
+    declare sub LoadMap101 (filename as string)
     declare sub SaveMap (filename as string, showDetails as integer = 0)
+    declare sub SaveMap045 (filename as string, showDetails as integer = 0)
+    declare sub SaveMap101 (filename as string, showDetails as integer = 0)
     declare sub LoadSprites (filename as string, spriteSetId as integer)
     declare sub DoMapPostProcessing ()
     declare sub postProcessTile(x as integer, y as integer)
@@ -92,14 +147,20 @@ end property
     declare sub showHelp ()
     declare sub GenerateSky()
     declare sub Notice(message as string)
-    declare sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointContained, bgcolor as integer = 18)
+    declare sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointType, bgcolor as integer = 18)
     declare sub MoveMap(dx as integer, dy as integer)
     declare function DialogYesNo(message as string) as integer
+    declare function getVersionTag() as string
+    declare function getNumAnimated() as integer
     
     declare sub elementsPutFont(x as integer, y as integer, charVal as integer)
     declare sub elementsFill(x as integer, y as integer, w as integer, h as integer, fillColor as integer, fillAlpha as double = 1.0)
     declare sub elementsSetFontColor(fontColor as integer)
     declare sub elementsSetAlphaMod(a as double)
+    
+    declare sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
+    declare sub drawSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
+    declare sub fillSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
     
     dim shared SpritesLarry as VideoSprites
     dim shared SpritesTile as VideoSprites
@@ -114,9 +175,10 @@ end property
     const MAPW = 201
     const MAPH = 13
 
+    dim shared CellMap(MAPW-1, MAPH-1) as MapCell
   DIM SHARED EditMap(200, 12) AS INTEGER
-  DIM SHARED LightMap1(200, 12) AS INTEGER
-  DIM SHARED LightMap2(200, 12) AS INTEGER
+  DIM SHARED LightMapFG(200, 12) AS INTEGER
+  DIM SHARED LightMapBG(200, 12) AS INTEGER
   DIM SHARED AniMap(200, 12) AS INTEGER
   dim shared NoSaveMap(200, 12) as integer
   
@@ -124,13 +186,9 @@ end property
     x AS short
     y AS short
     Item AS short
-  END TYPE: DIM SHARED Item(100) AS tItem
-
-  DIM SHARED NumItems AS INTEGER
+  END TYPE: DIM SHARED Items(100) AS tItem
 
   
-  DIM Cursor AS PointType
-
   DIM XScroll AS INTEGER
   DIM CurrentTile AS INTEGER
   DIM CurrentTileL AS INTEGER
@@ -171,29 +229,26 @@ end property
     dim filename as string
     
     dim mapFilename as string
+    
+    dim cursors(3) as PointType
+    dim cursor as PointType
+    
+    dim layers(4) as LayerMeta
+    layers(0).isVisible = 1: layers(0).id = LayerIds.Video  : layers(0).sid = "Screen"
+    layers(1).isVisible = 1: layers(1).id = LayerIds.Tile   : layers(1).sid = "Tile"
+    layers(2).isVisible = 1: layers(2).id = LayerIds.LightBG: layers(2).sid = "Light BG"
+    layers(3).isVisible = 1: layers(3).id = LayerIds.LightFG: layers(3).sid = "Light FG"
+    layers(4).isVisible = 1: layers(4).id = LayerIds.Item   : layers(4).sid = "Item"
     dim activeLayer as integer
-    dim activeLayerString as string
+    activeLayer = LayerIds.Tile
     
-    dim showLayer1 as integer
-    dim showLayer2 as integer
-    dim showLayer3 as integer
-    dim showLayer4 as integer
-    dim showLayer5 as integer
-    
-    activeLayer = 1
-    showLayer1  = 1
-    showLayer2  = 1
-    showLayer3  = 1
-    showLayer4  = 1
-    showLayer5  = 1
-    
-    dim cursors(3) as PointContained
+    dim layerString as string
     
     dim res_x as integer, res_y as integer
     screeninfo res_x, res_y
     
     dim m as PointContained
-    m.setBounds(0, 0, SCREEN_W-SPRITE_W, SCREEN_H-SPRITE_H*0.5)
+    m.setBounds(0, 0, 19, 12)
     
     dim mw as integer
 
@@ -201,6 +256,21 @@ end property
     
     dim mouseUp as integer
     mouseUp = 1
+    
+    dim lastClick as PointType
+    dim sprite as integer
+    
+    dim shared MapProps as MapMeta
+    MapProps.versionMajor = 1
+    MapProps.versionMinor = 1
+    MapProps.levelName = ""
+    MapProps.author = ""
+    MapProps.created = ""
+    MapProps.updated = ""
+    MapProps.comments = ""
+    MapProps.w = MAPW
+    MapProps.h = MAPH
+    MapProps.numItems = 0
 
   DO
     
@@ -210,129 +280,179 @@ end property
             exit do
         end if
     end if
-
-    if activeLayer = 1 then activeLayerString = "TILE"
-    if activeLayer = 2 then activeLayerString = "LIGHT BG"
-    if activeLayer = 3 then activeLayerString = "LIGHT FG"
-    if activeLayer = 4 then activeLayerString = "ITEM"
     
-    LD2_outline Cursor.x, Cursor.y, 16, 16, 15, 1
+    if keyboard(KEY_LSHIFT) then
+        select case activeLayer
+        case LayerIds.Tile: sprite = CurrentTile
+        case LayerIds.LightBG, LayerIds.LightFG: sprite = CurrentTileL
+        case LayerIds.Item: sprite = CurrentTileO
+        end select
+        if keyboard(KEY_B) then
+            drawSpriteBox lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, LayerIds.Video
+        elseif keyboard(KEY_F) then
+            fillSpriteBox lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, LayerIds.Video
+        else
+            drawSpriteLine 1, lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, LayerIds.Video
+        end if
+    end if
+
+    x = 2
+    for n = 1 to 4
+        layerString = iif(activeLayer = n, "["+layers(n).sid+"]", " "+layers(n).sid+" ")
+        if layers(n).isVisible then
+            SpritesFont.setColorMod(255, 255, 255)
+        else
+            SpritesFont.setColorMod(127, 127, 127)
+        end if
+        putText layerString, x, FONT_H*36.5
+        x += (len(layerString)+2)*FONT_W
+    next n
+    
+    LD2_outline cursor.x*SPRITE_W, cursor.y*SPRITE_H, 16, 16, 15, 1
     putText mapFilename, SCREEN_W-len(mapFilename)*FONT_W-1, 2
-    putText "XY "+str(int(Cursor.x/16)+XScroll)+" "+str(int(Cursor.y/16)), 2, FONT_H*34.5
-    putText "Layer "+str(activeLayer)+" ["+activeLayerString+"]", 2, FONT_H*36.5
+    putText "XY "+str((Cursor.x)+XScroll)+" "+str(Cursor.y), 2, FONT_H*34.5
     putText "Animations "+iif(Animation, "ON", "OFF"), 2, FONT_H*38.5
     LD2_RefreshScreen
     LD2_CopyBuffer 2, 1
     
     PullEvents
     
-    m.x = (m.x + mouseRelX()*0.4)
-    m.y = (m.y + mouseRelY()*0.4)
-    mw = mouseWheelY()
+    m.x = (m.x + mouseRelX()*0.025)
+    m.y = (m.y + mouseRelY()*0.025)
+    cursor.x = int(m.x)
+    cursor.y = int(m.y)
     
-    if (keyboard(KEY_Y) = 0) then cursor.x = int(m.x/SPRITE_W)*SPRITE_W
-    if (keyboard(KEY_X) = 0) then cursor.y = int(m.y/SPRITE_H)*SPRITE_H
+    mw = mouseWheelY()
 
     if keypress(KEY_H) then showHelp
     
-    if keypress(KEY_TAB) then
+    if keypress(KEY_TAB) or keypress(KEY_KP_5) then
         select case activeLayer
-        case 1
+        case LayerIds.Tile
             SpriteSelectScreen @spritesTile, currentTile, cursors(0)
-        case 2, 3
+        case LayerIds.LightBG, LayerIds.LightFG
             SpriteSelectScreen @spritesLight, currentTileL, cursors(1), 27
-        case 4
+        case LayerIds.Tile
             SpriteSelectScreen @spritesObject, currentTileO, cursors(2)
         end select
     end if
    
-    if keyboard(KEY_LSHIFT) and keyboard(KEY_ALT) then
-        if keypress(KEY_RIGHT) then MoveMap  1,  0: LD2_PlaySound Sounds.dialog
-        if keypress(KEY_LEFT ) then MoveMap -1,  0: LD2_PlaySound Sounds.dialog
-        if keypress(KEY_DOWN ) then MoveMap  0,  1: LD2_PlaySound Sounds.dialog
-        if keypress(KEY_UP   ) then MoveMap  0, -1: LD2_PlaySound Sounds.dialog
-    elseif keyboard(KEY_LSHIFT) then
-        if keypress(KEY_RIGHT) or keyboard(KEY_D) then XScroll += 1: LD2_PlaySound Sounds.dialog
-        if keypress(KEY_LEFT ) or keyboard(KEY_A) then XScroll -= 1: LD2_PlaySound Sounds.dialog
-    else
-        if keypress(KEY_RIGHT) or keypress(KEY_D) then m.x = m.x + 16: LD2_PlaySound Sounds.dialog
-        if keypress(KEY_LEFT ) or keypress(KEY_A) then m.x = m.x - 16: LD2_PlaySound Sounds.dialog
+    if keyboard(KEY_CTRL) and keyboard(KEY_ALT) then
+        if keypress(KEY_RIGHT) then MoveMap  1,  0: LD2_PlaySound EditSounds.quiet
+        if keypress(KEY_LEFT ) then MoveMap -1,  0: LD2_PlaySound EditSounds.quiet
+        if keypress(KEY_DOWN ) then MoveMap  0,  1: LD2_PlaySound EditSounds.quiet
+        if keypress(KEY_UP   ) then MoveMap  0, -1: LD2_PlaySound EditSounds.quiet
     end if
     
-    if keypress(KEY_DOWN) then m.y = m.y + 16: LD2_PlaySound Sounds.dialog
-    if keypress(KEY_S   ) then m.y = m.y + 16: LD2_PlaySound Sounds.dialog
-    if keypress(KEY_UP  ) then m.y = m.y - 16: LD2_PlaySound Sounds.dialog
-    if keypress(KEY_W   ) then m.y = m.y - 16: LD2_PlaySound Sounds.dialog
+    if keypress(KEY_RIGHT) or keypress(KEY_KP_6) then m.x = m.x + 1: LD2_PlaySound EditSounds.quiet
+    if keypress(KEY_LEFT ) or keypress(KEY_KP_4) then m.x = m.x - 1: LD2_PlaySound EditSounds.quiet
+    if keypress(KEY_DOWN ) or keypress(KEY_KP_2) then m.y = m.y + 1: LD2_PlaySound EditSounds.quiet
+    if keypress(KEY_UP   ) or keypress(KEY_KP_8) then m.y = m.y - 1: LD2_PlaySound EditSounds.quiet
+    if keypress(KEY_S    ) then m.y = m.y + 1: LD2_PlaySound EditSounds.quiet
+    if keypress(KEY_W    ) then m.y = m.y - 1: LD2_PlaySound EditSounds.quiet
+    
+    if keyboard(KEY_D) or keypress(KEY_KP_9) or keyboard(KEY_KP_3) then XScroll += 1: LD2_PlaySound EditSounds.quiet
+    if keyboard(KEY_A) or keypress(KEY_KP_7) or keyboard(KEY_KP_1) then XScroll -= 1: LD2_PlaySound EditSounds.quiet
 
-    if keypress(KEY_RBRACKET) or (mw > 0) then
-        if activeLayer = 1 then CurrentTile = CurrentTile + 1
-        if activeLayer = 2 then CurrentTileL = CurrentTileL + 1
-        if activeLayer = 3 then CurrentTileL = CurrentTileL + 1
-        if activeLayer = 4 then CurrentTileO = CurrentTileO + 1
+    if (keypress(KEY_PLUS) or keypress(KEY_KP_PLUS)) or (mw < 0) then
+        if activeLayer = LayerIds.Tile    then CurrentTile  += 1
+        if activeLayer = LayerIds.LightBG then CurrentTileL += 1
+        if activeLayer = LayerIds.LightFG then CurrentTileL += 1
+        if activeLayer = LayerIds.Item    then CurrentTileO += 1
+        LD2_PlaySound EditSounds.quiet
     end if
-    if keypress(KEY_LBRACKET) or (mw < 0) then
-        if activeLayer = 1 then CurrentTile = CurrentTile - 1
-        if activeLayer = 2 then CurrentTileL = CurrentTileL - 1
-        if activeLayer = 3 then CurrentTileL = CurrentTileL - 1
-        if activeLayer = 4 then CurrentTileO = CurrentTileO - 1
+    if (keypress(KEY_KP_PLUS) or keypress(KEY_KP_MINUS)) or (mw > 0) then
+        if activeLayer = LayerIds.Tile    then CurrentTile  -= 1
+        if activeLayer = LayerIds.LightBG then CurrentTileL -= 1
+        if activeLayer = LayerIds.LightFG then CurrentTileL -= 1
+        if activeLayer = LayerIds.Item    then CurrentTileO -= 1
+        LD2_PlaySound EditSounds.quiet
     end if
     
-    if keypress(KEY_Q) then
-      IF Animation = 0 THEN
-        Animation = 1
-      ELSE
-        Animation = 0
-      END IF
-    END IF
+    mapX = Cursor.x + XScroll
+    mapY = Cursor.y
     
-    mapX = Cursor.x \ 16 + XScroll
-    mapY = Cursor.y \ 16
-    
-    if keyboard(KEY_LSHIFT) then
-        if keypress(KEY_1) then AniMap(mapX, mapY) = 0
-        if keypress(KEY_2) then AniMap(mapX, mapY) = 1
-        if keypress(KEY_3) then AniMap(mapX, mapY) = 2
-        if keypress(KEY_4) then AniMap(mapX, mapY) = 3
-    elseif keyboard(KEY_CTRL) then
-        if keypress(KEY_1) then showLayer1 = iif(showLayer1, 0, 1)
-        if keypress(KEY_2) then showLayer2 = iif(showLayer2, 0, 1)
-        if keypress(KEY_3) then showLayer3 = iif(showLayer3, 0, 1)
-        if keypress(KEY_4) then showLayer4 = iif(showLayer4, 0, 1)
-        if keypress(KEY_5) then showLayer5 = iif(showLayer5, 0, 1)
+    if keyboard(KEY_ALT) then
+        if keypress(KEY_1) then layers(1).isVisible = iif(layers(1).isVisible, 0, 1): LD2_PlaySound iif(layers(1).isVisible, EditSounds.showLayer, EditSounds.hideLayer)
+        if keypress(KEY_2) then layers(2).isVisible = iif(layers(2).isVisible, 0, 1): LD2_PlaySound iif(layers(2).isVisible, EditSounds.showLayer, EditSounds.hideLayer)
+        if keypress(KEY_3) then layers(3).isVisible = iif(layers(3).isVisible, 0, 1): LD2_PlaySound iif(layers(3).isVisible, EditSounds.showLayer, EditSounds.hideLayer)
+        if keypress(KEY_4) then layers(4).isVisible = iif(layers(4).isVisible, 0, 1): LD2_PlaySound iif(layers(4).isVisible, EditSounds.showLayer, EditSounds.hideLayer)
     else
-        if keypress(KEY_1) then activeLayer = 1
-        if keypress(KEY_2) then activeLayer = 2
-        if keypress(KEY_3) then activeLayer = 3
-        if keypress(KEY_4) then activeLayer = 4
+        if keypress(KEY_1) then activeLayer = 1: LD2_PlaySound EditSounds.switchLayer
+        if keypress(KEY_2) then activeLayer = 2: LD2_PlaySound EditSounds.switchLayer
+        if keypress(KEY_3) then activeLayer = 3: LD2_PlaySound EditSounds.switchLayer
+        if keypress(KEY_4) then activeLayer = 4: LD2_PlaySound EditSounds.switchLayer
     end if
     
-    if keypress(KEY_SPACE) or keypress(KEY_V) or mouseLB() then
-        select case activeLayer
-        case 1
-            if EditMap(mapX, mapY) <> CurrentTile then
-                EditMap(mapX, mapY) = CurrentTile
-                LD2_PlaySound Sounds.editorPlace
+    if keypress(KEY_RBRACKET) or keypress(KEY_KP_MULTIPLY) then
+        if (activeLayer < 4) then
+            activeLayer += 1: LD2_PlaySound EditSounds.switchLayer
+        else
+            LD2_PlaySound EditSounds.invalid
+        end if
+    end if
+    if keypress(KEY_LBRACKET) or keypress(KEY_KP_DIVIDE) then
+        if (activeLayer > 1) then
+            activeLayer -= 1: LD2_PlaySound EditSounds.switchLayer
+        else
+            LD2_PlaySound EditSounds.invalid
+        end if
+    end if
+    
+    if keypress(KEY_ENTER) then
+        Animation = iif(Animation=0,1,0)
+    end if
+    if keypress(KEY_BACKSLASH) then
+        AniMap(mapX, mapY) += 1
+        if AniMap(mapX, mapY) > 3 then AniMap(mapX, mapY) = 0
+        LD2_PlaySound EditSounds.place
+    end if
+    
+    if keypress(KEY_SPACE) or keypress(KEY_V) or keypress(KEY_KP_ENTER) or keypress(KEY_KP_0) or mouseLB() then
+        if keyboard(KEY_LSHIFT) and mouseUp then
+            select case activeLayer
+            case LayerIds.Tile: sprite = CurrentTile
+            case LayerIds.LightBG, LayerIds.LightFG: sprite = CurrentTileL
+            case LayerIds.Item: sprite = CurrentTileO
+            end select
+            if keyboard(KEY_B) then
+                drawSpriteBox lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
+            elseif keyboard(KEY_F) then
+                fillSpriteBox lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
             else
-                if mouseUp then LD2_PlaySound Sounds.dialog
+                drawSpriteLine 1, lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
             end if
-        case 2
-            if LightMap2(mapX, mapY) <> CurrentTileL then
-                LightMap2(mapX, mapY) = CurrentTileL
-                LD2_PlaySound Sounds.editorPlace
-            else
-                if mouseUp then LD2_PlaySound Sounds.dialog
-            end if
-        case 3
-            if LightMap1(mapX, mapY) <> CurrentTileL then
-                LightMap1(mapX, mapY) = CurrentTileL
-                LD2_PlaySound Sounds.editorPlace
-            else
-                if mouseUp then LD2_PlaySound Sounds.dialog
-            end if
-        case 4
-            PlaceItem mapX, mapY, CurrentTileO
-        end select
-        NoSaveMap(mapX, mapY) = 0
+            LD2_PlaySound EditSounds.fill
+        else
+            select case activeLayer
+            case 1
+                if EditMap(mapX, mapY) <> CurrentTile then
+                    EditMap(mapX, mapY) = CurrentTile
+                    LD2_PlaySound EditSounds.place
+                else
+                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                end if
+            case 2
+                if LightMapBG(mapX, mapY) <> CurrentTileL then
+                    LightMapBG(mapX, mapY) = CurrentTileL
+                    LD2_PlaySound EditSounds.place
+                else
+                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                end if
+            case 3
+                if LightMapFG(mapX, mapY) <> CurrentTileL then
+                    LightMapFG(mapX, mapY) = CurrentTileL
+                    LD2_PlaySound EditSounds.place
+                else
+                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                end if
+            case 4
+                PlaceItem mapX, mapY, CurrentTileO
+            end select
+            NoSaveMap(mapX, mapY) = 0
+        end if
+        lastClick.x = mapX
+        lastClick.y = mapY
     end if
     
     if keypress(KEY_DELETE) or keypress(KEY_BACKSPACE) then
@@ -340,64 +460,64 @@ end property
         case 1
             if EditMap(mapX, mapY) <> 0 then
                 EditMap(mapX, mapY) = 0
-                LD2_PlaySound Sounds.uiCancel
+                LD2_PlaySound EditSounds.remove
             else
-                if mouseUp then LD2_PlaySound Sounds.dialog
+                if mouseUp then LD2_PlaySound EditSounds.quiet
             end if
         case 2
-            if LightMap2(mapX, mapY) <> 0 then
-                LightMap2(mapX, mapY) = 0
-                LD2_PlaySound Sounds.uiCancel
+            if LightMapBG(mapX, mapY) <> 0 then
+                LightMapBG(mapX, mapY) = 0
+                LD2_PlaySound EditSounds.remove
             else
-                if mouseUp then LD2_PlaySound Sounds.dialog
+                if mouseUp then LD2_PlaySound EditSounds.quiet
             end if
         case 3
-            if LightMap1(mapX, mapY) <> 0 then
-                LightMap1(mapX, mapY) = 0
-                LD2_PlaySound Sounds.uiCancel
+            if LightMapFG(mapX, mapY) <> 0 then
+                LightMapFG(mapX, mapY) = 0
+                LD2_PlaySound EditSounds.remove
             else
-                if mouseUp then LD2_PlaySound Sounds.dialog
+                if mouseUp then LD2_PlaySound EditSounds.quiet
             end if
         case 4
             RemoveItem mapX, mapY
         end select
     end if
     
-    if keypress(KEY_C) or mouseRB() then
+    if keypress(KEY_C) or keypress(KEY_KP_PERIOD) or mouseRB() then
         select case activeLayer
-        case 1
+        case LayerIds.Tile
             if CurrentTile <> EditMap(mapX, mapY) then
                 CurrentTile = EditMap(mapX, mapY)
-                LD2_PlaySound Sounds.editorCopy
+                LD2_PlaySound EditSounds.copy
             else
-                if mouseUp then LD2_PlaySound Sounds.dialog
+                if mouseUp then LD2_PlaySound EditSounds.quiet
             end if
-        case 2
-            if CurrentTileL <> LightMap2(mapX, mapY) then
-                CurrentTileL = LightMap2(mapX, mapY)
-                LD2_PlaySound Sounds.editorCopy
+        case LayerIds.LightBG
+            if CurrentTileL <> LightMapBG(mapX, mapY) then
+                CurrentTileL = LightMapBG(mapX, mapY)
+                LD2_PlaySound EditSounds.copy
             else
-                if mouseUp then LD2_PlaySound Sounds.dialog
+                if mouseUp then LD2_PlaySound EditSounds.quiet
             end if
-        case 3
-            if CurrentTileL <> LightMap1(mapX, mapY) then
-                CurrentTileL = LightMap1(mapX, mapY)
-                LD2_PlaySound Sounds.editorCopy
+        case LayerIds.LightFG
+            if CurrentTileL <> LightMapFG(mapX, mapY) then
+                CurrentTileL = LightMapFG(mapX, mapY)
+                LD2_PlaySound EditSounds.copy
             else
-                if mouseUp then LD2_PlaySound Sounds.dialog
+                if mouseUp then LD2_PlaySound EditSounds.quiet
             end if
-        case 4
+        case LayerIds.Item
             if CurrentTileO <> GetItem(mapX, mapY) then
                 CurrentTileO = GetItem(mapX, mapY)
-                LD2_PlaySound Sounds.editorCopy
+                LD2_PlaySound EditSounds.copy
             else
-                if mouseUp then LD2_PlaySound Sounds.dialog
+                if mouseUp then LD2_PlaySound EditSounds.quiet
             end if
         end select
     end if
     
     if keypress(KEY_F2) then
-        LD2_PlaySound Sounds.uiMix
+        LD2_PlaySound EditSounds.inputText
         filename = trim(inputText("Save Filename: ", mapFilename))
         if filename <> "" then
             SaveMap DATA_DIR+"rooms/"+filename, 1
@@ -405,7 +525,7 @@ end property
         end if
     end if
     if keypress(KEY_L) then
-        LD2_PlaySound Sounds.uiSubmenu
+        LD2_PlaySound EditSounds.inputText
         filename = trim(inputText("Load Filename: ", ""))
         if filename <> "" then
             SaveMap DATA_DIR+"rooms/autosave.ld2"
@@ -421,9 +541,9 @@ end property
     IF CurrentTileO < 0 THEN CurrentTileO = SpritesObject.getCount()-1
     IF CurrentTileO > SpritesObject.getCount()-1 THEN CurrentTileO = SpritesObject.getCount()-1
     IF Cursor.x < 0 THEN Cursor.x = 0
-    IF Cursor.x > 304 THEN Cursor.x = 304
+    IF Cursor.x > 19 THEN Cursor.x = 19
     IF Cursor.y < 0 THEN Cursor.y = 0
-    IF Cursor.y > 192 THEN Cursor.y = 192
+    IF Cursor.y > 11 THEN Cursor.y = 11
     IF XScroll < 0 THEN XScroll = 0
     IF XScroll > 181 THEN XScroll = 181
    
@@ -433,9 +553,9 @@ end property
             FOR x = 0 TO 19
                 putX = x * SPRITE_W: putY = y * SPRITE_H
                 mapX = x + XScroll: mapY = y
-                if showLayer1 then SpritesTile.putToScreen putX, putY, iif(showLayer5 and (NoSaveMap(mapX, mapY) > 0), NoSaveMap(mapx, mapY), EditMap(mapX, mapY))
-                if showLayer2 then SpritesLight.putToScreen putX, putY, LightMap2(mapX, mapY)
-                if showLayer3 then SpritesLight.putToScreen putX, putY, LightMap1(mapX, mapY)
+                if layers(LayerIds.Tile).isVisible    then SpritesTile.putToScreen putX, putY, EditMap(mapX, mapY)
+                if layers(LayerIds.LightBG).isVisible then SpritesLight.putToScreen putX, putY, LightMapBG(mapX, mapY)
+                if layers(LayerIds.LightFG).isVisible then SpritesLight.putToScreen putX, putY, LightMapFG(mapX, mapY)
             NEXT x
         NEXT y
     end if
@@ -446,9 +566,9 @@ end property
             FOR x = 0 TO 19
                 putX = x * SPRITE_W: putY = y * SPRITE_H
                 mapX = x + XScroll: mapY = y
-                if showLayer1 then SpritesTile.putToScreen putX, putY, iif(showLayer5 and (NoSaveMap(mapX, mapY) > 0), NoSaveMap(mapx, mapY), EditMap(mapX, mapY)) + (Ani mod (AniMap(mapX, mapY) + 1))
-                if showLayer2 then SpritesLight.putToScreen putX, putY, LightMap2(mapX, mapY)
-                if showLayer3 then SpritesLight.putToScreen putX, putY, LightMap1(mapX, mapY)
+                if layers(LayerIds.Tile).isVisible    then SpritesTile.putToScreen putX, putY, EditMap(mapX, mapY) + (Ani mod (AniMap(mapX, mapY) + 1))
+                if layers(LayerIds.LightBG).isVisible then SpritesLight.putToScreen putX, putY, LightMapBG(mapX, mapY)
+                if layers(LayerIds.LightFG).isVisible then SpritesLight.putToScreen putX, putY, LightMapFG(mapX, mapY)
             NEXT x
         NEXT y
     end if
@@ -457,10 +577,10 @@ end property
     spritesOpaqueLight.putToScreen 286, 183, CurrentTileL
     SpritesOpaqueObject.putToScreen 269, 183, CurrentTileO
 
-    if showLayer4 then
-        for i = 1 to NumItems
-            putX = Item(i).x - XScroll * 16: putY = Item(i).y
-            spritesObject.putToScreen putX, putY, Item(i).item
+    if layers(LayerIds.Tile).isVisible then
+        for i = 0 to MapProps.numItems-1
+            putX = (Items(i).x - XScroll) * SPRITE_W: putY = Items(i).y * SPRITE_H
+            spritesObject.putToScreen putX, putY, Items(i).item
         next i
     end if
 
@@ -513,28 +633,34 @@ SUB Init
     LoadSprites DATA_DIR+"gfx/objects.put", idOBJECT
     LoadSprites DATA_DIR+"gfx/font.put"   , idFONT
     
-    LD2_AddSound Sounds.dialog   , DATA_DIR+"sound/scenechar.wav"
+    LD2_AddSound EditSounds.quiet   , DATA_DIR+"sound/scenechar.wav"
     
-    LD2_AddSound Sounds.uiMenu   , DATA_DIR+"sound/ui-menu.wav"
-    LD2_AddSound Sounds.uiSubmenu, DATA_DIR+"sound/ui-submenu.wav"
-    LD2_AddSound Sounds.uiArrows , DATA_DIR+"sound/ui-arrows.wav"
-    LD2_AddSound Sounds.uiSelect , DATA_DIR+"sound/editor-select.wav"
-    LD2_AddSound Sounds.uiDenied , DATA_DIR+"sound/ui-denied.wav"
-    LD2_AddSound Sounds.uiInvalid, DATA_DIR+"sound/ui-invalid.wav"
-    LD2_AddSound Sounds.uiCancel , DATA_DIR+"sound/editor-cancel.wav"
-    LD2_AddSound Sounds.uiMix    , DATA_DIR+"sound/ui-mix.wav"
+    LD2_AddSound EditSounds.menu     , DATA_DIR+"sound/ui-menu.wav"
+    LD2_AddSound EditSounds.arrows   , DATA_DIR+"sound/ui-arrows.wav"
+    LD2_AddSound EditSounds.selected , DATA_DIR+"sound/editor/select.wav"
+    LD2_AddSound EditSounds.invalid  , DATA_DIR+"sound/ui-denied.wav"
+    LD2_AddSound EditSounds.notice   , DATA_DIR+"sound/ui-denied.wav"
+    LD2_AddSound EditSounds.cancel   , DATA_DIR+"sound/editor/cancel.wav"
+    LD2_AddSound EditSounds.goBack   , DATA_DIR+"sound/editor/cancel.wav"
+    LD2_AddSound EditSounds.inputText, DATA_DIR+"sound/ui-submenu.wav"
     
-    LD2_AddSound Sounds.pickup , DATA_DIR+"sound/item-pickup.wav"
-    LD2_AddSound Sounds.drop   , DATA_DIR+"sound/item-drop.wav"
+    LD2_AddSound EditSounds.place     , DATA_DIR+"sound/editor/place.wav"
+    LD2_AddSound EditSounds.copy      , DATA_DIR+"sound/editor/copy.wav"
+    LD2_AddSound EditSounds.remove    , DATA_DIR+"sound/editor/cancel.wav"
+    LD2_AddSound EditSounds.placeItem , DATA_DIR+"sound/item-pickup.wav"
+    LD2_AddSound EditSounds.removeItem, DATA_DIR+"sound/item-drop.wav"
     
-    'LD2_AddSound Sounds.keypadInput  , DATA_DIR+"sound/kp-input.wav"
-    LD2_AddSound Sounds.keypadGranted, DATA_DIR+"sound/kp-granted.wav"
-    LD2_AddSound Sounds.keypadDenied , DATA_DIR+"sound/kp-denied.wav"
+    LD2_AddSound EditSounds.fill, DATA_DIR+"sound/editor/fill.wav"
     
-    LD2_AddSound Sounds.useExtraLife, DATA_DIR+"sound/use-extralife.wav"
+    LD2_AddSound EditSounds.switchLayer, DATA_DIR+"sound/ui-submenu.wav"
+    LD2_AddSound EditSounds.showLayer  , DATA_DIR+"sound/editor/cancel.wav"
+    LD2_AddSound EditSounds.hideLayer  , DATA_DIR+"sound/item-drop.wav"
     
-    LD2_AddSound Sounds.editorPlace, DATA_DIR+"sound/editor-place.wav"
-    LD2_AddSound Sounds.editorCopy, DATA_DIR+"sound/editor-copy.wav"
+    LD2_AddSound EditSounds.loaded, DATA_DIR+"sound/kp-granted.wav"
+    LD2_AddSound EditSounds.saved , DATA_DIR+"sound/use-extralife.wav"
+    
+    LD2_AddSound EditSounds.showHelp, DATA_DIR+"sound/ui-mix.wav"
+    LD2_AddSound EditSounds.turnPage, DATA_DIR+"sound/editor/turnpage.wav"
     
     Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
     Elements_LoadFontMetrics DATA_DIR+"gfx/font.put"
@@ -553,7 +679,94 @@ END SUB
 '    
 'end sub
 
-SUB LoadMap (filename as string)
+sub LoadMap(filename as string)
+    
+    dim versionTag as string*12
+    
+    if FileExists(filename) = 0 then
+        Notice !"ERROR!$$ * File not found"
+        return
+    end if
+
+    if open(filename for binary as #1) <> 0 then
+        Notice !"ERROR!$$ * Error Opening File"
+        return
+    end if
+    
+    get #1, , versionTag
+    
+    close #1
+    
+    select case versionTag
+    case "[LD2L-V0.45]"
+        LoadMap045 filename
+    case "[LD2L-V1.01]"
+        LoadMap101 filename
+    case else
+        Notice !"ERROR!$$ * Invalid Version Tag$$"+versionTag
+    end select
+    
+end sub
+
+sub LoadMap101 (filename as string)
+    
+    type fileMapCell
+        tile as ubyte
+        lightBG as ubyte
+        lightFG as ubyte
+    end type
+    
+    type fileItem
+        x as ubyte
+        y as ubyte
+        id as ubyte
+    end type
+    
+    dim versionTag as string
+    dim props as MapMeta
+    
+    if FileExists(filename) = 0 then
+        Notice !"ERROR!$$ * File not found"
+        return
+    end if
+
+    if open(filename for binary as #1) <> 0 then
+        Notice !"ERROR!$$ * Error Opening File"
+        return
+    end if
+    
+    get #1, , versionTag
+    if versionTag <> "[LD2L-V1.01]" then
+        Notice !"ERROR!$$ * Invalid Version Tag$$"+versionTag
+        close #1
+        return
+    end if
+    
+    get #1, , props.w
+    get #1, , props.h
+    get #1, , props.numItems
+    
+    get #1, , props.levelName
+    get #1, , props.author
+    get #1, , props.created
+    get #1, , props.updated
+    get #1, , props.comments
+    
+    dim cell as fileMapCell
+    dim x as integer
+    dim y as integer
+    for y = 0 to props.h-1
+        for x = 0 to props.w-1
+            get #1, , cell
+            EditMap(x, y) = cell.tile
+            LightMapFG(x, y) = cell.lightBG
+            LightMapBG(x, y) = cell.lightFG
+        next x
+    next y
+    
+end sub
+
+sub LoadMap045 (filename as string)
 
     dim _byte as ubyte 'string * 1
     dim cn as integer
@@ -561,174 +774,176 @@ SUB LoadMap (filename as string)
     dim n as integer
     dim x as integer
     dim y as integer
-    dim ft as string
-    dim nm as string
-    dim cr as string
-    dim dt as string
-    dim info as string
+    dim versionTag as string * 12
+    dim levelName as string
+    dim author as string
+    dim updated as string
+    dim comments as string
+    dim version as integer
+    dim newLine as string * 2
+    dim separator as string * 1
+    dim doubleQuotes as string * 1
+    dim numItems as ubyte
     
     if FileExists(filename) = 0 then
         Notice !"ERROR!$$ * File not found"
         return
     end if
 
-    if OPEN(Filename FOR BINARY AS #1) <> 0 then
+    if open(filename for binary as #1) <> 0 then
         Notice !"ERROR!$$ * Error Opening File"
         return
     end if
-
-    NumItems = 0
-
+    
+    'NumItems = 0
+    separator = "|"
+    
     '- Get the file header
     '-----------------------
- 
-      FOR n = 1 TO 12
-        GET #1, , _byte
-        ft = ft + chr(_byte)        
-      NEXT n
-
-      GET #1, , _byte
-      GET #1, , _byte
-     
-      IF ft <> "[LD2L-V0.45]" THEN
-        Notice !"ERROR!$$ * Invalid File Tag$$"+ft
+    get #1, , versionTag
+    if versionTag <> "[LD2L-V0.45]" then
+        Notice !"ERROR!$$ * Invalid Version Tag$$"+versionTag
+        close #1
         return
-      END IF
+    end if
+    
+    get #1, , newLine
 
     '- Get the Level Name
     '-----------------------
+    get #1, , doubleQuotes
+    do
+        get #1, , _byte
+        if chr(_byte) = separator then exit do
+        levelName += chr(_byte)
+    loop
 
-      GET #1, , _byte
-      
-      DO
-        GET #1, , _byte
-        IF chr(_byte) = "|" THEN EXIT DO
-        nm = nm + chr(_byte)
-      LOOP
-
-    '- Get the Credits
+    '- Get the Author
     '-----------------------
+    do
+        get #1, , _byte
+        if chr(_byte) = separator then exit do
+        author += chr(_byte)
+    loop
 
-      DO
-        GET #1, , _byte
-        IF chr(_byte) = "|" THEN EXIT DO
-        cr = cr + chr(_byte)
-      LOOP
-
-    '- Get the Date
+    '- Get Updated
     '-----------------------
+    do
+        get #1, , _byte
+        if chr(_byte) = doubleQuotes then exit do
+        updated += chr(_byte)
+    loop
 
-      DO
-        GET #1, , _byte
-        IF _byte = 34 THEN EXIT DO
-        dt = dt + chr(_byte)
-      LOOP
-
-    '- Load in the info
+    '- Load in the comments
     '-----------------------
-
-      GET #1, , _byte
-      GET #1, , _byte
-      GET #1, , _byte
-
-      DO
-        GET #1, , _byte
-        IF _byte = 34 THEN EXIT DO
-        info = info + chr(_byte)
-      LOOP
+    get #1, , newLine
+    get #1, , doubleQuotes
+    do
+        get #1, , _byte
+        if chr(_byte) = doubleQuotes then exit do
+        comments += chr(_byte)
+    loop
      
-    '- Load in the map data
-    '-----------------------
-     
-      GET #1, , _byte
-      GET #1, , _byte
-
-      FOR y = 0 TO 12
-        GET #1, , _byte
-        GET #1, , _byte
-        FOR x = 0 TO 200
-          GET #1, , _byte
-          EditMap(x, y) = _byte
-        NEXT x
-      NEXT y
+    '- Load in the tile data
+    '------------------------
+    get #1, , newLine
+    for y = 0 to 12
+        get #1, , newLine
+        for x = 0 to 200
+            get #1, , _byte
+            EditMap(x, y) = _byte
+        next x
+    next y
 
     '- Load in the light map data
     '----------------------------
-    
-      FOR y = 0 TO 12
-        GET #1, , _byte
-        GET #1, , _byte
-        FOR x = 0 TO 200
-          GET #1, , _byte
-          LightMap1(x, y) = _byte
-          GET #1, , _byte
-          LightMap2(x, y) = _byte
-        NEXT x
-      NEXT y
+    for y = 0 to 12
+        get #1, , newLine
+        for x = 0 to 200
+            get #1, , _byte
+            LightMapFG(x, y) = _byte
+            get #1, , _byte
+            LightMapBG(x, y) = _byte
+        next x
+    next y
 
     '- Load in the animation data
     '-----------------------
-    
-      FOR y = 0 TO 12
-        GET #1, , _byte
-        GET #1, , _byte
-        FOR x = 0 TO 200
-          GET #1, , _byte
-          AniMap(x, y) = _byte
-        NEXT x
-      NEXT y
+    for y = 0 to 12
+        get #1, , newLine
+        for x = 0 to 200
+            get #1, , _byte
+            AniMap(x, y) = _byte
+        next x
+    next y
 
     '- Load in the item data
     '-----------------------
-     
-      GET #1, , _byte
-      GET #1, , _byte
+    get #1, , newLine
 
-      GET #1, , _byte: NumItems = _byte
-      FOR i = 1 TO NumItems
-        GET #1, , Item(i).x
-        GET #1, , Item(i).y
-        GET #1, , _byte: Item(i).Item = _byte
-      NEXT i
+    get #1, , _byte: numItems = _byte
+    for i = 0 to numItems-1
+        get #1, , newLine
+        get #1, , _byte: Items(i).Item = _byte
+        if version = 45 then
+            Items(i).x = int(Items(i).x / 16)
+            Items(i).y = int(Items(i).y / 16)
+        end if
+    next i
  
-  CLOSE #1
+  close #1
   
   DoMapPostProcessing
 
-  '- Display the map data
-  '- and wait for keypress
-  '-----------------------
+    '- Display the map data
+    '- and wait for keypress
+    '-----------------------
+    LD2_cls 1, 0
+    putText versionTag, 2, FONT_H*1
+    putText levelName, 2, FONT_H*3
+    putText author, 2, FONT_H*5
+    putText updated, 2, FONT_H*7
 
+    comments += " "
+    cn = 0
+    x = 2: y = FONT_H*10
+    for n = 1 to len(comments)
+        putText mid(comments, n, 1), x, y
+        if instr(n + 1, comments, " ") - instr(n, comments, " ") + cn > 40 THEN
+            y += FONT_H
+            x = 2
+            cn = 0
+        end if
+        x += FONT_W
+        cn = cn + 1
+    next n
     
-  LD2_cls 1, 0
-  putText ft, 2, FONT_H*1
-  putText nm, 2, FONT_H*3
-  putText cr, 2, FONT_H*5
-  putText dt, 2, FONT_H*7
-  
-  info = info + " "
-  cn = 0
-  x = 2: y = FONT_H*10
-  FOR n = 1 TO LEN(info)
-    putText mid(info, n, 1), x, y
-    IF INSTR(n + 1, info, " ") - INSTR(n, info, " ") + cn > 40 THEN
-        y += FONT_H
-        x = 2
-        cn = 0
-    END IF
-    x += FONT_W
-    cn = cn + 1
-  NEXT n
-  
-  putText "Press ENTER to continue", 0, FONT_H*36
+    select case versionTag
+    case "[LD2L-V0.45]"
+        MapProps.versionMajor = 0
+        MapProps.versionMinor = 45
+    case "[LD2L-V1.01]"
+        MapProps.versionMajor = 1
+        MapProps.versionMinor = 1
+    end select
+    MapProps.levelName = levelName
+    MapProps.author = author
+    MapProps.updated = updated
+    MapProps.created = "n/a"
+    MapProps.comments = comments
+    MapProps.w = 201
+    MapProps.h = 13
+    MapProps.numItems = numItems
 
-    LD2_PlaySound Sounds.keypadGranted
+    putText "Press ENTER to continue", 0, FONT_H*36
+
+    LD2_PlaySound EditSounds.loaded
     LD2_RefreshScreen
 
     WaitForKeyup(KEY_ENTER)
     WaitForKeydown(KEY_ENTER)
-    
-    LD2_PlaySound Sounds.uiArrows
+
+    LD2_PlaySound EditSounds.arrows
 
 END SUB
 
@@ -823,7 +1038,137 @@ sub LoadSprites (filename as string, spriteSetId as integer)
 
 END SUB
 
-SUB SaveMap (filename as string, showDetails as integer = 0)
+function getVersionTag() as string
+    
+    dim versionTag as string
+    
+    versionTag = "["
+        versionTag += "LD2L-V"
+        versionTag += str(MapProps.versionMajor)
+        versionTag += "."
+        versionTag += iif(MapProps.versionMinor<10,"0","")+str(MapProps.versionMinor)
+    versionTag += "]"
+    
+    return versionTag
+    
+end function
+
+function getNumAnimated() as integer
+    
+    dim x as integer
+    dim y as integer
+    dim count as integer
+    
+    count = 0
+    for y = 0 to MapProps.h-1
+        for x = 0 to MapProps.w-1
+            if AniMap(x, y) > 0 then
+                count += 1
+            end if
+        next x
+    next y
+    
+    return count
+    
+end function
+
+sub SaveMap101 (filename as string, showDetails as integer = 0)
+    
+    type fileMapCell
+        tile as ubyte
+        lightBG as ubyte
+        lightFG as ubyte
+    end type
+    
+    type fileItem
+        x as ubyte
+        y as ubyte
+        id as ubyte
+    end type
+    
+    dim props as MapMeta
+    props = MapProps
+    
+    dim versionTag as string
+    versionTag = getVersionTag()
+    
+    props.numAnimated = getNumAnimated()
+    
+    if open(Filename for binary as #1) <> 0 then
+        Notice !"ERROR!$$ * Error Opening File"
+        return
+    end if
+    
+    put #1, , versionTag
+    put #1, , props.w
+    put #1, , props.h
+    put #1, , props.numItems
+    put #1, , props.numAnimated
+    put #1, , props.levelName
+    put #1, , props.author
+    put #1, , props.created
+    put #1, , props.updated
+    put #1, , props.comments
+    
+    dim cell as fileMapCell
+    
+    dim x as integer
+    dim y as integer
+    for y = 0 to props.h-1
+        for x = 0 to props.w-1
+            cell.tile = EditMap(x, y)
+            cell.lightBG = LightMapBG(x, y)
+            cell.lightFG = LightMapFG(x, y)
+            put #1, , cell
+        next x
+    next y
+    
+    dim fitem as fileItem
+    dim n as integer
+    
+    for n = 0 to props.numItems-1
+        fitem.x  = Items(n).x
+        fitem.y  = Items(n).y
+        fitem.id = Items(n).item
+        put #1, , fitem
+    next n
+    
+    dim animated as ubyte
+    
+    for n = 0 to props.numAnimated-1
+        for y = 0 to props.h-1
+            for x = 0 to props.w-1
+                if AniMap(x, y) > 0 then
+                    animated = AniMap(x, y)
+                    put #1, , animated
+                end if
+            next x
+        next y
+    next n
+    
+    close #1
+    
+end sub
+
+sub SaveMap (filename as string, showDetails as integer = 0)
+    
+    dim versionTag as string
+    
+    versionTag = getVersionTag()
+    
+    select case versionTag
+    case "[LD2L-V0.45]"
+        SaveMap045 filename
+    case "[LD2L-V1.01]"
+        SaveMap101 filename
+    case else
+        Notice !"ERROR!$$ * Map Properties Invalid$$"+versionTag+"$$Saving as INVALID.LD2 (version 1.01)"
+        SaveMap101 "invalid.ld2"
+    end select
+    
+end sub
+
+SUB SaveMap045 (filename as string, showDetails as integer = 0)
 
     dim ft as string
     dim nm as string
@@ -951,10 +1296,10 @@ SUB SaveMap (filename as string, showDetails as integer = 0)
 
       FOR y = 0 TO 12
         FOR x = 0 TO 200
-            v = LightMap1(x, y): put #1, , v
-            v = LightMap2(x, y): put #1, , v
-          'PUT #1, , LightMap1(x, y)
-          'PUT #1, , LightMap2(x, y)
+            v = LightMapFG(x, y): put #1, , v
+            v = LightMapBG(x, y): put #1, , v
+          'PUT #1, , LightMapFG(x, y)
+          'PUT #1, , LightMapBG(x, y)
         NEXT x
         v = 13: PUT #1, , v
         v = 10: PUT #1, , v
@@ -977,12 +1322,12 @@ SUB SaveMap (filename as string, showDetails as integer = 0)
     '- Write the item data
     '-----------------------
 
-        _word = NumItems
+        _word = MapProps.numItems
         put #1, , _word
-        for i = 1 to NumItems
-            _word = Item(i).x   : put #1, , _word: c = c + 2
-            _word = Item(i).y   : put #1, , _word: c = c + 2
-            _word = Item(i).item: put #1, , _word
+        for i = 0 to MapProps.numItems-1
+            _word = Items(i).x   : put #1, , _word: c = c + 2
+            _word = Items(i).y   : put #1, , _word: c = c + 2
+            _word = Items(i).item: put #1, , _word
         next i
 
   CLOSE #1
@@ -1011,13 +1356,13 @@ SUB SaveMap (filename as string, showDetails as integer = 0)
 
         putText "Press ENTER to continue", 0, FONT_H*36
 
-        LD2_PlaySound Sounds.useExtraLife
+        LD2_PlaySound EditSounds.saved
         LD2_RefreshScreen
 
         WaitForKeyup(KEY_ENTER)
         WaitForKeydown(KEY_ENTER)
 
-        LD2_PlaySound Sounds.uiArrows
+        LD2_PlaySound EditSounds.arrows
     end if
 
 END SUB
@@ -1064,11 +1409,11 @@ function inputText(text as string, currentVal as string = "") as string
 				x = cursor_x-len(text)
 				strval = left(strval, x)+event.text.text+right(strval, len(strval)-x)
 				cursor_x += 1
-                LD2_PlaySound Sounds.dialog
+                LD2_PlaySound EditSounds.quiet
 			case SDL_KEYDOWN
 				if event.key.keysym.sym = SDLK_ESCAPE then
 					strval = ""
-                    LD2_PlaySound Sounds.uiCancel
+                    LD2_PlaySound EditSounds.cancel
 					exit do
 				end if
 				if event.key.keysym.sym = SDLK_BACKSPACE then
@@ -1076,9 +1421,9 @@ function inputText(text as string, currentVal as string = "") as string
 						x = cursor_x-len(text)
 						strval = left(strval, x-1)+right(strval, len(strval)-x)
 						cursor_x -= 1
-                        LD2_PlaySound Sounds.dialog
+                        LD2_PlaySound EditSounds.quiet
                     else
-                        LD2_PlaySound Sounds.uiDenied
+                        LD2_PlaySound EditSounds.invalid
 					end if
 				end if
 				if event.key.keysym.sym = SDLK_DELETE then
@@ -1086,9 +1431,9 @@ function inputText(text as string, currentVal as string = "") as string
 						x = cursor_x-len(text)
 						strval = left(strval, x)+right(strval, len(strval)-x-1)
 						if cursor_x > len(text+strval) then cursor_x = len(text+strval)
-                        LD2_PlaySound Sounds.dialog
+                        LD2_PlaySound EditSounds.quiet
                     else
-                        LD2_PlaySound Sounds.uiDenied
+                        LD2_PlaySound EditSounds.invalid
 					end if
 				end if
 				if event.key.keysym.sym = SDLK_RETURN then
@@ -1098,18 +1443,18 @@ function inputText(text as string, currentVal as string = "") as string
 					cursor_x -= 1
 					if cursor_x < len(text) then
                         cursor_x = len(text)
-                        LD2_PlaySound Sounds.uiDenied
+                        LD2_PlaySound EditSounds.invalid
                     else
-                        LD2_PlaySound Sounds.dialog
+                        LD2_PlaySound EditSounds.quiet
                     end if
 				end if
 				if event.key.keysym.sym = SDLK_RIGHT then
 					cursor_x += 1
 					if cursor_x > len(text+strval) then
                         cursor_x = len(text+strval)
-                        LD2_PlaySound Sounds.uiDenied
+                        LD2_PlaySound EditSounds.invalid
                     else
-                        LD2_PlaySound Sounds.dialog
+                        LD2_PlaySound EditSounds.quiet
                     end if
 				end if
 			end select
@@ -1137,20 +1482,20 @@ sub PlaceItem(x as integer, y as integer, id as integer)
     dim n as integer
     dim found as integer
     
-    if NumItems < 100 then
-        for n = 1 to NumItems
-            if Item(n).x = (x * SPRITE_W) and Item(n).y = (y * SPRITE_H) then
+    if MapProps.numItems < 100 then
+        for n = 0 to MapProps.numItems-1
+            if Items(n).x = x and Items(n).y = y then
                 found = 1
                 exit for
             end if
         next n
         if found = 0 then
-            NumItems = NumItems + 1
-            n = NumItems
-            Item(n).x = x * SPRITE_W
-            Item(n).y = y * SPRITE_H
-            Item(n).item = id
-            LD2_PlaySound Sounds.pickup
+            MapProps.numItems += 1
+            n = MapProps.numItems-1
+            Items(n).x = x
+            Items(n).y = y
+            Items(n).item = id
+            LD2_PlaySound EditSounds.placeItem
         end if
     end if
 
@@ -1163,21 +1508,21 @@ sub RemoveItem(x as integer, y as integer)
     dim found as integer
     
     found = 0
-    for i = 1 to NumItems
-        if Item(i).x = (x * SPRITE_W) and Item(i).y = (y * SPRITE_H) then
-            for n = i to NumItems - 1
-                Item(n) = Item(n + 1)
+    for i = 0 to MapProps.numItems-1
+        if Items(i).x = x and Items(i).y = y then
+            for n = i to MapProps.numItems - 2
+                Items(n) = Items(n + 1)
             next n
-            NumItems = NumItems - 1
+            MapProps.numItems -= 1
             found = 1
             exit for
         end if
     next i
     
     if found then
-        LD2_PlaySound Sounds.drop
+        LD2_PlaySound EditSounds.removeItem
     else
-        LD2_PlaySound Sounds.uiDenied
+        LD2_PlaySound EditSounds.invalid
     end if
     
 end sub
@@ -1187,9 +1532,9 @@ function GetItem(x as integer, y as integer) as integer
     dim i as integer
     dim n as integer
     
-    for i = 1 to NumItems
-        if Item(i).x = (x * SPRITE_W) and Item(i).y = (y * SPRITE_H) then
-            return Item(i).item
+    for i = 0 to MapProps.numItems-1
+        if Items(i).x = x and Items(i).y = y then
+            return Items(i).item
         end if
     next i
     
@@ -1199,46 +1544,49 @@ end function
 
 sub ShowHelp ()
 
-    dim padding as integer
+    dim padX as integer
+    dim padY as integer
     dim w as integer
     dim h as integer
     
-    padding = SPRITE_W*2-1
-    w = SCREEN_W-padding*2
-    h = SCREEN_H-padding*2
-    LD2_outline padding, padding, w, h, DIALOG_BORDER_COLOR, 1
-    LD2_fillm padding+1, padding+1, w-2, h-2, DIALOG_BACKGROUND, 1, int(DIALOG_ALPHA * 255)
+    padX = SPRITE_W*1.5-1
+    padY = SPRITE_H*1.5-1
+    w = SCREEN_W-padX*2
+    h = SCREEN_H-padY*2.2
+    LD2_outline padX, padY, w, h, DIALOG_BORDER_COLOR, 1
+    LD2_fillm padX+1, padY+1, w-2, h-2, DIALOG_BACKGROUND, 1, int(DIALOG_ALPHA * 255)
 
     dim top as integer
     dim lft as integer
     dim lineHeight as integer
     
-    top = padding+FONT_H
-    lft = padding+FONT_W
+    top = padY+FONT_H
+    lft = padX+FONT_W
     lineHeight = FONT_H*2
     
     putText "Help", lft, top: top += lineHeight*1.65
-    putText "Move Cursor........Arrow Keys or W,A,S,D", lft, top, 6: top += lineHeight
-    putText "Scroll Map.........SHIFT+(LEFT or RIGHT)", lft, top, 6: top += lineHeight
-    putText "Switch Layer.......1, 2, 3, 4", lft, top, 6: top += lineHeight
-    putText "* Select...........<  [  > <  ]  >", lft, top, 6: top += lineHeight
-    putText "* Place............SPACE or V", lft, top, 6: top += lineHeight
-    putText "* Copy.............TAB or C", lft, top, 6: top += lineHeight
-    putText "* Remove...........DELETE or BACKSPACE", lft, top, 6: top += lineHeight
-    putText "* Animation Loop...SHIFT+(1, 2, 3, 4)", lft, top, 6: top += lineHeight
-    putText "Preview Animation..Q (On / Off)", lft, top, 6: top += lineHeight
-    putText "Load / Save........L / F2", lft, top, 6
+    putText "Move Cursor        Arrow Keys  KP[2 4 6 8]", lft, top, 6: top += lineHeight
+    putText "Scroll Map         A  D        KP[7 9/1 3]", lft, top, 6: top += lineHeight
+    putText "Switch Layer       [  ]        1 2 3 4", lft, top, 6: top += lineHeight
+    putText "* Sprite Nxt/Prv   +  -        Mouse Wheel", lft, top, 6: top += lineHeight
+    putText "* Sprite Screen    TAB         KP[5]", lft, top, 6: top += lineHeight
+    putText "* Place            SPC L-Click KP[ENTER/0]", lft, top, 6: top += lineHeight
+    putText "* Copy             C   R-Click KP[.]", lft, top, 6: top += lineHeight
+    putText "* Remove           DELETE      BACKSPACE", lft, top, 6: top += lineHeight
+    putText "* Animate Tile     BACKSLASH", lft, top, 6: top += lineHeight
+    putText "Preview Animation  ENTER (On / Off)", lft, top, 6: top += lineHeight
+    putText "Load / Save        L / F2", lft, top, 6
     
-    putText "Press ENTER to return", lft, SCREEN_H-padding-FONT_H*2
+    putText "Press ENTER to return", lft, SCREEN_H-padY-FONT_H*3
     
-    LD2_PlaySound Sounds.uiMix
+    LD2_PlaySound EditSounds.showHelp
     
     LD2_RefreshScreen
     
     WaitForKeyup(KEY_H)
     WaitForKeydown(KEY_ENTER)
     
-    LD2_PlaySound Sounds.uiCancel
+    LD2_PlaySound EditSounds.goBack
 
 end sub
 
@@ -1307,103 +1655,148 @@ sub Notice(message as string)
     loop while i
     putText "Press ENTER to return", lft, SCREEN_H-padding-FONT_H*2
     LD2_RefreshScreen
-    LD2_PlaySound Sounds.uiDenied
+    LD2_PlaySound EditSounds.notice
     WaitForKeyup(KEY_ENTER)
     WaitForKeydown(KEY_ENTER)
-    LD2_PlaySound Sounds.uiCancel
+    LD2_PlaySound EditSounds.goBack
     return
     
 end sub
 
-sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointContained, bgcolor as integer = 18)
+sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointType, bgcolor as integer = 18)
 
-    dim grid as PointType
+    dim m as PointContained
+    dim padX as double
+    dim padY as double
+    dim numCols as integer
+    dim numRows as integer
+    dim addX as integer, addY as integer
     dim column as integer
+    dim pageSize as integer
+    dim numPages as integer
+    dim addPage as integer
     dim page as integer
-    dim add as integer
     dim top as integer
     dim lft as integer
-    dim x as integer, y as integer
+    dim x as integer
+    dim y as integer
     dim n as integer
     
     dim hovered as integer
     
-    cursor.setBounds(0, 0, SCREEN_W-SPRITE_W*1.5, SCREEN_H-SPRITE_H*3.0)
+    numCols = 9
+    numRows = 10
+    pageSize = numCols*numRows
+    numPages = int(sprites->getCount() / pageSize)+1
+    page = 0
+    padX = 0.5
+    padY = 0.5
+    m.setBounds(padX, padY, numCols*2-padX, numRows-1)
+    m.x = cursor.x
+    m.y = cursor.y
     
-    LD2_PlaySound Sounds.uiArrows
+    padX *= SPRITE_W
+    padY *= SPRITE_H
+    
+    LD2_PlaySound EditSounds.arrows
     
     do
         PullEvents
         
-        cursor.x = (cursor.x + mouseRelX()*0.4)
-        cursor.y = (cursor.y + mouseRelY()*0.4)
-        grid.x = int(cursor.x / SPRITE_W)*SPRITE_W+SPRITE_W*0.5
-        grid.y = int(cursor.y / SPRITE_H)*SPRITE_H+SPRITE_H*0.5
+        m.x = (m.x + mouseRelX()*0.025)
+        m.y = (m.y + mouseRelY()*0.025)
+        cursor.x = int(m.x)
+        cursor.y = int(m.y)
         
         LD2_cls 1, bgcolor
         hovered = -1
         column = 0
-        lft = SPRITE_W*0.5: top = SPRITE_H*0.5
+        lft = 0: top = 0
         x = lft: y = top
-        for n = 0 to sprites->getCount()
-            sprites->putToScreen(x, y, n)
+        for n = page*pageSize to page*pageSize+pageSize*2-1
+            if n > sprites->getCount() then
+                exit for
+            end if
+            sprites->putToScreen(x*SPRITE_W+padX, y*SPRITE_H+padY, n)
             if n = selected then
-                LD2_outline x, y, SPRITE_W, SPRITE_H, 15, 1
+                LD2_outline x*SPRITE_W+padX, y*SPRITE_H+padY, SPRITE_W, SPRITE_H, 15, 1
             end if
-            if x = grid.x and y = grid.y then
+            if x = cursor.x and y = cursor.y then
                 hovered = n
+                LD2_outline x*SPRITE_W+padX, y*SPRITE_H+padY, SPRITE_W, SPRITE_H, 15, 1
             end if
-            x += SPRITE_W
-            if ((n+1) mod 9) = 0 then
+            x += 1
+            if ((n+1) mod numCols) = 0 then
                 x = lft
-                y += SPRITE_H
+                y += 1
             end if
-            if (y > (SCREEN_H-SPRITE_H*3.0)) and (column = 0) then
+            if (y > numRows-1) and (column = 0) then
                 column += 1
-                lft = 10.5*SPRITE_W
+                lft = 10
                 x = lft
                 y = top
             end if
         next n
-        
-        LD2_outline grid.x, grid.y, SPRITE_W, SPRITE_H, 15, 1
         
         putText "Selected "+str(selected), 2, FONT_H*36
         putText "Hovered  "+iif(hovered >= 0, str(hovered), ""), 2, FONT_H*37.5
         
         LD2_RefreshScreen
         
-        add = 0
-        if keypress(KEY_LEFT)  then add = iif(selected mod 9 = 0, -82, -1): LD2_PlaySound Sounds.dialog
-        if keypress(KEY_RIGHT) then add = iif(selected mod 9 = 8,  82,  1): LD2_PlaySound Sounds.dialog
-        if keypress(KEY_UP)    then add = iif(selected mod 90 < 10, 0, -9): LD2_PlaySound Sounds.dialog
-        if keypress(KEY_DOWN)  then add = iif(selected mod 90 > 80, 0,  9): LD2_PlaySound Sounds.dialog
+        addX = 0: addY = 0
+        addPage = 0
+        if keypress(KEY_LEFT)  or keypress(KEY_KP_4) then addX = -1
+        if keypress(KEY_RIGHT) or keypress(KEY_KP_6) then addX =  1
+        if keypress(KEY_UP)    or keypress(KEY_KP_8) then addY = -1
+        if keypress(KEY_DOWN)  or keypress(KEY_KP_2) then addY =  1
+        if keypress(KEY_RBRACKET) or keypress(KEY_KP_9) then addX =  10
+        if keypress(KEY_LBRACKET) or keypress(KEY_KP_7) then addX = -10
+        if keypress(KEY_PLUS)  or keypress(KEY_KP_PLUS) then addPage = 1
+        if keypress(KEY_MINUS) or keypress(KEY_KP_MINUS) then addPage = -1
         
-        if (add <> 0) and (selected+add >= 0) and (selected+add < sprites->getCount()) then
-            selected += add
+        if (addX <> 0) or (addY <> 0) then
+            m.x = (m.x + addX)
+            m.y = (m.y + addY)
+            if (m.x = numCols) and (abs(addX) = 1) then m.x = (m.x + addX)
+            if m.crossedX() or m.crossedY() then
+                LD2_PlaySound EditSounds.invalid
+            else
+                LD2_PlaySound EditSounds.quiet
+            end if
+        end if
+        if (addPage <> 0) then
+            if (page+addPage >= 0) and (page+addPage < numPages) then
+                page += addPage
+                LD2_PlaySound EditSounds.turnPage
+            else
+                LD2_PlaySound EditSounds.invalid
+            end if
         end if
         
-        if (mouseLB() or keypress(KEY_SPACE)) and (selected <> hovered) then
+        if mouseLB() and (selected <> hovered) then
             selected = hovered
-            LD2_PlaySound Sounds.editorPlace
+            LD2_PlaySound EditSounds.place
+        end if
+        if keypress(KEY_SPACE) or keypress(KEY_KP_ENTER) or keypress(KEY_KP_0) then
+            if (selected <> hovered) then
+                selected = hovered
+                LD2_PlaySound EditSounds.place
+            else
+                LD2_PlaySound EditSounds.goBack
+                exit do
+            end if
         end if
         
         if keypress(KEY_H) then showHelp
         
-        if keypress(KEY_TAB) or keypress(KEY_ESCAPE) then
-            LD2_PlaySound Sounds.uiInvalid
+        if keypress(KEY_TAB) or keypress(KEY_KP_5) or keypress(KEY_ESCAPE) then
+            LD2_PlaySound EditSounds.goBack
             exit do
         end if
     loop
     
 end sub
 
-'DIM SHARED EditMap(200, 12) AS INTEGER
-'DIM SHARED LightMap1(200, 12) AS INTEGER
-'DIM SHARED LightMap2(200, 12) AS INTEGER
-'DIM SHARED AniMap(200, 12) AS INTEGER
-'END TYPE: DIM SHARED Item(100) AS tItem
-'DIM SHARED NumItems AS INTEGER
 sub MoveMap(dx as integer, dy as integer)
     
     dim copyMap(MAPW-1, MAPH-1) as integer
@@ -1422,8 +1815,8 @@ sub MoveMap(dx as integer, dy as integer)
                 if dst.y < 0 then dst.y += MAPH
                 select case MapType
                     case 0: copyMap(dst.x, dst.y) = EditMap(x, y)
-                    case 1: copyMap(dst.x, dst.y) = LightMap1(x, y)
-                    case 2: copyMap(dst.x, dst.y) = LightMap2(x, y)
+                    case 1: copyMap(dst.x, dst.y) = LightMapFG(x, y)
+                    case 2: copyMap(dst.x, dst.y) = LightMapBG(x, y)
                     case 3: copyMap(dst.x, dst.y) = AniMap(x, y)
                 end select
             next x
@@ -1432,19 +1825,19 @@ sub MoveMap(dx as integer, dy as integer)
             for x = 0 to MAPW-1
                 select case MapType
                     case 0: EditMap(x, y)   = copyMap(x, y)
-                    case 1: LightMap1(x, y) = copyMap(x, y)
-                    case 2: LightMap2(x, y) = copyMap(x, y)
+                    case 1: LightMapFG(x, y) = copyMap(x, y)
+                    case 2: LightMapBG(x, y) = copyMap(x, y)
                     case 3: AniMap(x, y)    = copyMap(x, y)
                 end select
             next x
         next y
     next mapType
     
-    for n = 1 to NumItems
-        Item(n).x = (Item(n).x + dx*SPRITE_W) mod MAPW*SPRITE_W
-        Item(n).y = (Item(n).y + dy*SPRITE_H) mod MAPH*SPRITE_H
-        if Item(n).x < 0 then Item(n).x += MAPW*SPRITE_W
-        if Item(n).y < 0 then Item(n).y += MAPH*SPRITE_H
+    for n = 0 to MapProps.numItems-1
+        Items(n).x = (Items(n).x + dx) mod MAPW
+        Items(n).y = (Items(n).y + dy) mod MAPH
+        if Items(n).x < 0 then Items(n).x += MAPW
+        if Items(n).y < 0 then Items(n).y += MAPH
     next n
     
 end sub
@@ -1491,7 +1884,7 @@ function DialogYesNo(message as string) as integer
     dim modw as double: modw = 1.6
     dim modh as double: modh = 0.8
     
-    LD2_PlaySound Sounds.uiMenu
+    LD2_PlaySound EditSounds.menu
     
     LD2_SaveBuffer 2
 	LD2_CopyBuffer 1, 2
@@ -1537,28 +1930,28 @@ function DialogYesNo(message as string) as integer
 		LD2_RefreshScreen
         PullEvents
         if keypress(KEY_ENTER) then
-            LD2_PlaySound Sounds.uiSelect
+            LD2_PlaySound EditSounds.selected
             exit do
         end if
         if keypress(KEY_DOWN) then
             selection += 1
             if selection > 1 then
-                selection = 1: LD2_PlaySound Sounds.uiInvalid
+                selection = 1: LD2_PlaySound EditSounds.invalid
             else
-                LD2_PlaySound Sounds.uiArrows
+                LD2_PlaySound EditSounds.arrows
             end if
         end if
         if keypress(KEY_UP) then
             selection -= 1
             if selection < 0 then
-                selection = 0: LD2_PlaySound Sounds.uiInvalid
+                selection = 0: LD2_PlaySound EditSounds.invalid
             else
-                LD2_PlaySound Sounds.uiArrows
+                LD2_PlaySound EditSounds.arrows
             end if
         end if
         if keypress(KEY_ESCAPE) then
             selection = escapeSelection
-            LD2_PlaySound Sounds.uiCancel
+            LD2_PlaySound EditSounds.goBack
             exit do
         end if
     loop
@@ -1591,4 +1984,99 @@ end sub
 
 sub elementsSetAlphaMod(a as double)
     SpritesFont.setAlphaMod(int(a * 255))
+end sub
+
+sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
+    
+	dim vx as double, vy as double
+	dim stepx as double, stepy as double
+	dim diffx as integer, diffy as integer
+	dim vm as double
+	
+	diffx = x1-x0
+	diffy = y1-y0
+	
+	vm = sqr(diffx*diffx+diffy*diffy)
+	vx = diffx / vm
+	vy = diffy / vm
+	
+	stepx = x0+0.5: stepy = y0+0.5
+	dim i as integer
+	dim x as integer, y as integer
+	for i = 0 to vm
+        x = int(stepx)
+        y = int(stepy)
+        select case layer
+        case LayerIds.video
+            spritesTile.putToScreen x*SPRITE_W, y*SPRITE_H, sprite
+        case LayerIds.tile
+            EditMap(x, y) = sprite
+        case LayerIds.lightBG
+            LightMapBG(x, y) = sprite
+        case LayerIds.lightFG
+            LightMapFG(x, y) = sprite
+        case LayerIds.Item
+            PlaceItem x, y, sprite
+        end select
+		stepx += vx: stepy += vy
+	next i
+	
+end sub
+
+sub drawSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
+    
+	dim cursor as PointContained
+    dim x as integer, y as integer
+	
+	cursor.setBounds(0, 0, MAPW-1, MAPH-1)
+	
+    if y0 > y1 then swap y0, y1
+    if x0 > x1 then swap x0, x1
+    
+	for y = y0 to y1
+        for x = x0 to x1
+            if (x <> x0) and (x <> x1) and (y <> y0) and (y <> y1) then
+                continue for
+            end if
+            select case layer
+            case LayerIds.video
+                spritesTile.putToScreen x*SPRITE_W, y*SPRITE_H, sprite
+            case LayerIds.tile
+                EditMap(x, y) = sprite
+            case LayerIds.lightBG
+                LightMapBG(x, y) = sprite
+            case LayerIds.lightFG
+                LightMapFG(x, y) = sprite
+            case LayerIds.Item
+                PlaceItem x, y, sprite
+            end select
+        next x
+    next y
+    
+end sub
+
+sub fillSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
+    
+	dim x as integer, y as integer
+	
+    if y0 > y1 then swap y0, y1
+    if x0 > x1 then swap x0, x1
+    
+	for y = y0 to y1
+        for x = x0 to x1
+            select case layer
+            case LayerIds.video
+                spritesTile.putToScreen x*SPRITE_W, y*SPRITE_H, sprite
+            case LayerIds.tile
+                EditMap(x, y) = sprite
+            case LayerIds.lightBG
+                LightMapBG(x, y) = sprite
+            case LayerIds.lightFG
+                LightMapFG(x, y) = sprite
+            case LayerIds.Item
+                PlaceItem x, y, sprite
+            end select
+        next x
+    next y
+    
 end sub

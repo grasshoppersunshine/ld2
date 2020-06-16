@@ -339,6 +339,31 @@ enum Sounds
     editorCopy
 end enum
 
+enum EditSounds
+    arrows = 1
+    cancel
+    copy
+    fill
+    goBack
+    hideLayer
+    inputText
+    invalid
+    loaded
+    menu
+    notice
+    place
+    placeItem
+    quiet
+    remove
+    removeItem
+    saved
+    selected
+    showHelp
+    showLayer
+    switchLayer
+    turnPage
+end enum
+
 '=======================
 '= ROOMS / FLOORS
 '=======================
