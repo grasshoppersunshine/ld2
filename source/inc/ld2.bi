@@ -343,6 +343,7 @@ enum EditSounds
     arrows = 1
     cancel
     copy
+    deleteArea
     fill
     goBack
     hideLayer

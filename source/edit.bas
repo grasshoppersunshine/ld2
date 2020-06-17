@@ -32,10 +32,17 @@ type PointDouble
 end type
 
 type BoundsType
-    top as integer
-    lft as integer
-    rgt as integer
-    btm as integer
+    x0 as integer
+    y0 as integer
+    x1 as integer
+    y1 as integer
+end type
+
+type BoxType
+    x as integer
+    y as integer
+    w as integer
+    h as integer
 end type
 
 type PointContained
@@ -43,7 +50,7 @@ type PointContained
     _bounds as BoundsType
     _crossedX as integer
     _crossedY as integer
-    declare sub setBounds(top as integer, lft as integer, btm as integer, rgt as integer)
+    declare sub setBounds(x0 as integer, y0 as integer, x1 as integer, y1 as integer)
     declare function crossedX() as integer
     declare function crossedY() as integer
     declare property x () as double
@@ -51,11 +58,11 @@ type PointContained
     declare property x (nx as double)
     declare property y (ny as double)
 end type
-sub PointContained.setBounds(top as integer, lft as integer, rgt as integer, btm as integer)
-    this._bounds.top = top
-    this._bounds.lft = lft
-    this._bounds.rgt = rgt
-    this._bounds.btm = btm
+sub PointContained.setBounds(x0 as integer, y0 as integer, x1 as integer, y1 as integer)
+    this._bounds.x0 = x0
+    this._bounds.y0 = y0
+    this._bounds.x1 = x1
+    this._bounds.y1 = y1
 end sub
 function PointContained.crossedX() as integer
     return this._crossedX
@@ -71,11 +78,11 @@ property PointContained.y() as double
 end property
 property PointContained.x(nx as double)
     this._point.x = nx
-    if this._point.x < this._bounds.lft then
-        this._point.x = this._bounds.lft
+    if this._point.x < this._bounds.x0 then
+        this._point.x = this._bounds.x0
         this._crossedX = 1
-    elseif this._point.x > this._bounds.rgt then
-        this._point.x = this._bounds.rgt
+    elseif this._point.x > this._bounds.x1 then
+        this._point.x = this._bounds.x1
         this._crossedX = 1
     else
         this._crossedX = 0
@@ -83,11 +90,11 @@ property PointContained.x(nx as double)
 end property
 property PointContained.y(ny as double)
     this._point.y = ny
-    if this._point.y < this._bounds.top then
-        this._point.y = this._bounds.top
+    if this._point.y < this._bounds.y0 then
+        this._point.y = this._bounds.y0
         this._crossedY = 1
-    elseif this._point.y > this._bounds.btm then
-        this._point.y = this._bounds.btm
+    elseif this._point.y > this._bounds.y1 then
+        this._point.y = this._bounds.y1
         this._crossedY = 1
     else
         this._crossedY = 0
@@ -149,6 +156,9 @@ end type
     declare sub Notice(message as string)
     declare sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointType, bgcolor as integer = 18)
     declare sub MoveMap(dx as integer, dy as integer)
+    declare sub MapCopy(x as integer, y as integer, w as integer, h as integer)
+    declare sub MapPaste(destX as integer, destY as integer, scrollX as integer, onlyVisible as integer = 0)
+    declare sub MapDeleteArea(lft as integer, top as integer, w as integer, h as integer)
     declare function DialogYesNo(message as string) as integer
     declare function getVersionTag() as string
     declare function getNumAnimated() as integer
@@ -175,7 +185,7 @@ end type
     const MAPW = 201
     const MAPH = 13
 
-    dim shared CellMap(MAPW-1, MAPH-1) as MapCell
+    'dim shared CellMap(MAPW-1, MAPH-1) as MapCell
   DIM SHARED EditMap(200, 12) AS INTEGER
   DIM SHARED LightMapFG(200, 12) AS INTEGER
   DIM SHARED LightMapBG(200, 12) AS INTEGER
@@ -187,6 +197,11 @@ end type
     y AS short
     Item AS short
   END TYPE: DIM SHARED Items(100) AS tItem
+    
+    dim shared CopyMap(200, 12) as MapCell
+    dim shared CopySection as BoundsType
+    dim shared CopyItems(100) as tItem
+    dim shared NumCopyItems as integer
 
   
   DIM XScroll AS INTEGER
@@ -248,7 +263,7 @@ end type
     screeninfo res_x, res_y
     
     dim m as PointContained
-    m.setBounds(0, 0, 19, 12)
+    m.setBounds(0, 0, 19, 13)
     
     dim mw as integer
 
@@ -271,12 +286,22 @@ end type
     MapProps.w = MAPW
     MapProps.h = MAPH
     MapProps.numItems = 0
+    
+    dim selectingBox as integer
+    dim selectStart as PointType
+    dim selectBox as BoxType
+    dim x0 as integer, y0 as integer
+    dim x1 as integer, y1 as integer
+    dim pastePreview as integer
+    
+    dim noticeMessage as string
+    dim noticeTimer as double
 
   DO
     
     if keypress(KEY_ESCAPE) then
         if DialogYesNo("Exit Editor?") = Options.Yes then
-            WaitSeconds 0.4 '// let option-select sound play
+            WaitSeconds 0.33 '// let option-select sound play
             exit do
         end if
     end if
@@ -295,8 +320,23 @@ end type
             drawSpriteLine 1, lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, LayerIds.Video
         end if
     end if
+    
+    if selectingBox then
+        x0 = selectStart.x-XScroll: x1 = cursor.x
+        y0 = selectStart.y: y1 = cursor.y
+        if x0 > x1 then swap x0, x1
+        if y0 > y1 then swap y0, y1
+        LD2_fillm x0*SPRITE_W, y0*SPRITE_H, (x1-x0+1)*SPRITE_W, (y1-y0+1)*SPRITE_H, 40, 1, 100
+        selectBox.x = x0+XScroll: selectBox.y = y0
+        selectBox.w = (x1-x0)
+        selectBox.h = (y1-y0)
+    end if
+    if pastePreview then
+        MapPaste cursor.x, cursor.y, XScroll, 1
+    end if
 
-    x = 2
+    x = FONT_W*0.5
+    LD2_SetTargetBuffer 1
     for n = 1 to 4
         layerString = iif(activeLayer = n, "["+layers(n).sid+"]", " "+layers(n).sid+" ")
         if layers(n).isVisible then
@@ -305,13 +345,27 @@ end type
             SpritesFont.setColorMod(127, 127, 127)
         end if
         putText layerString, x, FONT_H*36.5
-        x += (len(layerString)+2)*FONT_W
+        x += (len(layerString)+1)*FONT_W
     next n
     
     LD2_outline cursor.x*SPRITE_W, cursor.y*SPRITE_H, 16, 16, 15, 1
-    putText mapFilename, SCREEN_W-len(mapFilename)*FONT_W-1, 2
-    putText "XY "+str((Cursor.x)+XScroll)+" "+str(Cursor.y), 2, FONT_H*34.5
-    putText "Animations "+iif(Animation, "ON", "OFF"), 2, FONT_H*38.5
+    putText mapFilename, SCREEN_W-len(mapFilename)*FONT_W-1, FONT_W*0.5
+    putText "XY "+str((Cursor.x)+XScroll)+" "+str(Cursor.y), FONT_W*0.5, FONT_H*34.5
+    putText "Animations "+iif(Animation, "ON", "OFF"), FONT_W*0.5, FONT_H*38.5
+    
+    if (noticeTimer = 0) then
+        if len(noticeMessage) then
+            noticeTimer = timer
+        end if
+    else
+        if (timer-noticeTimer) < 5.0 then
+            putText noticeMessage, SCREEN_W-len(noticeMessage)*FONT_W-FONT_W*0.5, FONT_H*34.5
+        else
+            noticeTimer = 0
+            noticeMessage = ""
+        end if
+    end if
+    
     LD2_RefreshScreen
     LD2_CopyBuffer 2, 1
     
@@ -409,111 +463,136 @@ end type
     end if
     
     if keypress(KEY_SPACE) or keypress(KEY_V) or keypress(KEY_KP_ENTER) or keypress(KEY_KP_0) or mouseLB() then
-        if keyboard(KEY_LSHIFT) and mouseUp then
-            select case activeLayer
-            case LayerIds.Tile: sprite = CurrentTile
-            case LayerIds.LightBG, LayerIds.LightFG: sprite = CurrentTileL
-            case LayerIds.Item: sprite = CurrentTileO
-            end select
-            if keyboard(KEY_B) then
-                drawSpriteBox lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
-            elseif keyboard(KEY_F) then
-                fillSpriteBox lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
-            else
-                drawSpriteLine 1, lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
-            end if
+        if pastePreview and mouseUp then
+            while mouseLB(): PullEvents: wend
+            MapPaste cursor.x, cursor.y, XScroll
             LD2_PlaySound EditSounds.fill
         else
-            select case activeLayer
-            case 1
-                if EditMap(mapX, mapY) <> CurrentTile then
-                    EditMap(mapX, mapY) = CurrentTile
-                    LD2_PlaySound EditSounds.place
+            if keyboard(KEY_LSHIFT) and mouseUp then
+                select case activeLayer
+                case LayerIds.Tile: sprite = CurrentTile
+                case LayerIds.LightBG, LayerIds.LightFG: sprite = CurrentTileL
+                case LayerIds.Item: sprite = CurrentTileO
+                end select
+                if keyboard(KEY_B) then
+                    drawSpriteBox lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
+                elseif keyboard(KEY_F) then
+                    fillSpriteBox lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
                 else
-                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                    drawSpriteLine 1, lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
                 end if
-            case 2
-                if LightMapBG(mapX, mapY) <> CurrentTileL then
-                    LightMapBG(mapX, mapY) = CurrentTileL
-                    LD2_PlaySound EditSounds.place
-                else
-                    if mouseUp then LD2_PlaySound EditSounds.quiet
-                end if
-            case 3
-                if LightMapFG(mapX, mapY) <> CurrentTileL then
-                    LightMapFG(mapX, mapY) = CurrentTileL
-                    LD2_PlaySound EditSounds.place
-                else
-                    if mouseUp then LD2_PlaySound EditSounds.quiet
-                end if
-            case 4
-                PlaceItem mapX, mapY, CurrentTileO
-            end select
-            NoSaveMap(mapX, mapY) = 0
+                LD2_PlaySound EditSounds.fill
+            else
+                select case activeLayer
+                case 1
+                    if EditMap(mapX, mapY) <> CurrentTile then
+                        EditMap(mapX, mapY) = CurrentTile
+                        LD2_PlaySound EditSounds.place
+                    else
+                        if mouseUp then LD2_PlaySound EditSounds.quiet
+                    end if
+                case 2
+                    if LightMapBG(mapX, mapY) <> CurrentTileL then
+                        LightMapBG(mapX, mapY) = CurrentTileL
+                        LD2_PlaySound EditSounds.place
+                    else
+                        if mouseUp then LD2_PlaySound EditSounds.quiet
+                    end if
+                case 3
+                    if LightMapFG(mapX, mapY) <> CurrentTileL then
+                        LightMapFG(mapX, mapY) = CurrentTileL
+                        LD2_PlaySound EditSounds.place
+                    else
+                        if mouseUp then LD2_PlaySound EditSounds.quiet
+                    end if
+                case 4
+                    PlaceItem mapX, mapY, CurrentTileO
+                end select
+                NoSaveMap(mapX, mapY) = 0
+            end if
         end if
         lastClick.x = mapX
         lastClick.y = mapY
     end if
     
     if keypress(KEY_DELETE) or keypress(KEY_BACKSPACE) then
-        select case activeLayer
-        case 1
-            if EditMap(mapX, mapY) <> 0 then
-                EditMap(mapX, mapY) = 0
-                LD2_PlaySound EditSounds.remove
-            else
-                if mouseUp then LD2_PlaySound EditSounds.quiet
-            end if
-        case 2
-            if LightMapBG(mapX, mapY) <> 0 then
-                LightMapBG(mapX, mapY) = 0
-                LD2_PlaySound EditSounds.remove
-            else
-                if mouseUp then LD2_PlaySound EditSounds.quiet
-            end if
-        case 3
-            if LightMapFG(mapX, mapY) <> 0 then
-                LightMapFG(mapX, mapY) = 0
-                LD2_PlaySound EditSounds.remove
-            else
-                if mouseUp then LD2_PlaySound EditSounds.quiet
-            end if
-        case 4
-            RemoveItem mapX, mapY
-        end select
+        if (selectBox.w > 0) and (selectBox.h > 0) then
+            MapDeleteArea selectBox.x, selectBox.y, selectBox.w, selectBox.h
+            LD2_PlaySound EditSounds.deleteArea
+        else
+            select case activeLayer
+            case 1
+                if EditMap(mapX, mapY) <> 0 then
+                    EditMap(mapX, mapY) = 0
+                    LD2_PlaySound EditSounds.remove
+                else
+                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                end if
+            case 2
+                if LightMapBG(mapX, mapY) <> 0 then
+                    LightMapBG(mapX, mapY) = 0
+                    LD2_PlaySound EditSounds.remove
+                else
+                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                end if
+            case 3
+                if LightMapFG(mapX, mapY) <> 0 then
+                    LightMapFG(mapX, mapY) = 0
+                    LD2_PlaySound EditSounds.remove
+                else
+                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                end if
+            case 4
+                RemoveItem mapX, mapY
+            end select
+        end if
     end if
     
     if keypress(KEY_C) or keypress(KEY_KP_PERIOD) or mouseRB() then
-        select case activeLayer
-        case LayerIds.Tile
-            if CurrentTile <> EditMap(mapX, mapY) then
-                CurrentTile = EditMap(mapX, mapY)
+        if (selectBox.w > 0) and (selectBox.h > 0) then
+            if mouseUp then
+                while mouseRB(): PullEvents: wend
+                MapCopy selectBox.x, selectBox.y, selectBox.w, selectBox.h
                 LD2_PlaySound EditSounds.copy
-            else
-                if mouseUp then LD2_PlaySound EditSounds.quiet
+                selectingBox = 0
+                noticeMessage = "Copied Selection"
             end if
-        case LayerIds.LightBG
-            if CurrentTileL <> LightMapBG(mapX, mapY) then
-                CurrentTileL = LightMapBG(mapX, mapY)
-                LD2_PlaySound EditSounds.copy
-            else
-                if mouseUp then LD2_PlaySound EditSounds.quiet
-            end if
-        case LayerIds.LightFG
-            if CurrentTileL <> LightMapFG(mapX, mapY) then
-                CurrentTileL = LightMapFG(mapX, mapY)
-                LD2_PlaySound EditSounds.copy
-            else
-                if mouseUp then LD2_PlaySound EditSounds.quiet
-            end if
-        case LayerIds.Item
-            if CurrentTileO <> GetItem(mapX, mapY) then
-                CurrentTileO = GetItem(mapX, mapY)
-                LD2_PlaySound EditSounds.copy
-            else
-                if mouseUp then LD2_PlaySound EditSounds.quiet
-            end if
-        end select
+        else
+            select case activeLayer
+            case LayerIds.Tile
+                if CurrentTile <> EditMap(mapX, mapY) then
+                    CurrentTile = EditMap(mapX, mapY)
+                    LD2_PlaySound EditSounds.copy
+                else
+                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                end if
+            case LayerIds.LightBG
+                if CurrentTileL <> LightMapBG(mapX, mapY) then
+                    CurrentTileL = LightMapBG(mapX, mapY)
+                    LD2_PlaySound EditSounds.copy
+                else
+                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                end if
+            case LayerIds.LightFG
+                if CurrentTileL <> LightMapFG(mapX, mapY) then
+                    CurrentTileL = LightMapFG(mapX, mapY)
+                    LD2_PlaySound EditSounds.copy
+                else
+                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                end if
+            case LayerIds.Item
+                if CurrentTileO <> GetItem(mapX, mapY) then
+                    CurrentTileO = GetItem(mapX, mapY)
+                    LD2_PlaySound EditSounds.copy
+                else
+                    if mouseUp then LD2_PlaySound EditSounds.quiet
+                end if
+            end select
+        end if
+    end if
+    if keypress(KEY_P) then
+        pastePreview = iif(pastePreview=0,1,0)
+        LD2_PlaySound iif(pastePreview,EditSounds.arrows,EditSounds.cancel)
     end if
     
     if keypress(KEY_F2) then
@@ -531,6 +610,20 @@ end type
             SaveMap DATA_DIR+"rooms/autosave.ld2"
             LoadMap DATA_DIR+"rooms/"+filename
             mapFilename = filename
+        end if
+    end if
+    
+    if ((keyboard(KEY_LSHIFT) = 0) and keypress(KEY_B)) or (mouseMB() and mouseUp) then
+        if selectingBox = 0 then
+            selectingBox = 1
+            selectStart.x = mapX
+            selectStart.y = mapY
+            LD2_PlaySound EditSounds.copy
+        else
+            selectingBox = 0
+            selectBox.w = 0
+            selectBox.h = 0
+            LD2_PlaySound EditSounds.cancel
         end if
     end if
 
@@ -573,9 +666,11 @@ end type
         NEXT y
     end if
 
-    SpritesOpaqueTile.putToScreen 303, 183, CurrentTile
-    spritesOpaqueLight.putToScreen 286, 183, CurrentTileL
-    SpritesOpaqueObject.putToScreen 269, 183, CurrentTileO
+    x = SCREEN_W-FONT_W*0.5-SPRITE_W
+    y = SCREEN_H-FONT_H*0.5-SPRITE_H
+    SpritesOpaqueTile.putToScreen x, y, CurrentTile: x -= SPRITE_W*1.25
+    spritesOpaqueLight.putToScreen x, y, CurrentTileL: x -= SPRITE_W*1.25
+    SpritesOpaqueObject.putToScreen x, y, CurrentTileO: x -= SPRITE_W*1.25
 
     if layers(LayerIds.Tile).isVisible then
         for i = 0 to MapProps.numItems-1
@@ -587,7 +682,7 @@ end type
     Ani = Ani + .2
     IF Ani > 9 THEN Ani = 1
     
-    if mouseLB() or mouseRB() then
+    if mouseLB() or mouseRB() or mouseMB() then
         mouseUp = 0
     else
         mouseUp = 1
@@ -595,8 +690,8 @@ end type
     
   LOOP
     
-    LD2_FadeOut 2
-    WaitSeconds 0.33
+    LD2_FadeOut 3
+    WaitSeconds 0.25
     FreeCommon
     end
 
@@ -650,7 +745,8 @@ SUB Init
     LD2_AddSound EditSounds.placeItem , DATA_DIR+"sound/item-pickup.wav"
     LD2_AddSound EditSounds.removeItem, DATA_DIR+"sound/item-drop.wav"
     
-    LD2_AddSound EditSounds.fill, DATA_DIR+"sound/editor/fill.wav"
+    LD2_AddSound EditSounds.fill      , DATA_DIR+"sound/editor/fill.wav"
+    LD2_Addsound EditSounds.deleteArea, DATA_DIR+"sound/kick.wav"
     
     LD2_AddSound EditSounds.switchLayer, DATA_DIR+"sound/ui-submenu.wav"
     LD2_AddSound EditSounds.showLayer  , DATA_DIR+"sound/editor/cancel.wav"
@@ -1839,6 +1935,149 @@ sub MoveMap(dx as integer, dy as integer)
         if Items(n).x < 0 then Items(n).x += MAPW
         if Items(n).y < 0 then Items(n).y += MAPH
     next n
+    
+end sub
+
+sub MapCopy(x as integer, y as integer, w as integer, h as integer)
+    
+    dim mx as integer, my as integer
+    dim x0 as integer, y0 as integer
+    dim x1 as integer, y1 as integer
+    dim n as integer
+    dim i as integer
+    
+    x0 = x: y0 = y
+    x1 = x+w
+    y1 = y+h
+    
+    if x0 < 0 then x0 = 0
+    if y0 < 0 then y0 = 0
+    if x1 < 0 then x1 = 0
+    if y1 < 0 then y1 = 0
+    if x0 > MAPW-1 then x0 = MAPW-1
+    if y0 > MAPH-1 then y0 = MAPH-1
+    if x1 > MAPW-1 then x1 = MAPW-1
+    if y1 > MAPH-1 then y1 = MAPH-1
+    
+    if x0 > x1 then swap x0, x1
+    if y0 > y1 then swap y0, y1
+    
+    CopySection.x0 = x0: CopySection.y0 = y0
+    CopySection.x1 = x1: CopySection.y1 = y1
+    
+    for my = y0 to y1
+        for mx = x0 to x1
+            CopyMap(mx, my).tile     = EditMap(mx, my)
+            CopyMap(mx, my).lightBG  = LightMapBG(mx, my)
+            CopyMap(mx, my).lightFG  = LightMapFG(mx, my)
+            CopyMap(mx, my).animated = AniMap(mx, my)
+        next mx
+    next my
+    
+    NumCopyItems = 0
+    for i = 0 to MapProps.numItems-1
+        if  Items(i).x >= x0 and Items(i).x <= x1 _
+        and Items(i).y >= y0 and Items(i).y <= y1 then
+            n = NumCopyItems
+            CopyItems(n) = Items(i)
+            NumCopyItems += 1
+        end if
+    next i
+    
+end sub
+
+sub MapPaste(destX as integer, destY as integer, scrollX as integer, onlyVisible as integer = 0)
+    
+    dim mapX as integer, mapY as integer
+    dim x0 as integer, y0 as integer
+    dim x1 as integer, y1 as integer
+    dim x as integer, y as integer
+    dim n as integer
+    dim i as integer
+    
+    x0 = CopySection.x0: y0 = CopySection.y0
+    x1 = CopySection.x1: y1 = CopySection.y1
+    destX += scrollX
+    destX -= x0: destY -= y0
+    if onlyVisible then
+        spritesTile.setAlphaMod(159)
+        spritesLight.setAlphaMod(159)
+        spritesObject.setAlphaMod(159)
+        for y = y0 to y1
+            for x = x0 to x1
+                spritesTile.putToScreen (destX+x-scrollX)*SPRITE_W, (destY+y)*SPRITE_H, CopyMap(x, y).tile
+                spritesLight.putToScreen (destX+x-scrollX)*SPRITE_W, (destY+y)*SPRITE_H, CopyMap(x, y).lightBG
+                spritesLight.putToScreen (destx+x-scrollX)*SPRITE_W, (destY+y)*SPRITE_H, CopyMap(x, y).lightFG
+            next x
+        next y
+        for n = 0 to NumCopyItems-1
+            spritesObject.putToScreen CopyItems(n).x*SPRITE_W, CopyItems(n).y*SPRITE_H, CopyItems(n).item
+        next n
+        spritesTile.setAlphaMod(255)
+        spritesLight.setAlphaMod(255)
+        spritesObject.setAlphaMod(255)
+        'LD2_fillm (x0+destX-scrollX)*SPRITE_W, (y0+destY)*SPRITE_W, (x1-x0+1)*SPRITE_W, (y1-y0+1)*SPRITE_H, 15, 1, 63
+    else
+        for y = y0 to y1
+            mapY = destY+y
+            if mapY < 0 then continue for
+            if mapY > MAPH-1 then continue for
+            for x = x0 to x1
+                mapX = destX+x
+                if mapX < 0 then continue for
+                if mapX > MAPW-1 then continue for
+                EditMap(destX+x, destY+y)    = CopyMap(x, y).tile
+                LightMapBG(destX+x, destY+y) = CopyMap(x, y).lightBG
+                LightMapFG(destX+x, destY+y) = CopyMap(x, y).lightFG
+                AniMap(destX+x, destY+y)     = CopyMap(x, y).animated
+            next x
+        next y
+        for i = 0 to MapProps.numItems-1
+            if  Items(i).x >= x0 and Items(i).x <= x1 _
+            and Items(i).y >= y0 and Items(i).y <= y1 then
+                for n = i to MapProps.numItems - 2
+                    Items(n) = Items(n + 1)
+                next n
+                MapProps.numItems -= 1
+                i -= 1
+            end if
+        next i
+        for i = 0 to NumCopyItems-1
+            PlaceItem CopyItems(i).x, CopyItems(i).y, CopyItems(i).item
+        next i
+    end if
+    
+end sub
+
+sub MapDeleteArea(lft as integer, top as integer, w as integer, h as integer)
+    
+    dim x0 as integer, y0 as integer
+    dim x1 as integer, y1 as integer
+    dim x as integer, y as integer
+    dim n as integer
+    dim i as integer
+    
+    x0 = lft  : y0 = top
+    x1 = lft+w: y1 = top+h
+    for y = y0 to y1
+        for x = x0 to x1
+            EditMap(x, y) = 0
+            LightMapBG(x, y) = 0
+            LightMapFG(x, y) = 0
+            AniMap(x, y) = 0
+        next x
+    next y
+    
+    for i = 0 to MapProps.numItems-1
+        if  Items(i).x >= x0 and Items(i).x <= x1 _
+        and Items(i).y >= y0 and Items(i).y <= y1 then
+            for n = i to MapProps.numItems - 2
+                Items(n) = Items(n + 1)
+            next n
+            MapProps.numItems -= 1
+            i -= 1
+        end if
+    next i
     
 end sub
 

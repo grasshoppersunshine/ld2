@@ -228,9 +228,9 @@ sub PullEvents()
     
     EventMouseState    = SDL_GetMouseState(@EventMouseX, @EventMouseY)
     EventMouseRelState = SDL_GetRelativeMouseState(@EventMouseRelX, @EventMouseRelY)
-    EventMouseLB       = EventMouseState and SDL_BUTTON(SDL_BUTTON_LEFT)
-    EventMouseRB       = EventMouseState and SDL_BUTTON(SDL_BUTTON_RIGHT)
-    EventMouseMB       = EventMouseState and SDL_BUTTON(SDL_BUTTON_MIDDLE)
+    EventMouseLB       = (EventMouseState and SDL_BUTTON(SDL_BUTTON_LEFT)) > 0
+    EventMouseRB       = (EventMouseState and SDL_BUTTON(SDL_BUTTON_RIGHT)) > 0
+    EventMouseMB       = (EventMouseState and SDL_BUTTON(SDL_BUTTON_MIDDLE)) >0
     EventMouseWheelY   = oldMouseWheelY - newMouseWheelY
     oldMouseWheelY     = newMouseWheelY
     
