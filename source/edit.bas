@@ -129,6 +129,8 @@ enum LayerIds
     lightBG
     lightFG
     item
+    larry
+    enemies
 end enum
 
 type LayerMeta
@@ -155,7 +157,7 @@ end type
     declare sub showHelp ()
     declare sub GenerateSky()
     declare sub Notice(message as string)
-    declare sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointType, bgcolor as integer = 18)
+    declare function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointType, bgcolor as integer = 18) as integer
     declare sub MoveMap(dx as integer, dy as integer)
     declare sub MapCopy(x as integer, y as integer, w as integer, h as integer)
     declare sub MapPaste(destX as integer, destY as integer, scrollX as integer, onlyVisible as integer = 0)
@@ -251,15 +253,17 @@ end type
     
     dim mapFilename as string
     
-    dim cursors(3) as PointType
+    dim cursors(5) as PointType
     dim cursor as PointType
     
-    dim layers(4) as LayerMeta
+    dim layers(6) as LayerMeta
     layers(0).isVisible = 1: layers(0).id = LayerIds.Video  : layers(0).sid = "Screen"
     layers(1).isVisible = 1: layers(1).id = LayerIds.Tile   : layers(1).sid = "Tile"
     layers(2).isVisible = 1: layers(2).id = LayerIds.LightBG: layers(2).sid = "Light BG"
     layers(3).isVisible = 1: layers(3).id = LayerIds.LightFG: layers(3).sid = "Light FG"
     layers(4).isVisible = 1: layers(4).id = LayerIds.Item   : layers(4).sid = "Item"
+    layers(5).isVisible = 0: layers(5).id = LayerIds.Larry  : layers(5).sid = "Larry"
+    layers(6).isVisible = 0: layers(6).id = LayerIds.Enemies: layers(6).sid = "Enemies"
     dim activeLayer as integer
     activeLayer = LayerIds.Tile
     
@@ -388,14 +392,44 @@ end type
     mw = mouseWheelY()
     
     if keypress(KEY_TAB) or keypress(KEY_KP_5) then
-        select case activeLayer
-        case LayerIds.Tile
-            SpriteSelectScreen @spritesTile, currentTile, cursors(0)
-        case LayerIds.LightBG, LayerIds.LightFG
-            SpriteSelectScreen @spritesLight, currentTileL, cursors(1), 27
-        case LayerIds.Item
-            SpriteSelectScreen @spritesObject, currentTileO, cursors(2)
-        end select
+        dim nextScreen as integer
+        dim lastLayer as integer
+        lastLayer = activeLayer
+        do
+            select case activeLayer
+            case LayerIds.Tile
+                nextScreen = SpriteSelectScreen(@spritesTile, currentTile, cursors(0))
+            case LayerIds.LightBG
+                nextScreen = SpriteSelectScreen(@spritesLight, currentTileL, cursors(1), 27)
+            case LayerIds.LightFG
+                nextScreen = SpriteSelectScreen(@spritesLight, currentTileL, cursors(1), 251)
+            case LayerIds.Item
+                nextScreen = SpriteSelectScreen(@spritesObject, currentTileO, cursors(2))
+            case LayerIds.Larry
+                nextScreen = SpriteSelectScreen(@spritesLarry, 0, cursors(3))
+            case LayerIds.Enemies
+                nextScreen = SpriteSelectScreen(@spritesEnemy, 0, cursors(4))
+            end select
+            if nextScreen = -1 then
+                if activeLayer > 0 then
+                    activeLayer -= 1
+                    LD2_PlaySound EditSounds.switchLayer
+                else
+                    LD2_PlaySound EditSounds.invalid
+                end if
+            end if
+            if nextScreen = 1 then
+                if activeLayer < 6 then
+                    activeLayer += 1
+                    LD2_PlaySound EditSounds.switchLayer
+                else
+                    LD2_PlaySound EditSounds.invalid
+                end if
+            end if
+        loop while nextScreen <> 0
+        if activeLayer > LayerIds.Item then
+            activeLayer = lastLayer
+        end if
     end if
     
     if keypress(KEY_U) then
@@ -1803,7 +1837,7 @@ sub Notice(message as string)
     
 end sub
 
-sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointType, bgcolor as integer = 18)
+function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointType, bgcolor as integer = 18) as integer
 
     dim m as PointContained
     dim padX as double
@@ -1854,10 +1888,9 @@ sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, b
         lft = 0: top = 0
         x = lft: y = top
         for n = page*pageSize to page*pageSize+pageSize*2-1
-            if n > sprites->getCount() then
-                exit for
+            if n <= sprites->getCount() then
+                sprites->putToScreen(x*SPRITE_W+padX, y*SPRITE_H+padY, n)
             end if
-            sprites->putToScreen(x*SPRITE_W+padX, y*SPRITE_H+padY, n)
             if n = selected then
                 LD2_outline x*SPRITE_W+padX, y*SPRITE_H+padY, SPRITE_W, SPRITE_H, 15, 1
             end if
@@ -1885,28 +1918,42 @@ sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, b
         
         addX = 0: addY = 0
         addPage = 0
-        if keypress(KEY_LEFT)  or keypress(KEY_KP_4) then addX = -1
-        if keypress(KEY_RIGHT) or keypress(KEY_KP_6) then addX =  1
-        if keypress(KEY_UP)    or keypress(KEY_KP_8) then addY = -1
-        if keypress(KEY_DOWN)  or keypress(KEY_KP_2) then addY =  1
-        if keypress(KEY_RBRACKET) or keypress(KEY_KP_9) then addX =  10
-        if keypress(KEY_LBRACKET) or keypress(KEY_KP_7) then addX = -10
+        if keyboard(KEY_LSHIFT) or keyboard(KEY_RSHIFT) then
+            if keypress(KEY_LEFT)  or keypress(KEY_KP_4) then addX = -10
+            if keypress(KEY_RIGHT) or keypress(KEY_KP_6) then addX =  10
+        else
+            if keypress(KEY_LEFT)  or keypress(KEY_KP_4) then addX = -1
+            if keypress(KEY_RIGHT) or keypress(KEY_KP_6) then addX =  1
+            if keypress(KEY_UP)    or keypress(KEY_KP_8) then addY = -1
+            if keypress(KEY_DOWN)  or keypress(KEY_KP_2) then addY =  1
+        end if
         if keypress(KEY_PLUS)  or keypress(KEY_KP_PLUS) then addPage = 1
         if keypress(KEY_MINUS) or keypress(KEY_KP_MINUS) then addPage = -1
+        if keypress(KEY_LBRACKET) then return -1
+        if keypress(KEY_RBRACKET) then return 1
         
+        dim lastX as double
+        lastX = m.x
         if (addX <> 0) or (addY <> 0) then
             m.x = (m.x + addX)
             m.y = (m.y + addY)
             if (m.x = numCols) and (abs(addX) = 1) then m.x = (m.x + addX)
             if m.crossedX() or m.crossedY() then
-                LD2_PlaySound EditSounds.invalid
+                if addX > 0 then
+                    addPage = 1
+                elseif addX < 0 then
+                    addPage = -1
+                else
+                    LD2_PlaySound EditSounds.invalid
+                end if
             else
                 LD2_PlaySound EditSounds.quiet
             end if
         end if
         if (addPage <> 0) then
-            if (page+addPage >= 0) and (page+addPage < numPages) then
+            if (page+addPage >= 0) and (page+addPage < numPages-1) then
                 page += addPage
+                m.x = (lastX + iif(page>0,-10,10))
                 LD2_PlaySound EditSounds.turnPage
             else
                 LD2_PlaySound EditSounds.invalid
@@ -1935,7 +1982,9 @@ sub SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, b
         end if
     loop
     
-end sub
+    return 0
+    
+end function
 
 sub MoveMap(dx as integer, dy as integer)
     
