@@ -355,6 +355,7 @@ enum EditSounds
     place
     placeItem
     quiet
+    redo
     remove
     removeItem
     saved
@@ -363,6 +364,7 @@ enum EditSounds
     showLayer
     switchLayer
     turnPage
+    undo
 end enum
 
 '=======================

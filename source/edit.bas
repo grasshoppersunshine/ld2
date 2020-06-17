@@ -9,6 +9,7 @@
     #include once "modules/inc/elements.bi"
     #include once "inc/ld2.bi"
     #include once "file.bi"
+    #include once "dir.bi"
 
     const FONT_W = 7
     const FONT_H = 5
@@ -148,8 +149,8 @@ end type
     declare sub postProcessTile(x as integer, y as integer)
     declare sub putText (text as string, x as integer, y  as integer, fontw as integer = FONT_W)
     declare function inputText (text as string, currentVal as string = "") as string
-    declare sub PlaceItem(x as integer, y as integer, id as integer)
-    declare sub RemoveItem(x as integer, y as integer)
+    declare function PlaceItem(x as integer, y as integer, id as integer) as integer
+    declare function RemoveItem(x as integer, y as integer) as integer
     declare function GetItem(x as integer, y as integer) as integer
     declare sub showHelp ()
     declare sub GenerateSky()
@@ -159,6 +160,8 @@ end type
     declare sub MapCopy(x as integer, y as integer, w as integer, h as integer)
     declare sub MapPaste(destX as integer, destY as integer, scrollX as integer, onlyVisible as integer = 0)
     declare sub MapDeleteArea(lft as integer, top as integer, w as integer, h as integer)
+    declare sub MapPush()
+    declare function MapPop(forward as integer = 0) as integer
     declare function DialogYesNo(message as string) as integer
     declare function getVersionTag() as string
     declare function getNumAnimated() as integer
@@ -202,6 +205,9 @@ end type
     dim shared CopySection as BoundsType
     dim shared CopyItems(100) as tItem
     dim shared NumCopyItems as integer
+    
+    dim shared MapStackPointer as integer
+    dim shared MapMaxStack as integer
 
   
   DIM XScroll AS INTEGER
@@ -301,6 +307,7 @@ end type
     
     if keypress(KEY_ESCAPE) then
         if DialogYesNo("Exit Editor?") = Options.Yes then
+            SaveMap DATA_DIR+"editor/exitsave.ld2"
             WaitSeconds 0.33 '// let option-select sound play
             exit do
         end if
@@ -390,12 +397,27 @@ end type
             SpriteSelectScreen @spritesObject, currentTileO, cursors(2)
         end select
     end if
+    
+    if keypress(KEY_U) then
+        if MapPop() then
+            LD2_PlaySound EditSounds.undo
+        else
+            LD2_PlaySound EditSounds.invalid
+        end if
+    end if
+    if keypress(KEY_R) then
+        if MapPop(1) then
+            LD2_PlaySound EditSounds.redo
+        else
+            LD2_PlaySound EditSounds.invalid
+        end if
+    end if
    
     if keyboard(KEY_CTRL) and keyboard(KEY_ALT) then
-        if keypress(KEY_RIGHT) then MoveMap  1,  0: LD2_PlaySound EditSounds.quiet
-        if keypress(KEY_LEFT ) then MoveMap -1,  0: LD2_PlaySound EditSounds.quiet
-        if keypress(KEY_DOWN ) then MoveMap  0,  1: LD2_PlaySound EditSounds.quiet
-        if keypress(KEY_UP   ) then MoveMap  0, -1: LD2_PlaySound EditSounds.quiet
+        if keypress(KEY_RIGHT) then MapPush: MoveMap  1,  0: LD2_PlaySound EditSounds.quiet
+        if keypress(KEY_LEFT ) then MapPush: MoveMap -1,  0: LD2_PlaySound EditSounds.quiet
+        if keypress(KEY_DOWN ) then MapPush: MoveMap  0,  1: LD2_PlaySound EditSounds.quiet
+        if keypress(KEY_UP   ) then MapPush: MoveMap  0, -1: LD2_PlaySound EditSounds.quiet
     end if
     
     if keypress(KEY_RIGHT) or keypress(KEY_KP_6) then m.x = m.x + 1: LD2_PlaySound EditSounds.quiet
@@ -457,6 +479,7 @@ end type
         Animation = iif(Animation=0,1,0)
     end if
     if keypress(KEY_BACKSLASH) then
+        MapPush
         AniMap(mapX, mapY) += 1
         if AniMap(mapX, mapY) > 3 then AniMap(mapX, mapY) = 0
         LD2_PlaySound EditSounds.place
@@ -465,10 +488,12 @@ end type
     if keypress(KEY_SPACE) or keypress(KEY_V) or keypress(KEY_KP_ENTER) or keypress(KEY_KP_0) or mouseLB() then
         if pastePreview and mouseUp then
             while mouseLB(): PullEvents: wend
+            MapPush
             MapPaste cursor.x, cursor.y, XScroll
             LD2_PlaySound EditSounds.fill
         else
             if keyboard(KEY_LSHIFT) and mouseUp then
+                MapPush
                 select case activeLayer
                 case LayerIds.Tile: sprite = CurrentTile
                 case LayerIds.LightBG, LayerIds.LightFG: sprite = CurrentTileL
@@ -486,6 +511,7 @@ end type
                 select case activeLayer
                 case 1
                     if EditMap(mapX, mapY) <> CurrentTile then
+                        MapPush
                         EditMap(mapX, mapY) = CurrentTile
                         LD2_PlaySound EditSounds.place
                     else
@@ -493,6 +519,7 @@ end type
                     end if
                 case 2
                     if LightMapBG(mapX, mapY) <> CurrentTileL then
+                        MapPush
                         LightMapBG(mapX, mapY) = CurrentTileL
                         LD2_PlaySound EditSounds.place
                     else
@@ -500,13 +527,20 @@ end type
                     end if
                 case 3
                     if LightMapFG(mapX, mapY) <> CurrentTileL then
+                        MapPush
                         LightMapFG(mapX, mapY) = CurrentTileL
                         LD2_PlaySound EditSounds.place
                     else
                         if mouseUp then LD2_PlaySound EditSounds.quiet
                     end if
                 case 4
-                    PlaceItem mapX, mapY, CurrentTileO
+                    if GetItem(mapX, mapY) <> CurrentTileO then
+                        MapPush
+                        PlaceItem mapX, mapY, CurrentTileO
+                        LD2_PlaySound EditSounds.placeItem
+                    else
+                        if mouseUp then LD2_PlaySound EditSounds.quiet
+                    end if
                 end select
                 NoSaveMap(mapX, mapY) = 0
             end if
@@ -517,12 +551,14 @@ end type
     
     if keypress(KEY_DELETE) or keypress(KEY_BACKSPACE) then
         if (selectBox.w > 0) and (selectBox.h > 0) then
+            MapPush
             MapDeleteArea selectBox.x, selectBox.y, selectBox.w, selectBox.h
             LD2_PlaySound EditSounds.deleteArea
         else
             select case activeLayer
             case 1
                 if EditMap(mapX, mapY) <> 0 then
+                    MapPush
                     EditMap(mapX, mapY) = 0
                     LD2_PlaySound EditSounds.remove
                 else
@@ -530,6 +566,7 @@ end type
                 end if
             case 2
                 if LightMapBG(mapX, mapY) <> 0 then
+                    MapPush
                     LightMapBG(mapX, mapY) = 0
                     LD2_PlaySound EditSounds.remove
                 else
@@ -537,13 +574,20 @@ end type
                 end if
             case 3
                 if LightMapFG(mapX, mapY) <> 0 then
+                    MapPush
                     LightMapFG(mapX, mapY) = 0
                     LD2_PlaySound EditSounds.remove
                 else
                     if mouseUp then LD2_PlaySound EditSounds.quiet
                 end if
             case 4
-                RemoveItem mapX, mapY
+                if GetItem(mapX, mapY) then
+                    MapPush
+                    RemoveItem(mapX, mapY)
+                    LD2_PlaySound EditSounds.removeItem
+                else
+                    LD2_PlaySound EditSounds.invalid
+                end if
             end select
         end if
     end if
@@ -607,7 +651,7 @@ end type
         LD2_PlaySound EditSounds.inputText
         filename = trim(inputText("Load Filename: ", ""))
         if filename <> "" then
-            SaveMap DATA_DIR+"rooms/autosave.ld2"
+            SaveMap DATA_DIR+"editor/autosave.ld2"
             LoadMap DATA_DIR+"rooms/"+filename
             mapFilename = filename
         end if
@@ -707,6 +751,10 @@ SUB Init
     
     dim i as integer
     
+    if dir(DATA_DIR+"editor", fbDirectory) <> DATA_DIR+"editor" then
+        mkdir DATA_DIR+"editor"
+    end if
+    
     InitCommon
     
     LD2_InitVideo "LD2 Editor", SCREEN_W, SCREEN_H, SCREEN_FULL
@@ -738,6 +786,8 @@ SUB Init
     LD2_AddSound EditSounds.cancel   , DATA_DIR+"sound/editor/cancel.wav"
     LD2_AddSound EditSounds.goBack   , DATA_DIR+"sound/editor/cancel.wav"
     LD2_AddSound EditSounds.inputText, DATA_DIR+"sound/ui-submenu.wav"
+    LD2_AddSound EditSounds.undo     , DATA_DIR+"sound/editor/undo.wav"
+    LD2_AddSound EditSounds.redo     , DATA_DIR+"sound/ui-submenu.wav"
     
     LD2_AddSound EditSounds.place     , DATA_DIR+"sound/editor/place.wav"
     LD2_AddSound EditSounds.copy      , DATA_DIR+"sound/editor/copy.wav"
@@ -1573,31 +1623,29 @@ function inputText(text as string, currentVal as string = "") as string
 	
 end function
 
-sub PlaceItem(x as integer, y as integer, id as integer)
+function PlaceItem(x as integer, y as integer, id as integer) as integer
     
     dim n as integer
     dim found as integer
     
     if MapProps.numItems < 100 then
         for n = 0 to MapProps.numItems-1
-            if Items(n).x = x and Items(n).y = y then
-                found = 1
-                exit for
+            if Items(n).x = x and Items(n).y = y and Items(n).item = id then
+                return 0
             end if
         next n
-        if found = 0 then
-            MapProps.numItems += 1
-            n = MapProps.numItems-1
-            Items(n).x = x
-            Items(n).y = y
-            Items(n).item = id
-            LD2_PlaySound EditSounds.placeItem
-        end if
+        MapProps.numItems += 1
+        n = MapProps.numItems-1
+        Items(n).x = x
+        Items(n).y = y
+        Items(n).item = id
     end if
+    
+    return 1
+    
+end function
 
-end sub
-
-sub RemoveItem(x as integer, y as integer)
+function RemoveItem(x as integer, y as integer) as integer
     
     dim i as integer
     dim n as integer
@@ -1615,13 +1663,9 @@ sub RemoveItem(x as integer, y as integer)
         end if
     next i
     
-    if found then
-        LD2_PlaySound EditSounds.removeItem
-    else
-        LD2_PlaySound EditSounds.invalid
-    end if
+    return found
     
-end sub
+end function
 
 function GetItem(x as integer, y as integer) as integer
     
@@ -2080,6 +2124,182 @@ sub MapDeleteArea(lft as integer, top as integer, w as integer, h as integer)
     next i
     
 end sub
+
+sub MapPush()
+    
+    static lastPushTimer as double = 0
+    
+    type fileMapCell
+        tile as ubyte
+        lightBG as ubyte
+        lightFG as ubyte
+    end type
+    
+    type fileItem
+        x as ubyte
+        y as ubyte
+        id as ubyte
+    end type
+    
+    type fileAnimated
+        x as ubyte
+        y as ubyte
+        frames as ubyte
+    end type
+    
+    dim filename as string
+    dim x as integer
+    dim y as integer
+    dim n as integer
+    
+    dim props as MapMeta
+    
+    if (timer-lastPushTimer) < 0.25 then
+        exit sub
+    end if
+    
+    props = MapProps
+    props.numAnimated = getNumAnimated()
+    
+    filename = DATA_DIR+"editor/stackcopy"+str(MapStackPointer)+".ld2"
+    
+    open filename for binary as #1
+    
+    dim cell as fileMapCell
+    
+    for y = 0 to props.h-1
+        for x = 0 to props.w-1
+            cell.tile = EditMap(x, y)
+            cell.lightBG = LightMapBG(x, y)
+            cell.lightFG = LightMapFG(x, y)
+            put #1, , cell
+        next x
+    next y
+    
+    dim fitem as fileItem
+    dim nItems as ubyte
+    
+    nItems = props.numItems
+    put #1, , nItems
+    for n = 0 to props.numItems-1
+        fitem.x  = Items(n).x
+        fitem.y  = Items(n).y
+        fitem.id = Items(n).item
+        put #1, , fitem
+    next n
+    
+    dim animated as fileAnimated
+    dim nAnimated as ubyte
+    nAnimated = props.numAnimated
+    put #1, , nAnimated
+    for n = 0 to props.numAnimated-1
+        for y = 0 to props.h-1
+            for x = 0 to props.w-1
+                if AniMap(x, y) > 0 then
+                    animated.x = x
+                    animated.y = y
+                    animated.frames = AniMap(x, y)
+                    put #1, , animated
+                end if
+            next x
+        next y
+    next n
+    
+    close #1
+    
+    MapStackPointer += 1
+    MapMaxStack = MapStackPointer
+    
+    lastPushTimer = timer
+    
+end sub
+
+function MapPop(forward as integer = 0) as integer
+    
+    type fileMapCell
+        tile as ubyte
+        lightBG as ubyte
+        lightFG as ubyte
+    end type
+    
+    type fileItem
+        x as ubyte
+        y as ubyte
+        id as ubyte
+    end type
+    
+    type fileAnimated
+        x as ubyte
+        y as ubyte
+        frames as ubyte
+    end type
+    
+    dim filename as string
+    dim props as MapMeta
+    dim x as integer
+    dim y as integer
+    dim n as integer
+    
+    if forward then
+        if MapStackPointer >= MapMaxStack-1 then return 0
+        MapStackPointer += 1
+    else
+        if MapStackPointer <= 0 then return 0
+        if MapStackPointer = MapMaxStack then
+            MapPush '// save redo point
+            MapStackPointer -= 2
+        else
+            MapStackPointer -= 1
+        end if
+    end if
+    
+    props = MapProps
+    
+    filename = DATA_DIR+"editor/stackcopy"+str(MapStackPointer)+".ld2"
+    
+    open filename for binary as #1
+    
+    dim cell as fileMapCell
+    
+    for y = 0 to props.h-1
+        for x = 0 to props.w-1
+            get #1, , cell
+            EditMap(x, y) = cell.tile
+            LightMapBG(x, y) = cell.lightBG
+            LightMapFG(x, y) = cell.lightFG
+        next x
+    next y
+    
+    dim fitem as fileItem
+    dim nItems as ubyte
+    
+    get #1, , nItems
+    MapProps.numItems = 0
+    for n = 0 to nItems-1
+        get #1, , fitem
+        PlaceItem fitem.x, fitem.y, fitem.id
+    next n
+    
+    dim animated as fileAnimated
+    dim nAnimated as ubyte
+    
+    for y = 0 to props.h-1
+        for x = 0 to props.w-1
+            AniMap(x, y) = 0
+        next x
+    next y
+    
+    get #1, , nAnimated
+    for n = 0 to nAnimated-1
+        get #1, , animated
+        AniMap(animated.x, animated.y) = animated.frames
+    next n
+    
+    close #1
+    
+    return 1
+    
+end function
 
 function DialogYesNo(message as string) as integer
     
