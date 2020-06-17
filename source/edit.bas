@@ -15,7 +15,7 @@
     const FONT_H = 5
     const DIALOG_BACKGROUND = 0
     const DIALOG_COLOR = 15
-    const DIALOG_ALPHA = 0.5
+    const DIALOG_ALPHA = 0.65
     const DIALOG_BORDER_COLOR = 15
     const DIALOG_OPTION_BACKGROUND = 8
     const DIALOG_OPTION_COLOR = 7
@@ -373,6 +373,8 @@ end type
         end if
     end if
     
+    if keypress(KEY_H) then showHelp
+    
     LD2_RefreshScreen
     LD2_CopyBuffer 2, 1
     
@@ -384,8 +386,6 @@ end type
     cursor.y = int(m.y)
     
     mw = mouseWheelY()
-
-    if keypress(KEY_H) then showHelp
     
     if keypress(KEY_TAB) or keypress(KEY_KP_5) then
         select case activeLayer
@@ -393,7 +393,7 @@ end type
             SpriteSelectScreen @spritesTile, currentTile, cursors(0)
         case LayerIds.LightBG, LayerIds.LightFG
             SpriteSelectScreen @spritesLight, currentTileL, cursors(1), 27
-        case LayerIds.Tile
+        case LayerIds.Item
             SpriteSelectScreen @spritesObject, currentTileO, cursors(2)
         end select
     end if
@@ -716,7 +716,7 @@ end type
     spritesOpaqueLight.putToScreen x, y, CurrentTileL: x -= SPRITE_W*1.25
     SpritesOpaqueObject.putToScreen x, y, CurrentTileO: x -= SPRITE_W*1.25
 
-    if layers(LayerIds.Tile).isVisible then
+    if layers(LayerIds.Item).isVisible then
         for i = 0 to MapProps.numItems-1
             putX = (Items(i).x - XScroll) * SPRITE_W: putY = Items(i).y * SPRITE_H
             spritesObject.putToScreen putX, putY, Items(i).item
@@ -914,7 +914,8 @@ end sub
 
 sub LoadMap045 (filename as string)
 
-    dim _byte as ubyte 'string * 1
+    dim _byte as ubyte
+    dim _word as ushort
     dim cn as integer
     dim i as integer
     dim n as integer
@@ -925,7 +926,6 @@ sub LoadMap045 (filename as string)
     dim author as string
     dim updated as string
     dim comments as string
-    dim version as integer
     dim newLine as string * 2
     dim separator as string * 1
     dim doubleQuotes as string * 1
@@ -1029,12 +1029,11 @@ sub LoadMap045 (filename as string)
 
     get #1, , _byte: numItems = _byte
     for i = 0 to numItems-1
-        get #1, , newLine
-        get #1, , _byte: Items(i).Item = _byte
-        if version = 45 then
-            Items(i).x = int(Items(i).x / 16)
-            Items(i).y = int(Items(i).y / 16)
-        end if
+        get #1, , _word: Items(i).x = _word
+        get #1, , _word: Items(i).y = _word
+        get #1, , _byte: Items(i).item = _byte+1
+        Items(i).x = int(Items(i).x / 16)
+        Items(i).y = int(Items(i).y / 16)
     next i
  
   close #1
