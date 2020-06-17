@@ -1026,7 +1026,7 @@ sub LoadMap045 (filename as string)
     '- Load in the item data
     '-----------------------
     get #1, , newLine
-
+    
     get #1, , _byte: numItems = _byte
     for i = 0 to numItems-1
         get #1, , _word: Items(i).x = _word
@@ -1035,7 +1035,7 @@ sub LoadMap045 (filename as string)
         Items(i).x = int(Items(i).x / 16)
         Items(i).y = int(Items(i).y / 16)
     next i
- 
+    
   close #1
   
   DoMapPostProcessing
@@ -1048,10 +1048,11 @@ sub LoadMap045 (filename as string)
     putText levelName, 2, FONT_H*3
     putText author, 2, FONT_H*5
     putText updated, 2, FONT_H*7
+    putText "Item Count: "+str(numItems), 2, FONT_H*9
 
     comments += " "
     cn = 0
-    x = 2: y = FONT_H*10
+    x = 2: y = FONT_H*12
     for n = 1 to len(comments)
         putText mid(comments, n, 1), x, y
         if instr(n + 1, comments, " ") - instr(n, comments, " ") + cn > 40 THEN
@@ -1303,9 +1304,9 @@ sub SaveMap (filename as string, showDetails as integer = 0)
     
     select case versionTag
     case "[LD2L-V0.45]"
-        SaveMap045 filename
+        SaveMap045 filename, showDetails
     case "[LD2L-V1.01]"
-        SaveMap101 filename
+        SaveMap101 filename, showDetails
     case else
         Notice !"ERROR!$$ * Map Properties Invalid$$"+versionTag+"$$Saving as INVALID.LD2 (version 1.01)"
         SaveMap101 "invalid.ld2"
@@ -1467,12 +1468,12 @@ SUB SaveMap045 (filename as string, showDetails as integer = 0)
     '- Write the item data
     '-----------------------
 
-        _word = MapProps.numItems
-        put #1, , _word
+        v = MapProps.numItems
+        put #1, , v
         for i = 0 to MapProps.numItems-1
-            _word = Items(i).x   : put #1, , _word: c = c + 2
-            _word = Items(i).y   : put #1, , _word: c = c + 2
-            _word = Items(i).item: put #1, , _word
+            _word = Items(i).x*16: put #1, , _word: c = c + 2
+            _word = Items(i).y*16: put #1, , _word: c = c + 2
+            v = Items(i).item-1: put #1, , v
         next i
 
   CLOSE #1
