@@ -831,9 +831,12 @@ sub LoadMusic ()
     AddMusic Tracks.Wind1     , DATA_DIR+"sound/msplice/wind0.wav"   , 1
     AddMusic Tracks.Wind2     , DATA_DIR+"sound/msplice/wind1.wav"   , 1
     AddMusic Tracks.Ambient1  , DATA_DIR+"sound/msplice/room1.wav"   , 1
-    AddMusic Tracks.Ambient2  , DATA_DIR+"sound/msplice/room5.wav"   , 1
-    AddMusic Tracks.Ambient3  , DATA_DIR+"sound/msplice/basement.wav", 1
+    'AddMusic Tracks.Ambient2  , DATA_DIR+"sound/msplice/room5.wav"   , 1
+    'AddMusic Tracks.Ambient3  , DATA_DIR+"sound/msplice/basement.wav", 1
     AddMusic Tracks.Ambient4  , DATA_DIR+"sound/msplice/room7.wav"   , 1
+    
+    AddMusic Tracks.Ambient2  , DATA_DIR+"sound/music/gameover.ogg", 1
+    AddMusic Tracks.Ambient3  , DATA_DIR+"sound/music/motives.ogg" , 1
     AddMusic Tracks.SmallRoom1, DATA_DIR+"sound/msplice/smallroom0.wav", 1
     AddMusic Tracks.SmallRoom2, DATA_DIR+"sound/msplice/smallroom1.wav", 1
     
@@ -962,8 +965,8 @@ function GetFloorMusicId(roomId as integer) as integer
         trackId = Tracks.Wind1
     case Rooms.Rooftop
         trackId = Tracks.Wind2
-    case Rooms.DebriefRoom
-        trackId = Tracks.SmallRoom1
+    'case Rooms.DebriefRoom
+    '    trackId = Tracks.SmallRoom1
     case Rooms.LowerStorage, Rooms.UpperStorage
         trackId = Tracks.SmallRoom2
     case Rooms.ResearchLab
@@ -1680,7 +1683,9 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
     select case comm
     case "music"
         select case args(0)
-        case "id"
+        case ""
+            response = "Music is set to ID "+str(LD2_GetMusicId())+"\ \"+LD2_GetMusicFile()
+        case "id", "set"
             if val(args(1)) > 0 then
                 LD2_PlayMusic val(args(1))
                 response = "Changed music to ID "+str(val(args(1)))
@@ -1954,33 +1959,42 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
         if len(arg) then
             if (arg = "0") or (val(arg) > 0) then
                 LD2_SetGravity val(arg)
-                response = "Set gravity to "+str(val(arg))
+                response = "Changed gravity to "+str(val(arg))
             else
                 response = "!Invalid value for gravity"
             end if
         else
-            response = "Gravity is set at " + right(str(LD2_GetGravity()), 6)
+            response = "Gravity is set at " + left(str(LD2_GetGravity()), 6)
         end if
     case "light"
-        select case args(1)
-        case "bg": id = 0
-        case "fg": id = 1
-        case else: response = "!Invalid Light Id"
+        select case args(0)
+        case "bg"
+            id = 0
+        case "fg"
+            id = 1
+        case "status"
+            response  = "Background lighting is "+iif(LD2_LightingIsEnabled(0), "enabled", "disabled")
+            response += "\ \"
+            response += "Foreground lighting is "+iif(LD2_LightingIsEnabled(1), "enabled", "disabled")
+        case else
+            response = "!Invalid Light Id\ \Must be one of (BG/FG/status)"
         end select
-        if len(args(2)) = 0 then
-            response = iif(id=0,"Background","Foreground")+" lighting is "+iif(LD2_LightingIsEnabled(id), "enabled", "disabled")
-        else
-            select case args(2)
-            case "toggle"
-                LD2_LightingToggle(id)
-            case "on"
-                LD2_LightingSetEnabled(id, 1)
-            case "off"
-                LD2_LightingSetEnabled(id, 0)
-            case else
-                response = "!Not a valid light command\ \Must be (on/off/toggle)"
+        if len(response) = 0 then
+            select case args(1)
+                case "status"
+                    response = iif(id=0,"Background","Foreground")+" lighting is "+iif(LD2_LightingIsEnabled(id), "enabled", "disabled")
+                case "toggle"
+                    LD2_LightingToggle(id)
+                case "on"
+                    LD2_LightingSetEnabled(id, 1)
+                case "off"
+                    LD2_LightingSetEnabled(id, 0)
+                case else
+                    response = "!Not a valid light command\ \Must be one of (on/off/toggle/status)"
             end select
         end if
+    case "elevator"
+        LD2_SetFlag(ELEVATORMENU)
     case else
         if len(trim(comstring)) then
             response = "!Not a valid command"
@@ -2602,6 +2616,9 @@ function GetRoomName(id as integer) as string
 		input #1, filename
 		input #1, label
 		input #1, allowed
+        if len(filename) = 0 then
+            continue do
+        end if
         if floorNo = id then
             exit do
         end if

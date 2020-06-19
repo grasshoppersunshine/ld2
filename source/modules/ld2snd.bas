@@ -7,6 +7,7 @@ DIM SHARED LD2soundEnabled AS INTEGER
 dim shared LD2soundMusicTargetVolume as double = -1
 dim shared LD2soundMusicVolumeChangeSpeed as double
 dim shared LoopMusic as integer
+dim shared MusicId as integer
 dim shared SoundErrorMsg as string
 dim shared MaxMusicVolume as double = 1.0
 dim shared MaxSoundVolume as double = 1.0
@@ -120,6 +121,25 @@ function LD2_FadeOutMusic (speed as double = 1.0) as integer
 
 end function
 
+function LD2_GetMusicId() as integer
+    
+    return MusicId
+    
+end function
+
+function LD2_GetMusicFile() as string
+    
+    dim i as integer
+    for i = 0 to LD2musicListCount - 1
+        if LD2musicList(i).id = MusicId then
+            return LD2musicList(i).filepath
+        end if
+    next i
+    
+    return ""
+    
+end function
+
 SUB LD2_SetMusic (id AS INTEGER)
     
     LD2_LoadMusic id
@@ -137,6 +157,7 @@ sub LD2_LoadMusic (id as integer)
                 SOUND_StopMusic
                 SOUND_SetMusic LD2musicList(i).filepath
                 LoopMusic = LD2musicList(i).loopmusic
+                MusicId = id
                 found = 1
                 exit for
             end if

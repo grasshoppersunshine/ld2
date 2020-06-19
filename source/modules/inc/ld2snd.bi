@@ -19,6 +19,8 @@ DECLARE SUB LD2_PlayMusic (id AS INTEGER = 0)
 DECLARE SUB LD2_StopMusic ()
 DECLARE SUB LD2_PauseMusic ()
 DECLARE SUB LD2_ContinueMusic ()
+declare function LD2_GetMusicId() as integer
+declare function LD2_GetMusicFile() as string
 DECLARE SUB LD2_PlaySound (id as integer)
 declare function LD2_FadeInMusic (speed as double = 1.0) as integer
 declare function LD2_FadeOutMusic (speed as double = 1.0) as integer

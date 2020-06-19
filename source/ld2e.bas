@@ -1299,14 +1299,16 @@ SUB Map_Load (Filename as string, skipMobs as integer = 0, skipItems as integer 
     '* PICKUP ITEMS
     '*******************************************************************
     get #mapFile, , newLine
-    if skipItems = 0 then
+    'if skipItems = 0 then
         get #mapFile, , _byte: NumItems = _byte
         for i = 0 to NumItems-1
             get #MapFile, , _word: Items(i).x = _word
             get #MapFile, , _word: Items(i).y = _word
             get #MapFile, , _byte: Items(i).id = _byte+1
         next i
-    end if
+    'else
+    '    '// load items here
+    'end if
     
     close #mapFile
     
