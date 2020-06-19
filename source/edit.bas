@@ -173,9 +173,9 @@ end type
     declare sub elementsSetFontColor(fontColor as integer)
     declare sub elementsSetAlphaMod(a as double)
     
-    declare sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
-    declare sub drawSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
-    declare sub fillSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
+    declare sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, srcLayer as integer, dstLayer as integer = 0)
+    declare sub drawSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, srcLayer as integer, dstLayer as integer = 0)
+    declare sub fillSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, srcLayer as integer, dstLayer as integer = 0)
     
     dim shared SpritesLarry as VideoSprites
     dim shared SpritesTile as VideoSprites
@@ -273,7 +273,7 @@ end type
     screeninfo res_x, res_y
     
     dim m as PointContained
-    m.setBounds(0, 0, 19, 13)
+    m.setBounds(0, 0, 19, 12)
     
     dim mw as integer
 
@@ -324,11 +324,11 @@ end type
         case LayerIds.Item: sprite = CurrentTileO
         end select
         if keyboard(KEY_B) then
-            drawSpriteBox lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, LayerIds.Video
+            drawSpriteBox lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, activeLayer, LayerIds.Video
         elseif keyboard(KEY_F) then
-            fillSpriteBox lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, LayerIds.Video
+            fillSpriteBox lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, activeLayer, LayerIds.Video
         else
-            drawSpriteLine 1, lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, LayerIds.Video
+            drawSpriteLine 1, lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, activeLayer, LayerIds.Video
         end if
     end if
     
@@ -534,11 +534,11 @@ end type
                 case LayerIds.Item: sprite = CurrentTileO
                 end select
                 if keyboard(KEY_B) then
-                    drawSpriteBox lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
+                    drawSpriteBox lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer, activeLayer
                 elseif keyboard(KEY_F) then
-                    fillSpriteBox lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
+                    fillSpriteBox lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer, activeLayer
                 else
-                    drawSpriteLine 1, lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer
+                    drawSpriteLine 1, lastClick.x, lastClick.y, cursor.x+XScroll, cursor.y, sprite, activeLayer, activeLayer
                 end if
                 LD2_PlaySound EditSounds.fill
             else
@@ -584,9 +584,10 @@ end type
     end if
     
     if keypress(KEY_DELETE) or keypress(KEY_BACKSPACE) then
-        if (selectBox.w > 0) and (selectBox.h > 0) then
+        if selectingBox then
             MapPush
             MapDeleteArea selectBox.x, selectBox.y, selectBox.w, selectBox.h
+            selectingBox = 0
             LD2_PlaySound EditSounds.deleteArea
         else
             select case activeLayer
@@ -627,7 +628,7 @@ end type
     end if
     
     if keypress(KEY_C) or keypress(KEY_KP_PERIOD) or mouseRB() then
-        if (selectBox.w > 0) and (selectBox.h > 0) then
+        if selectingBox then
             if mouseUp then
                 while mouseRB(): PullEvents: wend
                 MapCopy selectBox.x, selectBox.y, selectBox.w, selectBox.h
@@ -711,10 +712,6 @@ end type
     IF CurrentTileL > SpritesLight.getCount()-1 THEN CurrentTileL = SpritesLight.getCount()-1
     IF CurrentTileO < 0 THEN CurrentTileO = SpritesObject.getCount()-1
     IF CurrentTileO > SpritesObject.getCount()-1 THEN CurrentTileO = SpritesObject.getCount()-1
-    IF Cursor.x < 0 THEN Cursor.x = 0
-    IF Cursor.x > 19 THEN Cursor.x = 19
-    IF Cursor.y < 0 THEN Cursor.y = 0
-    IF Cursor.y > 11 THEN Cursor.y = 11
     IF XScroll < 0 THEN XScroll = 0
     IF XScroll > 181 THEN XScroll = 181
    
@@ -1855,6 +1852,7 @@ function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integ
     dim x as integer
     dim y as integer
     dim n as integer
+    dim mw as integer
     
     dim hovered as integer
     
@@ -1881,6 +1879,8 @@ function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integ
         m.y = (m.y + mouseRelY()*0.025)
         cursor.x = int(m.x)
         cursor.y = int(m.y)
+        
+        mw = mouseWheelY()
         
         LD2_cls 1, bgcolor
         hovered = -1
@@ -1927,8 +1927,8 @@ function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integ
             if keypress(KEY_UP)    or keypress(KEY_KP_8) then addY = -1
             if keypress(KEY_DOWN)  or keypress(KEY_KP_2) then addY =  1
         end if
-        if keypress(KEY_PLUS)  or keypress(KEY_KP_PLUS) then addPage = 1
-        if keypress(KEY_MINUS) or keypress(KEY_KP_MINUS) then addPage = -1
+        if (keypress(KEY_PLUS)  or keypress(KEY_KP_PLUS))  or (mw < 0) then addPage = 1
+        if (keypress(KEY_MINUS) or keypress(KEY_KP_MINUS)) or (mw > 0) then addPage = -1
         if keypress(KEY_LBRACKET) then return -1
         if keypress(KEY_RBRACKET) then return 1
         
@@ -1944,7 +1944,7 @@ function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integ
                 elseif addX < 0 then
                     addPage = -1
                 else
-                    LD2_PlaySound EditSounds.invalid
+                    LD2_PlaySound EditSounds.quiet
                 end if
             else
                 LD2_PlaySound EditSounds.quiet
@@ -1956,11 +1956,11 @@ function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integ
                 m.x = (lastX + iif(page>0,-10,10))
                 LD2_PlaySound EditSounds.turnPage
             else
-                LD2_PlaySound EditSounds.invalid
+                LD2_PlaySound EditSounds.quiet
             end if
         end if
         
-        if mouseLB() and (selected <> hovered) then
+        if (mouseLB() or mouseRB()) and (selected <> hovered) then
             selected = hovered
             LD2_PlaySound EditSounds.place
         end if
@@ -2494,8 +2494,9 @@ sub elementsSetAlphaMod(a as double)
     SpritesFont.setAlphaMod(int(a * 255))
 end sub
 
-sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
+sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, srcLayer as integer, dstLayer as integer = 0)
     
+    dim sprites as VideoSprites ptr
 	dim vx as double, vy as double
 	dim stepx as double, stepy as double
 	dim diffx as integer, diffy as integer
@@ -2507,6 +2508,13 @@ sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer,
 	vm = sqr(diffx*diffx+diffy*diffy)
 	vx = diffx / vm
 	vy = diffy / vm
+    
+    select case srcLayer
+    case LayerIds.tile   : sprites = @spritesTile
+    case LayerIds.lightBG: sprites = @spritesLight
+    case LayerIds.lightFG: sprites = @spritesLight
+    case LayerIds.item   : sprites = @spritesObject
+    end select
 	
 	stepx = x0+0.5: stepy = y0+0.5
 	dim i as integer
@@ -2514,9 +2522,9 @@ sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer,
 	for i = 0 to vm
         x = int(stepx)
         y = int(stepy)
-        select case layer
+        select case dstLayer
         case LayerIds.video
-            spritesTile.putToScreen x*SPRITE_W, y*SPRITE_H, sprite
+            sprites->putToScreen x*SPRITE_W, y*SPRITE_H, sprite
         case LayerIds.tile
             EditMap(x, y) = sprite
         case LayerIds.lightBG
@@ -2531,9 +2539,10 @@ sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer,
 	
 end sub
 
-sub drawSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
+sub drawSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, srcLayer as integer, dstLayer as integer = 0)
     
 	dim cursor as PointContained
+    dim sprites as VideoSprites ptr
     dim x as integer, y as integer
 	
 	cursor.setBounds(0, 0, MAPW-1, MAPH-1)
@@ -2541,14 +2550,21 @@ sub drawSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sp
     if y0 > y1 then swap y0, y1
     if x0 > x1 then swap x0, x1
     
+    select case srcLayer
+    case LayerIds.tile   : sprites = @spritesTile
+    case LayerIds.lightBG: sprites = @spritesLight
+    case LayerIds.lightFG: sprites = @spritesLight
+    case LayerIds.item   : sprites = @spritesObject
+    end select
+    
 	for y = y0 to y1
         for x = x0 to x1
             if (x <> x0) and (x <> x1) and (y <> y0) and (y <> y1) then
                 continue for
             end if
-            select case layer
+            select case dstLayer
             case LayerIds.video
-                spritesTile.putToScreen x*SPRITE_W, y*SPRITE_H, sprite
+                sprites->putToScreen x*SPRITE_W, y*SPRITE_H, sprite
             case LayerIds.tile
                 EditMap(x, y) = sprite
             case LayerIds.lightBG
@@ -2563,18 +2579,26 @@ sub drawSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sp
     
 end sub
 
-sub fillSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, layer as integer = 0)
+sub fillSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, srcLayer as integer, dstLayer as integer = 0)
     
+    dim sprites as VideoSprites ptr
 	dim x as integer, y as integer
 	
     if y0 > y1 then swap y0, y1
     if x0 > x1 then swap x0, x1
     
+    select case srcLayer
+    case LayerIds.tile   : sprites = @spritesTile
+    case LayerIds.lightBG: sprites = @spritesLight
+    case LayerIds.lightFG: sprites = @spritesLight
+    case LayerIds.item   : sprites = @spritesObject
+    end select
+    
 	for y = y0 to y1
         for x = x0 to x1
-            select case layer
+            select case dstLayer
             case LayerIds.video
-                spritesTile.putToScreen x*SPRITE_W, y*SPRITE_H, sprite
+                sprites->putToScreen x*SPRITE_W, y*SPRITE_H, sprite
             case LayerIds.tile
                 EditMap(x, y) = sprite
             case LayerIds.lightBG
