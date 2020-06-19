@@ -4,6 +4,10 @@ enum TileIds
     AlienWallBottom      = 85
     AlienWallMiddle      = 86
     AlienWallBurningUp   = 87
+    ColaBottomLeft       = 8
+    ColaBottomRight      = 9
+    ColaTopLeft          = 5
+    ColaTopRight         = 7
     Crate                = 95
     DoorActivated        = 101
     DoorBehind           = 52
@@ -117,14 +121,34 @@ enum ItemIds
     SceneTheEnd          = 118
 end enum
 
+enum AnimationIds
+    None = 0
+    Fast1 = 1
+    Fast2 = 2
+    Fast3 = 3
+    Fast4 = 4
+    Slow1 = 5
+    Slow2 = 6
+    Slow3 = 7
+    Slow4 = 8
+    FastRotate = 9
+end enum
+
+enum ItemQtys
+    SHOTGUNAMMO    = 4
+    PISTOLAMMO     = 15
+    MACHINEGUNAMMO = 30
+    MAGNUMAMMO     = 6
+end enum
+
 CONST FIST = 0
 CONST NOTHING = 0
 CONST MEDIKIT50 = 1
 CONST MEDIKIT100 = 2
 CONST GRENADE = 3
-CONST SHELLS = 4
-CONST BULLETS = 5
-CONST DEAGLES = 6
+CONST SHOTGUNAMMO = 4
+CONST PISTOLAMMO = 5
+CONST MAGNUMAMMO = 6
 CONST WHITECARD = 7
 CONST WHITECARD1 = 8
 CONST WHITECARD2 = 9
@@ -142,8 +166,9 @@ CONST REDCARD = 20
 CONST SHOTGUN = 21
 CONST MACHINEGUN = 22
 CONST PISTOL = 23
-CONST DESERTEAGLE = 24
+CONST MAGNUM = 24
 CONST WALKIETALKIE = 25
+CONST MACHINEGUNAMMO = 26
 CONST EXTRALIFE = 27
 
 CONST AUTH = 50
@@ -153,6 +178,74 @@ CONST TEMPAUTH = 51
 'CONST NUMINVSLOTS = 53
 
 'CONST WALKYTALKY      = 99
+
+enum PlayerSprites
+    Crouching          = 28
+    HoldingMachinegun  = 8
+    HoldingMagnum      = 14
+    HoldingPistol      = 11
+    HoldingShotgun     = 1
+    Jumping            = 48
+    LegsCrouchWeapon   = 58
+    LegsJumping        = 66
+    LegsStanding       = 21
+    LegsRunningA       = 22
+    LegsRunningZ       = 26
+    MachineGunShootA   = 9
+    MachineGunShootZ   = 10
+    MagnumShootA       = 15
+    MagnumShootZ       = 17
+    PistolCrouch       = 59
+    PistolCrouchShootA = 60
+    PistolCrouchShootZ = 61
+    PistolDown         = 55
+    PistolShootA       = 12
+    PistolShootZ       = 13
+    PistolShootDownA   = 56
+    PistolShootDownZ   = 57
+    RunningA           = 36
+    RunningZ           = 43
+    ShotgunShootA      = 2
+    ShotgunShootZ      = 7
+    Standing           = 26
+end enum
+
+enum UpperSprites
+    HoldMachinegun     = 8
+    HoldMagnum         = 14
+    HoldPistol         = 69
+    HoldShotgun        = 1
+    JumpPistol         = 68
+    PistolCrouch       = 59
+    PistolCrouchShootA = 60
+    PistolCrouchShootZ = 61
+    PointPistol        = 70
+    ShootMachineGunA   = 9
+    ShootMachineGunZ   = 10
+    ShootMagnumA       = 15
+    ShootMagnumZ       = 17
+    ShootPistolA       = 12
+    ShootPistolZ       = 13
+    ShootShotgunA      = 2
+    ShootShotgunZ      = 7
+    Standing           = 26
+end enum
+enum LowerSprites
+    CrouchWeapon   = 58
+    Jumping        = 66
+    Standing       = 21
+    RunningA       = 22
+    RunningZ       = 26
+end enum
+enum FullBodySprites
+    Crouching          = 28
+    Jumping            = 48
+    PistolDown         = 55
+    PistolShootDownA   = 56
+    PistolShootDownZ   = 57
+    RunningA           = 36
+    RunningZ           = 43
+end enum
 
 type ActionItem
     itemId as integer
@@ -281,7 +374,7 @@ enum Sounds
     shotgun
     machinegun
     pistol
-    deserteagle
+    magnum
     '// doors
     doorup
     doordown

@@ -140,6 +140,13 @@ FUNCTION Inventory_GetItemBySlot (item AS InventoryType, slot AS INTEGER) as int
     
 END FUNCTION
 
+
+function Inventory_GetSize () as integer
+    
+    return InventorySize
+    
+end function
+
 FUNCTION Inventory_Init (size AS INTEGER, sizeVisible as integer = -1) as integer
     
     DIM i AS INTEGER

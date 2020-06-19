@@ -57,6 +57,7 @@
     #include once "inc/scene.bi"
     #include once "inc/scenes.bi"
     #include once "SDL2/SDL.bi"
+    #include once "dir.bi"
 
 
   
@@ -96,6 +97,7 @@
   declare sub SceneOpenElevatorDoors()
   declare sub Rooms_DoRooftop (player as PlayerType)
   declare sub Rooms_DoBasement (player as PlayerType)
+  declare sub PlayerCheck (player as PlayerType)
   declare sub SceneCheck (player as PlayerType)
   declare sub BossCheck (player as PlayerType)
   declare sub FlagsCheck (player as PlayerType)
@@ -722,7 +724,7 @@ sub UpdateLarryPos ()
     
     dim player as PlayerType
     
-    LD2_GetPlayer player
+    Player_Get player
     
     Larry.x = player.x
     Larry.y = player.y
@@ -774,7 +776,7 @@ sub LoadSounds ()
     AddSound Sounds.shotgun    , "shoot-shotgun.wav"
     AddSound Sounds.pistol     , "shoot-pistol.wav"
     AddSound Sounds.machinegun , "shoot-machinegun.wav"
-    AddSound Sounds.deserteagle, "shoot-deagle.wav"
+    AddSound Sounds.magnum     , "shoot-magnum.wav"
     AddSound Sounds.outofammo  , "shoot-outofammo.wav"
     AddSound Sounds.reload     , "shoot-reload.wav"
     AddSound Sounds.equip      , "shoot-reload.wav"
@@ -913,7 +915,7 @@ sub DoAction(actionId as integer, itemId as integer = 0)
             success = Player_ShootRepeat()
         end if
         if success = 1 then
-            LD2_GetPlayer player
+            Player_Get player
             select case player.weapon
             case FIST
                 LD2_PlaySound Sounds.punch
@@ -923,8 +925,8 @@ sub DoAction(actionId as integer, itemId as integer = 0)
                 LD2_PlaySound Sounds.machinegun
             case PISTOL
                 LD2_PlaySound Sounds.pistol
-            case DESERTEAGLE
-                LD2_PlaySound Sounds.deserteagle
+            case MAGNUM
+                LD2_PlaySound Sounds.magnum
             end select
             if playQuad then
                 LD2_PlaySound Sounds.quad
@@ -1009,8 +1011,9 @@ SUB Main
     Doors_Animate
 	LD2_RenderFrame
     
-    LD2_GetPlayer player
+    Player_Get player
     
+    PlayerCheck player
     SceneCheck player
     BossCheck player
     ItemsCheck player
@@ -1035,9 +1038,8 @@ SUB Main
         end if
     end if
     
-    if keyboard(KEY_L) then
+    if keypress(KEY_L) then
         LD2_SwapLighting
-        WaitForKeyup(KEY_L)
 	end if
     
     PlayerIsRunning = 0
@@ -1424,7 +1426,7 @@ sub SceneCheck (player as PlayerType)
             'SceneLobby
         end if
         if Player_NotItem(ItemIds.SceneTheEnd) and (player.x >= Guides.SceneTheEnd) then
-            SceneTheEnd '- the end
+            'SceneTheEnd '- the end
         end if
 	end if
 
@@ -1622,6 +1624,47 @@ sub ItemsCheck (player as PlayerType)
     
 end sub
 
+sub PlayerCheck (player as PlayerType)
+    
+    dim p as PlayerType
+    dim xshift as double
+    
+    p = player
+    xshift = Map_GetXShift()
+    
+    if Player.y < -12 then
+        Player_AddItem(ItemIds.CurrentRoom, 1)
+        Map_Load str(Player_GetItemQty(ItemIds.CurrentRoom))+"th.ld2"
+        Player_SetXY p.x, p.y+(13*16)-4
+        Map_SetXShift xshift
+        if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
+            CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
+            LD2_PlayMusic GetFloorMusicId(CurrentRoom)
+            if GooScene = 1 then GooScene = 0
+        end if
+    end if
+    if Player.y > 196 then
+        Player_AddItem(ItemIds.CurrentRoom, -1)
+        Map_Load str(Player_GetItemQty(ItemIds.CurrentRoom))+"th.ld2"
+        Player_SetXY p.x, p.y-(13*16)+4
+        Map_SetXShift xshift
+        if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
+            CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
+            LD2_PlayMusic GetFloorMusicId(CurrentRoom)
+            if GooScene = 1 then GooScene = 0
+        end if
+    end if
+    if Player.x < -12 then
+        Player_SetXY p.x + (16*201)-4, p.y
+        Map_SetXShift (16*201)-SCREEN_W
+    end if
+    if player.x > 3212 then
+        Player_SetXY p.x - (16*201)+4, p.y
+        Map_SetXShift 0
+    end if
+    
+end sub
+
 sub GenerateRoofCode
     
     dim i as integer
@@ -1784,6 +1827,7 @@ sub NewGame
     LD2_LogDebug "NewGame()"
     
     dim player as PlayerType
+    dim arg as string
     
     player.x = 92
     player.y = 144
@@ -1794,23 +1838,15 @@ sub NewGame
     Player_Init player
     
     Player_SetItemMaxQty ItemIds.HP, 100
+    Player_SetItemMaxQty ItemIds.ShotgunAmmo   , 8
+    Player_SetItemMaxQty ItemIds.PistolAmmo    , 15
+    Player_SetItemMaxQty ItemIds.MachineGunAmmo, 30
+    Player_SetItemMaxQty ItemIds.MagnumAmmo    , 6
     Player_SetWeapon ItemIds.Fist '// must be called after Player_Init()
     
     if LD2_isTestMode() then
-        Player_AddAmmo ItemIds.ShotgunAmmo, 99
-        Player_AddAmmo ItemIds.PistolAmmo, 99
-        Player_AddAmmo ItemIds.MachineGunAmmo, 99
-        Player_AddAmmo ItemIds.MagnumAmmo, 99
         Player_SetItemQty ItemIds.Lives, 99
-        LD2_AddToStatus(ItemIds.ElevatorMenu, 1)
-        LD2_AddToStatus(ItemIds.Redcard, 1)
-        LD2_AddToStatus(ItemIds.Pistol, 1)
-        LD2_AddToStatus(ItemIds.MachineGun, 1)
-        LD2_AddToStatus(ItemIds.NovaHeart, 1)
-        LD2_AddToStatus(ItemIds.BlockOfDoom, 1)
-        'LD2_AddToStatus(ItemIds.QuadDamage, 1)
-        'LD2_AddToStatus(ItemIds.PoweredArmor, 1)
-        'LD2_AddToStatus(ItemIds.Chemical410, 1)
+        
         Player_SetItemQty ItemIds.SceneIntro, 1
         Player_SetItemQty ItemIds.SceneJanitor, 1
         Player_SetItemQty ItemIds.SceneElevator, 1
@@ -1818,6 +1854,77 @@ sub NewGame
         Player_SetItemQty ItemIds.SceneSteveGone, 1
         'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
         'LD2_PlayMusic mscWANDERING
+        if LD2_HasCommandArg("noelevator") = 0 then
+            LD2_AddToStatus(ItemIds.ElevatorMenu, 1)
+        end if
+        if LD2_HasCommandArg("greencard,bluecard,yellowcard,whitecard,redcard") = 0 then
+            LD2_AddToStatus(ItemIds.RedCard, 1)
+        end if
+        if (LD2_HasCommandArg("noguns") = 0) and (LD2_HasCommandArg("shotgun,pistol,machinegun,magnum,allguns") = 0) then
+            LD2_AddToStatus(ItemIds.Pistol, 1)
+            LD2_AddToStatus(ItemIds.MachineGun, 1)
+            LD2_AddToStatus(ItemIds.PistolAmmo, 99)
+            LD2_AddToStatus(ItemIds.MachineGunAmmo, 99)
+            Player_AddAmmo ItemIds.PistolAmmo, 99
+            Player_AddAmmo ItemIds.MachineGunAmmo, 99
+        end if
+        LD2_ReadyCommandArgs
+        while LD2_HasNextCommandArg()
+            arg = LD2_GetNextCommandArg()
+            select case arg
+            case "shotgun"
+                LD2_AddToStatus(ItemIds.Shotgun, 1)
+                Player_AddAmmo ItemIds.ShotgunAmmo, 99
+            case "pistol"
+                LD2_AddToStatus(ItemIds.Pistol, 1)
+                Player_AddAmmo ItemIds.PistolAmmo, 99
+            case "machinegun"
+                LD2_AddToStatus(ItemIds.MachineGun, 1)
+                Player_AddAmmo ItemIds.MachineGunAmmo, 99
+            case "magnum"
+                LD2_AddToStatus(ItemIds.Magnum, 1)
+                Player_AddAmmo ItemIds.MagnumAmmo, 99
+            case "allguns"
+                LD2_AddToStatus(ItemIds.Shotgun, 1)
+                LD2_AddToStatus(ItemIds.Pistol, 1)
+                LD2_AddToStatus(ItemIds.MachineGun, 1)
+                LD2_AddToStatus(ItemIds.Magnum, 1)
+                Player_AddAmmo ItemIds.ShotgunAmmo, 99
+                Player_AddAmmo ItemIds.PistolAmmo, 99
+                Player_AddAmmo ItemIds.MachineGunAmmo, 99
+                Player_AddAmmo ItemIds.MagnumAmmo, 99
+            case "greencard"
+                LD2_AddToStatus(ItemIds.GreenCard, 1)
+            case "bluecard"
+                LD2_AddToStatus(ItemIds.BlueCard, 1)
+            case "yellowcard"
+                LD2_AddToStatus(ItemIds.YellowCard, 1)
+            case "whitecard"
+                LD2_AddToStatus(ItemIds.WhiteCard, 1)
+            case "redcard"
+                LD2_AddToStatus(ItemIds.Redcard, 1)
+            case "nova", "hpregen"
+                LD2_AddToStatus(ItemIds.NovaHeart, 1)
+            case "doom", "ammoregen"
+                LD2_AddToStatus(ItemIds.BlockOfDoom, 1)
+            case "quad"
+                LD2_AddToStatus(ItemIds.QuadDamage, 1)
+            case "armor", "speed", "highjump"
+                LD2_AddToStatus(ItemIds.PoweredArmor, 1)
+            case "chemical410", "410"
+                LD2_AddToStatus(ItemIds.Chemical410, 1)
+            case "chemical409", "409"
+                LD2_AddToStatus(ItemIds.Chemical409, 1)
+            case "mysterymeat", "meat"
+                LD2_AddToStatus(ItemIds.MysteryMeat, 1)
+            case "janitornote", "note"
+                LD2_AddToStatus(ItemIds.JanitorNote, 1)
+            case "flashlight"
+                LD2_AddToStatus(ItemIds.FlashLightNoBat, 1)
+            case "batteries"
+                LD2_AddToStatus(ItemIds.Batteries, 1)
+            end select
+        wend
     else
         LD2_AddToStatus(GREENCARD, 1)
     end if
@@ -1957,3 +2064,73 @@ function FadeOutMusic(seconds as double = 3.0) as integer
     return 0
     
 end function
+
+sub SaveInventory(fileNo as integer)
+    
+    type InvData
+        id as ubyte
+        qty as ushort
+    end type
+    
+    dim datum as InvData
+    dim n as integer
+    
+    for n = 0 to 127
+        datum.id = n
+        datum.qty = Player_GetItemQty(n)
+        put #fileNo, , datum
+    next n
+    
+end sub
+
+sub SaveStatusInventory(fileNo as integer)
+    
+    type InvData
+        id as ubyte
+        qty as ushort
+        visible as ubyte
+    end type
+    
+    dim item as InventoryType
+    dim datum as InvData
+    dim numItems as integer
+    dim n as integer
+    
+    numItems = Inventory_GetSize()
+    
+    for n = 0 to numItems-1
+        Inventory_GetItem item, n
+        datum.id = item.id
+        datum.qty = item.qty
+        datum.visible = item.visible
+        put #fileNo, , datum
+    next n
+    
+end sub
+
+sub SaveFloor()
+    
+    dim savePath as string
+    dim roomId as integer
+    
+    roomId = Player_GetItemQty(ItemIds.currentRoom)
+    
+    savePath = DATA_DIR+"save/"
+    if dir(savePath, fbDirectory) <> savePath then
+        mkdir savePath
+    end if
+    
+    savePath += str(roomId)+".flr"
+    
+    type FloorHeader
+        id as ubyte
+        numItems as ubyte
+        numMobs as ubyte
+    end type
+    
+    dim header as FloorHeader
+    header.id = roomId
+    header.numItems = MapItems_GetCount()
+    header.numMobs  = Mobs_GetCount()
+    
+end sub

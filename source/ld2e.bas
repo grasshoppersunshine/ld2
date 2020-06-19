@@ -10,6 +10,7 @@
     #include once "inc/ld2e.bi"
     #include once "inc/ld2.bi"
     #include once "inc/title.bi"
+    #include once "file.bi"
     
     property GutsIncorporated.facingLeft() as integer
         return (this.facing = 0)
@@ -23,139 +24,122 @@
     property GutsIncorporated.facingRight(isFacingRight as integer)
         this.facing = (isFacingRight <> 0)
     end property
-  
-  TYPE ElevatorType
-    x as integer
-    y as integer
-    w as integer
-    h as integer
-    mapX as integer
-    mapY as integer
-    isLocked as integer
-    isOpen as integer
-    isClosed as integer
-    tileToLeft as integer
-    tileToRight as integer
-  END TYPE
-
-  type ItemType
-    x as integer
-    y as integer
-    id as integer
-  END TYPE
-  
-  type DoorType
-    x as integer
-    y as integer
-    w as integer
-    h as integer
-    mapX as integer
-    mapY as integer
-    accessLevel as integer
-    ani as double
-    anicount as double
-  end type
     
+    '*******************************************************************
+    '* TYPES
+    '*******************************************************************
     type PointType
         x as integer
         y as integer
     end type
     
+    type ElevatorType
+        x as integer
+        y as integer
+        w as integer
+        h as integer
+        mapX as integer
+        mapY as integer
+        isLocked as integer
+        isOpen as integer
+        isClosed as integer
+        tileToLeft as integer
+        tileToRight as integer
+    end type
+    
+    type ItemType
+        x as integer
+        y as integer
+        id as integer
+    end type
+    
+    type DoorType
+        x as integer
+        y as integer
+        w as integer
+        h as integer
+        mapX as integer
+        mapY as integer
+        accessLevel as integer
+        percentOpen as double
+        speed as double
+    end type
+    
+    type RoomVarsType
+        numDoors as integer
+        numGuts  as integer
+        numItems as integer
+        numMobs  as integer
+        scrollx  as double
+    end type
+    
+    '*******************************************************************
+    '* MAP PROPS
+    '*******************************************************************
+    const MAPW = 201
+    const MAPH =  13
+    const DOOROPENSPEED  = 0.08  '* classic mode is .05
+    const DOORCLOSESPEED = -0.04 '* classic mode is .05
+    
+    '*******************************************************************
+    '* PLAYER STATES
+    '*******************************************************************
+    const STILL       = 1
+    const RUNNING     = 2
+    const JUMPING     = 3
+    const CROUCHING   = 4
+    const LOOKINGUP   = 5
+    const BLOCKED     = 6
+    const LOOKINGDOWN = 7
+    
+    '*******************************************************************
+    '* MOB STATES
+    '*******************************************************************
+    const SPAWNED   = 1
+    const GO        = 2
+    const GOING     = 3
+    const HURT      = 4
+    const HURTING   = 5
+    const ATTACK    = 6
+    const ATTACKING = 7
+    const RETREAT   = 8
+    const RETRATING = 9
   
-  '= SPRITES (LD2TILES.PUT)
-  '========================
-  CONST DOOR0 = 89
-  CONST DOOR1 = 90
-  CONST DOOR2 = 91
-  CONST DOOR3 = 92
-  CONST DOORW = 106
-  CONST DOORBACK = 52
-  CONST DOOROPEN = 101
-  CONST LARRYCROUCH = 28
-  
-  '= DOORS
-  '========================
-  CONST DOOROPENSPEED = .2
-  CONST DOORCLOSESPEED = -.2
-  
-  '= MAPS/ROOMS/FLOORS
-  '========================
-  CONST MAPW = 201
-  CONST MAPH = 13
-  
-  '= PLAYER STATES
-  '========================
-  CONST STILL = 1
-  CONST RUNNING = 2
-  CONST JUMPING = 3
-  CONST CROUCHING = 4
-  CONST LOOKINGUP = 5
-  CONST BLOCKED = 6
-  const LOOKINGDOWN = 7
-  
-  '= ENEMY/ENTITY STATES
-  '========================
-  CONST SPAWNED   = 1
-  CONST GO        = 2
-  CONST GOING     = 3
-  CONST HURT      = 4
-  CONST HURTING   = 5
-  CONST ATTACK    = 6
-  CONST ATTACKING = 7
-  CONST RETREAT   = 8
-  CONST RETRATING = 9
-  
-  '= THE ALMIGHT PIE
-  '= (PIE FLAVORED!)
-  '========================
-  CONST PI = 3.141592
-  
-'======================
-'= PRIVATE METHODS
-'======================
-  DECLARE FUNCTION CheckMobFloorHit (mob AS Mobile) as integer
-  DECLARE FUNCTION CheckMobWallHit (mob AS Mobile) as integer
-  DECLARE FUNCTION CheckPlayerFloorHit () as integer
-  DECLARE FUNCTION CheckPlayerWallHit () as integer
-  DECLARE SUB LoadSprites (filename AS STRING, BufferNum AS INTEGER)
-  DECLARE SUB MixTiles ()
-  DECLARE SUB ProcessDoors ()
-  DECLARE SUB RefreshPlayerAccess ()
-  DECLARE SUB SaveItems (filename AS STRING)
-  DECLARE SUB SetPlayerState (state AS INTEGER)
-  
-  DECLARE SUB GetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
-  DECLARE SUB SetRGB (idx AS INTEGER, r AS INTEGER, g AS INTEGER, b AS INTEGER)
+    '*******************************************************************
+    '* OH, BOY! WHAT FLAVOR?
+    '* PIE FLAVOR!!!
+    '*******************************************************************
+    const PI = 3.141592
+    
+    '*******************************************************************
+    '* PATH TO DATA FOLDER
+    '*******************************************************************
+    const DATA_DIR = "data/"
+    
+    '*******************************************************************
+    '* PRIVATE METHODS
+    '*******************************************************************
+    declare function CheckMobFloorHit (mob AS Mobile) as integer
+    declare function CheckMobWallHit (mob AS Mobile) as integer
+    declare function CheckPlayerFloorHit () as integer
+    declare function CheckPlayerWallHit () as integer
+    declare sub LoadSprites (filename as string, BufferNum as integer)
+    declare sub RefreshPlayerAccess ()
+    declare sub SaveItems (filename as string)
+    declare sub SetPlayerState (state as integer)
 
-'======================
-'= HASH MODULE
-'======================
-  DECLARE FUNCTION IntToBase64 (i AS INTEGER) as string
-  
-'======================
-'= BIT MAP MODULE
-'======================
-  DECLARE FUNCTION PeekBitmap (x AS INTEGER, y AS INTEGER) as integer
-  DECLARE SUB PokeBitmap (x AS INTEGER, y AS INTEGER, value AS INTEGER)
-  DECLARE SUB SetBitmap (segment AS INTEGER, offset AS INTEGER, pitch AS INTEGER)
-
-'======================
-'= FILE MODULE
-'======================
-  DECLARE FUNCTION File_getSize (filename AS STRING) as long
-  DECLARE FUNCTION File_getAllocSize (filename AS STRING) as long
-  
-  'REM $DYNAMIC
-  
-    DIM SHARED LarryFile   AS STRING
-    DIM SHARED TilesFile   AS STRING
-    DIM SHARED LightFile   AS STRING
-    DIM SHARED EnemiesFile AS STRING
-    DIM SHARED GutsFile    AS STRING
-    DIM SHARED SceneFile   AS STRING
-    DIM SHARED ObjectsFile AS STRING
-    DIM SHARED BossFile    AS STRING
-    DIM SHARED FontFile    AS STRING
+    '*******************************************************************
+    '* SPRITES
+    '*******************************************************************
+    dim shared LarryFile   as string
+    dim shared TilesFile   as string
+    dim shared LightFile   as string
+    dim shared EnemiesFile as string
+    dim shared GutsFile    as string
+    dim shared SceneFile   as string
+    dim shared ObjectsFile as string
+    dim shared BossFile    as string
+    dim shared FontFile    as string
 
     dim shared SpritesLarry as VideoSprites
     dim shared SpritesTile as VideoSprites
@@ -177,73 +161,76 @@
     dim shared LayerFoliage as VideoSprites
     dim shared LayerGrass as VideoSprites
     dim shared LayerClouds as VideoSprites
-  
-  DIM SHARED TileMap  ( MAPW, MAPH ) AS INTEGER
-  DIM SHARED MixMap   ( MAPW, MAPH ) AS INTEGER
-  DIM SHARED LightMapFg( MAPW, MAPH ) AS INTEGER
-  DIM SHARED LightMapBg( MAPW, MAPH ) AS INTEGER
-  DIM SHARED AniMap   ( MAPW, MAPH ) AS INTEGER
-  DIM SHARED FloorMap ( MAPW, MAPH ) AS INTEGER
-  
-  DIM SHARED Items      (MAXITEMS) AS ItemType
-  DIM SHARED Doors      (MAXDOORS) AS DoorType
-  DIM SHARED Guts       (MAXGUTS) AS GutsIncorporated
-  DIM SHARED Inventory  (MAXINVENTORY) AS INTEGER
-  DIM SHARED InventoryMax  (MAXINVENTORY) AS INTEGER
-  DIM SHARED InvSlots   (MAXINVSLOTS) AS INTEGER
-  DIM SHARED WentToRoom (MAXFLOORS) AS INTEGER  
-  
-  DIM SHARED TransparentSprites (255) AS INTEGER
-
-  DIM SHARED Gravity AS SINGLE
-  DIM SHARED NumItems AS INTEGER
-  DIM SHARED NumDoors AS INTEGER
-  DIM SHARED NumGuts AS INTEGER
-  DIM SHARED NumInvSlots AS INTEGER
-  DIM SHARED NumLoadedTiles AS INTEGER
-  
-  DIM SHARED SceneCaption AS STRING
-  DIM SHARED SceneMode AS INTEGER
-  DIM SHARED Scene as integer
-  
-  DIM SHARED AVGFPS   AS SINGLE
-  DIM SHARED FPS      AS INTEGER
-  DIM SHARED FPSCOUNT AS INTEGER
-  DIM SHARED DELAYMOD AS DOUBLE
-  
-  DIM SHARED Player AS PlayerType
-  DIM SHARED Elevator AS ElevatorType
-  
-  DIM SHARED XShift AS DOUBLE
-  
-  DIM SHARED Animation AS SINGLE
-  
-  DIM SHARED BossNum AS INTEGER
-  DIM SHARED ShowLife AS INTEGER
-  
-  DIM SHARED Lighting1 AS INTEGER '- infront of player
-  DIM SHARED Lighting2 AS INTEGER '- behind player
-  
-  DIM SHARED GameFlags AS INTEGER
-  DIM SHARED GameNoticeMsg AS STRING
-  DIM SHARED GameNoticeExpire AS SINGLE
-  
-  dim shared GotItemId as integer
-  
-  DIM SHARED GAME_RevealText AS STRING
-
-  DIM SHARED BitmapSeg   AS INTEGER
-  DIM SHARED BitmapOff   AS INTEGER
-  DIM SHARED BitmapPitch AS INTEGER
-  
-  dim shared Mobs as MobileCollection
-  dim shared Mobs_BeforeKillCallback as sub(mob as Mobile ptr)
-  
-  dim shared ElementCount as integer
-  dim shared RenderElements(64) as ElementType ptr
-  dim shared BackupElementsCount as integer
-  dim shared BackupElements(64) as ElementType ptr
     
+    dim shared TileMap    ( MAPW, MAPH ) as integer
+    dim shared LightMapFg ( MAPW, MAPH ) as integer
+    dim shared LightMapBg ( MAPW, MAPH ) as integer
+    dim shared AniMap     ( MAPW, MAPH ) as integer
+    dim shared FloorMap   ( MAPW, MAPH ) as integer
+    
+    '*******************************************************************
+    '* ROOM VARS
+    '*******************************************************************
+    dim shared Items      (MAXITEMS) AS ItemType
+    dim shared Doors      (MAXDOORS) AS DoorType
+    dim shared Guts       (MAXGUTS) AS GutsIncorporated
+    dim shared NumItems as integer
+    dim shared NumDoors as integer
+    dim shared NumGuts as integer
+    dim shared XShift as double
+    dim shared Elevator AS ElevatorType
+    dim shared Mobs as MobileCollection
+    dim shared Mobs_BeforeKillCallback as sub(mob as Mobile ptr)
+    
+    '*******************************************************************
+    '* PLAYER VARS
+    '*******************************************************************
+    dim shared Inventory    (MAXINVENTORY) as integer
+    dim shared InventoryMax (MAXINVENTORY) as integer
+    dim shared InvSlots     (MAXINVSLOTS) as integer
+    dim shared WentToRoom   (MAXFLOORS) as integer  
+    dim shared NumInvSlots as integer
+    dim shared Player AS PlayerType
+    
+    '*******************************************************************
+    '* GLOBAL VARS
+    '*******************************************************************
+    dim shared Gravity as single
+    
+    dim shared AVGFPS   as single
+    dim shared FPS      as integer
+    dim shared FPSCOUNT as integer
+    dim shared DELAYMOD as double
+    
+    dim shared SceneCaption as string
+    dim shared SceneMode as integer
+    dim shared Scene as integer
+    
+    dim shared BossBarId as integer
+    dim shared ShowLightBG as integer
+    dim shared ShowLightFG as integer
+    
+    dim shared GameFlags as integer
+    dim shared GameNoticeMsg as string
+    dim shared GameNoticeExpire as single
+    
+    dim shared GotItemId as integer
+    
+    redim shared CommandArgs(0) as string
+    dim shared NumCommandArgs as integer
+    dim shared CommandArgIndex as integer
+    
+    '*******************************************************************
+    '* UI MODULE
+    '*******************************************************************
+    dim shared ElementCount as integer
+    dim shared RenderElements(64) as ElementType ptr
+    dim shared BackupElementsCount as integer
+    dim shared BackupElements(64) as ElementType ptr
+    
+    '*******************************************************************
+    '* COLLISION VARS
+    '*******************************************************************
     dim shared FallContactMapX as integer
     dim shared FallContactMapY as integer
     dim shared FallContactPointX as integer
@@ -253,37 +240,14 @@
     dim shared WallContactMapY as integer
     dim shared WallContactPointX as integer
     dim shared WallContactPointY as integer
-  
-  const DATA_DIR = "data/"
-  PaletteFile = DATA_DIR+"gfx/gradient.pal"
 
 
-FUNCTION File_getSize (filename AS STRING) as long
-    
-    DIM fileNum AS INTEGER
-    DIM fileSize AS LONG
-    
-    fileNum = FREEFILE
-    OPEN filename FOR BINARY AS fileNum
-        fileSize = LOF(fileNum)
-    CLOSE fileNum
-    
-    return fileSize
-    
-END FUNCTION
 
-FUNCTION File_getAllocSize (filename AS STRING) as long
+sub Player_Get (p as PlayerType)
     
-    DIM fileSize AS LONG
+    p = Player
     
-    fileSize = File_getSize(filename)
-    fileSize = ((fileSize-7)\2)+1 '- todo: only add +1 if remainder
-    
-    IF LD2_isDebugMode() THEN LD2_Debug "Allocating"+STR(filesize*2)+" bytes for "+filename
-    
-    return fileSize
-    
-END FUNCTION
+end sub
 
 function Player_AddAmmo (weaponId as integer, qty as integer) as integer
     
@@ -307,14 +271,14 @@ function Player_AddAmmo (weaponId as integer, qty as integer) as integer
         return 0
     end select
     
-    spaceLeft = qtyMax - Inventory(weaponId)
-    if spaceLeft < qty then
-        qtyUnused = qty - spaceLeft
-        qty = spaceLeft
-    end if
-    if qty > 0 then
-        Inventory(weaponId) += qty
-    end if
+    'spaceLeft = qtyMax - Inventory(weaponId)
+    'if spaceLeft < qty then
+    '    qtyUnused = qty - spaceLeft
+    '    qty = spaceLeft
+    'end if
+    'if qty > 0 then
+        Player_AddItem weaponId, qty
+    'end if
 
   'IF Kind = 1 THEN Inventory(SHELLS) = Inventory(SHELLS) + Amount
   'IF Kind = 2 THEN Inventory(BULLETS) = Inventory(BULLETS) + Amount
@@ -333,12 +297,12 @@ function Player_AddAmmo (weaponId as integer, qty as integer) as integer
 
 end function
 
-FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
+FUNCTION LD2_AddToStatus (item as integer, Amount as integer) as integer
     
     IF LD2_isDebugMode() THEN LD2_Debug "LD2_AddToStatus% ("+STR(item)+","+STR(Amount)+" )"
     
-    DIM i AS INTEGER
-    DIM added AS INTEGER
+    DIM i as integer
+    DIM added as integer
 
     FOR i = 0 TO NumInvSlots-1
         IF InvSlots(i) = item THEN
@@ -378,7 +342,7 @@ FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
 
 END FUNCTION
 
-SUB LD2_ClearInventorySlot (slot AS INTEGER)
+SUB LD2_ClearInventorySlot (slot as integer)
     
     dim item as integer
     item = InvSlots(slot)
@@ -393,7 +357,7 @@ SUB LD2_ClearInventorySlot (slot AS INTEGER)
     
 END SUB
 
-FUNCTION LD2_GetStatusItem (slot AS INTEGER) as integer
+FUNCTION LD2_GetStatusItem (slot as integer) as integer
     
     IF LD2_isDebugMode() THEN LD2_Debug "LD2_GetStatusItem% ("+STR(slot)+" )"
     
@@ -405,7 +369,7 @@ FUNCTION LD2_GetStatusItem (slot AS INTEGER) as integer
     
 END FUNCTION
 
-FUNCTION LD2_GetStatusAmount (slot AS INTEGER) as integer
+FUNCTION LD2_GetStatusAmount (slot as integer) as integer
     
     IF slot >= 0 AND slot <= NumInvSlots THEN
         return Inventory(InvSlots(slot))
@@ -414,12 +378,6 @@ FUNCTION LD2_GetStatusAmount (slot AS INTEGER) as integer
     END IF
     
 END FUNCTION
-
-SUB LD2_GetPlayer (p AS PlayerType)
-    
-    p = Player
-    
-END SUB
 
 FUNCTION CheckPlayerFloorHit as integer
     
@@ -686,7 +644,7 @@ END SUB
 
 'SUB LD2_FadeOut
 '  
-'  DIM bufferSeg AS INTEGER
+'  DIM bufferSeg as integer
 '  
 '  bufferSeg = VARSEG(Buffer1(0))
 '  
@@ -700,9 +658,9 @@ END SUB
 
 SUB RefreshPlayerAccess
     
-    DIM i AS INTEGER
-    DIM item AS INTEGER
-    DIM maxLevel AS INTEGER
+    DIM i as integer
+    DIM item as integer
+    DIM maxLevel as integer
     
     Inventory(AUTH) = 0
     
@@ -727,6 +685,59 @@ SUB RefreshPlayerAccess
 
 END SUB
 
+function LD2_HasCommandArg(argcsv as string) as integer
+    
+    dim char as string
+    dim arg as string
+    dim n as integer
+    dim i as integer
+    
+    arg = ""
+    for n = 1 to len(argcsv)
+        char = mid(argcsv, n, 1)
+        if char <> "," then
+            arg += char
+        else
+            for i = 0 to NumCommandArgs-1
+                if trim(lcase(arg)) = CommandArgs(i) then
+                    return 1
+                end if
+            next i
+            arg = ""
+        end if
+    next n
+    
+    return 0
+    
+end function
+
+sub LD2_ReadyCommandArgs()
+    
+    CommandArgIndex = 0
+    
+end sub
+
+function LD2_HasNextCommandArg() as integer
+    
+    return (CommandArgIndex < NumCommandArgs)
+    
+end function
+
+function LD2_GetNextCommandArg() as string
+    
+    dim n as integer
+    
+    n = CommandArgIndex
+    if n < NumCommandArgs then
+        CommandArgIndex += 1
+    else
+        return ""
+    end if
+    
+    return CommandArgs(n)
+    
+end function
+
 sub LD2_Init
     
     dim arg as string
@@ -734,9 +745,14 @@ sub LD2_Init
     
     i = 1
     do
-        arg = lcase(command(i))
+        arg = trim(lcase(command(i)))
         if len(arg) = 0 then
             exit do
+        end if
+        if len(arg) then
+            CommandArgs(NumCommandArgs) = arg
+            NumCommandArgs += 1
+            redim preserve CommandArgs(NumCommandArgs) as string
         end if
         select case arg
         case "test"
@@ -798,9 +814,8 @@ sub LD2_Init
     end if
     
     '///////////////////////////////////////////////////////////////////
-    Animation   = 1
-    Lighting1   = 1
-    Lighting2   = 1
+    ShowLightBG = 1
+    ShowLightFG = 1
     Gravity     = 0.06
     XShift      = 0
     '///////////////////////////////////////////////////////////////////
@@ -834,6 +849,7 @@ sub LD2_Init
     end if
     WaitSeconds 0.3333
     
+    PaletteFile = DATA_DIR+"gfx/gradient.pal"
     if LD2_HasFlag(CLASSICMODE) then
         LD2_LoadPalette PaletteFile, 0
     else
@@ -885,10 +901,10 @@ SUB LD2_GenerateSky()
     
   LD2_cls 2, 66
   
-  DIM x AS INTEGER
-  DIM y AS INTEGER
-  DIM r AS INTEGER
-  DIM i AS INTEGER
+  DIM x as integer
+  DIM y as integer
+  DIM r as integer
+  DIM i as integer
   
   FOR i = 0 TO 9999
     'DO
@@ -976,17 +992,17 @@ sub LD2_RenderBackground(height as double)
     
 end sub
 
-SUB SaveItems (filename AS STRING)
+SUB SaveItems (filename as string)
     
-    DIM InFile AS INTEGER
-    DIM OutFile AS INTEGER
+    DIM InFile as integer
+    DIM OutFile as integer
     DIM item AS ItemType
-    DIM roomId AS INTEGER
-    DIM roomCount AS INTEGER
-    DIM roomItemCount AS INTEGER
-    DIM i AS INTEGER
+    DIM roomId as integer
+    DIM roomCount as integer
+    DIM roomItemCount as integer
+    DIM i as integer
     
-    DIM tmpFile AS STRING
+    DIM tmpFile as string
     tmpFile = DATA_DIR+"save/items.tmp"
     
     InFile = FREEFILE: OutFile = FREEFILE
@@ -1041,375 +1057,255 @@ SUB SaveItems (filename AS STRING)
     
 END SUB
 
-SUB Map_Load (Filename AS STRING, skipMobs as integer = 0)
-  
-  IF LD2_isDebugMode() THEN LD2_Debug "LD2_LoadMap ( "+filename+" )"
+sub Map_BeforeLoad(byref skipItems as integer)
     
-    if LD2_hasFlag(CLASSICMODE) then
-        filename = "2002/"+filename
+    if WentToRoom(Inventory(ItemIds.CurrentRoom)) then
+        skipItems = 0
+    else
+        skipItems = 1
     end if
-  
-  DIM Message AS STRING
-  'DIM bufferSeg AS INTEGER
-  DIM loadedSprites(120) AS INTEGER
-  DIM numLoadedSprites AS INTEGER
-  dim did as integer
-  
-  'LD2_FadeOut 2, 0
-  
-  IF WentToRoom(Inventory(ItemIds.CurrentRoom)) = 0 THEN
-    did = 0
-  ELSE
-    did = 1
-  END IF
+    
+    '// save enemies from previous room
+    '// save items from previous room
+    WentToRoom(Inventory(ItemIds.CurrentRoom)) = 1
+    
+    '// CLEAR KEYPAD ACCESS
+    Inventory(TEMPAUTH) = 0
+    
+    '// RESET MAP VARS
+    Mobs.Clear
+    NumDoors = 0
+    
+end sub
 
-  WentToRoom(Inventory(ItemIds.CurrentRoom)) = 1
-  
-  Inventory(TEMPAUTH) = 0
-  
-  'SaveItems DATA_DIR+"save/items"+LTRIM$(STR(CurrentRoom))+".bin"
-  
-  '- Load the map
-  '--------------
-  'LD2_cls 0, 0
-  'LD2_RestorePalette
-  
-  dim x as integer, y as integer
-  dim n as integer
-  'Message = "..Loading..."
-  'LD2_cls 1, 0
-  'LD2_PutText ((SCREEN_W - LEN(Message) * 6) / 2), 60, Message, 1
-  'FOR y = 80 TO 85
-  '  FOR x = 0 TO 15
-  '    FOR n = 0 TO 7
-  '      'LD2pset 126+x*4+n, y, bufferSeg, 112+x
-  '      LD2_pset 126+x*4+n, y, 112+x, 1
-  '    NEXT n
-  '  NEXT x
-  'NEXT y
-  'LD2_RefreshScreen
-  
-  NumDoors = 0
-  Inventory(TEMPAUTH) = 0
-  Mobs.Clear
-  
-  DIM _byte AS STRING * 1
-  dim _word as ushort
-
-  DIM MapFile AS INTEGER
-  MapFile = FREEFILE
-  
-  dim c as integer
-  dim ft as string
-  dim nm as string
-  dim cr as string
-  dim dt as string
-  dim info as string
+sub Map_AfterLoad(skipMobs as integer = 0)
     
     dim foundElevator as integer
+    dim tile as integer
+    dim x as integer
+    dim y as integer
+    dim i as integer
     
     foundElevator = 0
-
-  OPEN DATA_DIR+"rooms/" + Filename FOR BINARY AS MapFile
-
-    c = 1
-
-    '- Get the file header
-    '-----------------------
-
-      FOR n = 1 TO 12
-        GET #MapFile, c, _byte
-        ft = ft + _byte
-        c = c + 1
-      NEXT n
-
-      GET #MapFile, c, _byte: c = c + 1
-      GET #MapFile, c, _byte: c = c + 1
+    for y = 0 to 12
+        for x = 0 to 200
+            FloorMap(x, y) = 0
+            tile = TileMap(x, y)
+            select case tile
+            case TileIds.ElevatorDoorLeft
+                Player.y = y * SPRITE_H
+                Player.x = x * SPRITE_W + int(SPRITE_W / 2)
+                XShift = Player.x - 128
+                Elevator.x = x * SPRITE_W
+                Elevator.y = y * SPRITE_H
+                Elevator.mapX = x
+                Elevator.mapY = y
+                Elevator.w = SPRITE_W * 2
+                Elevator.h = SPRITE_H
+                foundElevator = 1
+            case TileIds.DoorGreen, TileIds.DoorBlue, TileIds.DoorYellow, TileIds.DoorRed
+                Doors(NumDoors).x = x * SPRITE_W
+                Doors(NumDoors).y = y * SPRITE_H
+                Doors(NumDoors).w = SPRITE_W
+                Doors(NumDoors).h = SPRITE_H
+                Doors(NumDoors).mapX = x
+                Doors(NumDoors).mapY = y
+                Doors(NumDoors).accessLevel = GREENACCESS + (tile - TileIds.DoorGreen)
+                TileMap(x, y) = TileIds.DoorBehind
+                NumDoors += 1
+            case TileIds.DoorWhite
+                Doors(NumDoors).x = x * SPRITE_W
+                Doors(NumDoors).y = y * SPRITE_H
+                Doors(NumDoors).w = SPRITE_W
+                Doors(NumDoors).h = SPRITE_H
+                Doors(NumDoors).mapX = x
+                Doors(NumDoors).mapY = y
+                Doors(NumDoors).accessLevel = WHITEACCESS
+                TileMap(x, y) = TileIds.DoorBehind
+                NumDoors += 1
+            case TileIds.SpinningFan
+                AniMap(x, y) = AnimationIds.FastRotate
+            case 80 to 109
+                FloorMap(x, y) = 1
+            case TileIds.ColaTopLeft, TileIds.ColaTopRIght
+                FloorMap(x, y) = 19
+            case 162, 164, 166, 168, 171, 173, 175
+                FloorMap(x, y) = 30 '* stairs slope-up (left low / right high)
+            case 163, 165, 167, 169, 172, 174, 176
+                FloorMap(x, y) = 31 '* stairs slope-down
+            case 170, 179
+                FloorMap(x, y) = 10
+            case 120, 145, 160, 161, 177, 178
+                FloorMap(x, y) = 0
+            end select
+        next x
+    next y
     
-      IF ft <> "[LD2L-V0.45]" THEN
-        PRINT "ERROR: INVALID FILE"
-        SLEEP
-        EXIT SUB
-      END IF
-
-    '- Get the Level Name
-    '-----------------------
-
-      GET #MapFile, c, _byte: c = c + 1
-     
-      DO
-        GET #MapFile, c, _byte: c = c + 1
-        IF _byte = "|" THEN EXIT DO
-        nm = nm + _byte
-      LOOP
-
-    '- Get the Credits
-    '-----------------------
-
-      DO
-        GET #MapFile, c, _byte: c = c + 1
-        IF _byte = "|" THEN EXIT DO
-        cr = cr + _byte
-      LOOP
-
-    '- Get the Date
-    '-----------------------
-
-      DO
-        GET #MapFile, c, _byte: c = c + 1
-        IF _byte = CHR(34) THEN EXIT DO
-        dt = dt + _byte
-      LOOP
-
-    '- Load in the info
-    '-----------------------
-
-      GET #MapFile, c, _byte: c = c + 1
-      GET #MapFile, c, _byte: c = c + 1
-      GET #MapFile, c, _byte: c = c + 1
-
-      DO
-        GET #MapFile, c, _byte: c = c + 1
-        IF _byte = CHR(34) THEN EXIT DO
-        info = info + _byte
-      LOOP
+    '*******************************************************************
+    '* ELEVATOR SETUP
+    '*******************************************************************
+    if foundElevator then
+        Elevator.tileToLeft = TileMap(Elevator.mapX-1, Elevator.mapY)
+        Elevator.tileToRight = TileMap(Elevator.mapX+2, Elevator.mapY)
+        Elevator.isOpen = 0
+        Elevator.isClosed = 1
+    end if
     
-    '- Load in the map data
-    '-----------------------
+    if CurrentRoom = Rooms.WeaponsLocker then
+        for i = 0 to NumItems-1
+            Items(i).y -= 4
+        next i
+    end if
     
-      GET #MapFile, c, _byte: c = c + 1
-      GET #MapFile, c, _byte: c = c + 1
-      
-      loadedSprites(0) = 0
-      numLoadedSprites = 1
-      
-      dim found as integer
-      
-      'SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
-      FOR y = 0 TO 12
-        GET #MapFile, c, _byte: c = c + 1
-        GET #MapFile, c, _byte: c = c + 1
-        FOR x = 0 TO 200
-          GET #MapFile, c, _byte: c = c + 1
-          IF x < MAPW THEN
-            TileMap(x, y) = asc(_byte) 'int(rnd(1)*20) 'asc(_byte)
-            'found = 0
-            'FOR n = 0 TO numLoadedSprites-1
-            '    IF loadedSprites(n) = ASC(_byte) THEN
-            '        'DEF SEG = VARSEG(TileMap(0))
-            '        'POKE (x + y * MAPW), n
-            '        'DEF SEG
-            '        TileMap(x, y) = n
-            '        found = 1
-            '        EXIT FOR
-            '    END IF
-            'NEXT n
-            'IF found = 0 THEN
-            '    loadedSprites(numLoadedSprites) = ASC(_byte)
-            '    'DEF SEG = VARSEG(TileMap(0))
-            '    'POKE (x + y * MAPW), numLoadedSprites
-            '    'DEF SEG
-            '    TileMap(x, y) = numLoadedSprites
-            '    numLoadedSprites = numLoadedSprites + 1
-            'END IF
-          END IF
-          IF ASC(_byte) = 14 THEN
-            Player.y = y * SPRITE_H
-            Player.x = x * SPRITE_W + int(SPRITE_W / 2)
-            XShift = Player.x - 128
-            Elevator.x = x * SPRITE_W
-            Elevator.y = y * SPRITE_H
-            Elevator.mapX = x
-            Elevator.mapY = y
-            Elevator.w = SPRITE_W * 2
-            Elevator.h = SPRITE_H
-            foundElevator = 1
-          END IF
-          IF ASC(_byte) >= 90 AND ASC(_byte) <= 93 THEN
-            Doors(NumDoors).x = x * SPRITE_W
-            Doors(NumDoors).y = y * SPRITE_H
-            Doors(NumDoors).w = SPRITE_W
-            Doors(NumDoors).h = SPRITE_H
-            Doors(NumDoors).mapX = x
-            Doors(NumDoors).mapY = y
-            Doors(NumDoors).accessLevel = GREENACCESS + (ASC(_byte) - 90)
-            TileMap(x, y) = 1
-            NumDoors = NumDoors + 1
-          END IF
-          IF ASC(_byte) = 106 THEN
-            Doors(NumDoors).x = x * SPRITE_W
-            Doors(NumDoors).y = y * SPRITE_H
-            Doors(NumDoors).w = SPRITE_W
-            Doors(NumDoors).h = SPRITE_H
-            Doors(NumDoors).mapX = x
-            Doors(NumDoors).mapY = y
-            Doors(NumDoors).accessLevel = WHITEACCESS
-            NumDoors = NumDoors + 1
-          END IF
-          FloorMap(x, y) = 0
-          IF ASC(_byte) >= 80 AND ASC(_byte) <= 109 THEN FloorMap(x, y) = 1
-          'if (asc(_byte) = 120) or (asc(_byte) = 124) or (asc(_byte) = 127) then FloorMap(x, y) = 1
-          if (asc(_byte) = 5) or (asc(_byte) = 6) then FloorMap(x, y) = 19
-            if (asc(_byte) = 120) then FloorMap(x, y) = 0
-            if (asc(_byte) = 145) then FloorMap(x, y) = 0
-          if (asc(_byte) = 160) then FloorMap(x, y) = 0
-          if (asc(_byte) = 161) then FloorMap(x, y) = 0
-          if (asc(_byte) = 162) then FloorMap(x, y) = 30
-          if (asc(_byte) = 163) then FloorMap(x, y) = 31
-          if (asc(_byte) = 164) then FloorMap(x, y) = 30
-          if (asc(_byte) = 165) then FloorMap(x, y) = 31
-          if (asc(_byte) = 166) then FloorMap(x, y) = 30
-          if (asc(_byte) = 167) then FloorMap(x, y) = 31
-          if (asc(_byte) = 168) then FloorMap(x, y) = 30
-          if (asc(_byte) = 169) then FloorMap(x, y) = 31
-          if (asc(_byte) = 170) then FloorMap(x, y) = 10
-          if (asc(_byte) = 171) then FloorMap(x, y) = 30
-          if (asc(_byte) = 172) then FloorMap(x, y) = 31
-          if (asc(_byte) = 173) then FloorMap(x, y) = 30
-          if (asc(_byte) = 174) then FloorMap(x, y) = 31
-          if (asc(_byte) = 175) then FloorMap(x, y) = 30
-          if (asc(_byte) = 176) then FloorMap(x, y) = 31
-          if (asc(_byte) = 177) then FloorMap(x, y) = 0
-          if (asc(_byte) = 178) then FloorMap(x, y) = 0
-          if (asc(_byte) = 179) then FloorMap(x, y) = 10
-        NEXT x
-      NEXT y
-    
-        if foundElevator then
-            Elevator.tileToLeft = TileMap(Elevator.mapX-1, Elevator.mapY)
-            Elevator.tileToRight = TileMap(Elevator.mapX+2, Elevator.mapY)
-            Elevator.isOpen = 0
-            Elevator.isClosed = 1
-        end if
-    
-
-    '- Load in the light map data
-    '----------------------------
-   
-      dim t as integer
-      
-      FOR y = 0 TO 12
-        GET #MapFile, c, _byte: c = c + 1
-        GET #MapFile, c, _byte: c = c + 1
-        FOR x = 0 TO 200
-          LightMapBg(x, y) = 0
-          LightMapFg(x, y) = 0
-          GET #MapFile, c, _byte: c = c + 1
-          IF x < MAPW THEN
-            'DEF SEG = VARSEG(TileMap(0)): t = PEEK (x + y * MAPW): DEF SEG
-            t = TileMap(x, y)
-            IF t = 0 THEN
-              'DEF SEG = VARSEG(LightMapBg(0)): POKE (x + y * MAPW), ASC(_byte): DEF SEG
-              LightMapBg(x, y) = ASC(_byte)
-            ELSE
-              'DEF SEG = VARSEG(LightMapFg(0)): POKE (x + y * MAPW), ASC(_byte): DEF SEG
-              LightMapFg(x, y) = ASC(_byte)
-            END IF
-          END IF
-          GET #MapFile, c, _byte: c = c + 1
-          IF x < MAPW THEN
-            'DEF SEG = VARSEG(LightMapBg(0))
-            'IF PEEK(x + y * MAPW) = 0 THEN POKE (x + y * MAPW), ASC(_byte)
-            'DEF SEG
-            if LightMapBg(x, y) = 0 then
-                LightMapBg(x, y) = ASC(_byte)
-            end if
-          END IF
-        NEXT x
-      NEXT y
-
-    '- Load in the animation data
-    '-----------------------
-   
-      'DEF SEG = VARSEG(AniMap(0))
-      FOR y = 0 TO 12
-        GET #MapFile, c, _byte: c = c + 1
-        GET #MapFile, c, _byte: c = c + 1
-        FOR x = 0 TO 200
-          GET #MapFile, c, _byte: c = c + 1
-          'IF x < MAPW THEN POKE (x + y * MAPW), ASC(_byte)
-          IF x < MAPW THEN AniMap(x, y) = ASC(_byte)
-        NEXT x
-      NEXT y
-      'DEF SEG
-
-    '- Load in the item data
-    '-----------------------
-      
-      dim i as integer
-      
-      GET #MapFile, c, _byte: c = c + 1
-      GET #MapFile, c, _byte: c = c + 1
-
-      IF did = 0 THEN
-        GET #MapFile, c, _byte: NumItems = ASC(_byte): c = c + 1
-      ELSE
-        c = c + 1
-      END IF
-      FOR i = 0 TO NumItems-1
-        IF did = 0 THEN
-          GET #MapFile, c, _word: Items(i).x = _word: c = c + 2
-          GET #MapFile, c, _word: Items(i).y = _word: c = c + 2
-          GET #MapFile, c, _byte: Items(i).id = ASC(_byte)+1: c = c + 1
-          IF CurrentRoom = 7 THEN Items(i).y = Items(i).y - 4
-        ELSE
-          c = c + 2
-          c = c + 2
-          c = c + 1
-        END IF
-      NEXT i
-
-  CLOSE #MapFile
-
     if skipMobs = 0 then
         select case Inventory(ItemIds.CurrentRoom)
         case Rooms.Rooftop, Rooms.PortalRoom, Rooms.WeaponsLocker, Rooms.Lobby, Rooms.Basement
         case else
             Mobs_Generate
+            Mobs_Animate '* let them go through their initial "spawned" state
         end select
     end if
-  
-  dim p as integer
-  dim u as ushort
-  
-  IF LD2_isDebugMode() THEN LD2_Debug "Loading Loaded Sprites"
-  DIM FileNo AS INTEGER
-  FileNo = FREEFILE
-  LD2_Debug "Floor "+Filename+" has"+STR(numLoadedSprites)+" unique tile sprites"
-  'REDIM sTile ( (numLoadedSprites+80)*EPS ) AS INTEGER
-  'DIM BPS AS INTEGER
-  'BPS = 16*16+4
-  'OPEN TilesFile FOR BINARY AS FileNo
-  'FOR n = 0 TO numLoadedSprites-1
-  '  TransparentSprites(n) = 0
-  '  SEEK #FileNo, 8+BPS*loadedSprites(n)
-  '  p = EPS*n
-  '  FOR t = 0 TO EPS-1
-  '    GET #FileNo, , u
-  '    IF (t > 1) AND (((u AND &hFF) = 0) OR ((u \ &h100) = 0)) THEN
-  '      TransparentSprites(n) = 1
-  '    END IF
-  '    'sTile(p+t) = i
-  '  NEXT t
-  'NEXT n
-  'CLOSE FileNo
-  IF LD2_isDebugMode() THEN LD2_Debug "Loading Loaded Sprites Done"
-  
-  NumLoadedTiles = numLoadedSprites
-  
-  'IF LD2_NotFlag(NOMIX) THEN
-  '  IF LD2_isDebugMode() THEN LD2_Debug "Mix Tiles Start"
-  '  MixTiles
-  '  IF LD2_isDebugMode() THEN LD2_Debug "Mix Tiles Done"
-  'ENDIF
-  
-  LD2_SetFlag MAPISLOADED
+    
+end sub
 
-    Mobs_Animate '- let them go through their initial "spawned" state
-  
+SUB Map_Load (Filename as string, skipMobs as integer = 0, skipItems as integer = 0)
+    
+    LD2_LogDebug "Map_Load ( "+filename+" )"
+    
+    dim mapFile as integer
+    dim _byte as ubyte
+    dim _word as ushort
+    dim tile as ubyte
+    dim char as string*1
+    dim newLine as string*2
+    dim separator as string*1
+    dim doubleQuotes as string*1
+    dim versiontag as string*12
+    dim levelname as string
+    dim author as string
+    dim created as string
+    dim comments as string
+    
+    dim x as integer, y as integer
+    dim n as integer
+    dim i as integer
+    
+    versiontag = ""
+    levelname  = ""
+    author     = ""
+    created    = ""
+    comments   = ""
+    separator  = "|"
+    
+    if LD2_hasFlag(CLASSICMODE) then
+        filename = DATA_DIR+"2002/rooms/"+filename
+    else
+        filename = DATA_DIR+"rooms/" + filename
+    end if
+    
+    Map_BeforeLoad skipItems
+    
+    mapFile = freefile
+    open filename for binary as mapFile
+    
+    '*******************************************************************
+    '* VERSION CHECK
+    '*******************************************************************
+    get #mapFile, , versiontag
+    if versiontag <> "[LD2L-V0.45]" then
+        LD2_LogDebug "Map_Load ( "+filename+" )   !!! ERROR: INVALID VERSION TAG"
+        exit sub
+    end if
+    
+    get #mapFile, , newLine
+    
+    '*******************************************************************
+    '* LEVEL NAME, AUTHOR, CREATED, COMMENTS
+    '*******************************************************************
+    get #MapFile, , doubleQuotes
+    do
+        get #MapFile, , char
+        if char = separator then exit do
+        levelname += char
+    loop
+    do
+        get #mapFile, , char
+        if char = separator then exit do
+        author += char
+    loop
+    do
+        get #mapFile, , char
+        if char = doubleQuotes then exit do
+        created += char
+    loop
+    
+    get #mapFile, , newLine
+    get #mapFile, , doubleQuotes
+    do
+        get #mapFile, , char
+        if char = doubleQuotes then exit do
+        comments += char
+    loop
+    
+    get #mapFile, , newLine
+    
+    '*******************************************************************
+    '* TILES
+    '*******************************************************************
+    for y = 0 to 12
+        get #mapFile, , newLine
+        for x = 0 to 200
+            get #MapFile, , tile
+            TileMap(x, y) = tile
+        next x
+    next y
+    
+    '*******************************************************************
+    '* LIGHT BG + FG
+    '*******************************************************************
+    for y = 0 to 12
+        get #mapFile, , newLine
+        for x = 0 to 200
+            LightMapBg(x, y) = 0
+            LightMapFg(x, y) = 0
+            get #mapFile, , tile: LightMapFg(x, y) = tile
+            get #mapFile, , tile: LightMapBg(x, y) = tile
+        next x
+    next y
+    
+    '*******************************************************************
+    '* TILE ANIMATIONS
+    '*******************************************************************
+    for y = 0 to 12
+        get #mapFile, , newLine
+        for x = 0 to 200
+            get #MapFile, , _byte
+            AniMap(x, y) = _byte
+        next x
+    next y
+    
+    '*******************************************************************
+    '* PICKUP ITEMS
+    '*******************************************************************
+    get #mapFile, , newLine
+    if skipItems = 0 then
+        get #mapFile, , _byte: NumItems = _byte
+        for i = 0 to NumItems-1
+            get #MapFile, , _word: Items(i).x = _word
+            get #MapFile, , _word: Items(i).y = _word
+            get #MapFile, , _byte: Items(i).id = _byte+1
+        next i
+    end if
+    
+    close #mapFile
+    
+    Map_AfterLoad skipMobs
+    
+    LD2_SetFlag MAPISLOADED
+    
 END SUB
 
-SUB LoadSprites (Filename AS STRING, BufferNum AS INTEGER)
+SUB LoadSprites (Filename as string, BufferNum as integer)
   
   IF LD2_isDebugMode() THEN LD2_Debug "LoadSprite ( "+Filename+","+STR(BufferNum)+" )"
 
@@ -1614,14 +1510,14 @@ sub Guts_Draw()
     
 end sub
 
-SUB SetPlayerState(state AS INTEGER)
+SUB SetPlayerState(state as integer)
     
     Player.state = state
     Player.stateTimestamp = TIMER
     
 END SUB
 
-SUB LD2_PopText (Message AS STRING)
+SUB LD2_PopText (Message as string)
 
     LD2_cls
    
@@ -1669,7 +1565,7 @@ SUB Doors_Animate
         
         playerHasAccess = (code >= Doors(i).accessLevel) or (tempcode >= Doors(i).accessLevel)
         playerIsNear    = (pcx >= Doors(i).x-16) and (pcx <= Doors(i).x+Doors(i).w+16) and (pcy >= Doors(i).y) and (pcy <= Doors(i).y+Doors(i).h)
-        doorIsMoving    = (Doors(i).ani > 0) and (Doors(i).ani < 4)
+        doorIsMoving    = (Doors(i).percentOpen > 0.0) and (Doors(i).percentOpen < 1.0)
         
         if playerHasAccess AND playerIsNear THEN
             Doors_Open i
@@ -1694,15 +1590,17 @@ SUB Doors_Animate
             Doors_Close i
         end if
         
-        Doors(i).ani = Doors(i).ani + Doors(i).anicount * DELAYMOD
-        if Doors(i).ani >= 4 then
-            Doors(i).ani = 4
+        Doors(i).percentOpen += Doors(i).speed * DELAYMOD
+        if Doors(i).percentOpen >= 1.0 then
+            Doors(i).percentOpen = 1.0
+            Doors(i).speed = 0
+            FloorMap(Doors(i).mapX, Doors(i).mapY) = 0
         end if
-        if Doors(i).ani <= 0 then
-            Doors(i).ani = 0
+        if Doors(i).percentOpen <= 0 then
+            Doors(i).percentOpen = 0
+            Doors(i).speed = 0
+            FloorMap(Doors(i).mapX, Doors(i).mapY) = 1
         end if
-        
-        Doors_Update i
         
     next i
     
@@ -1715,45 +1613,24 @@ sub Doors_Draw()
     dim offset as integer
     dim x as integer, y as integer
     dim n as integer
+    dim d as double
     
     crop.w = SPRITE_W
     for n = 0 to NumDoors-1
-        doorIsMoving = (Doors(n).ani > 0) and (Doors(n).ani < 4)
-        offset = int(Doors(n).ani * Doors(n).ani)
+        d = Doors(n).percentOpen
+        doorIsMoving = (d > 0.0) and (d < 1.0)
+        d *= 4
+        offset = int(d * d)
         if offset > 16 then offset = 16
         x = int(Doors(n).x) - int(XShift)
         y = int(Doors(n).y)
         crop.y = offset: crop.h = SPRITE_H-offset
         if doorIsMoving then
-            SpritesTile.putToScreenEx x, y, DOOR0 + Doors(n).accessLevel + 11, 0, 0, @crop
+            SpritesTile.putToScreenEx x, y, TileIds.DoorGreen + Doors(n).accessLevel + 11, 0, 0, @crop
         else
-            SpritesTile.putToScreenEx x, y, DOOR0 + Doors(n).accessLevel, 0, 0, @crop
+            SpritesTile.putToScreenEx x, y, TileIds.DoorGreen + Doors(n).accessLevel, 0, 0, @crop
         end if
     next n
-    
-end sub
-
-sub Doors_Update(id as integer)
-    
-    dim doorIsOpen as integer
-    dim doorIsMoving as integer
-    
-    doorIsOpen   = (Doors(id).ani = 4)
-    doorIsMoving = (Doors(id).ani > 0) and (Doors(id).ani < 4)
-    
-    if doorIsMoving then
-        'Map_PutTile Doors(id).mapX, Doors(id).mapY, TileIds.DoorOpening + Doors(id).ani, 1
-    elseif doorIsOpen then
-        'Map_PutTile Doors(id).mapX, Doors(id).mapY, TileIds.DoorBehind, 1
-        Map_SetFloor Doors(id).mapX, Doors(id).mapY, 0
-    else
-        'if Doors(id).accessLevel = WHITEACCESS then
-        '    Map_PutTile Doors(id).mapX, Doors(id).mapY, DOORW, 1
-        'else
-        '    Map_PutTile Doors(id).mapX, Doors(id).mapY, DOOR0 + Doors(id).accessLevel, 1
-        'end if
-        Map_SetFloor Doors(id).mapX, Doors(id).mapY, 1
-    end if
     
 end sub
 
@@ -1761,14 +1638,14 @@ sub Doors_Open (id as integer)
     
     dim doorIsClosed as integer
     
-    doorIsClosed = (Doors(id).ani = 0)
+    doorIsClosed = (Doors(id).percentOpen = 0.0)
     
     if doorIsClosed then
         LD2_PlaySound Sounds.doorup
-        LD2_PlaySound Sounds.keypadGranted
+        'LD2_PlaySound Sounds.keypadGranted
     end if
     
-    Doors(id).anicount = DOOROPENSPEED
+    Doors(id).speed = DOOROPENSPEED
     
 end sub
 
@@ -1776,13 +1653,13 @@ sub Doors_Close (id as integer)
     
     dim doorIsOpen as integer
     
-    doorIsOpen = (Doors(id).ani = 4)
+    doorIsOpen = (Doors(id).percentOpen = 1.0)
     
     if doorIsOpen then
         LD2_PlaySound Sounds.doordown
     end if
     
-    Doors(id).anicount = DOORCLOSESPEED
+    Doors(id).speed = DOORCLOSESPEED
     
 end sub
 
@@ -1792,7 +1669,7 @@ sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as intege
     
 end sub
 
-SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, _flip AS INTEGER, isFixed as integer = 0)
+SUB LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0)
   
   LD2_SetTargetBuffer 1
   
@@ -1837,7 +1714,7 @@ SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, _f
 
 END SUB
 
-SUB LD2_putText (x AS INTEGER, y AS INTEGER, Text AS STRING, bufferNum AS INTEGER)
+SUB LD2_putText (x as integer, y as integer, Text as string, bufferNum as integer)
 
   dim n as integer
   
@@ -1873,15 +1750,50 @@ SUB LD2_RenderFrame
     
     LD2_LogDebug "LD2_RenderFrame"
     
-    Animation = Animation + .2
-    if Animation > 9 then Animation = 1
-
-    static rotation as double
-    rotation += 6
-    if rotation >= 360 then rotation = 0
+    static fastTimer as double
+    static fastClock as double
+    static slowTimer as double
+    static slowClock as double
+    static rotTimer as double
+    static rotClock as double
+    dim timediff as double
+    
+    dim animators(9) as integer
+    dim rotators(9) as integer
+    dim n as integer
+    
+    dim playerIsLit as integer
+    
+    timediff = (timer - fastTimer)
+    if timediff >= 0.0833 then
+        fastClock = (fastClock + timediff/0.0833) mod 12
+        fastTimer = timer
+    end if
+    if timediff >= 0.0277 then
+        slowClock = (slowClock + timediff/0.0833) mod 12
+        slowTimer = timer
+    end if
+    for n = 1 to 4
+        animators(n) = int(fastClock mod (n+1))
+    next n
+    for n = 5 to 8
+        animators(n) = int(slowClock mod (n-3))
+    next n
+    animators(0) = 0
+    animators(9) = 0
+    
+    timediff = (timer - rotTimer)
+    if timediff >= 0.02 then
+        rotClock = (rotClock + 6*timediff/0.02) mod 360
+        rotTimer = timer
+    end if
+    for n = 0 to 8
+        rotators(n) = 0
+    next n
+    rotators(9) = int(rotClock)
     
     LD2_CopyBuffer 2, 1
-    LD2_RenderBackground (CurrentRoom+1)/24
+    LD2_RenderBackground int((CurrentRoom+1)/24)
     
     dim xp as integer, yp as integer
     dim x as integer, y as integer
@@ -1889,6 +1801,7 @@ SUB LD2_RenderFrame
     dim skipStaticLighting as integer
     dim m as integer
     dim a as integer
+    dim rot as integer
     dim l as integer
     
     dim playerMapX as integer, playerMapY as integer
@@ -1896,35 +1809,25 @@ SUB LD2_RenderFrame
     playerMapY = int((Player.y+7) / SPRITE_H)
     
     LD2_SetTargetBuffer 1
-    if Lighting2 then '// background/window lighting
+    if ShowLightBG then
         yp = 0
         for y = 0 to 12
             xp = 0 - (int(XShift) and 15)
             mapX = (int(XShift) \ 16)
             mapY = y
             for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
-                'skipStaticLighting = skipLight(x, y)
-                'IF skipStaticLighting THEN
-                    '  DEF SEG = segTileMap: m% = PEEK(mt%): DEF SEG
-                    m = TileMap(mapX, mapY)
-                'ELSE
-                '  m = MixMap(mapX, mapY)
-                'END IF
-                if 0 then 'TransparentSprites(m) = 0 THEN
-                    a = (Animation mod (AniMap(mapX, mapY)+1))
-                    SpritesTile.putToScreen(xp, yp, m+a)
+                m = TileMap(mapX, mapY)
+                a = animators(AniMap(mapX, mapY))
+                rot = rotators(AniMap(mapX, mapY))
+                if rot then
+                    SpritesTile.putToScreen(xp, yp, 1)
+                    SpritesTile.putToScreenEx(xp, yp, m+a, 0, rot)
                 else
-                    a = (Animation mod (AniMap(mapX, mapY)+1))
-                    if m = TileIds.SpinningFan then
-                        SpritesTile.putToScreen(xp, yp, 1)
-                        SpritesTile.putToScreenEx(xp, yp, m, 0, int(rotation))
-                    else
-                        SpritesTile.putToScreen(xp, yp, m+a)
-                    end if
-                    l = LightMapBg(mapX, mapY)
-                    if l then
-                        SpritesLight.putToScreen(xp, yp, l)
-                    end if
+                    SpritesTile.putToScreen(xp, yp, m+a)
+                end if
+                l = LightMapBg(mapX, mapY)
+                if l then
+                    SpritesLight.putToScreen(xp, yp, l)
                 end if
                 mapX += 1
                 xp = xp + 16
@@ -1938,25 +1841,19 @@ SUB LD2_RenderFrame
             mapX = (int(XShift) \ 16)
             mapY = y
             for x = 0 to 20
-            '// draw mixed/shaded tile or standard tile (that will be shaded later -- because and entity is in its space -- dynamically shade the entity with it later)
-            'skipStaticLighting% = PeekBitmap%(x%, y%)
-            'skipStaticLighting = skipLight(x, y)
-            'if skipStaticLighting then
                 m = TileMap(mapX, mapY)
-            'else
-            '    m = MixMap(mapX, mapY)
-            'end if
-            if m then
-                a = (Animation mod (AniMap(mapX, mapY)+1))
-                ''if TransparentSprites(m%) then
-                ''  LD2put xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1, 0
-                ''else
-                '  LD2putf xp%, yp%, segTile, VARPTR(sTile(EPS * (m% + a%))), segBuffer1
-                    SpritesTile.putToScreen(xp, yp, m+a)
-                ''end if
-            end if
-            mapX += 1
-            xp = xp + 16
+                if m then
+                    a = animators(AniMap(mapX, mapY))
+                    rot = rotators(AniMap(mapX, mapY))
+                    if rot then
+                        SpritesTile.putToScreen(xp, yp, 1)
+                        SpritesTile.putToScreenEx(xp, yp, m+a, 0, rot)
+                    else
+                        SpritesTile.putToScreen(xp, yp, m+a)
+                    end if
+                end if
+                mapX += 1
+                xp = xp + 16
             next x
             yp = yp + 16
         next y
@@ -1968,9 +1865,8 @@ SUB LD2_RenderFrame
     MapItems_Draw
     Guts_Draw
     
-    dim playerIsLit as integer
-    playerIsLit = Player.is_shooting and (Player.weapon <> FIST) and ((Player.uAni-Player.stillAni) < 1.5)
-    if Lighting1 then '// foreground lighting
+    if ShowLightFG then
+        playerIsLit = Player.is_shooting and (Player.weapon <> FIST) and ((Player.uAni-Player.stillAni) < 1.5)
         yp = 0
         for y = 0 to 12
             xp = 0 - (int(XShift) and 15)
@@ -2038,15 +1934,15 @@ SUB LD2_RenderFrame
     
 end sub
 
-FUNCTION LD2_HasFlag (flag AS INTEGER) as integer
+FUNCTION LD2_HasFlag (flag as integer) as integer
     
     return ((GameFlags AND flag) > 0)
     
 END FUNCTION
 
-FUNCTION LD2_NotFlag (flag AS INTEGER) as integer
+FUNCTION LD2_NotFlag (flag as integer) as integer
     
-    DIM hasFlag AS INTEGER
+    DIM hasFlag as integer
     
     hasFLag = (GameFlags AND flag)
     
@@ -2058,13 +1954,13 @@ FUNCTION LD2_NotFlag (flag AS INTEGER) as integer
     
 END FUNCTION
 
-SUB LD2_SetFlag (flag AS INTEGER)
+SUB LD2_SetFlag (flag as integer)
     
     GameFlags = (GameFlags OR flag)
     
 END SUB
 
-SUB LD2_ClearFlag (flag AS INTEGER)
+SUB LD2_ClearFlag (flag as integer)
     
     GameFlags = (GameFlags OR flag) XOR flag
     
@@ -2078,7 +1974,7 @@ SUB LD2_ClearMobs
 
 END SUB
 
-SUB LD2_SetPlayerlAni (Num AS INTEGER)
+SUB LD2_SetPlayerlAni (Num as integer)
 
   '- Set the current lower animation of the player
 
@@ -2086,7 +1982,7 @@ SUB LD2_SetPlayerlAni (Num AS INTEGER)
 
 END SUB
 
-SUB LD2_SetSceneMode (OnOff AS INTEGER)
+SUB LD2_SetSceneMode (OnOff as integer)
 
   '- Set to scene mode on or off
   '-----------------------------
@@ -2095,24 +1991,30 @@ SUB LD2_SetSceneMode (OnOff AS INTEGER)
 
 END SUB
 
-SUB LD2_SetSceneNo (Num AS INTEGER)
+SUB LD2_SetSceneNo (Num as integer)
 
   Scene = Num
 
 END SUB
 
-SUB LD2_SetBossBar (mobId AS INTEGER)
+SUB LD2_SetBossBar (mobId as integer)
 
-  ShowLife = mobId
+  BossBarId = mobId
 
 END SUB
 
-SUB LD2_SetNotice (message AS STRING)
+SUB LD2_SetNotice (message as string)
     
     GameNoticeMsg = message
     GameNoticeExpire = TIMER + 5.0
     
 END SUB
+
+function Map_GetXShift () as integer
+    
+    return XShift
+    
+end function
 
 sub Map_SetXShift (x as integer)
     
@@ -2120,6 +2022,8 @@ sub Map_SetXShift (x as integer)
     if XShift < 0 then
         XShift   = 0
     end if
+    '// edge is at 2896 (16*201), but lock at 2800 so stairs area
+    '// doesn't scroll left
     if (XShift > 2896) or (XShift > 2800) then
         XShift = 2896
     end if
@@ -2143,7 +2047,6 @@ sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer =
     select case layer
     case LayerIds.Tile
         TileMap(x, y) = Tile
-        MixMap(x, y) = Tile
     case LayerIds.LightFg
         LightMapFg(x, y) = Tile
     case LayerIds.LightBg
@@ -2209,7 +2112,63 @@ function MapItems_Pickup () as integer
     return success
 end function
 
-SUB Mobs_Add (x AS INTEGER, y AS INTEGER, id AS INTEGER)
+function MapItems_GetCount() as integer
+    
+    return NumItems
+    
+end function
+
+function MapItems_Append(fileNo as integer) as integer
+    
+    type ItemData
+        x as ubyte
+        y as ubyte
+        id as ubyte
+    end type
+    
+    dim datum as ItemData
+    dim n as integer
+    
+    seek #1, lof(fileNo)+1
+    
+    for n = 0 to NumItems-1
+        datum.x = int(Items(n).x/SPRITE_W)
+        datum.y = int(Items(n).y/SPRITE_H)
+        datum.id = Items(n).id
+        put #1, , datum
+    next n
+    
+    return 1
+    
+end function
+
+function Mobs_Append(fileNo as integer) as integer
+    
+    type MobData
+        x as ubyte
+        y as ubyte
+        id as ubyte
+    end type
+    
+    dim mob as Mobile
+    dim datum as MobData
+    
+    seek #1, lof(fileNo)+1
+    
+    Mobs.resetNext
+    do while Mobs.canGetNext()
+        Mobs.getNext mob
+        datum.x = int(mob.x/SPRITE_W)
+        datum.y = int(mob.y/SPRITE_H)
+        datum.id = mob.id
+        put #fileNo, , datum
+    loop
+    
+    return 1
+    
+end function
+
+SUB Mobs_Add (x as integer, y as integer, id as integer)
 
   DIM mob AS Mobile
   
@@ -2871,18 +2830,28 @@ sub Mobs_Draw()
             end if
         end if
     loop
-    if ShowLife then
+    if BossBarId then
         for x = 1 to 4
             SpritesLight.putToScreen(319 - (x * 16 - 16), 180, 2)
         next x
-        id = ShowLife
+        id = BossBarId
         Mobs.GetMob mob, id
-        if ShowLife = MobIds.Boss1 then LD2_putFixed 272, 180, 40, idENEMY, 1
-        if ShowLife = MobIds.Boss2 then LD2_putFixed 270 - 3, 180, 76, idSCENE, 0
-        if ShowLife = MobIds.Boss2 then LD2_putFixed 270 + 13, 180, 77, idSCENE, 0
+        select case id
+        case MobIds.Boss1
+            LD2_putFixed 272, 180, 40, idENEMY, 1
+        case MobIds.Boss2
+            LD2_putFixed 270 - 3, 180, 76, idSCENE, 0
+            LD2_putFixed 270 + 13, 180, 77, idSCENE, 0
+        end select
         LD2_PutText 288, 184, str(mob.life), 1
     end if
 end sub
+
+function Mobs_GetCount() as integer
+    
+    return Mobs.count()
+    
+end function
 
 sub Player_Animate()
     
@@ -2902,18 +2871,18 @@ sub Player_Animate()
             LD2_PopText "Lives Left:" + str(Inventory(ItemIds.Lives))
             LD2_SetFlag PLAYERDIED
             Inventory(ItemIds.Hp) = MAXLIFE
-            if showLife and (CurrentRoom = ROOFTOP) then
-                Inventory(SHELLS) = 40
-                Inventory(BULLETS) = 50
+            if (BossBarId > 0) and (CurrentRoom = Rooms.Rooftop) then
+                Inventory(SHOTGUNAMMO) = 40
+                Inventory(PISTOLAMMO) = 50
                 XShift = 1200
                 Player.x = 80
-            elseif showLife and (CurrentRoom = PORTALROOM) then
-                Inventory(SHELLS) = 40
-                Inventory(BULLETS) = 50
+            elseif (BossBarId > 0) and (CurrentRoom = Rooms.PortalRoom) then
+                Inventory(SHOTGUNAMMO) = 40
+                Inventory(PISTOLAMMO) = 50
                 XShift = 300
                 Player.x = 80
             else
-                Inventory(ItemIds.CurrentRoom) = WEAPONSLOCKER
+                Inventory(ItemIds.CurrentRoom) = Rooms.WeaponsLocker
                 Map_Load "7th.LD2"
                 XShift = 560
                 Player.x = 80
@@ -2938,6 +2907,21 @@ sub Player_Animate()
             Player.uAni = Player.uAni + .15
             if Player.uAni >= 8 then Player.uAni = 1: Player.is_shooting = 0
             Player.stillani = 1
+        case PISTOL
+            if Player.state = CROUCHING then
+                Player.uAni += 0.23
+                if Player.uAni >= (UpperSprites.PistolCrouchShootZ+1) then
+                    Player.uAni = int(UpperSprites.PistolCrouchShootZ): Player.is_shooting = 0
+                    Player.stillani = UpperSprites.PistolCrouchShootA
+                end if
+            else
+                Player.uAni += 0.19
+                if Player.uAni >= (UpperSprites.ShootPistolZ+1) then
+                    Player.uAni = int(UpperSprites.PointPistol): Player.is_shooting = 0
+                    Player.stillani = UpperSprites.PointPistol
+                    pistolTimer = timer
+                end if
+            end if
         case MACHINEGUN
             Player.uAni = Player.uAni + .4
             if Player.uAni >= 11 then
@@ -2945,27 +2929,20 @@ sub Player_Animate()
                 Player.stillani = 8
                 machineTimer = timer
             end if
-        case PISTOL
-            Player.uAni = Player.uAni + iif(Player.state = CROUCHING, 0.23, 0.19)
-            if Player.uAni >= 14 then
-                Player.uAni = 13: Player.is_shooting = 0
-                Player.stillani = 13
-                pistolTimer = timer
-            end if
-        case DESERTEAGLE
+        case MAGNUM
             Player.uAni = Player.uAni + .15
             if Player.uAni >= 18 then Player.uAni = 14: Player.is_shooting = 0
-        Player.stillani = 14
+            Player.stillani = 14
         end select
     else
-        if (machineTimer > 0) and ((timer-machineTimer) > 0.2) then
+        if (machineTimer > 0) and ((timer-machineTimer) > 0.45) then
             Player.uAni = 8
             Player.stillAni = 8
             machineTimer = 0
         end if
-        if (pistolTimer > 0) and ((timer-pistolTimer) > 0.2) then
-            Player.uAni = 69
-            Player.stillAni = 69
+        if (pistolTimer > 0) and ((timer-pistolTimer) > 1.5) then
+            Player.uAni = int(UpperSprites.HoldPistol)
+            Player.stillAni = UpperSprites.HoldPistol
             pistolTimer = 0
         end if
         'select case Player.weapon
@@ -3058,38 +3035,6 @@ sub Player_Animate()
         Elevator.isClosed = 1
     end if
     
-    dim px as double
-    dim py as double
-    dim xs as double
-    if Player.y < -12 then
-        px = Player.x
-        py = Player.y
-        xs = XShift
-        Inventory(ItemIds.CurrentRoom) += 1
-        Map_Load str(Inventory(ItemIds.CurrentRoom))+"th.ld2"
-        Player.x = px
-        Player.y = py+(13*16)-4
-        XShift = xs
-    end if
-    if Player.y > 196 then
-        px = Player.x
-        py = Player.y
-        xs = XShift
-        Inventory(ItemIds.CurrentRoom) -= 1
-        Map_Load str(Inventory(ItemIds.CurrentRoom))+"th.ld2"
-        Player.x = px
-        Player.y = py-(13*16)+4
-        XShift = xs
-    end if
-    if Player.x < -12 then
-        Player.x += (16*201)-4
-        XShift = (16*201)-SCREEN_W
-    end if
-    if player.x > 3212 then
-        Player.x -= (16*201)+4
-        XShift = 0
-    end if
-    
 end sub
 
 sub Player_Draw()
@@ -3106,14 +3051,14 @@ sub Player_Draw()
     select case Player.state
     case CROUCHING
         if Player.weapon = PISTOL then
-            SpritesLarry.putToScreenEx(px, py, 58, Player.flip)
+            SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player.flip)
             if Player.is_shooting then
-                SpritesLarry.putToScreenEx(px+iif(Player.flip=0,2,-2), py, 60+int(Player.uAni-12), Player.flip)
+                SpritesLarry.putToScreenEx(px+iif(Player.flip=0,2,-2), py, int(Player.uAni), Player.flip)
             else
-                SpritesLarry.putToScreenEx(px+iif(Player.flip=0,2,-2), py, 59, Player.flip)
+                SpritesLarry.putToScreenEx(px+iif(Player.flip=0,2,-2), py, UpperSprites.PistolCrouch, Player.flip)
             end if
         else
-            SpritesLarry.putToScreenEx(px, py, LARRYCROUCH, Player.flip)
+            SpritesLarry.putToScreenEx(px, py, FullBodySprites.Crouching, Player.flip)
         end if
     case LOOKINGUP
         SpritesLarry.putToScreenEx(px, py, 50, Player.flip)
@@ -3132,7 +3077,7 @@ sub Player_Draw()
                     SpritesLarry.putToScreenEx(px, py, lan, Player.flip)
                 end if
             else
-                if lan = 21 then '- legs still/standing-upright
+                if lan = LowerSprites.Standing then '- legs still/standing-upright
                     if Player.weapon = PISTOL then
                         SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 1, -1), py, lan, Player.flip)
                     else
@@ -3149,7 +3094,11 @@ sub Player_Draw()
                         SpritesLarry.putToScreenEx(px+iif(Player.flip, 2, -2), py, lan, Player.flip)
                     end if
                 end if
-                SpritesLarry.putToScreenEx(px, py, uan, Player.flip)
+                if (Player.is_shooting and (Player.weapon = PISTOL)) or(int(uan) = UpperSprites.PointPistol) then
+                    SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 3, -3), py, uan, Player.flip)
+                else
+                    SpritesLarry.putToScreenEx(px, py, uan, Player.flip)
+                end if
             end if
         end if
     end select
@@ -3219,7 +3168,7 @@ function Player_JumpDown () as integer
         y = pointsToCheck(n).y
         mapX = int(x / SPRITE_W)
         mapY = int(y / SPRITE_H)
-        m = FloorMap(x, y)
+        m = FloorMap(mapX, mapY)
         if m = 1 then
             return 0
         end if
@@ -3255,8 +3204,8 @@ function Player_Fall() as integer
             Player.lAni = 67
         end if
         Player.vy += Gravity*f
-        if Player.vy > 3 then
-            Player.vy = 3
+        if Player.vy > 9 then
+            Player.vy = 9
         end if
     else
         if isFalling then
@@ -3305,7 +3254,7 @@ function Player_Fall() as integer
     
 end function
 
-function Player_Move (dx AS DOUBLE, canFlip as integer = 1) as integer
+function Player_Move (dx as double, canFlip as integer = 1) as integer
 
     if (Player.state = CROUCHING)  or (Player.state = LOOKINGUP) or (Player.state = BLOCKED) then
         return 0
@@ -3586,9 +3535,9 @@ function Player_SetWeapon (itemId as integer) as integer
   
   IF itemId = FIST        THEN Player.uAni = 26: Player.stillani = Player.uAni
   IF itemId = SHOTGUN     THEN Player.uAni = 01: Player.stillani = Player.uAni
-  IF itemId = MACHINEGUN  THEN Player.uAni = 08: Player.stillani = Player.uAni
   IF itemId = PISTOL      THEN Player.uAni = 69: Player.stillani = Player.uAni
-  IF itemId = DESERTEAGLE THEN Player.uAni = 14: Player.stillani = Player.uAni
+  IF itemId = MACHINEGUN  THEN Player.uAni = 08: Player.stillani = Player.uAni
+  IF itemId = MAGNUM      THEN Player.uAni = 14: Player.stillani = Player.uAni
   
   return 1
   
@@ -3666,7 +3615,8 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         Inventory(ItemIds.PistolAmmo) -= 1
         damage = 2
         fireY = iif(Player.state = CROUCHING, 12, 5)
-        if Player.uAni = 68 or Player.uAni = 69 then Player.uAni = 11
+        Player.uAni = int(iif(Player.state = CROUCHING, UpperSprites.PistolCrouchShootA, UpperSprites.ShootPistolA))
+        Player.stillAni = Player.uAni
         
     case ItemIds.MachineGun
         
@@ -3812,7 +3762,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             LD2_RenderFrame
             LD2_RefreshScreen
             if Player.weapon = ItemIds.MachineGun then
-                WaitSeconds 0.025
+                WaitSeconds 0.0285
             else
                 WaitSeconds 0.05
             end if
@@ -3924,10 +3874,10 @@ sub Stats_Draw ()
     
     LD2_putTextCol pad+16, pad+3, str(Inventory(ItemIds.Hp)), 15, 1
     
-    if Player.weapon = SHOTGUN     then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(SHELLS)), 15, 1
-    if Player.weapon = MACHINEGUN  then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(ItemIds.MachineGunAmmo)), 15, 1
-    if Player.weapon = PISTOL      then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(BULLETS)), 15, 1
-    if Player.weapon = DESERTEAGLE then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(DEAGLES)), 15, 1
+    if Player.weapon = SHOTGUN     then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(SHOTGUNAMMO)), 15, 1
+    if Player.weapon = MACHINEGUN  then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(MACHINEGUNAMMO)), 15, 1
+    if Player.weapon = PISTOL      then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(PISTOLAMMO)), 15, 1
+    if Player.weapon = MAGNUM      then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(MAGNUMAMMO)), 15, 1
     if Player.weapon = FIST        then LD2_PutTextCol pad+16, pad+12+3, " INF", 15, 1
     
 end sub
@@ -3938,44 +3888,48 @@ function LD2_TileIsSolid(tileId as integer) as integer
     
 end function
 
-SUB LD2_ShutDown
-  
-  LD2_StopMusic
-  LD2_ReleaseSound
-  FreeCommon
-  
-END SUB
+sub LD2_ShutDown
+    
+    LD2_StopMusic
+    LD2_ReleaseSound
+    FreeCommon
+    
+end sub
 
-SUB LD2_SwapLighting
+sub LD2_SwapLighting
+    
+    if ShowLightBG and ShowLightFG then
+        ShowLightBG = 0
+        ShowLightFG = 1
+        LD2_SetNotice "BG OFF / FG ON"
+    elseif ShowLightBG = 0 and ShowLightFG = 1 then
+        ShowLightBG = 0
+        ShowLightFG = 0
+        LD2_SetNotice "BG OFF / FG OFF"
+    elseif ShowLightBG = 0 and ShowLightFG = 0 then
+        ShowLightBG = 1
+        ShowLightFG = 0
+        LD2_SetNotice "BG  ON / FG OFF"
+    elseif ShowLightBG = 1 and ShowLightFG = 0 then
+        ShowLightBG = 1
+        ShowLightFG = 1
+        LD2_SetNotice "BG  ON / FG  ON"
+    end if
+    
+end sub
 
-  IF Lighting1 = 1 AND Lighting2 = 1 THEN
-    Lighting1 = 1
-    Lighting2 = 0
-  ELSEIF Lighting1 = 0 AND Lighting2 = 1 THEN
-    Lighting1 = 1
-  ELSEIF Lighting1 = 1 AND Lighting2 = 0 THEN
-    Lighting1 = 0
-    Lighting2 = 0
-  ELSE
-    Lighting2 = 1
-  END IF
+sub LD2_WriteText (text as string)
+    
+    Text = UCASE(Text)
+    SceneCaption = Text
 
-END SUB
-
-SUB LD2_WriteText (Text AS STRING)
-
-  '- Write text
-
-  Text = UCASE(Text)
-  SceneCaption = Text
-
-END SUB
+end sub
 
 SUB LD2_CountFrame
 
-  STATIC seconds AS DOUBLE
-  STATIC first AS INTEGER
-  DIM AVGMOD AS DOUBLE
+  STATIC seconds as double
+  STATIC first as integer
+  DIM AVGMOD as double
   dim f as double
   
   IF first = 0 THEN
@@ -4016,131 +3970,6 @@ FUNCTION LD2_isDebugMode() as integer
     return LD2_HasFlag(DEBUGMODE)
     
 END FUNCTION
-
-SUB MixTiles()
-
-    'DIM spritePtr AS INTEGER
-    'DIM lightPtr1 AS INTEGER
-    'DIM lightPtr2 AS INTEGER
-    'DIM tempPtr AS INTEGER
-    DIM hash AS LONG
-    DIM x AS INTEGER
-    DIM y AS INTEGER
-    DIM m AS INTEGER
-    DIM sprite AS INTEGER
-
-    DIM hashes(80) AS LONG
-    DIM hashCount AS INTEGER
-    DIM found AS INTEGER
-
-    'DIM aniMapSeg AS INTEGER
-    'aniMapSeg = VARSEG(AniMap(0))
-
-    'tempPtr = VARPTR(sLight(EPS * 40))
-
-    DIM skip(15) AS INTEGER
-    DIM numSkip AS INTEGER
-    dim n as integer
-    n = 0
-    skip(n) = DOOR0: n = n + 1
-    skip(n) = DOOR1: n = n + 1
-    skip(n) = DOOR2: n = n + 1
-    skip(n) = DOOR3: n = n + 1
-    skip(n) = DOORW: n = n + 1
-    skip(n) = DOOROPEN+0: n = n + 1
-    skip(n) = DOOROPEN+1: n = n + 1
-    skip(n) = DOOROPEN+2: n = n + 1
-    skip(n) = DOOROPEN+3: n = n + 1
-    skip(n) = DOORBACK: n = n + 1
-    numSkip = n '- skip process / hole-punch
-    
-    dim SpritesTemp as VideoSprites
-    LD2_InitSprites "", @SpritesTemp, SPRITE_W, SPRITE_H
-    
-    dim t as integer
-    dim l1 as integer
-    dim l2 as integer
-    
-    m = 0
-    FOR y = 0 TO MAPH-1
-        FOR x = 0 TO MAPW-1
-            
-            'DEF SEG = tileMapSeg  : t%  = PEEK(m): DEF SEG
-            'DEF SEG = lightMapSeg1: l1% = PEEK(m): DEF SEG
-            'DEF SEG = lightMapSeg2: l2% = PEEK(m): DEF SEG
-            '
-            'spritePtr = VARPTR(sTile(EPS * t%))
-            'lightPtr1 = VARPTR(sLight(EPS * l1%))
-            'lightPtr2 = VARPTR(sLight(EPS * l2%))
-            
-            t = TileMap(x, y)
-            l1 = LightMapFg(x, y)
-            l2 = LightMapBg(x, y)
-            
-            'DEF SEG = aniMapSeg   : a%  = PEEK(m): DEF SEG
-            
-            FOR n = 0 TO numSkip-1
-                IF t = skip(n) THEN
-                END IF
-            NEXT n
-            IF ((l1 <> 0) OR (l2 <> 0)) AND (t > 0) THEN
-                dim a as long, b as long, c as long
-                dim i as integer
-                a = t: b = l1: c = l2
-                hash = (a OR (b*&H100 OR c*&H10000))
-                found = -1
-                FOR i = 0 TO hashCount-1
-                    IF hash = hashes(i) THEN
-                        found = i
-                        EXIT FOR
-                    END IF
-                NEXT i
-                IF (found = -1) AND (hashCount < 80) THEN
-                    IF (l2 <> 0) THEN
-                        'LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr2, tempPtr
-                        SpritesTemp.setAsTarget()
-                        SpritesTile.putToScreen(0, 0, t)
-                        SpritesLight.putToScreen(0, 0, l2)
-                        IF (l1 <> 0) THEN
-                            'LD2mixwl lightSeg, tempPtr, lightSeg, lightPtr1, tempPtr
-                            SpritesLight.putToScreen(0, 0, l1)
-                        END IF
-                    ELSEIF (l1 <> 0) THEN
-                        'LD2mixwl spriteSeg, spritePtr, lightSeg, lightPtr1, tempPtr
-                        SpritesTemp.setAsTarget()
-                        SpritesTile.putToScreen(0, 0, t)
-                        SpritesLight.putToScreen(0, 0, l1)
-                    END IF
-                    'LD2copySprite lightSeg, tempPtr, spriteSeg, VARPTR(sTile(EPS * (NumLoadedTiles+hashCount)))
-                    SpritesTile.setAsTarget()
-                    SpritesTemp.putToScreen((NumLoadedTiles+hashCount)*SPRITE_W, 0, 0)
-                    'DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (NumLoadedTiles+hashCount): DEF SEG
-                    'TransparentSprites(NumLoadedTiles+hashCount) = TransparentSprites(t)
-                    hashes(hashCount) = hash
-                    hashCount = hashCount + 1
-                    IF hashCount >= 80 THEN LD2_Debug "TOO MANY HASHES"
-                ELSE
-                    'DEF SEG = mixMapSeg: POKE VARPTR(MixMap(0))+m, (NumLoadedTiles+found): DEF SEG
-                    MixMap(x, y) = (NumLoadedTiles+found)
-                END IF
-            ELSE
-                'DEF SEG = mixMapSeg : POKE VARPTR(MixMap(0))+m, t%: DEF SEG
-                MixMap(x, y) = t
-            END IF
-            
-            m = m + 1
-            'RotatePalette
-        NEXT x
-    NEXT y
-    
-RETURN
-
-  'DEF SEG = VARSEG(sTile(0))
-  '  BSAVE "gfx\pp256\images\test0.put", VARPTR(sTile(0)), (EPS*120*2)
-  '  BSAVE "gfx\pp256\images\test1.put", VARPTR(sTile(EPS*120)), (EPS*hashCount*2)
-  'DEF SEG
-
-END SUB
 
 sub LD2_LogDebug(message as string)
     

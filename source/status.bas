@@ -204,7 +204,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
         LD2_AddElement @labelMixName1
     end if
 
-    LD2_GetPlayer player
+    Player_Get player
     
     '- show item that was picked up (lower-right corner of screen: "Picked Up Shotgun")
     '- copy steve scene sprites over
@@ -236,7 +236,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
         valueWeapon.text = "Machinegun"
     CASE PISTOL
         valueWeapon.text = "Pistol"
-    CASE DESERTEAGLE
+    CASE MAGNUM
         valueWeapon.text = "Magnum"
     END SELECT
     

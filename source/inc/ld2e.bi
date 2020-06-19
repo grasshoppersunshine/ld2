@@ -98,7 +98,6 @@ end enum
 
 declare sub Doors_Add ()
 declare sub Doors_Animate ()
-declare sub Doors_Update(id as integer)
 declare sub Doors_Open(id as integer)
 declare sub Doors_Close(id as integer)
 
@@ -109,10 +108,15 @@ declare sub Guts_Draw ()
 declare sub MapItems_Add (x as integer, y as integer, id as integer)
 declare sub MapItems_Draw ()
 declare function MapItems_Pickup () as integer
+declare function MapItems_Append(fileNo as integer) as integer
+declare function MapItems_GetCount() as integer
 
-declare sub Map_Load (filename as string, skipMobs as integer = 0)
+declare sub Map_AfterLoad(skipMobs as integer = 0)
+declare sub Map_BeforeLoad(byref skipItems as integer)
+declare sub Map_Load (filename as string, skipMobs as integer = 0, skipItems as integer = 0)
 declare sub Map_LockElevator ()
 declare sub Map_UnlockElevator ()
+declare function Map_GetXShift () as integer
 declare sub Map_SetXShift (x as integer)
 declare sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer = LayerIds.Tile)
 declare sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
@@ -124,9 +128,12 @@ declare sub Mobs_Draw ()
 declare sub Mobs_Kill (mob as Mobile)
 declare sub Mobs_KillAll ()
 declare sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
+declare function Mobs_Append(fileNo as integer) as integer
+declare function Mobs_GetCount() as integer
 
 declare sub Stats_Draw ()
 
+declare sub Player_Get (p as PlayerType)
 declare sub Player_Animate ()
 declare sub Player_Draw()
 declare function Player_Jump (amount as double, is_repeat as integer = 0) as integer
@@ -160,6 +167,10 @@ declare sub Player_SetTempAccess (accessLevel as integer)
 declare function Player_GetCollisionBox() as BoxType
 declare function Player_GetGotItem() as integer
 
+declare function LD2_HasCommandArg(argcsv as string) as integer
+declare sub LD2_ReadyCommandArgs()
+declare function LD2_HasNextCommandArg() as integer
+declare function LD2_GetNextCommandArg() as string
 
 DECLARE FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
 DECLARE SUB LD2_ClearInventorySlot (slot AS INTEGER)
@@ -169,7 +180,6 @@ DECLARE SUB LD2_CountFrame ()
 declare sub LD2_LogDebug (message as string)
 declare sub LD2_Debug (message as string)
 DECLARE SUB LD2_Drop (item as integer)
-DECLARE SUB LD2_GetPlayer (p AS PlayerType)
 DECLARE SUB LD2_GenerateSky ()
 DECLARE FUNCTION LD2_GetStatusAmount (slot AS INTEGER) as integer
 DECLARE FUNCTION LD2_GetStatusItem (slot AS INTEGER) as integer
