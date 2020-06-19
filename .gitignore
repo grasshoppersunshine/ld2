@@ -3,11 +3,13 @@ source/debug.log
 source/lib/
 source/var/
 
+data/editor
 data/sound/bak
 data/sound/maybe
 data/sound/recorded
 data/sound/splice
 data/sound/msplice
+data/sound/mptm/*.bak
 
 data/gfx/tmp.bmp
 

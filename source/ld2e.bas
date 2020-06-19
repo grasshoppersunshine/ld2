@@ -778,7 +778,7 @@ sub LD2_Init
     
     randomize timer
     
-    print "Larry the Dinosaur II v1.1.88"
+    print "Larry the Dinosaur II v1.1.130"
     
     if LD2_hasFlag(CLASSICMODE) then
         print "STARTING CLASSIC (2002) MODE"
