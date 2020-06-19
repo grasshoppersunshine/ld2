@@ -122,11 +122,13 @@ declare sub Map_PutTile (x as integer, y as integer, tile as integer, layer as i
 declare sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
 
 declare sub Mobs_Add (x as integer, y as integer, id as integer)
+declare sub Mobs_Get (mob as Mobile, id as integer)
 declare sub Mobs_Generate  (forceNumMobs as integer = 0, forceMobType as integer = 0)
 declare sub Mobs_Animate ()
 declare sub Mobs_Draw ()
 declare sub Mobs_Kill (mob as Mobile)
 declare sub Mobs_KillAll ()
+declare sub Mobs_Clear ()
 declare sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
 declare function Mobs_Append(fileNo as integer) as integer
 declare function Mobs_GetCount() as integer
@@ -174,7 +176,7 @@ declare function LD2_GetNextCommandArg() as string
 
 DECLARE FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
 DECLARE SUB LD2_ClearInventorySlot (slot AS INTEGER)
-DECLARE SUB LD2_ClearMobs ()
+declare sub LD2_ClearStatus ()
 DECLARE SUB LD2_CountFrame ()
 
 declare sub LD2_LogDebug (message as string)
@@ -198,11 +200,14 @@ DECLARE SUB LD2_SetPlayerlAni (Num AS INTEGER)
 DECLARE SUB LD2_SetNotice (message AS STRING)
 DECLARE SUB LD2_SetSceneMode (OnOff AS INTEGER)
 DECLARE SUB LD2_SetSceneNo (Num AS INTEGER)
+declare sub LD2_SetGravity (g as double)
+declare function LD2_GetGravity () as double
 DECLARE SUB LD2_ShutDown ()
 DECLARE SUB LD2_SetBossBar (mobId AS INTEGER)
 
-
-DECLARE SUB LD2_SwapLighting ()
+declare sub LD2_LightingToggle (id as integer)
+declare sub LD2_LightingSetEnabled (id as integer, enabled as integer)
+declare function LD2_LightingIsEnabled (id as integer) as integer
 
 declare function LD2_TileIsSolid(tileId as integer) as integer
 

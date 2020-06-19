@@ -24,3 +24,10 @@ declare function mouseMB() as integer
 declare function mouseWheelY() as integer
 declare function mouseWheelUp() as integer
 declare function mouseWheelDown() as integer
+declare sub StartTextInput ()
+declare sub StopTextInput ()
+declare function GetTextInput () as string
+declare function GetTextInputCursor() as integer
+declare sub SetTextInput (text as string)
+declare sub ClearTextInput ()
+

@@ -100,9 +100,11 @@
   declare sub PlayerCheck (player as PlayerType)
   declare sub SceneCheck (player as PlayerType)
   declare sub BossCheck (player as PlayerType)
+  declare function ConsoleCheck (comstring as string, player as PlayerType) as string
   declare sub FlagsCheck (player as PlayerType)
   declare sub ItemsCheck (player as PlayerType)
   declare sub GenerateRoofCode ()
+    declare function GetRoomName(id as integer) as string
   
 '======================
 '= SCENE-RELATED
@@ -985,6 +987,12 @@ SUB Main
     dim newReload as integer
     dim atKeypad as integer
     dim hasAccess as integer
+    dim showConsole as integer
+    dim inputText as string
+    dim response as string
+    dim consoleLog(99) as string
+    dim numLogs as integer
+    dim logPointer as integer
     
     CustomActions(1).actionId = ActionIds.Equip
     CustomActions(1).itemId   = ItemIds.Fist
@@ -995,6 +1003,19 @@ SUB Main
     NewGame
     
     dim nomouseRB as integer
+    dim consoleStart as double
+    dim consoleDialog as ElementType
+    dim e as ElementType
+    
+    LD2_InitElement @consoleDialog, "", 31
+    consoleDialog.y = SCREEN_H-FONT_H*4
+    consoleDialog.background = 0
+    consoleDialog.background_alpha = 160
+    consoleDialog.padding_x = 3
+    consoleDialog.padding_y = 3
+    consoleDialog.w = SCREEN_W-6
+    consoleDialog.h = SCREEN_H-consoleDialog.y-6
+    LD2_InitElement @e, "", 31
     
   DO
     
@@ -1005,13 +1026,108 @@ SUB Main
     
     PullEvents
  
-    Player_Animate
-	Mobs_Animate
-    Guts_Animate
-    Doors_Animate
+    if showConsole = 0 then
+        Player_Animate
+        Mobs_Animate
+        Guts_Animate
+        Doors_Animate
+    end if
 	LD2_RenderFrame
     
+    if showConsole then
+        consoleDialog.text =  "/"+GetTextInput()
+        LD2_RenderElement @consoleDialog
+        if (int((timer-consoleStart)*2) and 1) then
+            e.text = left(consoleDialog.text, GetTextInputCursor()+1)
+            LD2_putTextCol consoleDialog.x+consoleDialog.padding_x+LD2_GetElementTextWidth(@e)+1, consoleDialog.y+consoleDialog.padding_y, "_", 15, 1
+        end if
+    end if
+    
+	LD2_RefreshScreen
+	LD2_CountFrame
+    
     Player_Get player
+    
+    if showConsole then
+        if keypress(KEY_ESCAPE) or keypress(KEY_SLASH) then
+            StopTextInput
+            showConsole = 0
+            LD2_PlaySound Sounds.uiCancel
+        end if
+        if keypress(KEY_UP) then
+            if logPointer = -1 then
+                logPointer = numLogs
+                inputText = GetTextInput()
+            end if
+            logPointer -= 1
+            if logPointer < 0 then
+                logPointer = 0
+            else
+                SetTextInput(consoleLog(logPointer))
+            end if
+        end if
+        if keypress(KEY_DOWN) then
+            if logPointer >= 0 then
+                logPointer += 1
+                if logPointer > numLogs-1 then
+                    logPointer = -1
+                    SetTextInput(inputText)
+                else
+                    SetTextInput(consoleLog(logPointer))
+                end if
+            end if
+        end if
+        if keypress(KEY_ENTER) then
+            inputText = GetTextInput()
+            StopTextInput
+            showConsole = 0
+            response = ConsoleCheck( inputText, player )
+            if len(inputText) then
+                if numLogs = 0 then
+                    consoleLog(numLogs) = inputText
+                    numLogs += 1
+                elseif inputText <> consoleLog(numLogs-1) then
+                    consoleLog(numLogs) = inputText
+                    numLogs += 1
+                end if
+            end if
+            if numLogs > 99 then numLogs = 0
+            ClearTextInput
+            if len(response) then
+                select case left(response, 1)
+                case "!"
+                    LD2_PlaySound Sounds.uiDenied
+                    response = right(response, len(response)-1)
+                case "@"
+                    response = right(response, len(response)-1)
+                    '// no sound
+                case else
+                    LD2_PlaySound Sounds.keypadGranted
+                end select
+                LD2_SetNotice response
+            end if
+        end if
+        continue do
+    end if
+    if keypress(KEY_SLASH) then
+        if showConsole = 0 then
+            StartTextInput
+            showConsole = 1
+            logPointer = -1
+            consoleStart = timer
+            LD2_PlaySound Sounds.uiSubmenu
+        end if
+    end if
+    
+    if keypress(KEY_ESCAPE) then
+        LD2_PauseMusic
+        if STATUS_DialogYesNo("Exit Game?") = Options.Yes then
+            LD2_SetFlag EXITGAME
+            exit do
+        else
+            LD2_ContinueMusic
+        end if
+    end if
     
     PlayerCheck player
     SceneCheck player
@@ -1024,23 +1140,6 @@ SUB Main
     if CurrentRoom = ROoms.Basement then
         Rooms_DoBasement player
     end if
-
-	LD2_RefreshScreen
-	LD2_CountFrame
-   
-	if keyboard(KEY_ESCAPE) then
-        LD2_PauseMusic
-        if STATUS_DialogYesNo("Exit Game?") = Options.Yes then
-            LD2_SetFlag EXITGAME
-            exit do
-        else
-            LD2_ContinueMusic
-        end if
-    end if
-    
-    if keypress(KEY_L) then
-        LD2_SwapLighting
-	end if
     
     PlayerIsRunning = 0
     if keyboard(KEY_LSHIFT) or keyboard(KEY_KP_0) then
@@ -1082,13 +1181,6 @@ SUB Main
             LD2_PlaySound Sounds.reload
             newReload = 0
         end if
-        if keypress(KEY_K) then
-            Mobs_KillAll
-        end if
-        if keypress(KEY_G) then
-            Mobs_Generate(1)
-            LD2_PlaySound Sounds.rockJump
-        end if
     end if
     
     if mouseRB() then
@@ -1119,8 +1211,6 @@ SUB Main
         if keypress(KEY_3) then doAction CustomActions(2).actionId, CustomActions(2).itemId
         if keypress(KEY_4) then doAction CustomActions(3).actionId, CustomActions(3).itemId
 	end if
-
-	if PlayerIsRunning = 0 then LD2_SetPlayerlAni 21 '- legs still/standing/not-moving
 
 	FlagsCheck player
   
@@ -1546,6 +1636,361 @@ sub BossCheck (player as PlayerType)
     
 end sub
 
+function ConsoleCheck (comstring as string, player as PlayerType) as string
+    
+    dim mob as Mobile
+    dim argstring as string
+    dim numArgs as integer
+    dim args(9) as string
+    dim comm as string
+    dim response as string
+    dim suffix as string
+    dim idx as integer
+    dim qty as integer
+    dim id as integer
+    dim argx as string
+    dim argy as string
+    dim arg as string
+    dim x as integer
+    dim y as integer
+    
+    comstring = lcase(trim(comstring))
+    
+    idx = instr(comstring, " ")
+    if idx then
+        comm = left(comstring, idx-1)
+        argstring = trim(right(comstring, len(comstring)-idx))
+    else
+        comm = comstring
+        argstring = ""
+    end if
+    numArgs = 0
+    while instr(argstring, " ")
+        idx = instr(argstring, " ")
+        args(numArgs) = left(argstring, idx-1)
+        argstring = trim(right(argstring, len(argstring)-idx))
+        numArgs += 1
+        if numArgs > 9 then exit while
+    wend
+    if len(argstring) and (numArgs <= 9) then
+        args(numArgs) = argstring
+        numArgs += 1
+    end if
+    
+    select case comm
+    case "music"
+        select case args(0)
+        case "id"
+            if val(args(1)) > 0 then
+                LD2_PlayMusic val(args(1))
+                response = "Changed music to ID "+str(val(args(1)))
+            else
+                response = "!Invalid music ID "+str(val(args(1)))
+            end if
+        case "start"
+            LD2_PlayMusic
+            response = "Started music"
+        case "stop"
+            LD2_StopMusic
+            response = "Stopped music"
+        case "volume"
+            if len(args(1)) then
+                LD2_SetMusicVolume val(args(1))
+                response = "Set music volume to "+str(val(args(1)))
+            else
+                response = "Music volume is at "+str(LD2_GetMusicVolume())
+            end if
+        case "pause"
+            LD2_PauseMusic
+            response = "Paused music"
+        case "continue"
+            LD2_ContinueMusic
+            response = "Continued music"
+        end select
+        if len(LD2_GetSoundErrorMsg()) then
+            response = "!"+LD2_GetSoundErrorMsg()
+        end if
+    case "inventory"
+        select case args(0)
+        case "clear"
+            LD2_ClearStatus
+            response = "Emptied inventory"
+        case "add"
+            select case args(1)
+            case "shotgun"
+                LD2_AddToStatus(ItemIds.Shotgun, 1)
+                Player_AddAmmo ItemIds.ShotgunAmmo, 99
+                response = "Added SHOTGUN to inventory"
+            case "pistol"
+                LD2_AddToStatus(ItemIds.Pistol, 1)
+                Player_AddAmmo ItemIds.PistolAmmo, 99
+                response = "Added HANDGUN to inventory"
+            case "machinegun"
+                LD2_AddToStatus(ItemIds.MachineGun, 1)
+                Player_AddAmmo ItemIds.MachineGunAmmo, 99
+                response = "Added MACHINEGUN to inventory"
+            case "magnum"
+                LD2_AddToStatus(ItemIds.Magnum, 1)
+                Player_AddAmmo ItemIds.MagnumAmmo, 99
+                response = "Added MAGNUM to inventory"
+            case else
+                id = Inventory_SidToItemId(args(1))
+                if id = -1 then
+                    response = "!Item not found "+args(1)
+                else
+                    if val(args(2)) > 0 then
+                        qty = val(args(2))
+                    else
+                        qty = 1
+                    end if
+                    if LD2_AddToStatus(id, qty) = 0 then
+                        if qty > 1 then
+                            response = "Added "+str(qty)+" "+Inventory_GetShortName(id)+" to inventory"
+                        else
+                            response = "Added "+Inventory_GetShortName(id)+" to inventory"
+                        end if
+                    else
+                        response = "!Unable to add item to inventory"
+                    end if
+                end if
+            end select
+        end select
+    case "mobs"
+        select case args(0)
+            case "add"
+                qty = iif(len(args(1)),val(args(1)),1)
+                if qty > 0 then
+                    Mobs_Generate(qty)
+                    response = "Added "+str(qty)+" mob"+iif(qty>1,"s","")
+                else
+                    response = "!Quantity must be greater than zero"
+                end if
+            case "clear"
+                Mobs_Clear
+                response = "Removed all mobs"
+            case "killall"
+                Mobs_KillAll
+                response = "Killed all mobs"
+            case "kill"
+                if val(args(1)) > 0 then
+                    Mobs_Get mob, val(args(1))
+                    if mob.id > 0 then
+                        Mobs_Kill mob
+                        response = "Killed mob "+str(val(args(1)))
+                    else
+                        response = "!Mob not found "+str(val(args(1)))
+                    end if
+                end if
+        end select
+    case "room", "floor", "level"
+        if len(args(0)) = 0 then
+            response = "!Missing room/floor number"
+        else
+            id = val(args(0))
+            if (id >= 0) and (id <= 23) then
+                CurrentRoom = id
+                Player_SetItemQty(ItemIds.CurrentRoom, id)
+                Map_Load str(id)+"th.ld2"
+                select case id
+                case 1, 21: suffix = "st"
+                case 2, 22: suffix = "nd"
+                case 3, 23: suffix = "rd"
+                case else: suffix = "th"
+                end select
+                response = str(id)+suffix+" floor\ \"+GetRoomName(id)
+            else
+                response = "!Not a valid room numer "+str(id)
+            end if
+        end if
+    case "scene"
+        select case args(0)
+            case "1", "start", "steve1", "chess", "intro", "cola": Scene1
+            case "2", "janitor", "janitor1": Scene3
+            case "3", "janitor2", "janitordies": Scene4
+            case "4", "elevator": Scene5
+            case "5", "weapons", "weapons1": Scene7
+            case "6", "stevegone", "steve2": SceneSteveGone
+            case "7", "goo", "goo1": SceneGoo
+            case "8", "googone", "removegoo", "goo2": SceneGooGone
+            case "9", "rooftop", "yellowcard": SceneRooftopGotCard
+            case "10", "weapons2": SceneWeapons2
+            case "11", "weapons3": SceneWeapons3
+            case "12", "stevefound", "barneyplan", "truth", "steve3": SceneBarneyPlan
+            case "13", "crawl", "vent", "ventcrawl", "steve4": SceneVentCrawl
+            case "14", "lobby", "notleavingsteve", "steve5": SceneLobby
+            case "15", "portal", "steve6": ScenePortal
+            case "16", "end", "theend": SceneTheEnd
+            case else
+                response = "!Not a valid scene number "+str(id)
+        end select
+    case "player"
+        select case args(0)
+            case "x"
+                arg = args(1)
+                if len(arg) = 0 then
+                    response = "Player X is "+str(Player_GetX())
+                else
+                    if (left(arg, 1) = "+") or (left(arg, 1) = "-") then
+                        if (right(arg, len(arg)-1) = "0") or (val(arg) <> 0) then
+                            x = Player.x + val(arg)
+                        else
+                            response = "!Invalid value for X"
+                        end if
+                    else
+                        if (arg = "0") or (val(arg) > 0) then
+                            x = val(arg)
+                        else
+                            response = "!Invalid value for X"
+                        end if
+                    end if
+                    if len(response) = 0 then
+                        if (x < 0) or (x > 200*SPRITE_W) then
+                            response = "!X is out of bounds"
+                        else
+                            Player_SetXY x, Player.y
+                        end if
+                    end if
+                end if
+            case "y"
+                arg = args(1)
+                if len(arg) = 0 then
+                    response = "Player Y is "+str(Player_GetX())
+                else
+                    if (left(arg, 1) = "+") or (left(arg, 1) = "-") then
+                        if (right(arg, len(arg)-1) = "0") or (val(arg) <> 0) then
+                            y = Player.y + val(arg)
+                        else
+                            response = "!Invalid value for Y"
+                        end if
+                    else
+                        if (arg = "0") or (val(arg) > 0) then
+                            y = val(arg)
+                        else
+                            response = "!Invalid value for Y"
+                        end if
+                    end if
+                    if len(response) = 0 then
+                        if (y < 0) or (y > 12*SPRITE_W) then
+                            response = "!Y is out of bounds"
+                        else
+                            Player_SetXY Player.x, y
+                        end if
+                    end if
+                end if
+            case "kill"
+                Player_SetItemQty(ItemIds.HP, 0)
+            case "hp"
+                arg = args(1)
+                if (left(arg, 1) = "+") or (left(arg, 1) = "-") then
+                    if (right(arg, len(arg)-1) = "0") or (val(arg) <> 0) then
+                        Player_AddItem(ItemIds.HP, val(arg))
+                    else
+                        response = "!Invalid value for HP"
+                    end if
+                else
+                    if (arg = "0") or (val(arg) > 0) then
+                        Player_SetItemQty(ItemIds.HP, val(arg))
+                    else
+                        response = "!Invalid value for HP"
+                    end if
+                end if
+            case "move", "xy"
+                argx = args(1)
+                argy = args(2)
+                if (len(argx) = 0) and (args(0) = "xy") then
+                    response = "Player XY is "+str(Player_GetX())+" "+str(Player_GetY())
+                else
+                    if lcase(argx) = "x" then argx = "+0"
+                    if lcase(argy) = "y" then argy = "+0"
+                    if (lcase(left(argx, 2)) = "x+") or (lcase(left(argx, 2)) = "x-") then argx = right(argx, len(argx)-1)
+                    if (lcase(left(argy, 2)) = "y+") or (lcase(left(argy, 2)) = "y-") then argy = right(argy, len(argy)-1)
+                    if left(argx, 1) = "+" or left(argx, 1) = "-" then
+                        if (right(argx, len(argx)-1) = "0") or (val(argx) <> 0) then
+                            x = Player.x + val(argx)*SPRITE_W
+                        else
+                            response = "!Invalid value for X"
+                        end if
+                    else
+                        if (argx = "0") or (val(argx) > 0) then
+                            x = val(argx)*SPRITE_W
+                        else
+                            response = "!Invalid value for X"
+                        end if
+                    end if
+                    if len(argy) > 0 then
+                        if left(argy, 1) = "+" or left(argy, 1) = "-" then
+                            if (right(argy, len(argy)-1) = "0") or (val(argy) <> 0) then
+                                y = Player.y + val(argy)*SPRITE_H
+                            else
+                                response = "!Invalid value for Y"
+                            end if
+                        else
+                            if (argy = "0") or (val(argy) > 0) then
+                                y = val(argy)*SPRITE_H
+                            else
+                                response = "!Invalid value for Y"
+                            end if
+                        end if
+                    else
+                        y = Player.y
+                    end if
+                    if len(response) = 0 then
+                        if (x < 0) or (x > 200*SPRITE_W) then
+                            response = "!X is out of bounds"
+                        end if
+                        if (y < 0) or (y > 12*SPRITE_H) then
+                            response = iif(len(response)=0,"!Y is out of bounds",response+"\Y is out of bounds")
+                        end if
+                        if len(response) = 0 then
+                            Player_SetXY x, y
+                        end if
+                    end if
+                end if
+            case else
+                response = "!Not a valid player command"
+        end select
+    case "gravity"
+        arg = args(0)
+        if len(arg) then
+            if (arg = "0") or (val(arg) > 0) then
+                LD2_SetGravity val(arg)
+                response = "Set gravity to "+str(val(arg))
+            else
+                response = "!Invalid value for gravity"
+            end if
+        else
+            response = "Gravity is set at " + right(str(LD2_GetGravity()), 6)
+        end if
+    case "light"
+        select case args(1)
+        case "bg": id = 0
+        case "fg": id = 1
+        case else: response = "!Invalid Light Id"
+        end select
+        if len(args(2)) = 0 then
+            response = iif(id=0,"Background","Foreground")+" lighting is "+iif(LD2_LightingIsEnabled(id), "enabled", "disabled")
+        else
+            select case args(2)
+            case "toggle"
+                LD2_LightingToggle(id)
+            case "on"
+                LD2_LightingSetEnabled(id, 1)
+            case "off"
+                LD2_LightingSetEnabled(id, 0)
+            case else
+                response = "!Not a valid light command\ \Must be (on/off/toggle)"
+            end select
+        end if
+    case else
+        if len(trim(comstring)) then
+            response = "!Not a valid command"
+        end if
+    end select
+    
+    return response
+    
+end function
+
 sub FlagsCheck (player as PlayerType)
     
     dim itemId as integer
@@ -1742,7 +2187,7 @@ SUB Start
     end if
     LD2_Init
     LD2_SetMusicMaxVolume 1.00
-    LD2_SetSoundMaxVolume 0.65
+    LD2_SetSoundMaxVolume 0.50
     LD2_SetMusicVolume 1.0
     LD2_SetSoundVolume 1.0
     LoadSounds
@@ -2134,3 +2579,35 @@ sub SaveFloor()
     header.numMobs  = Mobs_GetCount()
     
 end sub
+
+function inputText(text as string, currentVal as string = "") as string
+	
+	return ""
+	
+end function
+
+function GetRoomName(id as integer) as string
+    
+    dim roomsFile as string
+    dim floorNo as integer
+    dim filename as string
+    dim label as string
+    dim allowed as string
+    
+    roomsFile = iif(LD2_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
+	
+	open DATA_DIR+roomsFile for input as #1
+	do while not eof(1)
+		input #1, floorNo
+		input #1, filename
+		input #1, label
+		input #1, allowed
+        if floorNo = id then
+            exit do
+        end if
+	loop
+	close #1
+    
+    return trim(label)
+    
+end function

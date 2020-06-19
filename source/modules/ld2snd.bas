@@ -126,32 +126,38 @@ SUB LD2_SetMusic (id AS INTEGER)
     
 END SUB
 
-SUB LD2_LoadMusic (id AS INTEGER)
+sub LD2_LoadMusic (id as integer)
 
-	DIM i AS INTEGER
-    IF LD2soundEnabled THEN
-        FOR i = 0 TO LD2musicListCount - 1
-            IF LD2musicList(i).id = id THEN
+    dim found as integer
+	dim i as integer
+    found = 0
+    if LD2soundEnabled then
+        for i = 0 to LD2musicListCount - 1
+            if LD2musicList(i).id = id then
                 SOUND_StopMusic
                 SOUND_SetMusic LD2musicList(i).filepath
                 LoopMusic = LD2musicList(i).loopmusic
-                EXIT FOR
-            END IF
-        NEXT i
-    END IF
+                found = 1
+                exit for
+            end if
+        next i
+    end if
+    if found = 0 then
+        SoundErrorMsg = "ID "+str(id)+" not found"
+    end if
 
-END SUB
+end sub
 
-SUB LD2_PlayMusic (id AS INTEGER = 0)
+sub LD2_PlayMusic (id as integer = 0)
 
-    IF LD2soundEnabled THEN
+    if LD2soundEnabled then
         if id > 0 then
             LD2_SetMusic id
         end if
         SOUND_PlayMusic LoopMusic
-    END IF
-
-END SUB
+    endif
+    
+end sub
 
 SUB LD2_PlaySound (id AS INTEGER)
 

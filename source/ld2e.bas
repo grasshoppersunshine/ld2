@@ -204,7 +204,6 @@
     
     dim shared SceneCaption as string
     dim shared SceneMode as integer
-    dim shared Scene as integer
     
     dim shared BossBarId as integer
     dim shared ShowLightBG as integer
@@ -356,6 +355,18 @@ SUB LD2_ClearInventorySlot (slot as integer)
     end select
     
 END SUB
+
+sub LD2_ClearStatus ()
+    
+    dim item as integer
+    dim i as integer
+    for i = 0 to NumInvSlots-1
+        item = InvSlots(i)
+        Inventory(item) = 0
+        InvSlots(i) = 0
+    next i
+    
+end sub
 
 FUNCTION LD2_GetStatusItem (slot as integer) as integer
     
@@ -1133,7 +1144,7 @@ sub Map_AfterLoad(skipMobs as integer = 0)
                 FloorMap(x, y) = 30 '* stairs slope-up (left low / right high)
             case 163, 165, 167, 169, 172, 174, 176
                 FloorMap(x, y) = 31 '* stairs slope-down
-            case 170, 179
+            case TileIds.CardboardBox, 170, 179
                 FloorMap(x, y) = 10
             case 120, 145, 160, 161, 177, 178
                 FloorMap(x, y) = 0
@@ -1934,81 +1945,68 @@ SUB LD2_RenderFrame
     
 end sub
 
-FUNCTION LD2_HasFlag (flag as integer) as integer
+function LD2_HasFlag (flag as integer) as integer
     
-    return ((GameFlags AND flag) > 0)
+    return ((GameFlags and flag) > 0)
     
-END FUNCTION
+end function
 
-FUNCTION LD2_NotFlag (flag as integer) as integer
+function LD2_NotFlag (flag as integer) as integer
     
-    DIM hasFlag as integer
+    dim hasFlag as integer
     
-    hasFLag = (GameFlags AND flag)
+    hasFLag = (GameFlags and flag)
     
-    IF hasFlag THEN
+    if hasFlag then
         return 0
-    ELSE
+    else
         return 1
-    END IF
+    end if
     
-END FUNCTION
+end function
 
-SUB LD2_SetFlag (flag as integer)
+sub LD2_SetFlag (flag as integer)
     
-    GameFlags = (GameFlags OR flag)
+    GameFlags = (GameFlags or flag)
     
-END SUB
+end sub
 
-SUB LD2_ClearFlag (flag as integer)
+sub LD2_ClearFlag (flag as integer)
     
-    GameFlags = (GameFlags OR flag) XOR flag
+    GameFlags = (GameFlags or flag) xor flag
     
-END SUB
+end sub
 
-SUB LD2_ClearMobs
+sub LD2_SetSceneMode (OnOff as integer)
+    
+    SceneMode = OnOff
+    
+end sub
 
-  'IF NE = 0 THEN ??? not sure what the NE check is for
-    Mobs.clear
-  'END IF
+sub LD2_SetBossBar (mobId as integer)
+    
+    BossBarId = mobId
+    
+end sub
 
-END SUB
-
-SUB LD2_SetPlayerlAni (Num as integer)
-
-  '- Set the current lower animation of the player
-
-  Player.lAni = Num
-
-END SUB
-
-SUB LD2_SetSceneMode (OnOff as integer)
-
-  '- Set to scene mode on or off
-  '-----------------------------
-
-  SceneMode = OnOff
-
-END SUB
-
-SUB LD2_SetSceneNo (Num as integer)
-
-  Scene = Num
-
-END SUB
-
-SUB LD2_SetBossBar (mobId as integer)
-
-  BossBarId = mobId
-
-END SUB
-
-SUB LD2_SetNotice (message as string)
+sub LD2_SetNotice (message as string)
     
     GameNoticeMsg = message
-    GameNoticeExpire = TIMER + 5.0
+    GameNoticeExpire = timer + 5.0
     
-END SUB
+end sub
+
+sub LD2_SetGravity (g as double)
+    
+    Gravity = g
+    
+end sub
+
+function LD2_GetGravity () as double
+    
+    return Gravity
+    
+end function
 
 function Map_GetXShift () as integer
     
@@ -2189,6 +2187,12 @@ sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
     
 end sub
 
+sub Mobs_Get (mob as Mobile, id as integer)
+    
+    Mobs.getMob mob, id
+    
+end sub
+
 sub Mobs_Kill (mob as Mobile)
 
     dim i as integer
@@ -2216,6 +2220,12 @@ sub Mobs_KillAll ()
         Mobs.getNext mob
         Mobs_Kill mob
     loop
+    
+end sub
+
+sub Mobs_Clear ()
+    
+    Mobs.clear
     
 end sub
 
@@ -2969,6 +2979,9 @@ sub Player_Animate()
                 Player.state = 0
             end if
         case else
+            if Player.vx = 0 then
+                Player.lAni = int(LowerSprites.Standing)
+            end if
     end select
     
     dim playerShiftX as double
@@ -3896,27 +3909,44 @@ sub LD2_ShutDown
     
 end sub
 
-sub LD2_SwapLighting
+sub LD2_LightingToggle (id as integer)
     
-    if ShowLightBG and ShowLightFG then
-        ShowLightBG = 0
-        ShowLightFG = 1
-        LD2_SetNotice "BG OFF / FG ON"
-    elseif ShowLightBG = 0 and ShowLightFG = 1 then
-        ShowLightBG = 0
-        ShowLightFG = 0
-        LD2_SetNotice "BG OFF / FG OFF"
-    elseif ShowLightBG = 0 and ShowLightFG = 0 then
-        ShowLightBG = 1
-        ShowLightFG = 0
-        LD2_SetNotice "BG  ON / FG OFF"
-    elseif ShowLightBG = 1 and ShowLightFG = 0 then
-        ShowLightBG = 1
-        ShowLightFG = 1
-        LD2_SetNotice "BG  ON / FG  ON"
-    end if
+    select case id
+    case 0
+        ShowLightBG = iif(ShowLightBG, 0, 1)
+        LD2_SetNotice iif(ShowLightBG, "BG Lighting ON", "BG Lighting OFF")
+    case 1
+        ShowLightFG = iif(ShowLightFG, 0, 1)
+        LD2_SetNotice iif(ShowLightFG, "FG Lighting ON", "FG Lighting OFF")
+    end select
     
 end sub
+
+sub LD2_LightingSetEnabled (id as integer, enabled as integer)
+    
+    select case id
+    case 0
+        ShowLightBG = enabled
+        LD2_SetNotice iif(ShowLightBG, "BG Lighting ON", "BG Lighting OFF")
+    case 1
+        ShowLightFG = enabled
+        LD2_SetNotice iif(ShowLightFG, "FG Lighting ON", "FG Lighting OFF")
+    end select
+    
+end sub
+
+function LD2_LightingIsEnabled (id as integer) as integer
+    
+    select case id
+    case 0
+        return ShowLightBG
+    case 1
+        return ShowLightFG
+    end select
+    
+    return -1
+    
+end function
 
 sub LD2_WriteText (text as string)
     

@@ -156,7 +156,7 @@ function Scene1Go () as integer
 	IF LD2_isDebugMode() THEN LD2_Debug "Scene1Go()"
 
     LD2_SetSceneMode LETTERBOX
-	LD2_ClearMobs
+	Mobs_Clear
     Map_SetXShift 0
     
     AddSound Sounds.kickvending, "kick.wav"
@@ -841,7 +841,7 @@ function SceneBarneyPlanGo() as integer
     
     Player_SetItemQty ItemIds.CurrentRoom, 20
     Map_Load "20th.ld2"
-    LD2_ClearMobs
+    Mobs_Clear
     LD2_SetSceneMode LETTERBOX
     
     Map_SetXShift 250 '300
@@ -1370,7 +1370,7 @@ sub ScenePortalEndConditions
     Player_SetXY Player_GetX(), 144
     Player_SetFlip 1
     
-    LD2_ClearMobs
+    Mobs_Clear
     Mobs_Add 208, 143, MobIds.Boss2
     LD2_SetBossBar MobIds.Boss2
     Player_SetAccessLevel NOACCESS

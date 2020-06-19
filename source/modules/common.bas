@@ -16,6 +16,9 @@ dim shared EventMouseLB as integer
 dim shared EventMouseRB as integer
 dim shared EventMouseMB as integer
 dim shared CommonErrorMsg as string
+dim shared InputText as string
+dim shared InputTextCursor as integer
+dim shared ReceivingTextInput as integer
 
 dim shared keysoff as ubyte ptr
 
@@ -204,13 +207,62 @@ sub WaitForKeyup (code as integer = -1)
     
 end sub
 
+sub StartTextInput()
+    
+    SDL_StartTextInput
+    ReceivingTextInput = 1
+    InputText = ""
+    InputTextCursor = 0
+    
+end sub
+
+sub StopTextInput()
+    
+    SDL_StopTextInput
+    ReceivingTextInput = 0
+    
+end sub
+
+function GetTextInput() as string
+    
+    return InputText
+    
+end function
+
+sub ClearTextInput()
+    
+    InputText = ""
+    InputTextCursor = 0
+    
+end sub
+
+sub SetTextInput(text as string)
+    
+    InputText = text
+    InputTextCursor = len(inputText)
+    
+end sub
+
+function GetTextInputCursor() as integer
+    
+    return InputTextCursor
+    
+end function
+
 sub PullEvents()
     
     static newMouseWheelY as integer
     static oldMouseWheelY as integer
+    static text as string
+    static cursor as integer
     dim event as SDL_Event
     dim code as integer
+    dim x as integer
     
+    if ReceivingTextInput then
+        text = InputText
+        cursor = InputTextCursor
+    end if
     while( SDL_PollEvent( @event ) )
         select case event.type
         case SDL_QUIT_
@@ -223,6 +275,11 @@ sub PullEvents()
             keysoff[code] = 1
         case SDL_MOUSEWHEEL
             newMouseWheelY += event.wheel.y
+        case SDL_TEXTINPUT
+            if ReceivingTextInput then
+                text = left(text, cursor)+event.text.text+right(text, len(text)-cursor)
+                cursor += 1
+            end if
         end select
     wend
     
@@ -235,6 +292,29 @@ sub PullEvents()
     oldMouseWheelY     = newMouseWheelY
     
     LD2_Sound_Update
+    
+    if ReceivingTextInput then
+        if keypress(KEY_BACKSPACE) then
+            if cursor > 0 then
+                cursor -= 1
+                text = left(text, cursor)
+            end if
+        end if
+        if keypress(KEY_RIGHT) then
+            if cursor < len(text)+1 then
+                cursor += 1
+            end if
+        end if
+        if keypress(KEY_LEFT) then  
+            if cursor > 0 then
+                cursor -= 1
+            end if
+        end if
+    end if
+    if ReceivingTextInput then
+        InputText = text
+        InputTextCursor = cursor
+    end if
 
 end sub
 

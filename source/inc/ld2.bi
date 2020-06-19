@@ -4,6 +4,7 @@ enum TileIds
     AlienWallBottom      = 85
     AlienWallMiddle      = 86
     AlienWallBurningUp   = 87
+    CardboardBox         = 195
     ColaBottomLeft       = 8
     ColaBottomRight      = 9
     ColaTopLeft          = 5
