@@ -864,6 +864,9 @@ sub LD2_Init
     NumItems = 0
     NumDoors = 0
     NumGuts = 0
+    NumSwaps = 0
+    NumSwitches = 0
+    NumTeleports = 0
     NumInvSlots = 8
     '///////////////////////////////////////////////////////////////////
     
@@ -1128,6 +1131,10 @@ sub Map_AfterLoad(skipMobs as integer = 0)
     dim y as integer
     dim i as integer
     dim j as integer
+    
+    NumSwaps = 0
+    NumSwitches = 0
+    NumTeleports = 0
     
     foundElevator = 0
     for y = 0 to 12
