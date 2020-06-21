@@ -125,6 +125,9 @@ declare function Switches_Api (args as string) as string
 declare sub Switches_Add (x as integer, y as integer)
 declare sub Switches_Trigger (x as integer, y as integer)
 
+declare sub Teleports_Add (x as integer, y as integer, groupId as integer)
+declare sub Teleports_Check (x as integer, y as integer, byref toX as integer, byref toY as integer)
+
 declare sub Map_AfterLoad(skipMobs as integer = 0)
 declare sub Map_BeforeLoad(byref skipItems as integer)
 declare sub Map_Load (filename as string, skipMobs as integer = 0, skipItems as integer = 0)
@@ -282,6 +285,7 @@ CONST MAXGUTS      = 100
 CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)
 CONST MAXDOORS     =  16 '- per room
 CONST MAXSWAPS     =  12
+CONST MAXTELEPORTS =  12
 CONST MAXFLOORS    =  23
 CONST MAXINVENTORY =  127
 CONST MAXINVSLOTS  =   7

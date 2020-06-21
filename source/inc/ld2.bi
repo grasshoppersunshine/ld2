@@ -30,10 +30,8 @@ enum TileIds
     ElevatorSign2Right   = 28
     Grass                = 107
     GraySquare           = 32
-    LightSwitchLftOn     = 213
-    LightSwitchLftOff    = 214
-    LightSwitchRgtOn     = 215
-    LightSwitchRgtOff    = 216
+    LightSwitchStart     = 213
+    LightSwitchEnd       = 220
     PortalTopLeft        = 110
     PortalTopRight       = 111
     PortalBottomLeft     = 112
@@ -128,6 +126,8 @@ enum ItemIds
     SwapSrcA0            = 50
     SwapSrcA1            = 51
     SwapDstA             = 52
+    TeleportA            = 58
+    TeleportB            = 59
 end enum
 
 enum AnimationIds
@@ -521,6 +521,8 @@ CONST MUSICFADEIN   = &h800
 CONST MUSICFADEOUT  = &h1000
 CONST MUSICCHANGE   = &h2000
 CONST NOMOBS        = &h4000
+CONST REVEALTEXT    = &h8000
+CONST REVEALDONE    = &h10000
 
 '======================
 '= SCENE POSES

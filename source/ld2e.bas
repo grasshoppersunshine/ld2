@@ -88,6 +88,12 @@
         swapId as integer
     end type
     
+    type TeleportType
+        x as integer
+        y as integer
+        groupId as integer
+    end type
+    
     '*******************************************************************
     '* MAP PROPS
     '*******************************************************************
@@ -193,11 +199,13 @@
     dim shared Guts       (MAXGUTS)  as GutsIncorporated
     dim shared Swaps      (MAXSWAPS) as SwapType
     dim shared Switches   (MAXSWAPS) as SwitchType
+    dim shared Teleports  (MAXTELEPORTS) as TeleportType
     dim shared NumItems as integer
     dim shared NumDoors as integer
     dim shared NumGuts as integer
     dim shared NumSwaps as integer
     dim shared NumSwitches as integer
+    dim shared NumTeleports as integer
     dim shared XShift as double
     dim shared Elevator AS ElevatorType
     dim shared Mobs as MobileCollection
@@ -233,6 +241,8 @@
     dim shared GameFlags as integer
     dim shared GameNoticeMsg as string
     dim shared GameNoticeExpire as single
+    
+    dim shared GameRevealText as string
     
     dim shared GotItemId as integer
     
@@ -1146,7 +1156,7 @@ sub Map_AfterLoad(skipMobs as integer = 0)
                 Doors_Add x, y, REDACCESS
             case TileIds.DoorWhite
                 Doors_Add x, y, WHITEACCESS
-            case TileIds.LightSwitchLftOn, TileIds.LightSwitchRgtOn, TileIds.LightSwitchLftOff, TileIds.LightSwitchRgtOff
+            case TileIds.LightSwitchStart to TileIds.LightSwitchEnd
                 Switches_Add x, y
             case TileIds.SpinningFan
                 AniMap(x, y) = AnimationIds.FastRotate
@@ -1172,6 +1182,16 @@ sub Map_AfterLoad(skipMobs as integer = 0)
         select case Items(i).id
         case ItemIds.SwapSrcA0, ItemIds.SwapSrcA1, ItemIds.SwapDstA
             NumItems -= 1
+            for j = i to NumItems-1
+                Items(j) = Items(j+1)
+            next j
+            i -= 1
+            if i >= NumItems-1 then
+                exit for
+            end if
+        case ItemIds.TeleportA
+            Teleports_Add int(Items(i).x/SPRITE_W), int(Items(i).y/SPRITE_H), 0
+             NumItems -= 1
             for j = i to NumItems-1
                 Items(j) = Items(j+1)
             next j
@@ -2033,6 +2053,41 @@ SUB LD2_RenderFrame
         LD2_RenderElement @labelNotice
     end if
     
+    static textReveal as ElementType
+    if textReveal.y = 0 then
+        LD2_InitElement @textReveal, "", 31, ElementFlags.CenterX
+        textReveal.y = SCREEN_H*0.33
+        textReveal.w = SCREEN_W*0.7
+        textReveal.background_alpha = 0
+    end if
+    static revealCursor as integer = 0
+    static text as string
+    static waitUntil as double
+    if len(GameRevealText) then
+        text = GameRevealText
+        LD2_SetFlag REVEALTEXT
+        GameRevealText = ""
+        revealCursor = -21
+    end if
+    if LD2_HasFlag(REVEALTEXT) then
+        if revealCursor < len(text) then
+            textReveal.text = left(text, revealCursor)
+            revealCursor += 3
+        else
+            textReveal.text = text
+        end if
+        LD2_RenderElement @textReveal
+    end if
+    if LD2_HasFlag(REVEALDONE) then
+        if LD2_HasFlag(REVEALTEXT) then
+            LD2_ClearFlag REVEALTEXT
+            waitUntil = timer+0.25
+        end if
+        if timer >= waitUntil then
+            LD2_ClearFlag REVEALDONE
+        end if
+    end if
+    
 end sub
 
 function LD2_HasFlag (flag as integer) as integer
@@ -2470,6 +2525,46 @@ sub Switches_Trigger (x as integer, y as integer)
     
     if switch <> 0 then
         Swaps_DoSwap switch->swapId
+    end if
+    
+end sub
+
+sub Teleports_Add (x as integer, y as integer, groupId as integer)
+    
+    dim n as integer
+    
+    n = NumTeleports: NumTeleports += 1
+    Teleports(n).x = x
+    Teleports(n).y = y
+    Teleports(n).groupId = groupId
+    
+end sub
+
+sub Teleports_Check (x as integer, y as integer, byref toX as integer, byref toY as integer)
+    
+    dim found as integer
+    dim findId as integer
+    dim skipN as integer
+    dim n as integer
+    
+    found = 0
+    for n = 0 to NumTeleports-1
+        if (x = Teleports(n).x) and (y = Teleports(n).y) then
+            findId = Teleports(n).groupId
+            skipN = n
+            found = 1
+            exit for
+        end if
+    next n
+    
+    if found then
+        for n = 0 to NumTeleports-1
+            if n = skipN then continue for
+            if findId = Teleports(n).groupId then
+                toX = Teleports(n).x
+                toY = Teleports(n).y
+            end if
+        next n
     end if
     
 end sub
@@ -3425,8 +3520,13 @@ sub Player_Animate()
                 Player.state = 0
                 Player.landTime = timer
             end if
-        case PlayerStates.Crouching, PlayerStates.LookingUp
+        case PlayerStates.Crouching
             if (timer - player.stateTimestamp) > 0.07 then
+                Player.state = 0
+                Player_SetWeapon Player.weapon '- reset upper-sprites back to normal
+            end if
+        case PlayerStates.LookingUp
+            if ((timer - player.stateTimestamp) > 0.07) and LD2_NotFlag(REVEALTEXT) and LD2_NotFlag(REVEALDONE) then
                 Player.state = 0
                 Player_SetWeapon Player.weapon '- reset upper-sprites back to normal
             end if
@@ -4016,6 +4116,8 @@ end function
 sub Player_DoAction ()
     
     dim mapX as integer, mapY as integer
+    dim toX as integer, toY as integer
+    dim responses(2) as string
     dim points(3) as PointType
     dim checked(3) as PointType
     dim tile as integer
@@ -4041,20 +4143,124 @@ sub Player_DoAction ()
             end if
             j += 1
         wend
+        toX = -1: toY = -1
+        Teleports_Check mapX, mapY, toX, toY
+        dim shift as double
+        if toX <> -1 then
+            shift = mapX*SPRITE_W - XShift
+            Player.x = toX*SPRITE_W: Player.y = toY*SPRITE_H
+            Map_SetXShift Player.x-shift
+            LD2_PlaySound Sounds.lightSwitch
+            exit sub
+        end if
         tile = TileMap(mapX, mapY)
         select case tile
-        case TileIds.LightSwitchLftOn, TileIds.LightSwitchLftOff, _
-             TileIds.LightSwitchRgtOn, TileIds.LightSwitchRgtOff
+        case 159
+            GameRevealText = "Load-bearing column."
+            exit sub
+        case TileIds.LightSwitchStart to TileIds.LightSwitchEnd
                 Switches_Trigger mapX, mapY
-                select case tile
-                case TileIds.LightSwitchLftOn : TileMap(mapX, mapY) = TileIds.LightSwitchLftOff
-                case TileIds.LightSwitchRgtOn : TileMap(mapX, mapY) = TileIds.LightSwitchRgtOff
-                case TileIds.LightSwitchLftOff: TileMap(mapX, mapY) = TileIds.LightSwitchLftOn
-                case TileIds.LightSwitchRgtOff: TileMap(mapX, mapY) = TileIds.LightSwitchRgtOn
-                end select
+                if ((tile-TileIds.LightSwitchStart) and 1) = 0 then
+                    TileMap(mapX, mapY) = tile+1
+                else
+                    TileMap(mapX, mapY) = tile-1
+                end if
                 LD2_PlaySound Sounds.lightSwitch
+                exit sub
+        end select
+        select case Inventory(ItemIds.CurrentRoom)
+        case Rooms.RestRoom
+            if mapY = 9 then
+                select case mapX
+                case 3, 5
+                    GameRevealText = "Nothing in the stall."
+                    exit sub
+                case 6, 10
+                    GameRevealText = "I don't need to go now.\ \... But I might in an hour or so."
+                    exit sub
+                case 8
+                    GameRevealText = "I would flush it, but the sound might attract aliens."
+                    exit sub
+                case 13, 15
+                    GameRevealText = "A clean sink."
+                    exit sub
+                end select
+            end if
+        case Rooms.MeetingRoom
+            if mapY = 9 then
+                select case mapX
+                case 2, 3
+                    GameRevealText = "Books and manuals on management and productivity.\ \... Lame."
+                    exit sub
+                case 4
+                    GameRevealText = "A graph charting what looks to be... a red line going down.\ \I don't know... I didn't really pay attention in the meeting."
+                    exit sub
+                case 27, 28
+                    GameRevealText = "These cola machines are getting out of hand.\ \So bright... It must cost a fortune to keep them on all the time."
+                    exit sub
+                end select
+            end if
+        case Rooms.VentControl
+            if mapY = 9 then
+                select case mapX
+                case 4, 5
+                    GameRevealText = "The janitor's desk.\ \Just scattered papers with coffee stains."
+                    exit sub
+                end select
+            end if
+        case Rooms.LowerOffice3
+            if mapY = 9 then
+                select case mapX
+                case 4
+                    GameRevealText = "Locked.\ \Maybe I shouldn't be trying to get into Barney's confidential documents?"
+                    exit sub
+                case 5, 6
+                    GameRevealText = "Barney's workstation."
+                    exit sub
+                case 10, 11
+                    GameRevealText = "Barney's desk.\ \Very organized and well-kempt."
+                    exit sub
+                case 20, 21, 23
+                    GameRevealText = "Disorganized files and folders."
+                    exit sub
+                case 39, 40, 41, 42
+                    GameRevealText = "A black void.\ \So dark my mind tricks me into seeing movement that isn't... there."
+                    exit sub
+                case 34 to 37, 44 to 47
+                    GameRevealText = "Dark..."
+                    exit sub
+                case 57 to 70
+                    GameRevealText = "An endless array of boxes.\ \Work to do or work that's already done?"
+                    exit sub
+                end select
+            end if
+        case Rooms.LarrysOffice
+            if mapY = 9 then
+                select case mapX
+                case 6, 7
+                    GameRevealText = "My work desk.\ \Nothing but mind-numbing paperwork here."
+                    exit sub
+                case 9, 10
+                    GameRevealText = "A cola dispenser. The one that gave Steve a toxic beverage.\ \... I best not risk poisoning myself."
+                    exit sub
+                case 55, 59, 67
+                    GameRevealText = "Filed papers.\ \Nothing of interest."
+                    exit sub
+                case 63
+                    GameRevealText = "Empty filing cabinet."
+                    exit sub
+                case 71
+                    GameRevealText = "Locked.\ \I'll need to find something to pick the lock with."
+                    exit sub
+                end select
+            end if
         end select
     next i
+    
+    responses(0) = "Nothing of use here."
+    responses(1) = "Nothing interesting."
+    responses(2) = "Nothing here."
+    GameRevealText = responses(int(3*rnd(1)))
     
 end sub
 

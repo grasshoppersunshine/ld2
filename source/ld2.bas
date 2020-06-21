@@ -832,10 +832,11 @@ sub LoadMusic ()
 
     AddMusic Tracks.Wind1     , DATA_DIR+"sound/msplice/wind0.wav"   , 1
     AddMusic Tracks.Wind2     , DATA_DIR+"sound/msplice/wind1.wav"   , 1
-    AddMusic Tracks.Ambient1  , DATA_DIR+"sound/msplice/room1.wav"   , 1
+    'AddMusic Tracks.Ambient1  , DATA_DIR+"sound/msplice/room1.wav"   , 1
     'AddMusic Tracks.Ambient2  , DATA_DIR+"sound/msplice/room5.wav"   , 1
     'AddMusic Tracks.Ambient3  , DATA_DIR+"sound/msplice/basement.wav", 1
-    AddMusic Tracks.Ambient4  , DATA_DIR+"sound/msplice/room7.wav"   , 1
+    'AddMusic Tracks.Ambient4  , DATA_DIR+"sound/msplice/room7.wav"   , 1
+    AddMusic Tracks.Ambient1  , DATA_DIR+"sound/music/musicbox.ogg", 1
     
     AddMusic Tracks.Ambient2  , DATA_DIR+"sound/music/gameover.ogg", 1
     AddMusic Tracks.Ambient3  , DATA_DIR+"sound/music/motives.ogg" , 1
@@ -950,15 +951,14 @@ end sub
 
 function GetFloorMusicId(roomId as integer) as integer
     
-    dim roomTracks(5) as integer
+    dim roomTracks(4) as integer
     dim trackId as integer
     
     roomTracks(0) = Tracks.Ambient1
     roomTracks(1) = Tracks.Ambient2
     roomTracks(2) = Tracks.Ambient3
-    roomTracks(3) = Tracks.Ambient4
-    roomTracks(4) = Tracks.Wandering
-    roomTracks(5) = Tracks.Portal
+    roomTracks(3) = Tracks.Wandering
+    roomTracks(4) = Tracks.Portal
     
     select case roomId
     case Rooms.LarrysOffice
@@ -970,7 +970,9 @@ function GetFloorMusicId(roomId as integer) as integer
     'case Rooms.DebriefRoom
     '    trackId = Tracks.SmallRoom1
     case Rooms.LowerStorage, Rooms.UpperStorage
-        trackId = Tracks.SmallRoom2
+        trackId = Tracks.Ambient3
+    case Rooms.DebriefRoom, Rooms.MeetingRoom
+        trackId = Tracks.Ambient1
     case Rooms.ResearchLab
         trackId = Tracks.Portal
     case else
@@ -1132,6 +1134,19 @@ SUB Main
         else
             LD2_ContinueMusic
         end if
+    end if
+    
+    if LD2_HasFlag(REVEALTEXT) then
+        if keypress(KEY_SPACE) or keypress(KEY_ENTER) or keypress(KEY_ESCAPE) then
+            LD2_SetFlag REVEALDONE
+        end if
+        if keypress(KEY_LEFT) or keypress(KEY_RIGHT) or keypress(KEY_DOWN) or mouseLB() or mouseRB() then
+            LD2_SetFlag REVEALDONE
+        end if
+        continue do
+    end if
+    if LD2_HasFlag(REVEALDONE) then
+        continue do
     end if
     
     PlayerCheck player
@@ -1837,10 +1852,20 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             response = !"!Invalid option\\ \\Use \"list\" to see options"
         end select
     case "rooms"
-        optlist = "reload|id [room-id]|goto [room-id]"
+        optlist = "status|reload|id [room-id]|goto [room-id]"
         select case args(0)
         case "list"
             response = "Valid room options are\ \"+optlist
+        case "status"
+            id = Player_GetItemQty(ItemIds.CurrentRoom)
+            response = "Room id "+str(id)+"\ \"
+            select case id
+            case 1, 21: suffix = "st"
+            case 2, 22: suffix = "nd"
+            case 3, 23: suffix = "rd"
+            case else: suffix = "th"
+            end select
+            response += GetRoomName(id)+"\"+str(id)+suffix+" floor"
         case "id"
             if ((args(1) = "0") or (val(args(1)) > 0)) = 0 then
                 response = "!Invalid room id"
@@ -2706,6 +2731,7 @@ end function
 
 function GetRoomName(id as integer) as string
     
+    dim fileNo as integer
     dim roomsFile as string
     dim floorNo as integer
     dim filename as string
@@ -2714,12 +2740,13 @@ function GetRoomName(id as integer) as string
     
     roomsFile = iif(LD2_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
 	
-	open DATA_DIR+roomsFile for input as #1
-	do while not eof(1)
-		input #1, floorNo : if eof(1) then exit do
-		input #1, filename: if eof(1) then exit do
-		input #1, label   : if eof(1) then exit do
-		input #1, allowed
+    fileNo = freefile
+	open DATA_DIR+roomsFile for input as #fileNo
+	do while not eof(fileNo)
+		input #fileNo, floorNo : if eof(fileNo) then exit do
+		input #fileNo, filename: if eof(fileNo) then exit do
+		input #fileNo, label   : if eof(fileNo) then exit do
+		input #fileNo, allowed
         if len(filename) = 0 then
             continue do
         end if
@@ -2727,7 +2754,7 @@ function GetRoomName(id as integer) as string
             exit do
         end if
 	loop
-	close #1
+	close #fileNo
     
     return trim(label)
     

@@ -797,7 +797,7 @@ SUB Init
     LD2_LoadPalette DATA_DIR+"gfx/gradient.pal"
   
     for i = 0 to 11
-        LightPalette.setRGBA(i, 0, 0, 0, iif(i*28 < 255, i*28, 255))
+        LightPalette.setRGBA(i, 0, 0, 0, iif(i*36 < 255, i*36, 255))
     next i
 
     LoadSprites DATA_DIR+"gfx/ld2tiles.put", idTILE
