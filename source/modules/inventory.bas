@@ -448,6 +448,19 @@ function Inventory_GetShortName(id as integer) as string
     return "OUT OF BOUNDS"
 end function
 
+function Inventory_GetSid(id as integer) as string
+    dim bound as integer
+    bound = UBOUND(ItemSids)
+    if id >= 0 and id <= bound then
+        return ItemSids(id)
+    end if
+    return "OUT OF BOUNDS"
+end function
+
+function Inventory_GetMaxId() as integer
+    return ubound(ItemSids)
+end function
+
 FUNCTION Inventory_Mix(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS STRING) as integer
     
     DIM MixesFile AS INTEGER

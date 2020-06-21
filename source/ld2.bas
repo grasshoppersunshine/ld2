@@ -813,6 +813,8 @@ sub LoadSounds ()
     AddSound Sounds.quad, "quad.wav"
     AddSound Sounds.titleStart , "start.wav"
     
+    AddSound Sounds.lightSwitch, "lightswitch.wav"
+    
 end sub
 
 sub LoadMusic ()
@@ -1159,7 +1161,7 @@ SUB Main
     else
         newShot = 1
     end if
-    IF keyboard(KEY_ALT) or keyboard(KEY_SPACE) or keyboard(KEY_UP) then
+    IF keyboard(KEY_ALT) or keyboard(KEY_SPACE) then
         if keyboard(KEY_DOWN) or keyboard(KEY_S) then
             doAction ActionIds.JumpDown
             newJump = 1
@@ -1643,7 +1645,8 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
     
     dim mob as Mobile
     dim argstring as string
-    dim numArgs as integer
+    dim astring as string
+    dim optlist as string
     dim args(9) as string
     dim comm as string
     dim response as string
@@ -1667,20 +1670,52 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
         comm = comstring
         argstring = ""
     end if
-    numArgs = 0
-    while instr(argstring, " ")
-        idx = instr(argstring, " ")
-        args(numArgs) = left(argstring, idx-1)
-        argstring = trim(right(argstring, len(argstring)-idx))
-        numArgs += 1
-        if numArgs > 9 then exit while
-    wend
-    if len(argstring) and (numArgs <= 9) then
-        args(numArgs) = argstring
-        numArgs += 1
+    args(0) = getArg(argstring, 0)
+    args(1) = getArg(argstring, 1)
+    args(2) = getArg(argstring, 2)
+    args(3) = getArg(argstring, 3)
+    args(4) = getArg(argstring, 4)
+    args(5) = getArg(argstring, 5)
+    args(6) = getArg(argstring, 6)
+    args(7) = getArg(argstring, 7)
+    args(8) = getArg(argstring, 8)
+    args(9) = getArg(argstring, 9)
+    
+    if comm = "room" then
+        comm = "rooms": args(1) = args(0)
+        args(0) = "goto"
     end if
     
     select case comm
+    case "list"
+        response = "Top-level commands are: player|rooms|inventory\ \mobs|elevator|music|sound|scene|light|gravity"
+    case "items"
+        response = MapItems_Api(argstring)
+    case "doors"
+        response = Doors_Api(argstring)
+    case "mobs"
+        response = Mobs_Api(argstring)
+    case "swaps"
+        response = Swaps_Api(argstring)
+    case "switches"
+        response = Switches_Api(argstring)
+    case "sound", "sfx"
+        select case args(0)
+        case "volume"
+            if len(args(1)) then
+                LD2_SetSoundVolume val(args(1))
+                response = "Set sound volume to "+str(val(args(1)))
+            else
+                response = "Sound volume is at "+str(LD2_GetSoundVolume())
+            end if
+        case "id", "play"
+            if val(args(1)) > 0 then
+                LD2_PlaySound val(args(1))
+                response = "@Playing SFX ID "+str(val(args(1)))
+            else
+                response = "!Invalid SFX ID "+str(val(args(1)))
+            end if
+        end select
     case "music"
         select case args(0)
         case ""
@@ -1715,11 +1750,31 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
         if len(LD2_GetSoundErrorMsg()) then
             response = "!"+LD2_GetSoundErrorMsg()
         end if
-    case "inventory"
+    case "inventory", "inv"
+        optlist = "id [id]|clear|add [id|sid][qty]|"
         select case args(0)
+        case "list"
+            response = "Valid inventory options are\ \"+optlist
         case "clear"
             LD2_ClearStatus
             response = "Emptied inventory"
+        case "id"
+            if ((args(1) = "0") or (val(args(1)) <> 0)) = 0 then
+                response = "!Invalid inventory id"
+            else
+                id = val(args(1))
+                if (id >= 0) and (id <= Inventory_GetMaxId()) then
+                    response = "Inventory id "+str(id)+"\ \"
+                    if len(Inventory_GetSid(id)) then
+                        response += Inventory_GetShortName(id)+"\"
+                        response += Inventory_GetSid(id)+" (SID)"
+                    else
+                        response += "No item assigned"
+                    end if
+                else
+                    response = "!Inventory id must be between 0 and "+str(Inventory_GetMaxId())
+                end if
+            end if
         case "add"
             select case args(1)
             case "shotgun"
@@ -1739,74 +1794,112 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
                 Player_AddAmmo ItemIds.MagnumAmmo, 99
                 response = "Added MAGNUM to inventory"
             case else
-                id = Inventory_SidToItemId(args(1))
-                if id = -1 then
-                    response = "!Item not found "+args(1)
-                else
-                    if val(args(2)) > 0 then
-                        qty = val(args(2))
-                    else
-                        qty = 1
-                    end if
-                    if LD2_AddToStatus(id, qty) = 0 then
-                        if qty > 1 then
-                            response = "Added "+str(qty)+" "+Inventory_GetShortName(id)+" to inventory"
+                if (args(1) = "0") or (val(args(1)) <> 0) then
+                    id = val(args(1))
+                    if (id >= 1) and (id <= Inventory_GetMaxId()) then
+                        if len(Inventory_GetSid(id)) then
                         else
-                            response = "Added "+Inventory_GetShortName(id)+" to inventory"
+                            response = "!No item assigned to id "+str(id)
+                            id = -1
                         end if
                     else
-                        response = "!Unable to add item to inventory"
+                        response = "!Inventory id must be between 1 and "+str(Inventory_GetMaxId())
+                        id = -1
+                    end if
+                else
+                    id = Inventory_SidToItemId(args(1))
+                    if id = -1 then
+                        response = "!No inventory item exists with SID "+args(1)
+                    end if
+                end if
+                if id > -1 then
+                    if (args(2) = "0") or (val(args(2)) > 0) or (args(2) = "") then
+                        if val(args(2)) > 0 then
+                            qty = val(args(2))
+                        else
+                            qty = 1
+                        end if
+                        if LD2_AddToStatus(id, qty) = 0 then
+                            if qty > 1 then
+                                response = "Added "+str(qty)+" "+Inventory_GetShortName(id)+" to inventory"
+                            else
+                                response = "Added "+Inventory_GetShortName(id)+" to inventory"
+                            end if
+                        else
+                            response = "!Unable to add item to inventory"
+                        end if
+                    else
+                        response = "!Invalid inventory id"
                     end if
                 end if
             end select
+        case else
+            response = !"!Invalid option\\ \\Use \"list\" to see options"
         end select
-    case "mobs"
+    case "rooms"
+        optlist = "reload|id [room-id]|goto [room-id]"
         select case args(0)
-            case "add"
-                qty = iif(len(args(1)),val(args(1)),1)
-                if qty > 0 then
-                    Mobs_Generate(qty)
-                    response = "Added "+str(qty)+" mob"+iif(qty>1,"s","")
-                else
-                    response = "!Quantity must be greater than zero"
-                end if
-            case "clear"
-                Mobs_Clear
-                response = "Removed all mobs"
-            case "killall"
-                Mobs_KillAll
-                response = "Killed all mobs"
-            case "kill"
-                if val(args(1)) > 0 then
-                    Mobs_Get mob, val(args(1))
-                    if mob.id > 0 then
-                        Mobs_Kill mob
-                        response = "Killed mob "+str(val(args(1)))
-                    else
-                        response = "!Mob not found "+str(val(args(1)))
-                    end if
-                end if
-        end select
-    case "room", "floor", "level"
-        if len(args(0)) = 0 then
-            response = "!Missing room/floor number"
-        else
-            id = val(args(0))
-            if (id >= 0) and (id <= 23) then
-                CurrentRoom = id
-                Player_SetItemQty(ItemIds.CurrentRoom, id)
-                Map_Load str(id)+"th.ld2"
-                select case id
-                case 1, 21: suffix = "st"
-                case 2, 22: suffix = "nd"
-                case 3, 23: suffix = "rd"
-                case else: suffix = "th"
-                end select
-                response = str(id)+suffix+" floor\ \"+GetRoomName(id)
+        case "list"
+            response = "Valid room options are\ \"+optlist
+        case "id"
+            if ((args(1) = "0") or (val(args(1)) > 0)) = 0 then
+                response = "!Invalid room id"
             else
-                response = "!Not a valid room numer "+str(id)
+                id = val(args(1))
+                if (id >= 0) and (id <= 23) then
+                    response = "Room id "+str(id)+"\ \"
+                    select case id
+                    case 1, 21: suffix = "st"
+                    case 2, 22: suffix = "nd"
+                    case 3, 23: suffix = "rd"
+                    case else: suffix = "th"
+                    end select
+                    response += GetRoomName(id)+"\"+str(id)+suffix+" floor"
+                else
+                    response = "!Room id must be between 0 and 23"
+                end if
             end if
-        end if
+        case "goto"
+            if len(args(1)) = 0 then
+                response = "!Missing room id"
+            else
+                if ((args(1) = "0") or (val(args(1)) <> 0)) = 0 then
+                    response = "!Invalid room id"
+                else
+                    id = val(args(1))
+                    if (id >= 0) and (id <= 23) then
+                        CurrentRoom = id
+                        Player_SetItemQty(ItemIds.CurrentRoom, id)
+                        Map_Load str(id)+"th.ld2"
+                        select case id
+                        case 1, 21: suffix = "st"
+                        case 2, 22: suffix = "nd"
+                        case 3, 23: suffix = "rd"
+                        case else: suffix = "th"
+                        end select
+                        response = str(id)+suffix+" floor\ \"+GetRoomName(id)
+                    else
+                        response = "!Room id must be between 0 and 23"
+                    end if
+                    LD2_PlayMusic GetFloorMusicId(CurrentRoom)
+                end if
+                'SceneOpenElevatorDoors
+            end if
+        case "reload"
+            id = Player_GetItemQty(ItemIds.CurrentRoom)
+            Map_Load str(id)+"th.ld2"
+            select case id
+            case 1, 21: suffix = "st"
+            case 2, 22: suffix = "nd"
+            case 3, 23: suffix = "rd"
+            case else: suffix = "th"
+            end select
+            response = str(id)+suffix+" floor\ \"+GetRoomName(id)
+            LD2_StopMusic
+            LD2_PlayMusic GetFloorMusicId(CurrentRoom)
+        case else
+            response = !"!Invalid option\\ \\Use \"list\" to see options"
+        end select
     case "scene"
         select case args(0)
             case "1", "start", "steve1", "chess", "intro", "cola": Scene1
@@ -1952,20 +2045,33 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
                     end if
                 end if
             case else
-                response = "!Not a valid player command"
+                response = "!Not a valid player command\Valid commands are:\x[val]/y[val]/xy[valx valy]/kill/hp[val]"
         end select
     case "gravity"
-        arg = args(0)
-        if len(arg) then
-            if (arg = "0") or (val(arg) > 0) then
-                LD2_SetGravity val(arg)
-                response = "Changed gravity to "+str(val(arg))
-            else
-                response = "!Invalid value for gravity"
-            end if
-        else
+        optlist = "status|set [new-value]|reset"
+        select case args(0)
+        case "list"
+            response = "Valid gravity options are\ \"+optlist
+        case "status"
             response = "Gravity is set at " + left(str(LD2_GetGravity()), 6)
-        end if
+        case "reset"
+            LD2_SetGravity 0.06
+            response = "Reset gravity to 0.06"
+        case "set"
+            arg = args(1)
+            if len(arg) then
+                if (arg = "0") or (val(arg) <> 0) then
+                    LD2_SetGravity val(arg)
+                    response = "Changed gravity to "+str(val(arg))
+                else
+                    response = "!Invalid gravity value"
+                end if
+            else
+                response = "!Missing gravity value"
+            end if
+        case else
+            response = !"!Invalid option\\ \\Use \"list\" to see options"
+        end select
     case "light"
         select case args(0)
         case "bg"
@@ -1997,7 +2103,7 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
         LD2_SetFlag(ELEVATORMENU)
     case else
         if len(trim(comstring)) then
-            response = "!Not a valid command"
+            response = !"!Invalid command\\ \\Use \"list\" to see commands"
         end if
     end select
     
@@ -2314,7 +2420,7 @@ sub NewGame
         'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
         'LD2_PlayMusic mscWANDERING
         if LD2_HasCommandArg("noelevator") = 0 then
-            LD2_AddToStatus(ItemIds.ElevatorMenu, 1)
+            'LD2_AddToStatus(ItemIds.ElevatorMenu, 1)
         end if
         if LD2_HasCommandArg("greencard,bluecard,yellowcard,whitecard,redcard") = 0 then
             LD2_AddToStatus(ItemIds.RedCard, 1)
@@ -2322,8 +2428,6 @@ sub NewGame
         if (LD2_HasCommandArg("noguns") = 0) and (LD2_HasCommandArg("shotgun,pistol,machinegun,magnum,allguns") = 0) then
             LD2_AddToStatus(ItemIds.Pistol, 1)
             LD2_AddToStatus(ItemIds.MachineGun, 1)
-            LD2_AddToStatus(ItemIds.PistolAmmo, 99)
-            LD2_AddToStatus(ItemIds.MachineGunAmmo, 99)
             Player_AddAmmo ItemIds.PistolAmmo, 99
             Player_AddAmmo ItemIds.MachineGunAmmo, 99
         end if
@@ -2612,9 +2716,9 @@ function GetRoomName(id as integer) as string
 	
 	open DATA_DIR+roomsFile for input as #1
 	do while not eof(1)
-		input #1, floorNo
-		input #1, filename
-		input #1, label
+		input #1, floorNo : if eof(1) then exit do
+		input #1, filename: if eof(1) then exit do
+		input #1, label   : if eof(1) then exit do
 		input #1, allowed
         if len(filename) = 0 then
             continue do

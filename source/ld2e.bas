@@ -73,6 +73,21 @@
         scrollx  as double
     end type
     
+    type SwapType
+        x0 as integer
+        y0 as integer
+        x1 as integer
+        y1 as integer
+        w as integer
+        h as integer
+    end type
+    
+    type SwitchType
+        x as integer
+        y as integer
+        swapId as integer
+    end type
+    
     '*******************************************************************
     '* MAP PROPS
     '*******************************************************************
@@ -84,13 +99,15 @@
     '*******************************************************************
     '* PLAYER STATES
     '*******************************************************************
-    const STILL       = 1
-    const RUNNING     = 2
-    const JUMPING     = 3
-    const CROUCHING   = 4
-    const LOOKINGUP   = 5
-    const BLOCKED     = 6
-    const LOOKINGDOWN = 7
+    enum PlayerStates
+        Blocked = 1
+        Crouching
+        FacingAway
+        Jumping
+        LookingUp
+        Running
+        Standing
+    end enum
     
     '*******************************************************************
     '* MOB STATES
@@ -171,12 +188,16 @@
     '*******************************************************************
     '* ROOM VARS
     '*******************************************************************
-    dim shared Items      (MAXITEMS) AS ItemType
-    dim shared Doors      (MAXDOORS) AS DoorType
-    dim shared Guts       (MAXGUTS) AS GutsIncorporated
+    dim shared Items      (MAXITEMS) as ItemType
+    dim shared Doors      (MAXDOORS) as DoorType
+    dim shared Guts       (MAXGUTS)  as GutsIncorporated
+    dim shared Swaps      (MAXSWAPS) as SwapType
+    dim shared Switches   (MAXSWAPS) as SwitchType
     dim shared NumItems as integer
     dim shared NumDoors as integer
     dim shared NumGuts as integer
+    dim shared NumSwaps as integer
+    dim shared NumSwitches as integer
     dim shared XShift as double
     dim shared Elevator AS ElevatorType
     dim shared Mobs as MobileCollection
@@ -1096,6 +1117,7 @@ sub Map_AfterLoad(skipMobs as integer = 0)
     dim x as integer
     dim y as integer
     dim i as integer
+    dim j as integer
     
     foundElevator = 0
     for y = 0 to 12
@@ -1114,29 +1136,21 @@ sub Map_AfterLoad(skipMobs as integer = 0)
                 Elevator.w = SPRITE_W * 2
                 Elevator.h = SPRITE_H
                 foundElevator = 1
-            case TileIds.DoorGreen, TileIds.DoorBlue, TileIds.DoorYellow, TileIds.DoorRed
-                Doors(NumDoors).x = x * SPRITE_W
-                Doors(NumDoors).y = y * SPRITE_H
-                Doors(NumDoors).w = SPRITE_W
-                Doors(NumDoors).h = SPRITE_H
-                Doors(NumDoors).mapX = x
-                Doors(NumDoors).mapY = y
-                Doors(NumDoors).accessLevel = GREENACCESS + (tile - TileIds.DoorGreen)
-                TileMap(x, y) = TileIds.DoorBehind
-                NumDoors += 1
+            case TileIds.DoorGreen
+                Doors_Add x, y, GREENACCESS
+            case TileIds.DoorBlue
+                Doors_Add x, y, BLUEACCESS
+            case TileIds.DoorYellow
+                Doors_Add x, y, YELLOWACCESS
+            case TileIds.DoorRed
+                Doors_Add x, y, REDACCESS
             case TileIds.DoorWhite
-                Doors(NumDoors).x = x * SPRITE_W
-                Doors(NumDoors).y = y * SPRITE_H
-                Doors(NumDoors).w = SPRITE_W
-                Doors(NumDoors).h = SPRITE_H
-                Doors(NumDoors).mapX = x
-                Doors(NumDoors).mapY = y
-                Doors(NumDoors).accessLevel = WHITEACCESS
-                TileMap(x, y) = TileIds.DoorBehind
-                NumDoors += 1
+                Doors_Add x, y, WHITEACCESS
+            case TileIds.LightSwitchLftOn, TileIds.LightSwitchRgtOn, TileIds.LightSwitchLftOff, TileIds.LightSwitchRgtOff
+                Switches_Add x, y
             case TileIds.SpinningFan
                 AniMap(x, y) = AnimationIds.FastRotate
-            case 80 to 109
+            case 80 to 109, 125, 133, 141, 143
                 FloorMap(x, y) = 1
             case TileIds.ColaTopLeft, TileIds.ColaTopRIght
                 FloorMap(x, y) = 19
@@ -1148,9 +1162,25 @@ sub Map_AfterLoad(skipMobs as integer = 0)
                 FloorMap(x, y) = 10
             case 120, 145, 160, 161, 177, 178
                 FloorMap(x, y) = 0
+            case 188, 197
+                FloorMap(x, y) = 17 '* paper stacks
             end select
         next x
     next y
+    
+    for i = 0 to NumItems-1
+        select case Items(i).id
+        case ItemIds.SwapSrcA0, ItemIds.SwapSrcA1, ItemIds.SwapDstA
+            NumItems -= 1
+            for j = i to NumItems-1
+                Items(j) = Items(j+1)
+            next j
+            i -= 1
+            if i >= NumItems-1 then
+                exit for
+            end if
+        end select
+    next i
     
     '*******************************************************************
     '* ELEVATOR SETUP
@@ -1173,7 +1203,6 @@ sub Map_AfterLoad(skipMobs as integer = 0)
         case Rooms.Rooftop, Rooms.PortalRoom, Rooms.WeaponsLocker, Rooms.Lobby, Rooms.Basement
         case else
             Mobs_Generate
-            Mobs_Animate '* let them go through their initial "spawned" state
         end select
     end if
     
@@ -1486,7 +1515,7 @@ sub Guts_Animate
             i -= 1
         end if
         
-        if i >= NumGuts then
+        if i >= NumGuts-1 then
             exit for
         end if
         
@@ -1551,7 +1580,66 @@ SUB LD2_PopText (Message as string)
 
 END SUB
 
-sub Doors_Add
+function Doors_Api(args as string) as string
+    
+    dim response as string
+    dim optlist as string
+    dim arg0 as string
+    dim arg1 as string
+    dim door as DoorType
+    dim id as integer
+    
+    arg0 = getArg(args, 0)
+    arg1 = getArg(args, 1)
+    
+    optlist = "count|id [id]"
+    
+    select case arg0
+    case "list"
+        response = "Valid doors options are\ \"+optlist
+    case "count"
+        return "Door count is "+str(NumDoors)
+    case "id"
+        if NumDoors = 0 then
+            return "No doors available to check"
+        end if
+        if arg1 = "" then
+            return "Missing door id"
+        end if
+        if (arg1 = "0") or (val(arg1) > 0) then
+            id = val(arg1)
+            if id >= NumDoors then
+                return "!Door id is out-of-bounds"
+            end if
+            door = Doors(id)
+            response = "Door ID 0\x: "+str(door.x)+" y: "+str(door.y)+"\w: "+str(door.w)+" h: "+str(door.h)+"\access level: "+str(door.accessLevel)
+        else
+            response = "!Invalid door id"
+        end if
+    case else
+        response = !"!Invalid option\\ \\Use \"list\" to see options"
+    end select
+    
+    return response
+    
+end function
+
+sub Doors_Add (x as integer, y as integer, accessLevel as integer)
+    
+    dim n as integer
+    
+    n = NumDoors
+    Doors(n).x = x * SPRITE_W
+    Doors(n).y = y * SPRITE_H
+    Doors(n).w = SPRITE_W
+    Doors(n).h = SPRITE_H
+    Doors(n).mapX = x
+    Doors(n).mapY = y
+    Doors(n).accessLevel = accessLevel
+    TileMap(x, y) = TileIds.DoorBehind
+    
+    NumDoors += 1
+    
 end sub
 
 SUB Doors_Animate
@@ -1737,7 +1825,7 @@ SUB LD2_putText (x as integer, y as integer, Text as string, bufferNum as intege
 
   FOR n = 1 TO LEN(Text)
     IF MID(Text, n, 1) <> " " THEN
-      SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, ASC(MID(Text, n, 1)) - 32)
+      SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, fontVal(mid(Text, n, 1)))
     END IF
   NEXT n
 
@@ -1753,7 +1841,7 @@ sub LD2_putTextCol (x as integer, y as integer, text as string, col as integer, 
   
   for n = 1 to len(text)
     if mid(text, n, 1) <> " " then
-      SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, ASC(MID(text, n, 1)) - 32)
+      SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, fontVal(mid(text, n, 1)))
     end if
   next n
 
@@ -2061,6 +2149,50 @@ sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
     
 end sub
 
+function MapItems_Api(args as string) as string
+    
+    dim response as string
+    dim optlist as string
+    dim arg0 as string
+    dim arg1 as string
+    dim item as ItemType
+    dim id as integer
+    
+    arg0 = getArg(args, 0)
+    arg1 = getArg(args, 1)
+    
+    optlist = "count|id [id]"
+    
+    select case arg0
+    case "list"
+        response = "Valid items options are\ \"+optlist
+    case "count"
+        return "Item count is "+str(NumItems)
+    case "id"
+        if NumItems = 0 then
+            return "No items available to check"
+        end if
+        if arg1 = "" then
+            return "Missing item id"
+        end if
+        if (arg1 = "0") or (val(arg1) > 0) then
+            id = val(arg1)
+            if id >= NumItems then
+                return "!Item id is out-of-bounds"
+            end if
+            item = Items(id)
+            response = "Item ID 0\x: "+str(item.x)+"\y: "+str(item.y)+"\item_id: "+str(item.id)
+        else
+            response = "!Invalid item id"
+        end if
+    case else
+        response = !"!Invalid option\\ \\Use \"list\" to see options"
+    end select
+    
+    return response
+    
+end function
+
 sub MapItems_Add (x as integer, y as integer, id as integer)
     dim n as integer
     if NumItems >= MAXITEMS then exit sub
@@ -2078,11 +2210,8 @@ sub MapItems_Draw ()
 end sub
 
 function MapItems_Pickup () as integer
-    if Player.state = JUMPING then
+    if Player.state = PlayerStates.Jumping then
         Player.is_lookingdown = 1
-        return 0
-    end if
-    if Player.state = LOOKINGDOWN then
         return 0
     end if
 
@@ -2107,7 +2236,7 @@ function MapItems_Pickup () as integer
         end if
     next i
 
-    SetPlayerState( CROUCHING )
+    SetPlayerState( PlayerStates.Crouching )
 
     return success
 end function
@@ -2168,19 +2297,318 @@ function Mobs_Append(fileNo as integer) as integer
     
 end function
 
-SUB Mobs_Add (x as integer, y as integer, id as integer)
+function Swaps_Api(args as string) as string
+    
+    dim response as string
+    dim optlist as string
+    dim arg0 as string
+    dim arg1 as string
+    dim swp as SwapType
+    dim id as integer
+    
+    arg0 = getArg(args, 0)
+    arg1 = getArg(args, 1)
+    
+    optlist = "count|id [id]"
+    
+    select case arg0
+    case "list"
+        response = "Valid swaps options are\ \"+optlist
+    case "count"
+        return "Swap count is "+str(NumSwaps)
+    case "id"
+        if NumSwaps = 0 then
+            return "No swaps available to check"
+        end if
+        if arg1 = "" then
+            return "Missing swap id"
+        end if
+        if (arg1 = "0") or (val(arg1) > 0) then
+            id = val(arg1)
+            if id >= NumSwaps then
+                return "!Swap id is out-of-bounds"
+            end if
+            swp = Swaps(id)
+            response = "Swap ID 0\xy0 "+str(swp.x0)+" "+str(swp.y0)+"\xy1 "+str(swp.x1)+" "+str(swp.y1)+"\w/h "+str(swp.w)+" "+str(swp.h)
+        else
+            response = "!Invalid swap id"
+        end if
+    case else
+        response = !"!Invalid option\\ \\Use \"list\" to see options"
+    end select
+    
+    return response
+    
+end function
 
-  DIM mob AS Mobile
-  
-  mob.x     = x
-  mob.y     = y
-  mob.id    = id
-  mob.life  = -99
-  mob.state = SPAWNED
-  mob.top   = 0
+function Swaps_Add (x0 as integer, y0 as integer, x1 as integer, y1 as integer, dx as integer, dy as integer) as integer
+    
+    dim n as integer
+    
+    if x0 > x1 then swap x0, x1
+    if y0 > y1 then swap y0, y1
+    n = NumSwaps: NumSwaps += 1
+    Swaps(n).x0 = x0
+    Swaps(n).y0 = y0
+    Swaps(n).x1 = dx
+    Swaps(n).y1 = dy
+    Swaps(n).w = (x1-x0)+1
+    Swaps(n).h = (y1-y0)+1
+    
+    return n
+    
+end function
 
-  Mobs.add mob
+sub Swaps_DoSwap (swapId as integer)
+    
+    dim swp as SwapType
+    dim mapX as integer, mapY as integer
+    dim x as integer, y as integer
+    if (swapId >= 0) and (swapId < NumSwaps) then
+        swp = Swaps(swapId)
+        for y = 0 to swp.h-1
+            for x = 0 to swp.w-1
+                mapX = swp.x0+x: mapY = swp.y0+y
+                if (mapX < 0) or (mapX >= MAPW) or (mapY < 0) or (mapY >= MAPH) then continue for
+                mapX = swp.x1+x: mapY = swp.y1+y
+                if (mapX < 0) or (mapX >= MAPW) or (mapY < 0) or (mapY >= MAPH) then continue for
+                swap LightMapBG(swp.x0+x, swp.y0+y), LightMapBG(swp.x1+x, swp.y1+y)
+                swap LightMapFG(swp.x0+x, swp.y0+y), LightMapFG(swp.x1+x, swp.y1+y)
+            next x
+        next y
+    end if
+    
+end sub
 
+function Switches_Api(args as string) as string
+    
+    dim response as string
+    dim optlist as string
+    dim arg0 as string
+    dim arg1 as string
+    dim switch as SwitchType
+    dim id as integer
+    
+    arg0 = getArg(args, 0)
+    arg1 = getArg(args, 1)
+    
+    optlist = "count|id [id]"
+    
+    select case arg0
+    case "list"
+        response = "Valid switches options are\ \"+optlist
+    case "count"
+        return "Switch count is "+str(NumSwitches)
+    case "id"
+        if NumSwitches = 0 then
+            return "No switches available to check"
+        end if
+        if arg1 = "" then
+            return "Missing switch id"
+        end if
+        if (arg1 = "0") or (val(arg1) > 0) then
+            id = val(arg1)
+            if id >= NumSwitches then
+                return "!Switch id is out-of-bounds"
+            end if
+            switch = Switches(id)
+            response = "Switch ID 0\x: "+str(switch.x)+"\y: "+str(switch.y)+"\swap_id: "+str(switch.swapId)
+        else
+            response = "!Invalid switch id"
+        end if
+    case else
+        response = !"!Invalid option\\ \\Use \"list\" to see options"
+    end select
+    
+    return response
+    
+end function
+
+sub Switches_Add (x as integer, y as integer)
+    
+    dim swapId as integer
+    dim x0 as integer, y0 as integer
+    dim x1 as integer, y1 as integer
+    dim dx as integer, dy as integer
+    dim n as integer
+    
+    x0 = -1: y0 = -1
+    x1 = -1: y1 = -1
+    dx = -1: dy = -1
+    for n = 0 to NumItems-1
+        select case Items(n).id
+        case ItemIds.SwapSrcA0
+            x0 = int(Items(n).x/SPRITE_W): y0 = int(Items(n).y/SPRITE_H)
+        case ItemIds.SwapSrcA1
+            x1 = int(Items(n).x/SPRITE_W): y1 = int(Items(n).y/SPRITE_H)
+        case ItemIds.SwapDstA
+            dx = int(Items(n).x/SPRITE_W): dy = int(Items(n).y/SPRITE_H)
+        end select
+    next n
+    
+    if (x0 >= 0) and (x1 >= 0) and (dx >= 0) then
+        swapId = Swaps_Add(x0, y0, x1, y1, dx, dy)
+        n = NumSwitches: NumSwitches += 1
+        Switches(n).x = x
+        Switches(n).y = y
+        Switches(n).swapId = swapId
+    end if
+    
+end sub
+
+sub Switches_Trigger (x as integer, y as integer)
+    
+    dim switch as SwitchType ptr
+    dim n as integer
+    
+    for n = 0 to NumSwitches-1
+        if (x = Switches(n).x) and (y = Switches(n).y) then
+            switch = @Switches(n)
+            exit for
+        end if
+    next n
+    
+    if switch <> 0 then
+        Swaps_DoSwap switch->swapId
+    end if
+    
+end sub
+
+function getArg(argstring as string, numArg as integer) as string
+    
+    dim astring as string
+    dim count as integer
+    dim arg as string
+    dim idx as integer
+    
+    astring = trim(argstring)
+    count = 0
+    while instr(astring, " ")
+        idx = instr(astring, " ")
+        arg = left(astring, idx-1)
+        astring = trim(right(astring, len(astring)-idx))
+        if count = numArg then
+            return arg
+        end if
+        count += 1
+    wend
+    if len(astring) and (count = numArg) then
+        return astring
+    end if
+    
+    return ""
+    
+end function
+
+function Mobs_Api(args as string) as string
+    
+    dim response as string
+    dim optlist as string
+    dim arg0 as string
+    dim arg1 as string
+    dim mob as Mobile
+    dim qty as integer
+    dim id as integer
+    
+    arg0 = getArg(args, 0)
+    arg1 = getArg(args, 1)
+    
+    optlist = "count|status|off|on|clear|killall\ids|id [id]|add [qty]|kill [id]"
+    
+    select case arg0
+    case "list"
+        response = "Valid mobs options are\ \"+optlist
+    case "count"
+        response = "Mob count is "+str(Mobs.count())
+    case "id", "kill"
+        if Mobs.count() = 0 then
+            return "No mobs available to check"
+        end if
+        if arg1 = "" then
+            return "Missing mob id"
+        end if
+        if (arg1 = "0") or (val(arg1) > 0) then
+            id = val(arg1)
+            Mobs.getMob mob, id
+            if mob.uid = 0 then
+                response = "!No mob found with id "+str(id)
+            else
+                select case arg0
+                case "id"
+                    response = "Mob ID "+str(id)+"\"+Mobs_GetTypeName(mob.id)+"\xy "+str(int(mob.x))+" "+str(int(mob.y))+"\hp "+str(mob.life)
+                case "kill"
+                    Mobs_Kill mob
+                    response = "Killed mob with id "+str(id)
+                end select
+            end if
+        else
+            response = "!Invalid mob id"
+        end if
+    case "ids"
+        response = "Mob ids are\"
+        Mobs.resetNext
+        do while Mobs.canGetNext()
+            Mobs.getNext mob
+            response += str(mob.uid)
+            if Mobs.canGetNext() then
+                response += " "
+            end if
+        loop
+    case "status"
+        response = "Mobs are "+iif(LD2_NotFlag(NOMOBS),"enabled","disabled")
+    case "off"
+        if LD2_NotFlag(NOMOBS) then
+            LD2_SetFlag(NOMOBS)
+            response = "Mobs disabled"
+        else
+            response = "Mobs already disabled"
+        end if
+    case "on"
+        if LD2_HasFlag(NOMOBS) then
+            LD2_ClearFlag(NOMOBS)
+            response = "Mobs enabled"
+        else
+            response = "Mobs already enabled"
+        end if
+    case "add"
+        qty = iif(len(arg1),val(arg1),1)
+        if qty > 0 then
+            Mobs_Generate(qty)
+            response = "Added "+str(qty)+" mob"+iif(qty>1,"s","")
+        else
+            response = "!Quantity must be greater than zero"
+        end if
+    case "clear"
+        Mobs_Clear
+        response = "Removed all mobs"
+    case "killall"
+        Mobs_KillAll
+        response = "Killed all mobs"
+    case else
+        response = !"!Invalid option\\ \\Use \"list\" to see options"
+    end select
+    
+    return response
+    
+end function
+
+sub Mobs_Add (x as integer, y as integer, id as integer)
+    
+    dim mob as Mobile
+    
+    if LD2_HasFlag(NOMOBS) then
+        exit sub
+    end if
+    
+    mob.x     = x
+    mob.y     = y
+    mob.id    = id
+    mob.life  = 0
+    mob.state = SPAWNED
+    mob.top   = 0
+    
+    Mobs.add mob
+    
 END SUB
 
 sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
@@ -2189,9 +2617,9 @@ sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
     
 end sub
 
-sub Mobs_Get (mob as Mobile, id as integer)
+sub Mobs_GetFirstOfType (mob as Mobile, id as integer)
     
-    Mobs.getMob mob, id
+    Mobs.getFirstOfType mob, id
     
 end sub
 
@@ -2673,11 +3101,12 @@ sub Mobs_Animate()
         END SELECT
         
     CASE MobIds.Boss1
-
-        if mob.life = -99 then
+        
+        select case mob.state
+        case SPAWNED
             mob.life = 100
             mob.ani = 41
-        end if
+        end select
         
         if mob.ani < 1 then mob.ani = 41
         
@@ -2712,10 +3141,11 @@ sub Mobs_Animate()
    
     CASE MobIds.Boss2
 
-        IF mob.life = -99 THEN
-          mob.life = 100
-          mob.ani = 0
-        END IF
+        select case mob.state
+        case SPAWNED
+            mob.life = 100
+            mob.ani = 0
+        end select
 
         mob.ani = mob.ani + 20
         IF mob.ani >= 360 THEN mob.ani = 0
@@ -2847,7 +3277,7 @@ sub Mobs_Draw()
             SpritesLight.putToScreen(319 - (x * 16 - 16), 180, 2)
         next x
         id = BossBarId
-        Mobs.GetMob mob, id
+        Mobs.GetFirstOfType mob, id
         select case id
         case MobIds.Boss1
             LD2_putFixed 272, 180, 40, idENEMY, 1
@@ -2862,6 +3292,29 @@ end sub
 function Mobs_GetCount() as integer
     
     return Mobs.count()
+    
+end function
+
+function Mobs_GetTypeName(typeId as integer) as string
+    
+    select case typeId
+    case MobIds.Rockmonster
+        return "Rock Monster"
+    case MobIds.Troop1
+        return "Trooper A"
+    case MobIds.Troop2
+        return "Trooper B"
+    case MobIds.Blobmine
+        return "Blob Mine"
+    case MobIds.Jellyblob
+        return "Jelly Blob"
+    case MobIds.Boss1
+        return "Rooftop Boss"
+    case MobIds.Boss2
+        return "Portal Boss"
+    case else
+        return "Name not defined"
+    end select
     
 end function
 
@@ -2920,7 +3373,7 @@ sub Player_Animate()
             if Player.uAni >= 8 then Player.uAni = 1: Player.is_shooting = 0
             Player.stillani = 1
         case PISTOL
-            if Player.state = CROUCHING then
+            if Player.state = PlayerStates.Crouching then
                 Player.uAni += 0.23
                 if Player.uAni >= (UpperSprites.PistolCrouchShootZ+1) then
                     Player.uAni = int(UpperSprites.PistolCrouchShootZ): Player.is_shooting = 0
@@ -2953,8 +3406,8 @@ sub Player_Animate()
             machineTimer = 0
         end if
         if (pistolTimer > 0) and ((timer-pistolTimer) > 1.5) then
-            Player.uAni = int(UpperSprites.HoldPistol)
-            Player.stillAni = UpperSprites.HoldPistol
+            'Player.uAni = int(UpperSprites.HoldPistol)
+            'Player.stillAni = UpperSprites.HoldPistol
             pistolTimer = 0
         end if
         'select case Player.weapon
@@ -2965,18 +3418,19 @@ sub Player_Animate()
     end if
     
     select case Player.state
-        case STILL
-        case RUNNING
-        case JUMPING
+        case PlayerStates.Standing
+        case PlayerStates.Running
+        case PlayerStates.Jumping
             if falling = 0 then
                 Player.state = 0
                 Player.landTime = timer
             end if
-        case CROUCHING, LOOKINGUP, LOOKINGDOWN
+        case PlayerStates.Crouching, PlayerStates.LookingUp
             if (timer - player.stateTimestamp) > 0.07 then
                 Player.state = 0
+                Player_SetWeapon Player.weapon '- reset upper-sprites back to normal
             end if
-        case BLOCKED
+        case PlayerStates.Blocked
             if (timer - player.stateTimestamp) > 0.30 then
                 Player.state = 0
             end if
@@ -3056,6 +3510,7 @@ sub Player_Draw()
     
     dim px as integer, py as integer
     dim lan as integer, uan as integer
+    dim idx as integer
     
     if (SceneMode = 1) or (Player.is_visible = 0) then
         exit sub
@@ -3064,7 +3519,7 @@ sub Player_Draw()
     px = int(Player.x - XShift): py = int(Player.y)
     lan = int(Player.lAni): uan = int(Player.uAni)
     select case Player.state
-    case CROUCHING
+    case PlayerStates.Crouching
         if Player.weapon = PISTOL then
             SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player.flip)
             if Player.is_shooting then
@@ -3075,8 +3530,10 @@ sub Player_Draw()
         else
             SpritesLarry.putToScreenEx(px, py, FullBodySprites.Crouching, Player.flip)
         end if
-    case LOOKINGUP
-        SpritesLarry.putToScreenEx(px, py, 50, Player.flip)
+    case PlayerStates.LookingUp
+        idx =  int((timer - player.actionStartTime) / 0.075)
+        if idx > 2 then idx = 2
+        SpritesLarry.putToScreenEx(px, py, FullBodySprites.TurningToWall+idx, Player.flip)
     case else
         if Player.is_lookingdown then
             if Player.is_shooting then
@@ -3086,7 +3543,7 @@ sub Player_Draw()
             end if
         else
             if (Player.weapon = FIST) and (lan >= 36) then '- full-body sprites
-                if (Player.state = JUMPING) and Player.is_shooting then
+                if (Player.state = PlayerStates.Jumping) and Player.is_shooting then
                     SpritesLarry.putToScreenEx(px, py, iif(Player.vy > -0.5 and Player.vy < 0.5, 29, 30), Player.flip)
                 else
                     SpritesLarry.putToScreenEx(px, py, lan, Player.flip)
@@ -3100,7 +3557,7 @@ sub Player_Draw()
                     end if
                 else
                     if Player.weapon = PISTOL then
-                        if Player.state = JUMPING then
+                        if Player.state = PlayerStates.Jumping then
                             SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, -1, 1), py, lan, Player.flip)
                         else
                             SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, -1, 1), py, lan, Player.flip)
@@ -3150,7 +3607,7 @@ function Player_Jump (amount as double, is_repeat as integer = 0) as integer
         success = 1
     END IF
 
-    SetPlayerState( JUMPING )
+    SetPlayerState( PlayerStates.Jumping )
 
     return success
     
@@ -3190,7 +3647,7 @@ function Player_JumpDown () as integer
     next n
     
     Player.y += 2
-    Player.state = JUMPING
+    Player.state = PlayerStates.Jumping
     
     return 1
     
@@ -3228,9 +3685,9 @@ function Player_Fall() as integer
             if Player.weapon = FIST then
                 Player.lAni = 42
             elseif Player.weapon = PISTOL then
-                Player.uAni = 69
+                Player.uAni = int(UpperSprites.HoldPistol)
                 Player.lAni = 24
-                Player.stillAni = 69
+                Player.stillAni = UpperSprites.HoldPistol
             else
                 Player.lAni = 24
             end if
@@ -3271,7 +3728,7 @@ end function
 
 function Player_Move (dx as double, canFlip as integer = 1) as integer
 
-    if (Player.state = CROUCHING)  or (Player.state = LOOKINGUP) or (Player.state = BLOCKED) then
+    if (Player.state = PlayerStates.Crouching)  or (Player.state = PlayerStates.LookingUp) or (Player.state = PlayerStates.Blocked) then
         return 0
     end if
 
@@ -3297,7 +3754,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     f = DELAYMOD
     dx *= f
     
-    if Player.state = JUMPING then
+    if Player.state = PlayerStates.Jumping then
         dx *= 1.1
         if (abs(dx) < abs(Player.vx)) and (sgn(dx) = sgn(Player.vx)) then
             if dx > 0 then
@@ -3325,7 +3782,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
             px = Player.x
             Player.x = fromX * SPRITE_W+box.padRgt
             bx = Player_GetCollisionBox()
-            LD2_SetNotice str(bx.rgt)
+            'LD2_SetNotice str(bx.rgt)
             if CheckPlayerWallHit() then
                 hitWall = 1
             end if
@@ -3338,7 +3795,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
             px = Player.x
             Player.x = fromX * SPRITE_W-box.padLft
             bx = Player_GetCollisionBox()
-            LD2_SetNotice str(bx.lft)
+            'LD2_SetNotice str(bx.lft)
             if CheckPlayerWallHit() then
                 hitWall = 1
             end if
@@ -3355,7 +3812,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
             footstep = 0
         end if
         Player.lAni = Player.lAni + iif(forward, abs(dx / 7.5), -abs(dx / 7.5))
-        if Player.state <> JUMPING then
+        if Player.state <> PlayerStates.Jumping then
             select case footstep
             case 0
                 if (forward = 1) and (player.lani >= 37) then LD2_PlaySound Sounds.footstep: footstep += 1
@@ -3369,7 +3826,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
         Player.vx   = dx
         Player.x    = Player.x + dx
         Player.lAni = Player.lAni + iif(forward, abs(dx / 7.5), -abs(dx / 7.5))
-        if Player.state <> JUMPING then
+        if Player.state <> PlayerStates.Jumping then
             select case footstep
             case 0
                 if (forward = 1) and (player.lani >= 23) then LD2_PlaySound Sounds.footstep: footstep += 1
@@ -3532,14 +3989,74 @@ end sub
 
 function Player_LookUp () as integer
     
-    if Player.state = JUMPING then
+    static didAction as integer = 0
+    dim idx as integer
+    
+    if (Player.state = PlayerStates.Jumping) then
         return 0
     else
-        SetPlayerState( LOOKINGUP )
+        if Player.state <> PlayerStates.LookingUp then
+            Player.actionStartTime = timer
+            didAction = 0
+        else
+            if didAction = 0 then
+                idx = int((timer - player.actionStartTime) / 0.075)
+                if idx >= 3 then
+                    Player_DoAction
+                    didAction = 1
+                end if
+            end if
+        end if
+        SetPlayerState( PlayerStates.LookingUp )
         return 1
     end if
     
 end function
+
+sub Player_DoAction ()
+    
+    dim mapX as integer, mapY as integer
+    dim points(3) as PointType
+    dim checked(3) as PointType
+    dim tile as integer
+    dim box as BoxType
+    dim i as integer
+    dim j as integer
+    
+    box = Player_GetCollisionBox()
+    points(0).x = box.lft: points(0).y = box.top
+    points(1).x = box.rgt: points(1).y = box.top
+    points(2).x = box.lft: points(2).y = box.btm
+    points(3).x = box.rgt: points(3).y = box.btm
+    
+    for i = 0 to 3
+        mapX = int(points(i).x/SPRITE_W)
+        mapY = int(points(i).y/SPRITE_H)
+        checked(i).x = mapX
+        checked(i).y = mapY
+        j = 0
+        while j < i
+            if (mapX = checked(j).x) and (mapY = checked(j).y) then
+                continue for
+            end if
+            j += 1
+        wend
+        tile = TileMap(mapX, mapY)
+        select case tile
+        case TileIds.LightSwitchLftOn, TileIds.LightSwitchLftOff, _
+             TileIds.LightSwitchRgtOn, TileIds.LightSwitchRgtOff
+                Switches_Trigger mapX, mapY
+                select case tile
+                case TileIds.LightSwitchLftOn : TileMap(mapX, mapY) = TileIds.LightSwitchLftOff
+                case TileIds.LightSwitchRgtOn : TileMap(mapX, mapY) = TileIds.LightSwitchRgtOff
+                case TileIds.LightSwitchLftOff: TileMap(mapX, mapY) = TileIds.LightSwitchLftOn
+                case TileIds.LightSwitchRgtOff: TileMap(mapX, mapY) = TileIds.LightSwitchRgtOn
+                end select
+                LD2_PlaySound Sounds.lightSwitch
+        end select
+    next i
+    
+end sub
 
 function Player_SetWeapon (itemId as integer) as integer
 
@@ -3550,7 +4067,7 @@ function Player_SetWeapon (itemId as integer) as integer
   
   IF itemId = FIST        THEN Player.uAni = 26: Player.stillani = Player.uAni
   IF itemId = SHOTGUN     THEN Player.uAni = 01: Player.stillani = Player.uAni
-  IF itemId = PISTOL      THEN Player.uAni = 69: Player.stillani = Player.uAni
+  IF itemId = PISTOL      THEN Player.uAni = int(UpperSprites.HoldPistol): Player.stillani = Player.uAni
   IF itemId = MACHINEGUN  THEN Player.uAni = 08: Player.stillani = Player.uAni
   IF itemId = MAGNUM      THEN Player.uAni = 14: Player.stillani = Player.uAni
   
@@ -3616,11 +4133,11 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         
         Inventory(ItemIds.ShotgunAmmo) -= 1
         damage = 5
-        fireY = iif(Player.state = CROUCHING, 12, 8)
+        fireY = iif(Player.state = PlayerStates.Crouching, 12, 8)
         
     case ItemIds.Pistol
         
-        if Player.state = CROUCHING then
+        if Player.state = PlayerStates.Crouching then
             if (is_repeat = 1 and timeSinceLastShot < 0.33) then return 0
             'if (is_repeat = 0 and timeSinceLastShot < 0.10) then return 0
         else
@@ -3629,8 +4146,8 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         end if
         Inventory(ItemIds.PistolAmmo) -= 1
         damage = 2
-        fireY = iif(Player.state = CROUCHING, 12, 5)
-        Player.uAni = int(iif(Player.state = CROUCHING, UpperSprites.PistolCrouchShootA, UpperSprites.ShootPistolA))
+        fireY = iif(Player.state = PlayerStates.Crouching, 12, 5)
+        Player.uAni = int(iif(Player.state = PlayerStates.Crouching, UpperSprites.PistolCrouchShootA-1, UpperSprites.ShootPistolA-1))
         Player.stillAni = Player.uAni
         
     case ItemIds.MachineGun
@@ -3638,14 +4155,14 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         if timeSinceLastShot < 0.12 then return 0
         Inventory(ItemIds.MachineGunAmmo) -= 1
         damage = 1
-        fireY = iif(Player.state = CROUCHING, 7, 5)
+        fireY = iif(Player.state = PlayerStates.Crouching, 7, 5)
         Player.uAni = 8: Player.stillAni = 8
         
     case ItemIds.Magnum
         
         Inventory(ItemIds.Magnum) -= 1
         damage = 7
-        fireY = iif(Player.state = CROUCHING, 12, 8)
+        fireY = iif(Player.state = PlayerStates.Crouching, 12, 8)
         
     case ItemIds.Fist
         
@@ -3777,7 +4294,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             LD2_RenderFrame
             LD2_RefreshScreen
             if Player.weapon = ItemIds.MachineGun then
-                WaitSeconds 0.0285
+                WaitSeconds 0.027 '85
             else
                 WaitSeconds 0.05
             end if
@@ -3796,7 +4313,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
                 mob.hit = 1
             end if
             'if mob.hit then
-            '    SetPlayerState( BLOCKED )
+            '    SetPlayerState( PlayerStates.Blocked )
             'end if
             if mob.hit then
                 mob.life -= damage
@@ -3816,8 +4333,8 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             end if
         loop
         
-        if Player.state <> JUMPING then
-            SetPlayerState( BLOCKED )
+        if Player.state <> PlayerStates.Jumping then
+            SetPlayerState( PlayerStates.Blocked )
             Player.lAni = 21 '- make const for legs still/standing
         end if
         
@@ -4052,7 +4569,7 @@ function LD2_GetElementTextWidth (e as ElementType ptr) as integer
     pixels = 0
     for n = 1 to len(text)
         char = mid(text, n, 1)
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32)) + iif(n < len(text), textSpacing, 0)
+        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
     next n
     
     return pixels
@@ -4152,7 +4669,7 @@ sub LD2_RenderElement(e as ElementType ptr)
             pixels = 0
             continue for
         end if
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32)) + iif(n < len(text), textSpacing, 0)
+        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
     next n
     if pixels > maxpixels then maxpixels = pixels
     textWidth = maxpixels
@@ -4245,7 +4762,7 @@ sub LD2_RenderElement(e as ElementType ptr)
         if n = len(text) then
             printWord = 1
             _word += char
-            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32))+iif(n < len(text), textSpacing, 0)
+            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), textSpacing, 0)
         end if
         if printWord and (len(_word) > 0) then
             if doLTrim then
@@ -4259,8 +4776,8 @@ sub LD2_RenderElement(e as ElementType ptr)
             end if
             for i = 1 to len(_word)
                 ch = mid(_word, i, 1)
-                SpritesFont.putToScreen(int(fx)-FontCharMargins(asc(ch)-32), fy, asc(ch) - 32)
-                fx += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(ch)-32))+textSpacing
+                SpritesFont.putToScreen(int(fx)-FontCharMargins(fontVal(ch)), fy, fontVal(ch))
+                fx += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(ch)))+textSpacing
             next i
             _word = ""
             pixels = fx - x
@@ -4272,7 +4789,7 @@ sub LD2_RenderElement(e as ElementType ptr)
             doLtrim =1
         end if
         _word += char
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32))+iif(n < len(text), textSpacing, 0)
+        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), textSpacing, 0)
         newLine = 0
         printWord = 0
     next n
@@ -4444,6 +4961,7 @@ sub LD2_LoadFontMetrics(filename as string)
             else
                 charWidth = FONT_W '- assume space
             end if
+            if n = 64 then charWidth = FONT_W: rightMost = -1 '* "|"
             FontCharWidths(n) = charWidth
             FontCharMargins(n) = iif(leftMost <= rightMost, leftMost, 0)
             n += 1
@@ -4451,3 +4969,17 @@ sub LD2_LoadFontMetrics(filename as string)
     close #1
     
 end sub
+
+function FontVal(ch as string) as integer
+    
+    dim v as integer
+    
+    if ch = "|" then
+        v = 64
+    else
+        v = asc(ch)-32
+    end if
+    
+    return v
+    
+end function

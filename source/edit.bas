@@ -2104,7 +2104,7 @@ sub MapPaste(destX as integer, destY as integer, scrollX as integer, onlyVisible
             next x
         next y
         for n = 0 to NumCopyItems-1
-            spritesObject.putToScreen CopyItems(n).x*SPRITE_W, CopyItems(n).y*SPRITE_H, CopyItems(n).item
+            spritesObject.putToScreen (destX+CopyItems(n).x-scrollX)*SPRITE_W, (destY+CopyItems(n).y)*SPRITE_H, CopyItems(n).item
         next n
         spritesTile.setAlphaMod(255)
         spritesLight.setAlphaMod(255)
@@ -2125,18 +2125,27 @@ sub MapPaste(destX as integer, destY as integer, scrollX as integer, onlyVisible
                 AniMap(destX+x, destY+y)     = CopyMap(x, y).animated
             next x
         next y
+        '// clear items from destination space
+        x0 += destX: x1 += destX
+        y0 += destY: y1 += destY
         for i = 0 to MapProps.numItems-1
             if  Items(i).x >= x0 and Items(i).x <= x1 _
             and Items(i).y >= y0 and Items(i).y <= y1 then
-                for n = i to MapProps.numItems - 2
-                    Items(n) = Items(n + 1)
-                next n
                 MapProps.numItems -= 1
+                if MapProps.numItems > 0 then
+                    for n = i to MapProps.numItems-1
+                        Items(n) = Items(n + 1)
+                    next n
+                end if
                 i -= 1
+                if i >= MapProps.numItems-1 then
+                    exit for
+                end if
             end if
         next i
+        '// copy items over from source space
         for i = 0 to NumCopyItems-1
-            PlaceItem CopyItems(i).x, CopyItems(i).y, CopyItems(i).item
+            PlaceItem destX+CopyItems(i).x, destY+CopyItems(i).y, CopyItems(i).item
         next i
     end if
     

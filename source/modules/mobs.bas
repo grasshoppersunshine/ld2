@@ -156,13 +156,28 @@ function MobileCollection.findVacantSlot () as integer
     
 end function
 
-sub MobileCollection.getMob (mob as Mobile, id as integer)
+sub MobileCollection.getFirstOfType (mob as Mobile, id as integer)
     
     dim n as integer
     
     n = this._firstMob
     do while n >= 0
         if (this._mobs(n).id = id) and (this._mobs(n).vacant = 0) then
+            mob = this._mobs(n)
+            exit do
+        end if
+        n = this._mobs(n).nxt
+    loop
+    
+end sub
+
+sub MobileCollection.getMob (mob as Mobile, id as integer)
+    
+    dim n as integer
+    
+    n = this._firstMob
+    do while n >= 0
+        if (this._mobs(n).uid = id) and (this._mobs(n).vacant = 0) then
             mob = this._mobs(n)
             exit do
         end if

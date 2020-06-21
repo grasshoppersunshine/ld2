@@ -12,6 +12,7 @@ type PlayerType
     state as integer
     stateTimestamp as double
     landTime as double
+    actionStartTime as double
     weapon as integer
     is_shooting as integer
     is_visible as integer
@@ -96,7 +97,11 @@ enum LayerIds
     LightBg = 3
 end enum
 
-declare sub Doors_Add ()
+declare function fontVal(ch as string) as integer
+declare function getArg(argstring as string, numArg as integer) as string
+
+declare function Doors_Api (args as string) as string
+declare sub Doors_Add (x as integer, y as integer, accessLevel as integer)
 declare sub Doors_Animate ()
 declare sub Doors_Open(id as integer)
 declare sub Doors_Close(id as integer)
@@ -105,11 +110,20 @@ declare sub Guts_Add (gutsId as integer, x as integer, y as integer, qty as inte
 declare sub Guts_Animate ()
 declare sub Guts_Draw ()
 
+declare function MapItems_Api (args as string) as string
 declare sub MapItems_Add (x as integer, y as integer, id as integer)
 declare sub MapItems_Draw ()
 declare function MapItems_Pickup () as integer
 declare function MapItems_Append(fileNo as integer) as integer
 declare function MapItems_GetCount() as integer
+
+declare function Swaps_Api (args as string) as string
+declare function Swaps_Add (x0 as integer, y0 as integer, x1 as integer, y1 as integer, dx as integer, dy as integer) as integer
+declare sub Swaps_DoSwap (swapId as integer)
+
+declare function Switches_Api (args as string) as string
+declare sub Switches_Add (x as integer, y as integer)
+declare sub Switches_Trigger (x as integer, y as integer)
 
 declare sub Map_AfterLoad(skipMobs as integer = 0)
 declare sub Map_BeforeLoad(byref skipItems as integer)
@@ -121,8 +135,9 @@ declare sub Map_SetXShift (x as integer)
 declare sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer = LayerIds.Tile)
 declare sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
 
+declare function Mobs_Api (args as string) as string
 declare sub Mobs_Add (x as integer, y as integer, id as integer)
-declare sub Mobs_Get (mob as Mobile, id as integer)
+declare sub Mobs_GetFirstOfType (mob as Mobile, id as integer)
 declare sub Mobs_Generate  (forceNumMobs as integer = 0, forceMobType as integer = 0)
 declare sub Mobs_Animate ()
 declare sub Mobs_Draw ()
@@ -132,6 +147,7 @@ declare sub Mobs_Clear ()
 declare sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
 declare function Mobs_Append(fileNo as integer) as integer
 declare function Mobs_GetCount() as integer
+declare function Mobs_GetTypeName(typeId as integer) as string
 
 declare sub Stats_Draw ()
 
@@ -168,6 +184,7 @@ declare sub Player_SetAccessLevel (accessLevel as integer)
 declare sub Player_SetTempAccess (accessLevel as integer)
 declare function Player_GetCollisionBox() as BoxType
 declare function Player_GetGotItem() as integer
+declare sub Player_DoAction ()
 
 declare function LD2_HasCommandArg(argcsv as string) as integer
 declare sub LD2_ReadyCommandArgs()
@@ -264,6 +281,7 @@ const FONT_h = 5
 CONST MAXGUTS      = 100
 CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)
 CONST MAXDOORS     =  16 '- per room
+CONST MAXSWAPS     =  12
 CONST MAXFLOORS    =  23
 CONST MAXINVENTORY =  127
 CONST MAXINVSLOTS  =   7

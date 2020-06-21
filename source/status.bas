@@ -545,7 +545,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
             selectedRoom = selectedRoom + 1
             if selectedRoom <= numFloors - 1 then
                 while (selectedRoom <= numFloors-1)
-                    if trim(floors(numFloors-1-selectedRoom).filename) = "" then
+                    if trim(floors(numFloors-selectedRoom).filename) = "" then
                         selectedRoom = selectedRoom + 1
                     else
                         exit while
@@ -563,7 +563,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
             selectedRoom = selectedRoom - 1
             if selectedRoom >= 0 then
                 while (selectedRoom >= 0)
-                    if trim(floors(numFloors-1-selectedRoom).filename) = "" then
+                    if trim(floors(numFloors-selectedRoom).filename) = "" then
                         selectedRoom = selectedRoom - 1
                     else
                         exit while

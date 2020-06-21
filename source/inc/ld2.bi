@@ -5,10 +5,10 @@ enum TileIds
     AlienWallMiddle      = 86
     AlienWallBurningUp   = 87
     CardboardBox         = 195
-    ColaBottomLeft       = 8
-    ColaBottomRight      = 9
+    ColaBottomLeft       = 7
+    ColaBottomRight      = 8
     ColaTopLeft          = 5
-    ColaTopRight         = 7
+    ColaTopRight         = 6
     Crate                = 95
     DoorActivated        = 101
     DoorBehind           = 52
@@ -30,6 +30,10 @@ enum TileIds
     ElevatorSign2Right   = 28
     Grass                = 107
     GraySquare           = 32
+    LightSwitchLftOn     = 213
+    LightSwitchLftOff    = 214
+    LightSwitchRgtOn     = 215
+    LightSwitchRgtOff    = 216
     PortalTopLeft        = 110
     PortalTopRight       = 111
     PortalBottomLeft     = 112
@@ -120,6 +124,10 @@ enum ItemIds
     ScenePortal          = 116
     SceneLobby           = 117
     SceneTheEnd          = 118
+    '=======================================
+    SwapSrcA0            = 50
+    SwapSrcA1            = 51
+    SwapDstA             = 52
 end enum
 
 enum AnimationIds
@@ -214,7 +222,7 @@ end enum
 enum UpperSprites
     HoldMachinegun     = 8
     HoldMagnum         = 14
-    HoldPistol         = 69
+    HoldPistol         = 70 '69
     HoldShotgun        = 1
     JumpPistol         = 68
     PistolCrouch       = 59
@@ -241,11 +249,13 @@ end enum
 enum FullBodySprites
     Crouching          = 28
     Jumping            = 48
+    LookingUp          = 50
     PistolDown         = 55
     PistolShootDownA   = 56
     PistolShootDownZ   = 57
     RunningA           = 36
     RunningZ           = 43
+    TurningToWall      = 77
 end enum
 
 type ActionItem
@@ -424,6 +434,7 @@ enum Sounds
     outofammo
     reload
     quad
+    lightSwitch
     '// rooftop
     keypadInput
     keypadGranted
@@ -509,6 +520,7 @@ CONST ELEVATORMENU  = &h400
 CONST MUSICFADEIN   = &h800
 CONST MUSICFADEOUT  = &h1000
 CONST MUSICCHANGE   = &h2000
+CONST NOMOBS        = &h4000
 
 '======================
 '= SCENE POSES

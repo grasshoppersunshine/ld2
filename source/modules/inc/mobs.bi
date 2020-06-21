@@ -74,6 +74,7 @@ public:
     declare function getRandomType() as integer
     declare function typeIsEnabled(id as integer) as integer
     declare sub add(mob as Mobile)
+    declare sub getFirstOfType(mob as Mobile, id as integer)
     declare sub getMob(mob as Mobile, id as integer)
     declare sub update(mob as Mobile)
     declare sub resetNext()
