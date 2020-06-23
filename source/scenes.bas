@@ -41,16 +41,6 @@ declare sub SceneWeapons2EndConditions ()
 declare sub SceneWeapons3EndConditions ()
 declare sub ScenePortalEndConditions ()
 
-function ContinueAfterSeconds(seconds as double) as integer
-    dim pausetime as double
-    pausetime = timer
-    while (timer-pausetime) <= seconds
-        PullEvents : RenderScene
-        if keypress(KEY_ENTER) then return 1
-    wend
-    return 0
-end function
-
 function ContinueAfterSlowMo(seconds as double) as integer
     dim pausetime as double
     pausetime = timer
@@ -133,10 +123,9 @@ end function
 sub Scene1 ()
     
     if Scene1Go() then
-        LD2_FadeOut 2
+        SceneFadeOut 0.5
         Scene1EndConditions
-        RenderScene 0
-        LD2_FadeIn 2
+        SceneFadeIn 0.5
     else
         Scene1EndConditions
     end if
@@ -163,16 +152,18 @@ function Scene1Go () as integer
     AddSound Sounds.sodacanopen, "splice/sodacanopen.wav"
     AddSound Sounds.sodacandrop, "splice/sodacandrop.wav"
 	
-	DIM LarryPose AS PoseType
-	DIM StevePose AS PoseType
+	static LarryPose as PoseType
+	static StevePose as PoseType
+    dim leftX as integer
+    leftX = 83
 
 	GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
 	GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Talking
 	LarryPose.isFlipped = 0
 	StevePose.isFlipped = 1
 
-	LarryPose.x =  83: LarryPose.y =  144
-	StevePose.x = 127: StevePose.y =  144
+	LarryPose.x = leftX   : LarryPose.y =  144
+	StevePose.x = leftX+44: StevePose.y =  144
 	
 	ClearPoses
 	AddPose @LarryPose
@@ -180,10 +171,11 @@ function Scene1Go () as integer
 
 	LD2_RenderFrame
 	RenderPoses
-    LD2_FadeIn 2
+    if SceneFadeIn(1.0) then return 1
 
-	'FadeInMusic Tracks.Wandering
+	'FadeInMusic Tracks.Wandering, 1.0
     LD2_PlayMusic Tracks.Wandering
+    if ContinueAfterSeconds(1.0) then return 1
 	
     dim escaped as integer
     dim x as integer
@@ -196,20 +188,20 @@ function Scene1Go () as integer
     '- Steve walks to soda machine
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Walking
     StevePose.isFlipped = 0
-    for x = 124 to 152
+    for x = leftX+44 to leftX+70
         StevePose.x = x
-        'StevePose.btmMod = int(x mod 6)
-        StevePose.nextFrame
+        if ((x-leftX-44) and 1) = 1 then
+            StevePose.nextFrame
+        end if
         RenderScene
-        RetraceDelay 3
+        ContinueAfterSeconds 0.0333
         PullEvents
         if keyboard(KEY_ENTER) then return 1
     next x
 
-    StevePose.x = 152
+    StevePose.x = leftX+70
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Talking
     RenderScene
-    RetraceDelay 40
 
     if DoScene("SCENE-1B") then return 1 '// Hey, you got a quarter?
 
@@ -217,20 +209,18 @@ function Scene1Go () as integer
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Kicking
     StevePose.isFlipped = 1 '- can DoScene update the flipped value from script file?
     for i = 0 to 3
-        'StevePose.btmMod = i
         RenderScene
         StevePose.nextFrame
-        if i = 3 then
-            RetraceDelay 10
+        if i = 2 then
+            ContinueAfterSeconds 0.1667
             LD2_PlaySound Sounds.kickvending
-        else
-            RetraceDelay 19
         end if
+        ContinueAfterSeconds 0.3333
         PullEvents
         if keyboard(KEY_ENTER) then return 1
     next i
     
-    WaitSeconds 0.5
+    ContinueAfterSeconds 0.5
 
     '- Steve bends down and gets a soda
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.GettingSoda
@@ -238,7 +228,7 @@ function Scene1Go () as integer
         'StevePose.btmMod = i
         RenderScene
         StevePose.nextFrame
-        RetraceDelay 29
+        ContinueAfterSeconds 0.6667
         PullEvents
         if keyboard(KEY_ENTER) then return 1
     next i
@@ -248,18 +238,20 @@ function Scene1Go () as integer
     StevePose.lastFrame
     RenderScene
     
-    WaitSeconds 0.5
+    ContinueAfterSeconds 0.5
     LD2_PlaySound Sounds.sodacanopen
     
+    SceneFadeOut 0.20
     if DoScene("SCENE-1C") then return 1 '// Steve drinks the cola!
     
     '// Steve looks ill
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Surprised
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Sick
-    StevePose.x = 170
-    RenderScene
+    StevePose.x = leftX+87
+    RenderScene 0
+    SceneFadeIn 1.0
 
-    RetraceDelay 80
+    ContinueAfterSeconds  1.3333
 
     if DoScene("SCENE-1D") then return 1 '// Larry, I don't feel so good
     
@@ -268,10 +260,13 @@ function Scene1Go () as integer
     
     LD2_PlaySound Sounds.sodacandrop
 
-    RetraceDelay 80
+    ContinueAfterSeconds 1.3333
 
     if DoScene("SCENE-1E") then return 1 '// Steve! I gotta get help1
+    SceneFadeOut 0.20
     if DoScene("SCENE-1F") then return 1 '// The Journey Begins...Again!!
+    RenderScene 0
+    SceneFadeIn 1.0
 
     WaitForKeyup(KEY_ENTER)
     WaitForKeyup(KEY_SPACE)

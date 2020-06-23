@@ -188,7 +188,7 @@ FUNCTION SCENE_ReadLine() as integer
                 SetSpeakerId row
             case "LARRY_LOOKINGUP", "LARRY_THINKING", "LARRY_THINKING_TALKING"
                 SetSpeakerId row
-            case "LARRY_RADIO", "BARNEY_RADIO"
+            case "LARRY_RADIO", "BARNEY_RADIO", "LARRY_SURPRISED"
                 SetSpeakerId row
             case ""
                 '- do nothing -- read next line

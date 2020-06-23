@@ -575,6 +575,7 @@ enum ChatBoxes
     LarryThinking        = 132
     LarryThinkTalking    = 134
     LarryRadio           = 68
+    LarrySurprised       = 165
     Steve                = 39
     SteveSick            = 115
     SteveLaughing        = 139
@@ -626,3 +627,7 @@ declare function FadeInMusic(id as integer = -1, seconds as double = 3.0) as int
 declare function FadeOutMusic(seconds as double = 3.0) as integer
 
 declare function GetFloorMusicId(roomId as integer) as integer
+
+declare function ContinueAfterSeconds(seconds as double) as integer
+declare function SceneFadeIn(seconds as double) as integer
+declare function SceneFadeOut(seconds as double) as integer

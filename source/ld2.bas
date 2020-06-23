@@ -245,19 +245,6 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
 	GetCharacterPose poseTalking, characterId, talkingPoseId
     UpdatePose renderPose, poseTalking
     
-    'cursor = 1
-	'DO
-	'	cursor = INSTR(cursor, caption, " ")
-	'	IF cursor THEN
-	'		WHILE MID(caption, cursor, 1) = " ": cursor = cursor + 1: WEND
-	'		words = words + 1
-    '    ELSE
-    '        EXIT DO
-	'	END IF
-	'LOOP
-    'IF (words = 0) AND (LEN(caption) > 0) THEN '- trim caption?
-    '    words = 1
-    'END IF
     dim text as string
     text = caption
     caption = ""
@@ -327,13 +314,21 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
     end if
     LD2_RefreshScreen
     
-    WaitForKeyup(KEY_SPACE)
-    while mouseLB(): PullEvents: wend
+    while keyboard(KEY_SPACE) or keyboard(KEY_ENTER) or mouseLB()
+        PullEvents: RenderScene 0
+        if chatBox then LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+        LD2_RefreshScreen
+    wend
 
     dim timestamp as double
     timestamp = timer
 	do
         PullEvents
+        RenderScene 0
+        if chatBox then
+            LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+        end if
+        LD2_RefreshScreen
         if (timer - timestamp) >= 0.15 then
             if right(caption, 1) <> "_" then
                 caption += "_"
@@ -350,10 +345,12 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
         end if
 		if keypress(KEY_ENTER) then escapeFlag = 1: exit do
 	loop until keypress(KEY_SPACE) or mouseLB()
-
-    WaitForKeyup(KEY_SPACE)
-	WaitForKeyup(KEY_ENTER)
-    while mouseLB(): PullEvents: wend
+    
+    while keyboard(KEY_SPACE) or keyboard(KEY_ENTER) or mouseLB()
+        PullEvents: RenderScene 0
+        if chatBox then LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+        LD2_RefreshScreen
+    wend
     
     return escapeFlag
     
@@ -396,11 +393,10 @@ sub CharacterDoCommands(characterId AS INTEGER)
                 case "walkto"
                     pose.setX val(param)
                     UpdatePose pose, pose
-                    LD2_RenderFrame
-                    RenderPoses
-                    LD2_RefreshScreen
                 case "wait"
-                    WaitSeconds(val(param))
+                    LD2_WriteText ""
+                    RenderScene
+                    ContinueAfterSeconds(val(param))
                 case "kick"
                 case "crouch"
                 case "stand"
@@ -410,7 +406,9 @@ sub CharacterDoCommands(characterId AS INTEGER)
         end if
         select case comm
             case "wait"
-                WaitSeconds(val(param))
+                LD2_WriteText ""
+                RenderScene
+                ContinueAfterSeconds(val(param))
             case else
         end select
         PullEvents
@@ -436,6 +434,7 @@ FUNCTION DoDialogue() as integer
     characterId = 0
     SELECT CASE sid
     CASE "NARRATOR"
+        LD2_WriteText ""
         CharacterDoCommands( 0 )
         LD2_PopText dialogue
 	CASE "LARRY"
@@ -458,6 +457,10 @@ FUNCTION DoDialogue() as integer
         characterId = CharacterIds.Larry
         poseId = PoseIds.Radio
         chatBox = ChatBoxes.LarryRadio
+    case "LARRY_SURPRISED"
+        characterId = CharacterIds.Larry
+        poseId = PoseIds.Surprised
+        chatBox = ChatBoxes.LarrySurprised
 	CASE "STEVE"
         characterId = CharacterIds.Steve
         poseId = PoseIds.Talking
@@ -516,9 +519,8 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
             pose.addSprite 3: pose.addSprite 0: pose.takeSnapshot
             pose.addSprite 3: pose.addSprite 1: pose.takeSnapshot
         case PoseIds.Surprised
-            pose.addSprite 3
-            pose.addSprite 2, 0, -2
-            pose.takeSnapshot
+            pose.addSprite 3: pose.addSprite 167, 0, -2: pose.takeSnapshot
+            pose.addSprite 3: pose.addSprite 168, 0, -2: pose.takeSnapshot
         case PoseIds.Walking
             pose.setSpriteSetId idLARRY
             pose.addSprite 36: pose.takeSnapshot
@@ -1309,7 +1311,6 @@ function DoScene (sceneId as string) as integer
     end if
     
     LD2_WriteText ""
-    RenderScene
     
     return escaped
     
@@ -2716,5 +2717,45 @@ function GetRoomName(id as integer) as string
 	close #fileNo
     
     return trim(label)
+    
+end function
+
+function ContinueAfterSeconds(seconds as double) as integer
+    dim pausetime as double
+    pausetime = timer
+    while (timer-pausetime) <= seconds
+        PullEvents : RenderScene
+        if keypress(KEY_ENTER) then return 1
+    wend
+    return 0
+end function
+
+function SceneFadeIn(seconds as double) as integer
+    
+    dim delay as double
+    
+    delay = seconds/60
+    do
+        PullEvents
+        RenderScene 0
+        if keypress(KEY_ENTER) then return 1
+    loop while LD2_FadeInStep(delay, 0)
+    
+    return 0
+    
+end function
+
+function SceneFadeOut(seconds as double) as integer
+    
+    dim delay as double
+    
+    delay = seconds/60
+    do
+        PullEvents
+        RenderScene 0
+        if keypress(KEY_ENTER) then return 1
+    loop while LD2_FadeOutStep(delay, 0)
+    
+    return 0
     
 end function

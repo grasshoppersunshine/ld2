@@ -302,18 +302,53 @@ SUB LD2_FadeInWhileNoKey (speed AS INTEGER, col as integer = 0)
     
 END SUB
 
-function LD2_FadeOutStep (speed AS INTEGER, col as integer = 0) as integer
+function LD2_FadeInStep (delay as double, col as integer = 0) as integer
     
-    static a as integer = 255
+    static timestamp as double
+    static a as double = 0
+    dim t as double
     
-    if a = 255 then a = 0
+    if a = 0 then
+        a = 255
+        timestamp = timer
+    end if
     
-    speed *= 4
-    a += speed
+    t = (timer - timestamp)
+    if t >= delay then
+        a -= 4.25*t/delay
+        timestamp = timer
+    end if
+    
+    if a < 0 then a = 0
+    VideoBuffers(0).putToScreen()
+    VideoHandle.fillScreen(col, a)
+    VideoHandle.update()
+    
+    return (a > 0)
+    
+end function
+
+function LD2_FadeOutStep (delay as double, col as integer = 0) as integer
+    
+    static timestamp as double
+    static a as double = 255
+    dim t as double
+    
+    if a = 255 then
+        a = 0
+        timestamp = timer
+    end if
+    
+    t = (timer - timestamp)
+    if t >= delay then
+        a += 4.25*t/delay
+        timestamp = timer
+    end if
     
     if a > 255 then a = 255
     VideoBuffers(0).putToScreen()
     VideoHandle.fillScreen(col, a)
+    VideoHandle.update()
     
     return (a < 255)
     

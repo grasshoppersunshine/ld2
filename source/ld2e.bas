@@ -1177,7 +1177,7 @@ sub Map_AfterLoad(skipMobs as integer = 0)
             case 80 to 109, 125, 133, 141, 143
                 FloorMap(x, y) = 1
             case TileIds.ColaTopLeft, TileIds.ColaTopRIght
-                FloorMap(x, y) = 19
+                FloorMap(x, y) = 15
             case 162, 164, 166, 168, 171, 173, 175, 225, 227
                 FloorMap(x, y) = 30 '* stairs slope-up (left low / right high)
             case 163, 165, 167, 169, 172, 174, 176, 226, 228
@@ -1586,15 +1586,24 @@ SUB SetPlayerState(state as integer)
     
 END SUB
 
-SUB LD2_PopText (Message as string)
-
-    LD2_cls
-   
-    WaitForKeyup(KEY_SPACE)
-
-    LD2_PutText ((SCREEN_W - LEN(Message) * FONT_W) / 2), 60, Message, 0
+sub LD2_PopText (message as string)
     
-    LD2_UpdateScreen
+    static textPop as ElementType
+    if textPop.y = 0 then
+        LD2_InitElement @textPop, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
+        textPop.y = 60
+        textPop.background_alpha = 0
+    end if
+
+    LD2_cls 1, 0
+   
+    textPop.text = message
+    LD2_RenderElement @textPop
+    
+    LD2_FadeIn 7.5
+    WaitForKeyup(KEY_SPACE)
+    WaitForKeyup(KEY_ENTER)
+    while mouseLB(): PullEvents: wend
     
     do
         PullEvents
@@ -1604,6 +1613,8 @@ SUB LD2_PopText (Message as string)
     WaitForKeyup(KEY_SPACE)
     WaitForKeyup(KEY_ENTER)
     while mouseLB(): PullEvents: wend
+    
+    LD2_FadeOut 7.5
 
 END SUB
 

@@ -37,13 +37,15 @@ SCENE-1A
     LARRY
     Yep...
     Smell ya later.
+    
+    STEVE [ WAIT 0.20, FACE RIGHT, WAIT 0.20 ]
 
 END
 
 SCENE-1B
     
-    STEVE [ FACE RIGHT, WALKTO 152, WAIT 0.3333, FACE LEFT ]
-    D Cola, eh?
+    STEVE [ WAIT 0.25, FACE LEFT, WAIT 0.50 ]
+    "D" Cola, eh?
     
     LARRY
     You know it.
@@ -56,19 +58,17 @@ SCENE-1B
     ... You got a quarter?
 
     LARRY
-    No, but...
-    If you kick it, you get one for free.
+    No, but... if you kick it, you get one for free.
 
     STEVE
-    Ha!
-    Kick it in the D!
+    Ha! Kick it in the "D"!
     
     LARRY
     Ha! ha!
     Seriously though... don't hurt yourself.
     
     STEVE
-    Heh... I'll be just fine.
+    Don't you worry... I'll be just fine.
     
 END
 
@@ -92,7 +92,7 @@ END
 
 SCENE-1E
     
-    LARRY
+    LARRY_SURPRISED
     Steve!
     I gotta get help!
 
@@ -128,7 +128,7 @@ SCENE-3A
     He needs help!
     
     JANITOR
-    The vending machine? That hasn't been checked in ages!
+    The vending machine? That hasn't been serviced in ages!
     In fact, those colas are...
     ...
     
