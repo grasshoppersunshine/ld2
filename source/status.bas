@@ -80,6 +80,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     static labelWeapon as ElementType: static valueWeapon as ElementType
     static labelInventory as ElementType
     static labelItems(7) as ElementType
+    static labelItemsQty(7) as ElementType
     static labelItemsDecor(7) as ElementType
     static menuActions as ElementType
     static labelActions(3) as ElementType
@@ -172,6 +173,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     LD2_AddElement @labelInventory
     for i = 0 to 7
         LD2_AddElement @labelItems(i)
+        LD2_AddElement @labelItemsQty(i)
         LD2_AddElement @labelItemsDecor(i)
     next i
     if (action <> -1) and (mixItem = 0) then
@@ -228,19 +230,21 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     END SELECT
     
     SELECT CASE Player.weapon
-    CASE FIST
+    CASE ItemIds.Fist
         valueWeapon.text = "Fist"
-    CASE SHOTGUN
+    CASE ItemIds.Shotgun
         valueWeapon.text = "Shotgun"
-    CASE MACHINEGUN
+    CASE ItemIds.MachineGun
         valueWeapon.text = "Machinegun"
-    CASE PISTOL
+    CASE ItemIds.Pistol
         valueWeapon.text = "Pistol"
-    CASE MAGNUM
+    CASE ItemIds.Magnum
         valueWeapon.text = "Magnum"
     END SELECT
     
     valueHealth.text = ltrim(str(Player_GetItemQty(ItemIds.Hp)))+"%"
+    
+    dim qty as integer
     
     FOR i = 0 TO 7
         
@@ -259,6 +263,14 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
         labelItems(i).w = (FONT_W+1)*15 - labelItems(i).padding_x
         labelItems(i).x = labelItemsDecor(i).x + fontW * 2 - labelItems(i).padding_x
         labelItems(i).y = labelItemsDecor(i).y - labelItems(i).padding_y
+        
+        LD2_initElement @labelItemsQty(i), str(item.qty), 31, ElementFlags.AlignTextRight
+        labelItemsQty(i).h = FONT_H
+        labelItemsQty(i).parent = @dialog
+        labelItemsQty(i).padding_x = 3
+        labelItemsQty(i).padding_y = 1
+        labelItemsQty(i).y = labelItems(i).y
+        labelItemsQty(i).x = labelItems(i).x+labelItems(i).w+labelItems(i).padding_x-LD2_GetElementTextWidth(@labelItemsQty(i))
         
         IF i = selectedInventorySlot THEN
             selected = item
@@ -758,21 +770,19 @@ SUB RefreshStatusScreen
     DIM i AS INTEGER
     DIM id AS INTEGER
     DIM qty AS INTEGER
+    dim qtyMax as integer
     
     Inventory_Clear
     FOR i = 0 TO 7 '- change to LD2_GetMaxInvSize% ?
         id = LD2_GetStatusItem(i)
         qty = LD2_GetStatusAmount(i)
-        IF Inventory_Add(id, qty) THEN
+        qtyMax = Player_GetItemMaxQty(id)
+        IF Inventory_Add(id, qty, qtyMax) THEN
             EXIT FOR
         END IF
     NEXT i
-    Inventory_AddHidden(ItemIds.Hp, Player_GetItemQty(ItemIds.Hp))
-    Inventory_AddHidden(ItemIds.ShotgunLoaded   , Player_GetItemQty(ItemIds.ShotgunAmmo   ))
-    Inventory_AddHidden(ItemIds.PistolLoaded    , Player_GetItemQty(ItemIds.PistolAmmo    ))
-    Inventory_AddHidden(ItemIds.MachineGunLoaded, Player_GetItemQty(ItemIds.MachineGunAmmo))
-    Inventory_AddHidden(ItemIds.MagnumLoaded    , Player_GetItemQty(ItemIds.MagnumAmmo    ))
-    Inventory_AddHidden(ItemIds.Active410       , Player_GetItemQty(ItemIds.Active410     ))
+    Inventory_AddHidden(ItemIds.Hp, Player_GetItemQty(ItemIds.Hp), Maxes.Hp)
+    Inventory_AddHidden(ItemIds.Active410, Player_GetItemQty(ItemIds.Active410))
     Inventory_RefreshNames
     
 END SUB

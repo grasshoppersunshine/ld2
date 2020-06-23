@@ -93,17 +93,16 @@
   
   
   
-  declare sub LoadSounds ()
-  declare sub SceneOpenElevatorDoors()
-  declare sub Rooms_DoRooftop (player as PlayerType)
-  declare sub Rooms_DoBasement (player as PlayerType)
-  declare sub PlayerCheck (player as PlayerType)
-  declare sub SceneCheck (player as PlayerType)
-  declare sub BossCheck (player as PlayerType)
-  declare function ConsoleCheck (comstring as string, player as PlayerType) as string
-  declare sub FlagsCheck (player as PlayerType)
-  declare sub ItemsCheck (player as PlayerType)
-  declare sub GenerateRoofCode ()
+    declare sub LoadSounds ()
+    declare sub Rooms_DoRooftop (player as PlayerType)
+    declare sub Rooms_DoBasement (player as PlayerType)
+    declare sub PlayerCheck (player as PlayerType)
+    declare sub SceneCheck (player as PlayerType)
+    declare sub BossCheck (player as PlayerType)
+    declare function ConsoleCheck (comstring as string, player as PlayerType) as string
+    declare sub FlagsCheck (player as PlayerType)
+    declare sub ItemsCheck (player as PlayerType)
+    declare sub GenerateRoofCode ()
     declare function GetRoomName(id as integer) as string
   
 '======================
@@ -925,15 +924,15 @@ sub DoAction(actionId as integer, itemId as integer = 0)
         if success = 1 then
             Player_Get player
             select case player.weapon
-            case FIST
+            case ItemIds.Fist
                 LD2_PlaySound Sounds.punch
-            case SHOTGUN
+            case ItemIds.Shotgun
                 LD2_PlaySound Sounds.shotgun
-            case MACHINEGUN
+            case ItemIds.MachineGun
                 LD2_PlaySound Sounds.machinegun
-            case PISTOL
+            case ItemIds.Pistol
                 LD2_PlaySound Sounds.pistol
-            case MAGNUM
+            case ItemIds.Magnum
                 LD2_PlaySound Sounds.magnum
             end select
             if playQuad then
@@ -1038,6 +1037,7 @@ SUB Main
         Mobs_Animate
         Guts_Animate
         Doors_Animate
+        Elevators_Animate
     end if
 	LD2_RenderFrame
     
@@ -1194,10 +1194,10 @@ SUB Main
     
     if LD2_isTestMode() then
         if keypress(KEY_R) or ((mouseRB() > 0) and newReload) then
-            Player_AddAmmo ItemIds.ShotgunAmmo, 99
-            Player_AddAmmo ItemIds.PistolAmmo, 99
-            Player_AddAmmo ItemIds.MachineGunAmmo, 99
-            Player_AddAmmo ItemIds.MagnumAmmo, 99
+            Player_AddAmmo ItemIds.Shotgun, 99
+            Player_AddAmmo ItemIds.Pistol, 99
+            Player_AddAmmo ItemIds.MachineGun, 99
+            Player_AddAmmo ItemIds.Magnum, 99
             LD2_PlaySound Sounds.reload
             newReload = 0
         end if
@@ -1209,18 +1209,8 @@ SUB Main
         newReload = 1
     end if
     
-	if keyboard(KEY_E) or ((keyboard(KEY_TAB) or mouseMB()) and (Player_AtElevator = 0)) then
+	if keyboard(KEY_E) or (keyboard(KEY_TAB) or mouseMB()) then
         StatusScreen
-    end if
-	if (keyboard(KEY_TAB) or mouseMB()) and (Player_AtElevator = 1) then
-        EStatusScreen CurrentRoom
-        if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
-            CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
-            LD2_PlayMusic GetFloorMusicId(CurrentRoom)
-            SceneOpenElevatorDoors
-            if GooScene = 1 then GooScene = 0
-        end if
-        Player_Unhide
     end if
 	
     atKeypad  = (CurrentRoom = Rooms.Rooftop) and (player.x >= 1376 and player.x <= 1408)
@@ -1702,6 +1692,7 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
     end if
     
     select case comm
+    case "fps"
     case "list"
         response = "Top-level commands are: player|rooms|inventory\ \mobs|elevator|music|sound|scene|light|gravity"
     case "items"
@@ -1794,19 +1785,19 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             select case args(1)
             case "shotgun"
                 LD2_AddToStatus(ItemIds.Shotgun, 1)
-                Player_AddAmmo ItemIds.ShotgunAmmo, 99
+                Player_AddAmmo ItemIds.Shotgun, 99
                 response = "Added SHOTGUN to inventory"
             case "pistol"
                 LD2_AddToStatus(ItemIds.Pistol, 1)
-                Player_AddAmmo ItemIds.PistolAmmo, 99
+                Player_AddAmmo ItemIds.Pistol, 99
                 response = "Added HANDGUN to inventory"
             case "machinegun"
                 LD2_AddToStatus(ItemIds.MachineGun, 1)
-                Player_AddAmmo ItemIds.MachineGunAmmo, 99
+                Player_AddAmmo ItemIds.MachineGun, 99
                 response = "Added MACHINEGUN to inventory"
             case "magnum"
                 LD2_AddToStatus(ItemIds.Magnum, 1)
-                Player_AddAmmo ItemIds.MagnumAmmo, 99
+                Player_AddAmmo ItemIds.Magnum, 99
                 response = "Added MAGNUM to inventory"
             case else
                 if (args(1) = "0") or (val(args(1)) <> 0) then
@@ -1908,7 +1899,6 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
                     end if
                     LD2_PlayMusic GetFloorMusicId(CurrentRoom)
                 end if
-                'SceneOpenElevatorDoors
             end if
         case "reload"
             id = Player_GetItemQty(ItemIds.CurrentRoom)
@@ -2154,10 +2144,10 @@ sub FlagsCheck (player as PlayerType)
         if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
             CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
             LD2_PlayMusic GetFloorMusicId(CurrentRoom)
-            SceneOpenElevatorDoors
             if GooScene = 1 then GooScene = 0
         end if
         Player_Unhide
+        Player_SetFlip 1
     end if
     if LD2_HasFlag(MUSICCHANGE) or LD2_HasFlag(MUSICFADEOUT) then
         if LD2_FadeOutMusic(3.0) = 0 then
@@ -2199,10 +2189,10 @@ sub ItemsCheck (player as PlayerType)
     end if
     if Player_HasItem(ItemIds.BlockOfDoom) then
         if (timer - doomtime) >= 0.75 then
-            Player_AddAmmo ItemIds.ShotgunAmmo, 1
-            Player_AddAmmo ItemIds.PistolAmmo, 1
-            Player_AddAmmo ItemIds.MachineGunAmmo, 1
-            Player_AddAmmo ItemIds.MagnumAmmo, 1
+            Player_AddAmmo ItemIds.Shotgun, 1
+            Player_AddAmmo ItemIds.Pistol, 1
+            Player_AddAmmo ItemIds.MachineGun, 1
+            Player_AddAmmo ItemIds.Magnum, 1
             doomtime = timer
         end if
     end if
@@ -2422,16 +2412,16 @@ sub NewGame
     player.x = 92
     player.y = 144
     player.is_visible = 1
-    Player_SetItemQty ItemIds.Lives, 3
-    Player_SetItemQty ItemIds.Hp, MAXLIFE
+    Player_SetItemQty ItemIds.Lives, StartVals.Lives
+    Player_SetItemQty ItemIds.Hp, Maxes.Hp
     
     Player_Init player
     
-    Player_SetItemMaxQty ItemIds.HP, 100
-    Player_SetItemMaxQty ItemIds.ShotgunAmmo   , 8
-    Player_SetItemMaxQty ItemIds.PistolAmmo    , 15
-    Player_SetItemMaxQty ItemIds.MachineGunAmmo, 30
-    Player_SetItemMaxQty ItemIds.MagnumAmmo    , 6
+    Player_SetItemMaxQty ItemIds.HP, Maxes.Hp
+    Player_SetItemMaxQty ItemIds.Shotgun   , Maxes.Shotgun
+    Player_SetItemMaxQty ItemIds.Pistol    , Maxes.Pistol
+    Player_SetItemMaxQty ItemIds.MachineGun, Maxes.MachineGun
+    Player_SetItemMaxQty ItemIds.Magnum    , Maxes.Magnum
     Player_SetWeapon ItemIds.Fist '// must be called after Player_Init()
     
     if LD2_isTestMode() then
@@ -2451,10 +2441,10 @@ sub NewGame
             LD2_AddToStatus(ItemIds.RedCard, 1)
         end if
         if (LD2_HasCommandArg("noguns") = 0) and (LD2_HasCommandArg("shotgun,pistol,machinegun,magnum,allguns") = 0) then
-            LD2_AddToStatus(ItemIds.Pistol, 1)
-            LD2_AddToStatus(ItemIds.MachineGun, 1)
-            Player_AddAmmo ItemIds.PistolAmmo, 99
-            Player_AddAmmo ItemIds.MachineGunAmmo, 99
+            LD2_AddToStatus(ItemIds.Pistol, 0)
+            LD2_AddToStatus(ItemIds.MachineGun, 0)
+            Player_AddAmmo ItemIds.Pistol, 99
+            Player_AddAmmo ItemIds.MachineGun, 99
         end if
         LD2_ReadyCommandArgs
         while LD2_HasNextCommandArg()
@@ -2462,25 +2452,25 @@ sub NewGame
             select case arg
             case "shotgun"
                 LD2_AddToStatus(ItemIds.Shotgun, 1)
-                Player_AddAmmo ItemIds.ShotgunAmmo, 99
+                Player_AddAmmo ItemIds.Shotgun, 99
             case "pistol"
                 LD2_AddToStatus(ItemIds.Pistol, 1)
-                Player_AddAmmo ItemIds.PistolAmmo, 99
+                Player_AddAmmo ItemIds.Pistol, 99
             case "machinegun"
                 LD2_AddToStatus(ItemIds.MachineGun, 1)
-                Player_AddAmmo ItemIds.MachineGunAmmo, 99
+                Player_AddAmmo ItemIds.MachineGun, 99
             case "magnum"
                 LD2_AddToStatus(ItemIds.Magnum, 1)
-                Player_AddAmmo ItemIds.MagnumAmmo, 99
+                Player_AddAmmo ItemIds.Magnum, 99
             case "allguns"
                 LD2_AddToStatus(ItemIds.Shotgun, 1)
                 LD2_AddToStatus(ItemIds.Pistol, 1)
                 LD2_AddToStatus(ItemIds.MachineGun, 1)
                 LD2_AddToStatus(ItemIds.Magnum, 1)
-                Player_AddAmmo ItemIds.ShotgunAmmo, 99
-                Player_AddAmmo ItemIds.PistolAmmo, 99
-                Player_AddAmmo ItemIds.MachineGunAmmo, 99
-                Player_AddAmmo ItemIds.MagnumAmmo, 99
+                Player_AddAmmo ItemIds.Shotgun, 99
+                Player_AddAmmo ItemIds.Pistol, 99
+                Player_AddAmmo ItemIds.MachineGun, 99
+                Player_AddAmmo ItemIds.Magnum, 99
             case "greencard"
                 LD2_AddToStatus(ItemIds.GreenCard, 1)
             case "bluecard"
@@ -2544,17 +2534,19 @@ sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as in
     dim qtyUnused as integer
     
     select case id
-    case ItemIds.Shotgun, ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum
-        CustomActions(0).actionId = ActionIds.Equip
-        CustomActions(0).itemId   = id
-        DoAction ActionIds.Equip, id
-    case ItemIds.ShotgunAmmo, ItemIds.PistolAmmo, ItemIds.MachineGunAmmo, ItemIds.MagnumAmmo
-        qtyUnused = Player_AddAmmo(id, qty)
+    case ItemIds.Shotgun, ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum '// need to separate use from add
+        if qty = 1 then
+            CustomActions(0).actionId = ActionIds.Equip
+            CustomActions(0).itemId   = id
+            DoAction ActionIds.Equip, id
+        elseif qty > 1 then
+            qtyUnused = Player_AddAmmo(id, qty)
+        end if
     case ItemIds.Hp
         Player_AddItem id, qty
         LD2_PlaySound Sounds.useMedikit
-    case ItemIds.Lives
-        Player_AddItem id, qty
+    case ItemIds.ExtraLife
+        Player_AddItem ItemIds.Lives, qty
         LD2_PlaySound Sounds.useExtraLife
     case ItemIds.Chemical410
         SceneCallback = @SceneGooGone
@@ -2572,39 +2564,6 @@ sub LD2_LookItem (id as integer, byref desc as string)
     case ItemIds.JanitorNote
         desc += " * "+left(RoofCode,1)+" - "+mid(RoofCode,2,1)+" - "+mid(RoofCode,3,1)+" - "+mid(RoofCode,4,1)
     end select
-    
-end sub
-
-sub SceneOpenElevatorDoors()
-    
-    dim LarryPose as PoseType
-    dim ex as double, ey as double
-    dim mapX as integer, mapY as integer
-    dim x as integer
-    
-    UpdateLarryPos
-    
-    ex = Larry.x-8: ey = Larry.y
-    mapX = int(ex / 16)
-    mapY = int(ey / 16)
-    
-    Player_Unhide
-    
-    Map_PutTile mapX, mapY, TileIds.ElevatorBehindDoor, 1
-    Map_PutTile mapX+1, mapY, TileIds.ElevatorBehindDoor, 1
-
-    '- open elevator doors
-    dim i as integer
-    FOR x = 1 TO 16
-        RenderScene 0
-        LD2_put ex - x, ey, TileIds.ElevatorDoorLeft, idTILE, 0
-        LD2_put (ex + SPRITE_W) + x, ey, TileIds.ElevatorDoorRight, idTILE, 0
-        LD2_RefreshScreen
-        PullEvents
-    NEXT x
-
-    Map_PutTile mapX-1, mapY, TileIds.ElevatorDoorLeft, 1
-    Map_PutTile mapx+2, mapY, TileIds.ElevatorDoorRight, 1
     
 end sub
 

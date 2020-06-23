@@ -393,7 +393,7 @@ sub Scene4EndConditions()
     
     Map_PutTile 13, 8, 19, 3
     Mobs_Add 208, 144, MobIds.Rockmonster
-    Map_LockElevator
+    Map_LockElevators
     
     LD2_SetMusicVolume 1.0
     LD2_PlayMusic Tracks.Chase
@@ -544,7 +544,7 @@ sub Scene5EndConditions()
     Player_SetFlip 1
     
     LD2_AddToStatus(BLUECARD, 1)
-    Map_UnlockElevator
+    Map_UnlockElevators
     
 end sub
 

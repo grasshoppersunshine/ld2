@@ -11,7 +11,7 @@ enum TileIds
     ColaTopRight         = 6
     Crate                = 95
     DoorActivated        = 101
-    DoorBehind           = 52
+    DoorBehind           = 124
     DoorOpening          = 102
     DoorGreen            = 90
     DoorBlue             = 91
@@ -26,8 +26,8 @@ enum TileIds
     ElevatorBehindDoor   = 16
     ElevatorSignLeft     = 21
     ElevatorSignRight    = 22
-    ElevatorSign2Left    = 27
-    ElevatorSign2Right   = 28
+    ElevatorDoorLeftTop  = 27
+    ElevatorDoorRightTop = 28
     Grass                = 107
     GraySquare           = 32
     LightSwitchStart     = 213
@@ -57,47 +57,49 @@ end enum
 '= ids correspond to location in OBJECTS.PUT
 '===========================================
 enum ItemIds
-    Nothing          = 0
-    Fist             = 0
-    Medikit50        = 1
-    Medikit100       = 2
-    Grenade          = 3
-    ShotgunAmmo      = 4
-    PistolAmmo       = 5
-    MagnumAmmo       = 6
-    WhiteCard        = 7
-    WhiteCard1       = 8
-    WhiteCard2       = 9
-    FlashlightNoBat  = 10
-    MysteryMeat      = 11
-    Chemical409      = 12
-    Chemical410      = 13
-    JanitorNote      = 14
-    Batteries        = 15
-    Flashlight       = 16
-    GreenCard        = 17
-    BlueCard         = 18
-    YellowCard       = 19
-    RedCard          = 20
-    Shotgun          = 21
-    MachineGun       = 22
-    Pistol           = 23
-    Magnum           = 24
-    WalkieTalkie     = 25
-    MachineGunAmmo   = 26
-    Lives            = 27
-    HP               = 28
-    ShotgunLoaded    = 29
-    PistolLoaded     = 30
-    MachineGunLoaded = 31
-    MagnumLoaded     = 32
-    NovaHeart        = 60
-    BlockOfDoom      = 61
-    PoweredArmor     = 62
-    QuadDamage       = 63
-    DamageMod        = 64
-    Active410        = 70
-    ElevatorMenu     = 71
+    Nothing           = 0
+    Fist              = 0
+    Medikit50         = 1
+    Medikit100        = 2
+    Grenade           = 3
+    ShotgunAmmo       = 4
+    PistolAmmo        = 5
+    MagnumAmmo        = 6
+    WhiteCard         = 7
+    WhiteCard1        = 8
+    WhiteCard2        = 9
+    FlashlightNoBat   = 10
+    MysteryMeat       = 11
+    Chemical409       = 12
+    Chemical410       = 13
+    JanitorNote       = 14
+    Batteries         = 15
+    Flashlight        = 16
+    GreenCard         = 17
+    BlueCard          = 18
+    YellowCard        = 19
+    RedCard           = 20
+    Shotgun           = 21
+    MachineGun        = 22
+    Pistol            = 23
+    Magnum            = 24
+    WalkieTalkie      = 25
+    MachineGunAmmo    = 26
+    ExtraLife         = 27
+    Auth              = 50
+    TempAuth          = 51
+    '=======================================
+    Active410         = 60
+    ElevatorMenu      = 61
+    '=======================================
+    Lives             = 70
+    HP                = 71
+    '=======================================
+    NovaHeart         = 80
+    BlockOfDoom       = 81
+    PoweredArmor      = 82
+    QuadDamage        = 83
+    DamageMod         = 84
     '=======================================
     CurrentRoom          = 90
     BossRooftopBegin     = 91
@@ -143,50 +145,24 @@ enum AnimationIds
     FastRotate = 9
 end enum
 
-enum ItemQtys
-    SHOTGUNAMMO    = 4
-    PISTOLAMMO     = 15
-    MACHINEGUNAMMO = 30
-    MAGNUMAMMO     = 6
+enum AmmoBoxQtys
+    Shotgun    = 8
+    Pistol     = 15
+    MachineGun = 30
+    Magnum     = 6
 end enum
 
-CONST FIST = 0
-CONST NOTHING = 0
-CONST MEDIKIT50 = 1
-CONST MEDIKIT100 = 2
-CONST GRENADE = 3
-CONST SHOTGUNAMMO = 4
-CONST PISTOLAMMO = 5
-CONST MAGNUMAMMO = 6
-CONST WHITECARD = 7
-CONST WHITECARD1 = 8
-CONST WHITECARD2 = 9
-CONST FLASHLIGHTNOBAT = 10
-CONST MYSTERYMEAT = 11
-CONST CHEMICAL409 = 12
-CONST CHEMICAL410 = 13
-CONST JANITORNOTE = 14
-CONST BATTERIES = 15
-CONST FLASHLIGHT = 16
-CONST GREENCARD = 17
-CONST BLUECARD = 18
-CONST YELLOWCARD = 19
-CONST REDCARD = 20
-CONST SHOTGUN = 21
-CONST MACHINEGUN = 22
-CONST PISTOL = 23
-CONST MAGNUM = 24
-CONST WALKIETALKIE = 25
-CONST MACHINEGUNAMMO = 26
-CONST EXTRALIFE = 27
+enum Maxes
+    Hp         = 100
+    Shotgun    = 8
+    Pistol     = 15
+    MachineGun = 30
+    Magnum     = 6
+end enum
 
-CONST AUTH = 50
-CONST TEMPAUTH = 51
-'const DAMAGEMOD = 64
-'CONST NUMLIVES = 52
-'CONST NUMINVSLOTS = 53
-
-'CONST WALKYTALKY      = 99
+enum StartVals
+    Lives = 3
+end enum
 
 enum PlayerSprites
     Crouching          = 28

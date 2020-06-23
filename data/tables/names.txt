@@ -1,35 +1,35 @@
-NOTHING        , Empty         , Empty
-MEDIKIT50      , Medikit +50   , Medikit +50
-MEDIKIT100     , Medikit +100  , Medikit +100
-GRENADE        , Grenade       , Grenade
-SHOTGUNAMMO    , Shells        , Shotgun Shells
-PISTOLAMMO     , Magazine      , Magazine
-MAGNUMAMMO     , Magnum Rounds , Magnum Rounds
-WHITECARD      , White Card    , White Card
-WHITECARD1     , White Card (L), White Card (Left-Half)
-WHITECARD2     , White Card (R), White Card (Right-Half)
-FLASHLIGHTNOBAT, Flashlight    , Flashlight (No Batteries)
-MYSTERYMEAT    , Mystery Meat  , Mystery Meat
-CHEMICAL409    , Chemical 409  , Chemical 409
-CHEMICAL410    , Chemical 410  , Chemical 410
-JANITORNOTE    , Janitor Note  , Janitor Note
-BATTERIES      , Batteries     , Batteries
-FLASHLIGHT     , Flashlight    , Flashlight
-GREENCARD      , Green Card    , Code-Green Access Card
-BLUECARD       , Blue Card     , Code-Blue Access Card
-YELLOWCARD     , Yellow Card   , Code-Yellow Access Card
-REDCARD        , Red Card      , Code-Red Access Card
-SHOTGUN        , Shotgun       , Shotgun
-MACHINEGUN     , Machine-Gun   , Machine-Gun
-PISTOL         , Handgun       , Handgun
-MAGNUM         , Magnum        , Magnum
-WALKIETALKIE   , Walkie-Talkie , Walkie-Talkie
-MACHINEGUNAMMO , Clip          , Machine-Gun Clip
-EXTRALIFE      , Extra Life    , Extra Life
-ACTIVE410      , Active 410    , Execute "SceneGooGone" Scene
-NOVAHEART      , Nova Heart    , Nova Heart
-BLOCKOFDOOM    , Block of Doom , Block of Doom
-POWEREDARMOR   , Powered Armor , Powered Armor
-QUADDAMAGE     , Quad Damage   , Quad Damage
-ELEVATORMENU   , Elevator Menu , Elevator Menu
-ADHESIVE       , Adhesive      , Synthetic Adhesive
+NOTHING           , Empty           , Empty
+MEDIKIT50         , Medikit +50     , Medikit +50
+MEDIKIT100        , Medikit +100    , Medikit +100
+GRENADE           , Grenade         , Grenade
+SHOTGUNAMMO       , Shells          , Shotgun Shells
+PISTOLAMMO        , Handgun Ammo    , Handgun Ammo
+MAGNUMAMMO        , Magnum Rounds   , Magnum Rounds
+WHITECARD         , White Card      , White Access Card
+WHITECARD1        , White Card (L)  , White Access Card (Left-Half)
+WHITECARD2        , White Card (R)  , White Access Card (Right-Half)
+FLASHLIGHTNOBAT   , Flashlight      , Flashlight (No Batteries)
+MYSTERYMEAT       , Mystery Meat    , Mystery Meat
+CHEMICAL409       , Chemical 409    , Chemical 409
+CHEMICAL410       , Chemical 410    , Chemical 410
+JANITORNOTE       , Janitor Note    , Janitor Note
+BATTERIES         , Batteries       , Batteries
+FLASHLIGHT        , Flashlight      , Flashlight
+GREENCARD         , Green Card      , Green Access Card
+BLUECARD          , Blue Card       , Blue Access Card
+YELLOWCARD        , Yellow Card     , Yellow Access Card
+REDCARD           , Red Card        , Red Access Card
+SHOTGUN           , Shotgun         , Shotgun
+MACHINEGUN        , Machine Gun     , Machine Gun
+PISTOL            , Handgun         , Handgun
+MAGNUM            , Magnum          , Magnum
+WALKIETALKIE      , Walkie-Talkie   , Walkie-Talkie
+MACHINEGUNAMMO    , Machine Gun Ammo, Machine Gun Ammo
+EXTRALIFE         , Extra Life      , Extra Life
+ACTIVE410         , Active 410      , Execute "SceneGooGone" Scene
+NOVAHEART         , Nova Heart      , Nova Heart
+BLOCKOFDOOM       , Block of Doom   , Block of Doom
+POWEREDARMOR      , Powered Armor   , Powered Armor
+QUADDAMAGE        , Quad Damage     , Quad Damage
+ELEVATORMENU      , Elevator Menu   , Elevator Menu
+ADHESIVE          , Adhesive        , Synthetic Adhesive

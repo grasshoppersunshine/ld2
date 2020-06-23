@@ -105,6 +105,13 @@ declare sub Doors_Add (x as integer, y as integer, accessLevel as integer)
 declare sub Doors_Animate ()
 declare sub Doors_Open(id as integer)
 declare sub Doors_Close(id as integer)
+declare sub Doors_Draw()
+
+declare sub Elevators_Add (x as integer, y as integer)
+declare sub Elevators_Animate ()
+declare sub Elevators_Close (id as integer)
+declare sub Elevators_Open (id as integer)
+declare sub Elevators_Draw ()
 
 declare sub Guts_Add (gutsId as integer, x as integer, y as integer, qty as integer, direction as integer = 0)
 declare sub Guts_Animate ()
@@ -131,8 +138,8 @@ declare sub Teleports_Check (x as integer, y as integer, byref toX as integer, b
 declare sub Map_AfterLoad(skipMobs as integer = 0)
 declare sub Map_BeforeLoad(byref skipItems as integer)
 declare sub Map_Load (filename as string, skipMobs as integer = 0, skipItems as integer = 0)
-declare sub Map_LockElevator ()
-declare sub Map_UnlockElevator ()
+declare sub Map_LockElevators ()
+declare sub Map_UnlockElevators ()
 declare function Map_GetXShift () as integer
 declare sub Map_SetXShift (x as integer)
 declare sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer = LayerIds.Tile)
@@ -169,6 +176,7 @@ declare function Player_NotItem(itemId as integer) as integer
 declare sub Player_AddItem(itemId as integer, qty as integer = 1)
 declare sub Player_SetItemQty(itemId as integer, qty as integer)
 declare sub Player_SetItemMaxQty(itemId as integer, qty as integer)
+declare function Player_GetItemMaxQty(itemId as integer) as integer
 declare function Player_AddAmmo (weaponId as integer, qty as integer) as integer
 declare function Player_AtElevator () as integer
 declare sub Player_SetFlip (flipped as integer)
@@ -194,10 +202,10 @@ declare sub LD2_ReadyCommandArgs()
 declare function LD2_HasNextCommandArg() as integer
 declare function LD2_GetNextCommandArg() as string
 
-DECLARE FUNCTION LD2_AddToStatus (item AS INTEGER, Amount AS INTEGER) as integer
-DECLARE SUB LD2_ClearInventorySlot (slot AS INTEGER)
+declare function LD2_AddToStatus (item as integer, qty as integer) as integer
+declare sub LD2_ClearInventorySlot (slot as integer)
 declare sub LD2_ClearStatus ()
-DECLARE SUB LD2_CountFrame ()
+declare sub LD2_CountFrame ()
 
 declare sub LD2_LogDebug (message as string)
 declare sub LD2_Debug (message as string)
@@ -284,6 +292,7 @@ const FONT_h = 5
 CONST MAXGUTS      = 100
 CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)
 CONST MAXDOORS     =  16 '- per room
+CONST MAXELEVATORS =  12
 CONST MAXSWAPS     =  12
 CONST MAXTELEPORTS =  12
 CONST MAXFLOORS    =  23
@@ -291,9 +300,3 @@ CONST MAXINVENTORY =  127
 CONST MAXINVSLOTS  =   7
 CONST MAXTILES     = 120
 CONST MAXEVENTS    =   9
-
-CONST MAXLIFE        = 100
-CONST SHOTGUN_MAX    = 8
-CONST PISTOL_MAX     = 15
-CONST MAGNUM_MAX     = 6
-CONST MACHINEGUN_MAX = 50

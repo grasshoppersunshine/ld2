@@ -25,75 +25,77 @@ dim shared UseItemDiscard as integer
 
 const DATA_DIR = "data/"
 
-FUNCTION Inventory_Add (id AS INTEGER, qty AS INTEGER) as integer
+function Inventory_Add (id as integer, qty as integer, max as integer = -1) as integer
     
-    DIM i AS INTEGER
-    DIM added AS INTEGER
+    dim i as integer
+    dim added as integer
 
     added = 0
-    FOR i = 0 TO VisibleSize - 1
-        IF InventoryItems(i).id = 0 THEN
+    for i = 0 to VisibleSize - 1
+        if InventoryItems(i).id = 0 then
             InventoryItems(i).id = id
             InventoryItems(i).qty = qty
+            InventoryItems(i).max = max
             added = 1
-            EXIT FOR
-        END IF
-    NEXT i
+            exit for
+        end if
+    next i
     
-    IF added THEN
+    if added then
         return 0
-    ELSE
+    else
         return InventoryErr_NOVACANTSLOT
-    END IF
+    end if
     
-END FUNCTION
+end function
 
-FUNCTION Inventory_AddHidden (id AS INTEGER, qty AS INTEGER) as integer
+function Inventory_AddHidden (id as integer, qty as integer, max as integer = -1) as integer
     
-    DIM i AS INTEGER
-    DIM added AS INTEGER
+    dim i as integer
+    dim added as integer
 
     added = 0
-    FOR i = VisibleSize TO InventorySize - 1
-        IF InventoryItems(i).id = 0 THEN
+    for i = VisibleSize to InventorySize - 1
+        if InventoryItems(i).id = 0 then
             InventoryItems(i).id = id
             InventoryItems(i).qty = qty
+            InventoryItems(i).max = max
             added = 1
-            EXIT FOR
-        END IF
-    NEXT i
+            exit for
+        end if
+    next i
     
-    IF added THEN
+    if added then
         return 0
-    ELSE
+    else
         return InventoryErr_NOVACANTSLOT
-    END IF
+    end if
     
-END FUNCTION
+end function
 
-FUNCTION Inventory_AddQty (slot AS INTEGER, qty AS INTEGER) as integer
+function Inventory_AddQty (slot as integer, qty as integer) as integer
     
-    IF (slot >= 0) AND (slot < InventorySize) THEN
+    if (slot >= 0) and (slot < InventorySize) then
         InventoryItems(slot).qty = InventoryItems(slot).qty + qty
-    ELSE
+        if (InventoryItems(slot).max >= -1) and (InventoryItems(slot).qty > InventoryItems(slot).max) then
+            InventoryItems(slot).qty = InventoryItems(slot).max
+        end if
+    else
         return InventoryErr_OUTOFBOUNDS
-    END IF
+    end if
     
     return 0
     
-END FUNCTION
+end function
 
-SUB Inventory_Clear
+sub Inventory_Clear
     
-    DIM i AS INTEGER
-    FOR i = 0 TO InventorySize - 1
-        InventoryItems(i).id = 0
-        InventoryItems(i).qty = 0
-        InventoryItems(i).shortName = "Empty"
-        InventoryItems(i).longName = "Empty"
-    NEXT i
+    dim i as integer
+    for i = 0 to InventorySize - 1
+        Inventory_ResetItem InventoryItems(i)
+    next i
     
-END SUB
+end sub
 
 FUNCTION Inventory_GetErrorMessage(errorId as integer) as string
     
@@ -115,31 +117,44 @@ FUNCTION Inventory_GetErrorMessage(errorId as integer) as string
     
 END FUNCTION
 
-SUB Inventory_GetItem (item AS InventoryType, id AS INTEGER)
+function Inventory_HasItem (itemId as integer) as integer
     
-    DIM i AS INTEGER
+    dim i as integer
     
-    FOR i = 0 TO InventorySize - 1
-        IF InventoryItems(i).id = id THEN
-            item = InventoryItems(i)
-            EXIT FOR
-        END IF
-    NEXT i
-    
-END SUB
-
-FUNCTION Inventory_GetItemBySlot (item AS InventoryType, slot AS INTEGER) as integer
-    
-    IF (slot >= 0) AND (slot < InventorySize) THEN
-        item = InventoryItems(slot)
-    ELSE
-        return InventoryErr_OUTOFBOUNDS
-    END IF
+    for i = 0 to InventorySize - 1
+        if InventoryItems(i).id = itemId then
+            return 1
+        end if
+    next i
     
     return 0
     
-END FUNCTION
+end function
 
+sub Inventory_GetItem (byref item as InventoryType, id as integer)
+    
+    dim i as integer
+    
+    for i = 0 to InventorySize - 1
+        if InventoryItems(i).id = id then
+            item = InventoryItems(i)
+            exit for
+        end if
+    next i
+    
+end sub
+
+function Inventory_GetItemBySlot (byref item as InventoryType, slot as integer) as integer
+    
+    if (slot >= 0) and (slot < InventorySize) then
+        item = InventoryItems(slot)
+    else
+        return InventoryErr_OUTOFBOUNDS
+    end if
+    
+    return 0
+    
+end function
 
 function Inventory_GetSize () as integer
     
@@ -272,21 +287,26 @@ FUNCTION Inventory_SidToItemId (sid AS STRING) as integer
     
 END FUNCTION
 
-SUB Inventory_RemoveItem (item AS InventoryType)
+sub Inventory_RemoveItem (byref item as InventoryType)
     
-    DIM slot AS INTEGER
+    dim slot as integer
     
     slot = item.slot
-    IF (slot >= 0) AND (slot < InventorySize) THEN
-        item = InventoryItems(slot)
-        item.id  = 0
-        item.qty = 0
-        item.shortName  = "Empty"
-        item.longName   = "Empty"
-        InventoryItems(slot) = item
-    END IF
+    if (slot >= 0) and (slot < InventorySize) then
+        Inventory_ResetItem InventoryItems(slot)
+    end if
     
-END SUB
+end sub
+
+sub Inventory_ResetItem (byref item as InventoryType)
+    
+    item.id  = 0
+    item.qty = 0
+    item.max = -1
+    item.shortName  = "Empty"
+    item.longName   = "Empty"
+    
+end sub
 
 SUB LoadSids (filename AS STRING)
     
@@ -357,6 +377,9 @@ function Inventory_Use (itemId as integer) as integer
     dim itemTotest as integer
     dim qtyToTest as integer
     dim item as InventoryType
+    dim maxqty as integer
+    dim qty as integer
+    dim prc as integer
     
     UseItemId = 0
     UseItemQty = 0
@@ -370,38 +393,59 @@ function Inventory_Use (itemId as integer) as integer
             
             input #ItemsFile, _data.toUse, _data.useCommand, _data.item, _data.itemQty, _data.discard, _data.message
             
-            _data.toUse      = trim(_data.toUse)
-            _data.useCommand = trim(_data.useCommand)
-            _data.item       = trim(_data.item)
-            _data.itemQty    = trim(_data.itemQty)
-            _data.discard    = trim(_data.discard)
-            _data.message    = trim(_data.message)
+            _data.toUse      = lcase(trim(_data.toUse))
+            _data.useCommand = lcase(trim(_data.useCommand))
+            _data.item       = lcase(trim(_data.item))
+            _data.itemQty    = lcase(trim(_data.itemQty))
+            _data.discard    = lcase(trim(_data.discard))
+            _data.message    = lcase(trim(_data.message))
             
             if left(_data.toUse, 1) = "#" then continue while
             
             toUseId = Inventory_SidToItemId(_data.toUse)
             
             if toUseId = itemId then
-                UseItemDiscard = iif(lcase(_data.discard) = "discard" ,1 ,0)
-                select case ucase(_data.useCommand)
-                case "ADD", "USE"
+                UseItemDiscard = iif(_data.discard = "discard" ,1 ,0)
+                select case _data.useCommand
+                case "add", "use"
                     UseItemId = Inventory_SidToItemId(_data.item)
-                    UseItemQty = val(_data.itemQty)
+                    Inventory_ResetItem item
+                    Inventory_GetItem item, UseItemId
+                    maxqty = iif(item.max > -1, item.max, 1)
+                    if left(_data.itemQty, 1) = "p" then
+                        _data.itemQty = right(_data.itemQty, len(_data.itemQty)-1)
+                        prc = val(_data.itemQty)
+                        UseItemQty = int((maxqty*prc)/100)
+                    else
+                        qty = val(_data.itemQty)
+                        UseItemQty = iif(_data.itemQty="max", maxqty, qty)
+                    end if
                     UseItemMessage = _data.message
                     return 1
-                case "EQ"
+                case "eq"
+                    item.id = -1
                     itemToTest = Inventory_SidToItemId(_data.item)
-                    qtyToTest  = val(_data.itemQty)
                     Inventory_GetItem item, itemToTest
+                    qtyToTest  = iif(_data.itemQty="max",item.max,val(_data.itemQty))
                     if item.qty = qtyToTest then
                         UseItemMessage = _data.message
                         return 0
                     end if
-                case "NEQ"
+                case "neq"
                     itemToTest = Inventory_SidToItemId(_data.item)
-                    qtyToTest  = val(_data.itemQty)
+                    item.qty = -1
                     Inventory_GetItem item, itemToTest
+                    qtyToTest  = iif(_data.itemQty="max",item.max,val(_data.itemQty))
                     if item.qty <> qtyToTest then
+                        UseItemMessage = _data.message
+                        return 0
+                    end if
+                case "has"
+                    item.id = -1
+                    itemToTest = Inventory_SidToItemId(_data.item)
+                    Inventory_GetItem item, itemToTest
+                    qtyToTest  = val(_data.itemQty)
+                    if ((item.id > -1) and (qtyToTest = 1)) or ((item.id = -1) and (qtyToTest = 0)) then
                         UseItemMessage = _data.message
                         return 0
                     end if

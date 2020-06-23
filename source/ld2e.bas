@@ -41,16 +41,15 @@
         mapX as integer
         mapY as integer
         isLocked as integer
-        isOpen as integer
-        isClosed as integer
-        tileToLeft as integer
-        tileToRight as integer
+        percentOpen as double
+        speed as double
     end type
     
     type ItemType
         x as integer
         y as integer
         id as integer
+        qty as integer
     end type
     
     type DoorType
@@ -99,8 +98,10 @@
     '*******************************************************************
     const MAPW = 201
     const MAPH =  13
-    const DOOROPENSPEED  = 0.08  '* classic mode is .05
+    const DOOROPENSPEED  =  0.08 '* classic mode is .05
     const DOORCLOSESPEED = -0.04 '* classic mode is .05
+    const ELEVATOROPENSPEED  =  0.02
+    const ELEVATORCLOSESPEED = -0.02
     
     '*******************************************************************
     '* PLAYER STATES
@@ -113,6 +114,8 @@
         LookingUp
         Running
         Standing
+        EnteringElevator
+        ExitingElevator
     end enum
     
     '*******************************************************************
@@ -196,18 +199,19 @@
     '*******************************************************************
     dim shared Items      (MAXITEMS) as ItemType
     dim shared Doors      (MAXDOORS) as DoorType
+    dim shared Elevators  (MAXELEVATORS) as ElevatorType
     dim shared Guts       (MAXGUTS)  as GutsIncorporated
     dim shared Swaps      (MAXSWAPS) as SwapType
     dim shared Switches   (MAXSWAPS) as SwitchType
     dim shared Teleports  (MAXTELEPORTS) as TeleportType
     dim shared NumItems as integer
     dim shared NumDoors as integer
+    dim shared NumElevators as integer
     dim shared NumGuts as integer
     dim shared NumSwaps as integer
     dim shared NumSwitches as integer
     dim shared NumTeleports as integer
     dim shared XShift as double
-    dim shared Elevator AS ElevatorType
     dim shared Mobs as MobileCollection
     dim shared Mobs_BeforeKillCallback as sub(mob as Mobile ptr)
     
@@ -289,14 +293,14 @@ function Player_AddAmmo (weaponId as integer, qty as integer) as integer
     qtyUnused = 0
     
     select case weaponId
-    case ItemIds.ShotgunAmmo
-        qtyMax = SHOTGUN_MAX
-    case ItemIds.PistolAmmo
-        qtyMax = PISTOL_MAX
-    case ItemIds.MagnumAmmo
-        qtyMax = MAGNUM_MAX
-    case ItemIds.MachineGunAmmo
-        qtyMax = MACHINEGUN_MAX
+    case ItemIds.Shotgun
+        qtyMax = Maxes.Shotgun
+    case ItemIds.Pistol
+        qtyMax = Maxes.Pistol
+    case ItemIds.Magnum
+        qtyMax = Maxes.Magnum
+    case ItemIds.MachineGun
+        qtyMax = Maxes.MachineGun
     case else
         return 0
     end select
@@ -327,52 +331,65 @@ function Player_AddAmmo (weaponId as integer, qty as integer) as integer
 
 end function
 
-FUNCTION LD2_AddToStatus (item as integer, Amount as integer) as integer
+function LD2_AddToStatus (item as integer, qty as integer) as integer
     
-    IF LD2_isDebugMode() THEN LD2_Debug "LD2_AddToStatus% ("+STR(item)+","+STR(Amount)+" )"
+    LD2_LogDebug "LD2_AddToStatus ("+str(item)+","+str(qty)+" )"
     
     DIM i as integer
     DIM added as integer
-
-    FOR i = 0 TO NumInvSlots-1
-        IF InvSlots(i) = item THEN
-            Inventory(item) = Inventory(item) + Amount
+    
+    if qty = 1 then '// assuming pick-up item
+        select case item
+        case ItemIds.ShotgunAmmo
+            qty = AmmoBoxQtys.Shotgun
+        case ItemIds.PistolAmmo
+            qty = AmmoBoxQtys.Pistol
+        case ItemIds.MachineGunAmmo
+            qty = AmmoBoxQtys.MachineGun
+        case ItemIds.MagnumAmmo
+            qty = AmmoBoxQtys.Magnum
+        end select
+    end if
+    
+    for i = 0 to NumInvSlots-1
+        if InvSlots(i) = item then
+            Inventory(item) += qty
             if Inventory(item) <= 0 then
                 Inventory(item) = 0
                 InvSlots(i) = 0
             end if
             added = 1
-            EXIT FOR
-        END IF
-    NEXT i
-
-    IF (added = 0) and (Amount > 0) THEN
-        FOR i = 0 TO NumInvSlots-1
-            IF InvSlots(i) = 0 THEN
+            exit for
+        end if
+    next i
+    
+    if (added = 0) and (qty >= 0) then
+        for i = 0 to NumInvSlots-1
+            if InvSlots(i) = 0 then
                 InvSlots(i) = item
-                Inventory(item) = Amount
+                Inventory(item) = qty
                 added = 1
-                EXIT FOR
-            END IF
-        NEXT i
-    END IF
-
-    IF added THEN
-        SELECT CASE item
-        CASE GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
+                exit for
+            end if
+        next i
+    end if
+    
+    if added then
+        select case item
+        case GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
             RefreshPlayerAccess
-        END SELECT
-    END IF
+        end select
+    end if
 
-    IF added THEN
+    if added then
         return 0
-    ELSE
+    else
         return 1
-    END IF
+    end if
+    
+end function
 
-END FUNCTION
-
-SUB LD2_ClearInventorySlot (slot as integer)
+sub LD2_ClearInventorySlot (slot as integer)
     
     dim item as integer
     item = InvSlots(slot)
@@ -385,7 +402,7 @@ SUB LD2_ClearInventorySlot (slot as integer)
       RefreshPlayerAccess
     end select
     
-END SUB
+end sub
 
 sub LD2_ClearStatus ()
     
@@ -399,29 +416,29 @@ sub LD2_ClearStatus ()
     
 end sub
 
-FUNCTION LD2_GetStatusItem (slot as integer) as integer
+function LD2_GetStatusItem (slot as integer) as integer
     
-    IF LD2_isDebugMode() THEN LD2_Debug "LD2_GetStatusItem% ("+STR(slot)+" )"
+    LD2_LogDebug "LD2_GetStatusItem% ("+str(slot)+" )"
     
-    IF slot >= 0 AND slot <= NumInvSlots THEN
+    if slot >= 0 and slot <= NumInvSlots then
         return InvSlots(slot)
-    ELSE
+    else
         return -1
-    END IF
+    end if
     
-END FUNCTION
+end function
 
-FUNCTION LD2_GetStatusAmount (slot as integer) as integer
+function LD2_GetStatusAmount (slot as integer) as integer
     
-    IF slot >= 0 AND slot <= NumInvSlots THEN
+    if slot >= 0 and slot <= NumInvSlots then
         return Inventory(InvSlots(slot))
-    ELSE
+    else
         return -1
-    END IF
+    end if
     
-END FUNCTION
+end function
 
-FUNCTION CheckPlayerFloorHit as integer
+function CheckPlayerFloorHit as integer
     
     dim pointsToCheck(1) as PointType
     dim mapX as integer
@@ -531,10 +548,10 @@ FUNCTION CheckPlayerFloorHit as integer
     'NEXT x
     
     return 1
- 
-END FUNCTION
 
-FUNCTION CheckMobFloorHit (mob AS Mobile) as integer
+end function
+
+function CheckMobFloorHit (mob AS Mobile) as integer
   
   'SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
   dim x as integer
@@ -549,9 +566,9 @@ FUNCTION CheckMobFloorHit (mob AS Mobile) as integer
   
   return 0
   
-END FUNCTION
+end function
 
-FUNCTION CheckPlayerWallHit() as integer
+function CheckPlayerWallHit() as integer
     
     dim pointsToCheck(1) as PointType
     dim mapX as integer
@@ -630,9 +647,9 @@ FUNCTION CheckPlayerWallHit() as integer
     
     return 0
     
-END FUNCTION
+end function
 
-FUNCTION CheckMobWallHit (mob AS Mobile) as integer
+function CheckMobWallHit (mob AS Mobile) as integer
   
   'SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
   dim x as integer, y as integer
@@ -649,40 +666,36 @@ FUNCTION CheckMobWallHit (mob AS Mobile) as integer
   
   return 0
   
-END FUNCTION
+end function
 
-SUB LD2_Drop (item as integer)
-
-  '- drop an item
-  '--------------
-  dim n as integer
-  dim x as integer, y as integer
-  dim px as integer, py as integer
-
-  n = NumItems: NumItems += 1
-
-  Items(n).x = Player.x
- 
-  y = Player.y
-  'SetBitmap VARSEG(FloorMap(0)), VARPTR(FloorMap(0)), MAPW
-  '- drop to ground
-  DO
-    FOR x = 0 TO 15 STEP 15
-      px = INT(Player.x + x) \ 16: py = y \ 16
-      IF FloorMap(px, py + 1) THEN
-        EXIT DO
-      END IF
-    NEXT x
-    y = y + 16
-  LOOP
-
-
-  Items(n).y = (y \ 16) * 16
-  Items(n).id = item
-
-  'IF Player.weapon1 = item% - 20 THEN LD2_SetWeapon1 0 '- what's this for???
- 
-END SUB
+sub LD2_Drop (item as integer)
+    
+    dim n as integer
+    dim x as integer, y as integer
+    dim px as integer, py as integer
+    
+    n = NumItems: NumItems += 1
+    
+    Items(n).x = Player.x
+    y = Player.y
+    
+    '// find ground
+    do
+        for x = 0 to 15 step 15
+            px = int((Player.x + x) / SPRITE_W)
+            py = int(y / SPRITE_H)
+            if FloorMap(px, py + 1) then
+                exit do
+            end if
+        next x
+        y += SPRITE_H
+    loop
+    
+    Items(n).y   = int(y / SPRITE_H) * SPRITE_H
+    Items(n).id  = item
+    Items(n).qty = Inventory(item)
+    
+end sub
 
 'SUB LD2_FadeOut
 '  
@@ -863,6 +876,7 @@ sub LD2_Init
     '///////////////////////////////////////////////////////////////////
     NumItems = 0
     NumDoors = 0
+    NumElevators = 0
     NumGuts = 0
     NumSwaps = 0
     NumSwitches = 0
@@ -1120,12 +1134,12 @@ sub Map_BeforeLoad(byref skipItems as integer)
     '// RESET MAP VARS
     Mobs.Clear
     NumDoors = 0
+    NumElevators = 0
     
 end sub
 
 sub Map_AfterLoad(skipMobs as integer = 0)
     
-    dim foundElevator as integer
     dim tile as integer
     dim x as integer
     dim y as integer
@@ -1136,7 +1150,6 @@ sub Map_AfterLoad(skipMobs as integer = 0)
     NumSwitches = 0
     NumTeleports = 0
     
-    foundElevator = 0
     for y = 0 to 12
         for x = 0 to 200
             FloorMap(x, y) = 0
@@ -1146,13 +1159,7 @@ sub Map_AfterLoad(skipMobs as integer = 0)
                 Player.y = y * SPRITE_H
                 Player.x = x * SPRITE_W + int(SPRITE_W / 2)
                 XShift = Player.x - 128
-                Elevator.x = x * SPRITE_W
-                Elevator.y = y * SPRITE_H
-                Elevator.mapX = x
-                Elevator.mapY = y
-                Elevator.w = SPRITE_W * 2
-                Elevator.h = SPRITE_H
-                foundElevator = 1
+                Elevators_Add x, y
             case TileIds.DoorGreen
                 Doors_Add x, y, GREENACCESS
             case TileIds.DoorBlue
@@ -1171,9 +1178,9 @@ sub Map_AfterLoad(skipMobs as integer = 0)
                 FloorMap(x, y) = 1
             case TileIds.ColaTopLeft, TileIds.ColaTopRIght
                 FloorMap(x, y) = 19
-            case 162, 164, 166, 168, 171, 173, 175
+            case 162, 164, 166, 168, 171, 173, 175, 225, 227
                 FloorMap(x, y) = 30 '* stairs slope-up (left low / right high)
-            case 163, 165, 167, 169, 172, 174, 176
+            case 163, 165, 167, 169, 172, 174, 176, 226, 228
                 FloorMap(x, y) = 31 '* stairs slope-down
             case TileIds.CardboardBox, 170, 179
                 FloorMap(x, y) = 10
@@ -1208,16 +1215,6 @@ sub Map_AfterLoad(skipMobs as integer = 0)
             end if
         end select
     next i
-    
-    '*******************************************************************
-    '* ELEVATOR SETUP
-    '*******************************************************************
-    if foundElevator then
-        Elevator.tileToLeft = TileMap(Elevator.mapX-1, Elevator.mapY)
-        Elevator.tileToRight = TileMap(Elevator.mapX+2, Elevator.mapY)
-        Elevator.isOpen = 0
-        Elevator.isClosed = 1
-    end if
     
     if CurrentRoom = Rooms.WeaponsLocker then
         for i = 0 to NumItems-1
@@ -1361,6 +1358,7 @@ SUB Map_Load (Filename as string, skipMobs as integer = 0, skipItems as integer 
             get #MapFile, , _word: Items(i).x = _word
             get #MapFile, , _word: Items(i).y = _word
             get #MapFile, , _byte: Items(i).id = _byte+1
+            Items(i).qty = 1
         next i
     'else
     '    '// load items here
@@ -1552,6 +1550,8 @@ end sub
 
 sub Guts_Draw()
     
+    LD2_LogDebug "Guts_Draw()"
+    
     dim cx as integer, cy as integer
     dim x as integer, y as integer
     dim sz as integer
@@ -1736,6 +1736,8 @@ end sub
 
 sub Doors_Draw()
     
+    LD2_LogDebug "Doors_Draw()"
+    
     dim crop as SDL_Rect
     dim doorIsMoving as integer
     dim offset as integer
@@ -1754,9 +1756,9 @@ sub Doors_Draw()
         y = int(Doors(n).y)
         crop.y = offset: crop.h = SPRITE_H-offset
         if doorIsMoving then
-            SpritesTile.putToScreenEx x, y, TileIds.DoorGreen + Doors(n).accessLevel + 11, 0, 0, @crop
+            SpritesTile.putToScreenEx x, y, TileIds.DoorGreen + Doors(n).accessLevel + 11 - 1, 0, 0, @crop
         else
-            SpritesTile.putToScreenEx x, y, TileIds.DoorGreen + Doors(n).accessLevel, 0, 0, @crop
+            SpritesTile.putToScreenEx x, y, TileIds.DoorGreen + Doors(n).accessLevel - 1, 0, 0, @crop
         end if
     next n
     
@@ -1788,6 +1790,136 @@ sub Doors_Close (id as integer)
     end if
     
     Doors(id).speed = DOORCLOSESPEED
+    
+end sub
+
+sub Elevators_Add (x as integer, y as integer)
+    
+    dim n as integer
+    
+    n = NumElevators: NumElevators += 1
+    
+    Elevators(n).mapX = x
+    Elevators(n).mapY = y
+    Elevators(n).x = x * SPRITE_W
+    Elevators(n).y = y * SPRITE_H - 5
+    Elevators(n).w = SPRITE_W * 2
+    Elevators(n).h = SPRITE_H + 5
+    Elevators(n).isLocked = 0
+    Elevators(n).percentOpen = 0
+    Elevators(n).speed = 0
+    
+    TileMap(x+0, y) = TileIds.ElevatorBehindDoor
+    TileMap(x+1, y) = TileIds.ElevatorBehindDoor
+    
+end sub
+
+sub Elevators_Animate ()
+    
+    dim e as ElevatorType
+    dim nearElevator as integer
+    dim countClosed as integer
+    dim countOpen as integer
+    dim n as integer
+    dim x as integer
+    dim y as integer
+    
+    x = int(Player.x+7)
+    y = int(Player.y+7)
+    
+    countClosed = 0
+    for n = 0 to NumElevators-1
+        
+        e = Elevators(n)
+        
+        if Player.state = PlayerStates.EnteringElevator then
+            Elevators_Close n
+        else
+            nearElevator = (x >= e.x-16) and (x <= e.x+e.w+16) and (y >= e.y) and (y <= e.y+e.h)
+            if nearElevator then
+                Elevators_Open n
+            else
+                Elevators_Close n
+            end if
+        end if
+        
+        Elevators(n).percentOpen += Elevators(n).speed * DELAYMOD
+        if Elevators(n).percentOpen >= 1.0 then
+            Elevators(n).percentOpen = 1.0
+            Elevators(n).speed = 0
+            countOpen += 1
+        end if
+        if Elevators(n).percentOpen <= 0 then
+            Elevators(n).percentOpen = 0
+            Elevators(n).speed = 0
+            if Player.state = PlayerStates.EnteringElevator then
+                countClosed += 1
+            end if
+        end if
+        
+    next n
+    
+    if (Player.state = PlayerStates.EnteringElevator) and (countClosed = NumElevators) then
+        Player.state = PlayerStates.ExitingElevator
+        Player.is_visible = 0
+        LD2_SetFlag ELEVATORMENU
+    end if
+    if (Player.state = PlayerStates.ExitingElevator) and (countOpen = NumElevators) then
+        Player.state = 0
+    end if
+    
+end sub
+
+
+
+sub Elevators_Open (id as integer)
+    
+    dim isClosed as integer
+    
+    isClosed = (Elevators(id).percentOpen = 0.0)
+    
+    if isClosed then
+        LD2_PlaySound Sounds.doorup
+    end if
+    
+    Elevators(id).speed = ELEVATOROPENSPEED
+    
+end sub
+
+sub Elevators_Close (id as integer)
+    
+    dim isOpen as integer
+    
+    isOpen = (Elevators(id).percentOpen = 1.0)
+    
+    if isOpen then
+        LD2_PlaySound Sounds.doorup
+    end if
+    
+    Elevators(id).speed = ELEVATORCLOSESPEED
+    
+end sub
+
+sub Elevators_Draw ()
+    
+    dim offset as integer
+    dim d as double
+    dim x as integer
+    dim y as integer
+    dim n as integer
+    
+    for n = 0 to NumElevators-1
+        d = Elevators(n).percentOpen
+        d *= 4
+        offset = int(d * d)
+        if offset > 16 then offset = 16
+        x = int(Elevators(n).x) - int(XShift)
+        y = int(Elevators(n).y)
+        SpritesTile.putToScreen x-offset, y-11, TileIds.ElevatorDoorLeftTop
+        SpritesTile.putToScreen x-offset, y+ 5, TileIds.ElevatorDoorLeft
+        SpritesTile.putToScreen x+SPRITE_W+offset, y-11, TileIds.ElevatorDoorRightTop
+        SpritesTile.putToScreen x+SPRITE_W+offset, y+ 5, TileIds.ElevatorDoorRight
+    next n
     
 end sub
 
@@ -1938,6 +2070,7 @@ SUB LD2_RenderFrame
     
     LD2_SetTargetBuffer 1
     if ShowLightBG then
+        LD2_LogDebug "LD2_RenderFrame() - Draw Light BG"
         yp = 0
         for y = 0 to 12
             xp = 0 - (int(XShift) and 15)
@@ -1963,6 +2096,7 @@ SUB LD2_RenderFrame
             yp = yp + 16
         next y
     else
+        LD2_LogDebug "LD2_RenderFrame() - Draw Tiles"
         yp = 0
         for y = 0 to 12
             xp = 0 - (int(XShift) and 15)
@@ -1987,14 +2121,21 @@ SUB LD2_RenderFrame
         next y
     end if
     
+    if (Player.state <> PlayerStates.EnteringElevator) and (Player.state <> PlayerStates.ExitingElevator) then
+        Elevators_Draw
+    end if
     Mobs_Draw
     Player_Draw
+    if (Player.state = PlayerStates.EnteringElevator) or (Player.state = PlayerStates.ExitingElevator) then
+        Elevators_Draw
+    end if
     Doors_Draw
     MapItems_Draw
     Guts_Draw
     
     if ShowLightFG then
-        playerIsLit = Player.is_shooting and (Player.weapon <> FIST) and ((Player.uAni-Player.stillAni) < 1.5)
+        LD2_LogDebug "LD2_RenderFrame() - Draw Light FG"
+        playerIsLit = Player.is_shooting and (Player.weapon <> ItemIds.Fist) and ((Player.uAni-Player.stillAni) < 1.5)
         yp = 0
         for y = 0 to 12
             xp = 0 - (int(XShift) and 15)
@@ -2019,14 +2160,7 @@ SUB LD2_RenderFrame
     
     Stats_Draw
     
-    if LD2_isDebugMode() then
-        LD2_putText 0, 48, "FPS: " + str(FPS), 1
-        LD2_putText 0, 56, "PLX: " + str(int(Player.x)), 1
-        LD2_putText 0, 64, "XSH: " + str(int(XShift)), 1
-        LD2_putText 0, 72, "P-X: " + str(int(Player.x)), 1
-        LD2_putText 0, 80, "MOB: " + str(Mobs.Count()), 1
-    end if
-    
+    LD2_LogDebug "LD2_RenderFrame() - LetterBox and Caption"
     '- Switch to letter box mode if in scene mode
     if SceneMode = LETTERBOX then
         LD2_fill 0, 0, SCREEN_W, SPRITE_H*2, 0, 1
@@ -2060,6 +2194,7 @@ SUB LD2_RenderFrame
         LD2_RenderElement @labelNotice
     end if
     
+    LD2_LogDebug "LD2_RenderFrame() - Reveal Text"
     static textReveal as ElementType
     if textReveal.y = 0 then
         LD2_InitElement @textReveal, "", 31, ElementFlags.CenterX
@@ -2180,15 +2315,21 @@ sub Map_SetXShift (x as integer)
     
 end sub
 
-sub Map_LockElevator
+sub Map_LockElevators
     
-    Elevator.isLocked = 1
+    dim n as integer
+    for n = 0 to NumElevators-1
+        Elevators(n).isLocked = 1
+    next n
     
 end sub
 
-sub Map_UnlockElevator
+sub Map_UnlockElevators
     
-    Elevator.isLocked = 0
+    dim n as integer
+    for n = 0 to NumElevators-1
+        Elevators(n).isLocked = 0
+    next n
     
 end sub
 
@@ -2265,13 +2406,18 @@ sub MapItems_Add (x as integer, y as integer, id as integer)
 end sub
 
 sub MapItems_Draw ()
-  dim n as integer
-  for n = 0 to NumItems-1
-    SpritesObject.putToScreen(int(Items(n).x - XShift), Items(n).y, Items(n).id)
-  next n
+    
+    LD2_LogDebug "MapItems_Draw()"
+    
+    dim n as integer
+    for n = 0 to NumItems-1
+        SpritesObject.putToScreen(int(Items(n).x - XShift), Items(n).y, Items(n).id)
+    next n
+    
 end sub
 
 function MapItems_Pickup () as integer
+    
     if Player.state = PlayerStates.Jumping then
         Player.is_lookingdown = 1
         return 0
@@ -2285,7 +2431,7 @@ function MapItems_Pickup () as integer
 
     for i = 0 TO NumItems-1
         if int(Player.x + 8) >= Items(i).x and int(Player.x + 8) <= Items(i).x + 16 then
-            if LD2_AddToStatus(Items(i).id, 1) = 0 then
+            if LD2_AddToStatus(Items(i).id, Items(i).qty) = 0 then
                 success = 1
                 LD2_SetFlag GOTITEM
                 GotItemId = items(i).id
@@ -2787,7 +2933,7 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
     
     for i = 0 to numMobs-1
         do
-            x = int((Elevator.mapX-5) * rnd(1))
+            x = int(80*rnd(1)) 'int((Elevator.mapX-5) * rnd(1))
             y = int((MAPH-2) * rnd(1))
             if (FloorMap(x, y) = 0) and (FloorMap(x, y+1) <> 0) then
                 exit do
@@ -3328,6 +3474,9 @@ end sub
 
 '- TODO: only draw entities in frame
 sub Mobs_Draw()
+    
+    LD2_LogDebug "Mobs_Draw()"
+    
     dim mob as Mobile
     dim x as integer, y as integer
     dim sprite as integer
@@ -3428,6 +3577,10 @@ sub Player_Animate()
     dim prevX as double
     dim f as double
     
+    if (Player.state = PlayerStates.EnteringElevator) or (Player.state = PlayerStates.ExitingElevator) then
+        exit sub
+    end if
+    
     if Inventory(ItemIds.Hp) <= 0 then
         LD2_PlaySound Sounds.larryDie
         Inventory(ItemIds.Lives) -= 1
@@ -3437,15 +3590,15 @@ sub Player_Animate()
         else
             LD2_PopText "Lives Left:" + str(Inventory(ItemIds.Lives))
             LD2_SetFlag PLAYERDIED
-            Inventory(ItemIds.Hp) = MAXLIFE
+            Inventory(ItemIds.Hp) = Maxes.Hp
             if (BossBarId > 0) and (CurrentRoom = Rooms.Rooftop) then
-                Inventory(SHOTGUNAMMO) = 40
-                Inventory(PISTOLAMMO) = 50
+                Inventory(ItemIds.Shotgun) = 40
+                Inventory(ItemIds.Pistol) = 50
                 XShift = 1200
                 Player.x = 80
             elseif (BossBarId > 0) and (CurrentRoom = Rooms.PortalRoom) then
-                Inventory(SHOTGUNAMMO) = 40
-                Inventory(PISTOLAMMO) = 50
+                Inventory(ItemIds.Shotgun) = 40
+                Inventory(ItemIds.Pistol) = 50
                 XShift = 300
                 Player.x = 80
             else
@@ -3466,15 +3619,15 @@ sub Player_Animate()
     
     if Player.is_shooting then
         select case Player.weapon
-        case FIST
+        case ItemIds.Fist
             Player.uAni = Player.uAni + .15
             if Player.uAni >= 28 then Player.uAni = 26: Player.is_shooting = 0
             Player.stillani = 26
-        case SHOTGUN
+        case ItemIds.Shotgun
             Player.uAni = Player.uAni + .15
             if Player.uAni >= 8 then Player.uAni = 1: Player.is_shooting = 0
             Player.stillani = 1
-        case PISTOL
+        case ItemIds.Pistol
             if Player.state = PlayerStates.Crouching then
                 Player.uAni += 0.23
                 if Player.uAni >= (UpperSprites.PistolCrouchShootZ+1) then
@@ -3489,14 +3642,14 @@ sub Player_Animate()
                     pistolTimer = timer
                 end if
             end if
-        case MACHINEGUN
+        case ItemIds.MachineGun
             Player.uAni = Player.uAni + .4
             if Player.uAni >= 11 then
                 Player.uAni = 10: Player.is_shooting = 0
                 Player.stillani = 8
                 machineTimer = timer
             end if
-        case MAGNUM
+        case ItemIds.Magnum
             Player.uAni = Player.uAni + .15
             if Player.uAni >= 18 then Player.uAni = 14: Player.is_shooting = 0
             Player.stillani = 14
@@ -3581,39 +3734,11 @@ sub Player_Animate()
         XShift = 2896
     end if
     
-    dim checkX as integer
-    dim checkY as integer
-    dim atElevator as integer
-    dim atElevatorFar as integer
-    
-    checkX = ((Player.x + 7) >= (Elevator.x - 19)) and ((Player.x + 7) <= (Elevator.x + Elevator.w + 19))
-    checkY = ((Player.y + 7) >= (Elevator.y - 19)) and ((Player.y + 7) <= (Elevator.y + Elevator.h))
-    atElevator = checkX and checkY
-    
-    checkX = ((Player.x + 7) >= (Elevator.x - 39)) and ((Player.x + 7) <= (Elevator.x + Elevator.w + 39))
-    checkY = ((Player.y + 7) >= (Elevator.y - 39)) and ((Player.y + 7) <= (Elevator.y + Elevator.h))
-    atElevatorFar = checkX and checkY
-    
-    '- check if Player is at elevator
-    if (Elevator.isLocked = 0) and Elevator.isClosed and atElevator then
-        Map_PutTile Elevator.mapX - 1, Elevator.mapY, TileIds.ElevatorDoorLeft, 1
-        Map_PutTile Elevator.mapX + 0, Elevator.mapY, TileIds.ElevatorBehindDoor, 1
-        Map_PutTile Elevator.mapX + 1, Elevator.mapY, TileIds.ElevatorBehindDoor, 1
-        Map_PutTile Elevator.mapX + 2, Elevator.mapY, TileIds.ElevatorDoorRight, 1
-        Elevator.isOpen = 1
-        Elevator.isClosed = 0
-    elseif Elevator.isOpen and (atElevatorFar = 0) then
-        Map_PutTile Elevator.mapX - 1, Elevator.mapY, Elevator.tileToLeft, 1
-        Map_PutTile Elevator.mapX + 0, Elevator.mapY, TileIds.ElevatorDoorLeft, 1
-        Map_PutTile Elevator.mapX + 1, Elevator.mapY, TileIds.ElevatorDoorRight, 1
-        Map_PutTile Elevator.mapX + 2, Elevator.mapY, Elevator.tileToRight, 1
-        Elevator.isOpen = 0
-        Elevator.isClosed = 1
-    end if
-    
 end sub
 
 sub Player_Draw()
+    
+    LD2_LogDebug "Player_Draw()"
     
     dim px as integer, py as integer
     dim lan as integer, uan as integer
@@ -3627,7 +3752,7 @@ sub Player_Draw()
     lan = int(Player.lAni): uan = int(Player.uAni)
     select case Player.state
     case PlayerStates.Crouching
-        if Player.weapon = PISTOL then
+        if Player.weapon = ItemIds.Pistol then
             SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player.flip)
             if Player.is_shooting then
                 SpritesLarry.putToScreenEx(px+iif(Player.flip=0,2,-2), py, int(Player.uAni), Player.flip)
@@ -3637,7 +3762,7 @@ sub Player_Draw()
         else
             SpritesLarry.putToScreenEx(px, py, FullBodySprites.Crouching, Player.flip)
         end if
-    case PlayerStates.LookingUp
+    case PlayerStates.LookingUp, PlayerStates.EnteringElevator
         idx =  int((timer - player.actionStartTime) / 0.075)
         if idx > 2 then idx = 2
         SpritesLarry.putToScreenEx(px, py, FullBodySprites.TurningToWall+idx, Player.flip)
@@ -3649,7 +3774,7 @@ sub Player_Draw()
                 SpritesLarry.putToScreenEx(px, py, 55, Player.flip)
             end if
         else
-            if (Player.weapon = FIST) and (lan >= 36) then '- full-body sprites
+            if (Player.weapon = ItemIds.Fist) and (lan >= 36) then '- full-body sprites
                 if (Player.state = PlayerStates.Jumping) and Player.is_shooting then
                     SpritesLarry.putToScreenEx(px, py, iif(Player.vy > -0.5 and Player.vy < 0.5, 29, 30), Player.flip)
                 else
@@ -3657,13 +3782,13 @@ sub Player_Draw()
                 end if
             else
                 if lan = LowerSprites.Standing then '- legs still/standing-upright
-                    if Player.weapon = PISTOL then
+                    if Player.weapon = ItemIds.Pistol then
                         SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 1, -1), py, lan, Player.flip)
                     else
                         SpritesLarry.putToScreenEx(px, py, lan, Player.flip)
                     end if
                 else
-                    if Player.weapon = PISTOL then
+                    if Player.weapon = ItemIds.Pistol then
                         if Player.state = PlayerStates.Jumping then
                             SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, -1, 1), py, lan, Player.flip)
                         else
@@ -3673,7 +3798,7 @@ sub Player_Draw()
                         SpritesLarry.putToScreenEx(px+iif(Player.flip, 2, -2), py, lan, Player.flip)
                     end if
                 end if
-                if (Player.is_shooting and (Player.weapon = PISTOL)) or(int(uan) = UpperSprites.PointPistol) then
+                if (Player.is_shooting and (Player.weapon = ItemIds.Pistol)) or(int(uan) = UpperSprites.PointPistol) then
                     SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 3, -3), py, uan, Player.flip)
                 else
                     SpritesLarry.putToScreenEx(px, py, uan, Player.flip)
@@ -3704,7 +3829,7 @@ function Player_Jump (amount as double, is_repeat as integer = 0) as integer
         return 0
     end if
 
-    'IF Player.weapon = FIST THEN
+    'IF Player.weapon = ItemIds.Fist THEN
         Amount = Amount * 1.1
     'END IF
 
@@ -3774,9 +3899,9 @@ function Player_Fall() as integer
     Player.y += Player.vy
     if CheckPlayerFloorHit() = 0 then
         isFalling = 1
-        if Player.weapon = FIST then
+        if Player.weapon = ItemIds.Fist then
             Player.lAni = iif(Player.vy < -0.5, 48, 49)
-        elseif Player.weapon = PISTOL then
+        elseif Player.weapon = ItemIds.Pistol then
             Player.lAni = 67 '66
             Player.uAni = 68
         else
@@ -3789,9 +3914,9 @@ function Player_Fall() as integer
     else
         if isFalling then
             isFalling = 0
-            if Player.weapon = FIST then
+            if Player.weapon = ItemIds.Fist then
                 Player.lAni = 42
-            elseif Player.weapon = PISTOL then
+            elseif Player.weapon = ItemIds.Pistol then
                 Player.uAni = int(UpperSprites.HoldPistol)
                 Player.lAni = 24
                 Player.stillAni = UpperSprites.HoldPistol
@@ -3836,6 +3961,9 @@ end function
 function Player_Move (dx as double, canFlip as integer = 1) as integer
 
     if (Player.state = PlayerStates.Crouching)  or (Player.state = PlayerStates.LookingUp) or (Player.state = PlayerStates.Blocked) then
+        return 0
+    end if
+    if (Player.state = PlayerStates.EnteringElevator) or (Player.state = PlayerStates.ExitingElevator) then
         return 0
     end if
 
@@ -3911,7 +4039,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     end if
     
     if hitWall = 0 then
-    if Player.weapon = FIST then
+    if Player.weapon = ItemIds.Fist then
         Player.vx   = dx
         Player.x    = Player.x + dx
         if (Player.lAni < 36) or (Player.lani >= 44) then
@@ -3955,7 +4083,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
         success = 0
     else
         if (forward = 1) then
-            if Player.weapon = FIST then
+            if Player.weapon = ItemIds.Fist then
                 if Player.lAni >= 44 then
                     Player.lAni = 36
                     footstep = 0
@@ -3967,7 +4095,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
                 end if
             end if
         elseif (forward = 0) then
-            if Player.weapon = FIST then
+            if Player.weapon = ItemIds.Fist then
                 if Player.lAni < 36 then
                     Player.lAni = 43.9999
                     footstep = 0
@@ -4033,9 +4161,26 @@ sub Player_SetItemMaxQty(itemId as integer, maxQty as integer)
     
 end sub
 
+function Player_GetItemMaxQty(itemId as integer) as integer
+    
+    if (InventoryMax(itemId) > 0) then
+        return InventoryMax(itemId)
+    end if
+    
+    return -1
+    
+end function
+
 function Player_AtElevator() as integer
     
-    return Elevator.isOpen
+    dim n as integer
+    for n = 0 to NumElevators-1
+        if Elevators(n).percentOpen = 1.0 then
+            return 1
+        end if
+    next n
+    
+    return 0
     
 end function
 
@@ -4099,7 +4244,7 @@ function Player_LookUp () as integer
     static didAction as integer = 0
     dim idx as integer
     
-    if (Player.state = PlayerStates.Jumping) then
+    if (Player.state = PlayerStates.Jumping) or (Player.state = PlayerStates.EnteringElevator) then
         return 0
     else
         if Player.state <> PlayerStates.LookingUp then
@@ -4114,7 +4259,9 @@ function Player_LookUp () as integer
                 end if
             end if
         end if
-        SetPlayerState( PlayerStates.LookingUp )
+        if  (Player.state <> PlayerStates.EnteringElevator) then
+            SetPlayerState( PlayerStates.LookingUp )
+        end if
         return 1
     end if
     
@@ -4127,6 +4274,9 @@ sub Player_DoAction ()
     dim responses(2) as string
     dim points(3) as PointType
     dim checked(3) as PointType
+    dim p as PointType
+    dim e as ElevatorType
+    dim atElevator as integer
     dim tile as integer
     dim box as BoxType
     dim i as integer
@@ -4137,6 +4287,22 @@ sub Player_DoAction ()
     points(1).x = box.rgt: points(1).y = box.top
     points(2).x = box.lft: points(2).y = box.btm
     points(3).x = box.rgt: points(3).y = box.btm
+    
+    for i = 0 to NumElevators-1
+        e = Elevators(i)
+        atElevator = 1
+        for j = 0 to 3
+            p = points(j)
+            if 0 = ((p.x >= e.x) and (p.x <= e.x+e.w) and (p.y >= e.y) and (p.y <= e.y+e.h+9)) then
+                atElevator = 0
+                exit for
+            end if
+        next j
+        if atElevator then
+            Player.state = PlayerStates.EnteringElevator
+            exit sub
+        end if
+    next i
     
     for i = 0 to 3
         mapX = int(points(i).x/SPRITE_W)
@@ -4272,20 +4438,29 @@ sub Player_DoAction ()
 end sub
 
 function Player_SetWeapon (itemId as integer) as integer
-
-  '- Set the current weapon
-  '------------------------
-  
-  Player.weapon = itemId
-  
-  IF itemId = FIST        THEN Player.uAni = 26: Player.stillani = Player.uAni
-  IF itemId = SHOTGUN     THEN Player.uAni = 01: Player.stillani = Player.uAni
-  IF itemId = PISTOL      THEN Player.uAni = int(UpperSprites.HoldPistol): Player.stillani = Player.uAni
-  IF itemId = MACHINEGUN  THEN Player.uAni = 08: Player.stillani = Player.uAni
-  IF itemId = MAGNUM      THEN Player.uAni = 14: Player.stillani = Player.uAni
-  
-  return 1
-  
+    
+    Player.weapon = itemId
+    
+    select case itemId
+    case ItemIds.Fist
+        Player.uAni = int(UpperSprites.Standing)
+    case ItemIds.Shotgun
+        Player.uAni = int(UpperSprites.HoldShotgun)
+    case ItemIds.Pistol
+        Player.uAni = int(UpperSprites.HoldPistol)
+    case ItemIds.MachineGun
+        Player.uAni = int(UpperSprites.HoldMachineGun)
+    case ItemIds.Magnum
+        Player.uAni = int(UpperSprites.HoldMagnum)
+    end select
+    
+    select case itemId
+    case ItemIds.Fist, ItemIds.Shotgun, ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum
+        Player.stillani = Player.uAni
+    end select
+    
+    return 1
+    
 end function
 
 sub Player_SetDamageMod (factor as integer)
@@ -4334,17 +4509,17 @@ function Player_Shoot(is_repeat as integer = 0) as integer
 
     if Player.is_shooting then return 0
 
-    if Player.weapon = ItemIds.Shotgun    and Inventory(ItemIds.ShotgunAmmo)    = 0 then return -1
-    if Player.weapon = ItemIds.Pistol     and Inventory(ItemIds.PistolAmmo)     = 0 then return -1
-    if Player.weapon = ItemIds.MachineGun and Inventory(ItemIds.MachineGunAmmo) = 0 then return -1
-    if Player.weapon = ItemIds.Magnum     and Inventory(ItemIds.MagnumAmmo)     = 0 then return -1
+    if Player.weapon = ItemIds.Shotgun    and Inventory(ItemIds.Shotgun)    = 0 then return -1
+    if Player.weapon = ItemIds.Pistol     and Inventory(ItemIds.Pistol)     = 0 then return -1
+    if Player.weapon = ItemIds.MachineGun and Inventory(ItemIds.MachineGun) = 0 then return -1
+    if Player.weapon = ItemIds.Magnum     and Inventory(ItemIds.Magnum)     = 0 then return -1
 
     timeSinceLastShot = (timer - timestamp)
     
     select case Player.weapon
     case ItemIds.Shotgun
         
-        Inventory(ItemIds.ShotgunAmmo) -= 1
+        Inventory(ItemIds.Shotgun) -= 1
         damage = 5
         fireY = iif(Player.state = PlayerStates.Crouching, 12, 8)
         
@@ -4357,7 +4532,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             if (is_repeat = 1 and timeSinceLastShot < 0.45) then return 0
             if (is_repeat = 0 and timeSinceLastShot < 0.25) then return 0
         end if
-        Inventory(ItemIds.PistolAmmo) -= 1
+        Inventory(ItemIds.Pistol) -= 1
         damage = 2
         fireY = iif(Player.state = PlayerStates.Crouching, 12, 5)
         Player.uAni = int(iif(Player.state = PlayerStates.Crouching, UpperSprites.PistolCrouchShootA-1, UpperSprites.ShootPistolA-1))
@@ -4366,7 +4541,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     case ItemIds.MachineGun
         
         if timeSinceLastShot < 0.12 then return 0
-        Inventory(ItemIds.MachineGunAmmo) -= 1
+        Inventory(ItemIds.MachineGun) -= 1
         damage = 1
         fireY = iif(Player.state = PlayerStates.Crouching, 7, 5)
         Player.uAni = 8: Player.stillAni = 8
@@ -4600,6 +4775,8 @@ end function
 
 sub Stats_Draw ()
     
+    LD2_LogDebug "Stats_Draw()"
+    
     dim pad as integer
     
     pad = 3
@@ -4607,23 +4784,23 @@ sub Stats_Draw ()
     SpritesLarry.putToScreen(pad, pad, 44)
     
     select case Player.weapon
-    case FIST
+    case ItemIds.Fist
         SpritesLarry.putToScreen(pad, pad+12, 46)
-    case SHOTGUN
+    case ItemIds.Shotgun
         SpritesLarry.putToScreen(pad, pad+12, 45)
-    case PISTOL
+    case ItemIds.Pistol
         SpritesLarry.putToScreen(pad, pad+12, 52)
-    case MACHINEGUN
+    case ItemIds.MachineGun
         SpritesLarry.putToScreen(pad, pad+12, 53)
     end select
     
-    LD2_putTextCol pad+16, pad+3, str(Inventory(ItemIds.Hp)), 15, 1
+    LD2_putTextCol pad+16, pad+3, " "+str(Inventory(ItemIds.Hp)), 15, 1
     
-    if Player.weapon = SHOTGUN     then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(SHOTGUNAMMO)), 15, 1
-    if Player.weapon = MACHINEGUN  then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(MACHINEGUNAMMO)), 15, 1
-    if Player.weapon = PISTOL      then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(PISTOLAMMO)), 15, 1
-    if Player.weapon = MAGNUM      then LD2_PutTextCol pad+16, pad+12+3, str(Inventory(MAGNUMAMMO)), 15, 1
-    if Player.weapon = FIST        then LD2_PutTextCol pad+16, pad+12+3, " INF", 15, 1
+    if Player.weapon = ItemIds.Fist then
+        LD2_PutTextCol pad+16, pad+12+3, " INF", 15, 1
+    else
+        LD2_PutTextCol pad+16, pad+12+3, str(Inventory(Player.weapon)), 15, 1
+    end if
     
 end sub
 

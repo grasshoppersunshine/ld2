@@ -1,28 +1,31 @@
 #pragma once
 #inclib "inventory"
 
-TYPE InventoryType
-  id AS INTEGER
-  qty AS INTEGER
-  shortName AS STRING
-  longName AS STRING
-  slot AS INTEGER
-  visible as integer
-END TYPE
+type InventoryType
+    id as integer
+    qty as integer
+    max as integer
+    shortName as string
+    longName as string
+    slot as integer
+    visible as integer
+end type
 
-DECLARE FUNCTION Inventory_Add (id AS INTEGER, qty AS INTEGER) as integer
-DECLARE FUNCTION Inventory_AddHidden (id AS INTEGER, qty AS INTEGER) as integer
-DECLARE FUNCTION Inventory_AddQty (slot AS INTEGER, qty AS INTEGER) as integer
+declare function Inventory_Add (id as integer, qty as integer, max as integer = -1) as integer
+declare function Inventory_AddHidden (id as integer, qty as integer, max as integer = -1) as integer
+declare function Inventory_AddQty (slot as integer, qty as integer) as integer
 DECLARE SUB Inventory_Clear ()
 DECLARE FUNCTION Inventory_GetErrorMessage (errorId as integer) as string
-DECLARE SUB Inventory_GetItem (item AS InventoryType, id AS INTEGER)
-DECLARE FUNCTION Inventory_GetItemBySlot (item AS InventoryType, slot AS INTEGER) as integer
+declare sub Inventory_GetItem (byref item as InventoryType, id as integer)
+declare function Inventory_GetItemBySlot (byref item as InventoryType, slot as integer) as integer
 declare function Inventory_GetSize () as integer
+declare function Inventory_HasItem (itemId as integer) as integer
 DECLARE FUNCTION Inventory_Init (size AS INTEGER, sizeVisible as integer = -1) as integer
 DECLARE FUNCTION Inventory_LoadDescription (itemId AS INTEGER) as string
 DECLARE FUNCTION Inventory_Mix(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS STRING) as integer
 DECLARE SUB Inventory_RefreshNames ()
-DECLARE SUB Inventory_RemoveItem (item AS InventoryType)
+declare sub Inventory_RemoveItem (byref item as InventoryType)
+declare sub Inventory_ResetItem (byref item as InventoryType)
 DECLARE FUNCTION Inventory_SidToItemId (sid AS STRING) as integer
 
 declare function Inventory_Use (itemId as integer) as integer
