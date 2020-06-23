@@ -548,10 +548,10 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
             pose.addSprite 14: pose.addSprite 12: pose.takeSnapshot
             pose.addSprite 14: pose.addSprite 13: pose.takeSnapshot
 		CASE PoseIds.Walking
-            pose.addSprite 15: pose.addSprite 12: pose.takeSnapshot
-            pose.addSprite 16: pose.addSprite 12: pose.takeSnapshot
-            pose.addSprite 17: pose.addSprite 12: pose.takeSnapshot
-            pose.addSprite 18: pose.addSprite 12: pose.takeSnapshot
+            pose.addSprite 15: pose.addSprite 12, 2, 0: pose.takeSnapshot
+            pose.addSprite 16: pose.addSprite 12, 2, 0: pose.takeSnapshot
+            pose.addSprite 17: pose.addSprite 12, 2, 0: pose.takeSnapshot
+            pose.addSprite 18: pose.addSprite 12, 2, 0: pose.takeSnapshot
         CASE PoseIds.Kicking
             pose.addSprite 19: pose.addSprite 12: pose.takeSnapshot
             pose.addSprite 20: pose.addSprite 12: pose.takeSnapshot

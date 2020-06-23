@@ -171,8 +171,8 @@ function Scene1Go () as integer
 	LarryPose.isFlipped = 0
 	StevePose.isFlipped = 1
 
-	LarryPose.x =  92: LarryPose.y =  144
-	StevePose.x = 124: StevePose.y =  144
+	LarryPose.x =  83: LarryPose.y =  144
+	StevePose.x = 127: StevePose.y =  144
 	
 	ClearPoses
 	AddPose @LarryPose
@@ -182,7 +182,8 @@ function Scene1Go () as integer
 	RenderPoses
     LD2_FadeIn 2
 
-	FadeInMusic Tracks.Wandering
+	'FadeInMusic Tracks.Wandering
+    LD2_PlayMusic Tracks.Wandering
 	
     dim escaped as integer
     dim x as integer
@@ -206,8 +207,7 @@ function Scene1Go () as integer
     next x
 
     StevePose.x = 152
-    StevePose.firstFrame
-    'StevePose.btmMod = 0
+    GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Talking
     RenderScene
     RetraceDelay 40
 
@@ -391,7 +391,7 @@ sub Scene4EndConditions()
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneJanitorDies, 1
     
-    Map_PutTile 13, 8, 19, 3
+    Map_PutTile 13, 8, 131, LayerIds.Tile
     Mobs_Add 208, 144, MobIds.Rockmonster
     Map_LockElevators
     
@@ -440,7 +440,7 @@ function Scene4Go() as integer
 
     '- Rockmonster busts through window and eats the janitor/doctor
     '--------------------------------------------------------------
-    Map_PutTile 13, 8, 19, 3
+    Map_PutTile 13, 8, 131, LayerIds.Tile
     
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Crashing
     RockmonsterPose.x = 208

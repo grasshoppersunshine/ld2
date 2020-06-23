@@ -1,8 +1,8 @@
 SCENE-1A
     
-    LARRY [ X  92, Y 144, FACE RIGHT ]
+    LARRY [ X  83, Y 144, FACE RIGHT ]
 
-    STEVE [ X 124, Y 144, FACE LEFT  ]
+    STEVE [ X 127, Y 144, FACE LEFT  ]
     
     [ MUSIC WANDERING ]
     
@@ -43,14 +43,32 @@ END
 SCENE-1B
     
     STEVE [ FACE RIGHT, WALKTO 152, WAIT 0.3333, FACE LEFT ]
-    Hey, you got a quarter?
+    D Cola, eh?
+    
+    LARRY
+    You know it.
+    When you're thirsty... go for the "D".
+    ... "D" Cola.
+    
+    STEVE
+    Ha! Stupid commercial.
+    I am thirsty, though.
+    ... You got a quarter?
 
     LARRY
     No, but...
     If you kick it, you get one for free.
 
     STEVE
-    Well, I couldn't agree more.
+    Ha!
+    Kick it in the D!
+    
+    LARRY
+    Ha! ha!
+    Seriously though... don't hurt yourself.
+    
+    STEVE
+    Heh... I'll be just fine.
     
 END
 
