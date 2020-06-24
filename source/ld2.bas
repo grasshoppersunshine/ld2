@@ -139,7 +139,6 @@
   DIM SHARED NumPoses AS INTEGER '- POSES module
   
   DIM SHARED SceneNo as integer
-  DIM SHARED CurrentRoom AS INTEGER
   DIM SHARED RoofScene as integer
   DIM SHARED SteveGoneScene as integer
   DIM SHARED FlashLightScene as integer
@@ -1171,12 +1170,12 @@ SUB Main
     BossCheck player
     ItemsCheck player
     
-    if CurrentRoom = Rooms.Rooftop then
-        Rooms_DoRooftop player
-    end if
-    if CurrentRoom = ROoms.Basement then
-        Rooms_DoBasement player
-    end if
+    select case Player_GetCurrentRoom()
+        case Rooms.Rooftop
+            Rooms_DoRooftop player
+        case Rooms.Basement
+            Rooms_DoBasement player
+    end select
     
     PlayerIsRunning = 0
     if keyboard(KEY_LSHIFT) or keyboard(KEY_KP_0) then
@@ -1230,7 +1229,7 @@ SUB Main
         StatusScreen
     end if
 	
-    atKeypad  = (CurrentRoom = Rooms.Rooftop) and (player.x >= 1376 and player.x <= 1408)
+    atKeypad  = (Player_GetCurrentRoom() = Rooms.Rooftop) and (player.x >= 1376 and player.x <= 1408)
     hasAccess = (Player_GetAccessLevel() >= YELLOWACCESS)
     if (atKeypad = 0) or (atKeypad and hasAccess) then
         if keypress(KEY_1) then doAction CustomActions(0).actionId, CustomActions(0).itemId
@@ -1509,7 +1508,7 @@ sub SceneCheck (player as PlayerType)
         TITLE_TheEnd
     end if
     
-    if CurrentRoom = Rooms.LarrysOffice then
+    if Player_GetCurrentRoom() = Rooms.LarrysOffice then
         if Player_NotItem(ItemIds.SceneJanitor) then
             LD2_put 1196, 144, POSEJANITOR, idSCENE, 0
             if player.x >= Guides.SceneJanitor then
@@ -1528,7 +1527,7 @@ sub SceneCheck (player as PlayerType)
             '// ??????
         end if
     end if
-    if CurrentRoom = Rooms.WeaponsLocker then
+    if Player_GetCurrentRoom() = Rooms.WeaponsLocker then
         if Player_NotItem(ItemIds.SceneWeapons1) then
             LD2_put 368, 144, BARNEYEXITELEVATOR, idSCENE, 0
             if player.x <= Guides.SceneWeapons1 then
@@ -1537,7 +1536,7 @@ sub SceneCheck (player as PlayerType)
         end if
     end if
 	
-    if CurrentRoom = Rooms.Lobby then
+    if Player_GetCurrentRoom() = Rooms.Lobby then
         if Player_NotItem(ItemIds.ScenePortal) and (player.x <= Guides.SceneLobby) then
             'SceneLobby
         end if
@@ -1546,7 +1545,7 @@ sub SceneCheck (player as PlayerType)
         end if
 	end if
 
-    if Player_NotItem(ItemIds.SceneGooGone) and (CurrentRoom = Rooms.VentControl) then
+    if Player_NotItem(ItemIds.SceneGooGone) and (Player_GetCurrentRoom() = Rooms.VentControl) then
         if player.x <= Guides.Activate410 then
             if Player_HasItem(ItemIds.Chemical410) then
                 Player_SetItemQty ItemIds.Active410, 1
@@ -1559,15 +1558,15 @@ sub SceneCheck (player as PlayerType)
         else
             Player_SetItemQty ItemIds.Active410, 0
         end if
-    elseif Player_HasItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.Chemical410) and (CurrentRoom <> Rooms.VentControl) then
+    elseif Player_HasItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.Chemical410) and (Player_GetCurrentRoom() <> Rooms.VentControl) then
         Player_SetItemQty ItemIds.SceneGoo, 0
     end if
     
-    if Player_HasItem(ItemIds.YellowCard) and Player_NotItem(ItemIds.SceneRooftopGotCard) and Player_HasItem(ItemIds.BossRooftopEnd) and (CurrentRoom = Rooms.Rooftop) then
+    if Player_HasItem(ItemIds.YellowCard) and Player_NotItem(ItemIds.SceneRooftopGotCard) and Player_HasItem(ItemIds.BossRooftopEnd) and (Player_GetCurrentRoom() = Rooms.Rooftop) then
         SceneRooftopGotCard
     end if
     
-    if Player_NotItem(ItemIds.ScenePortal) and (CurrentRoom = Rooms.PortalRoom) then
+    if Player_NotItem(ItemIds.ScenePortal) and (Player_GetCurrentRoom() = Rooms.PortalRoom) then
         if player.x <= Guides.ScenePortal then
             ScenePortal
         else
@@ -1589,7 +1588,7 @@ sub SceneCheck (player as PlayerType)
     end if
 
     if Player_HasItem(ItemIds.SceneVentCrawl)and Player_NotItem(ItemIds.SceneVentRemoveSteve) then
-        if CurrentRoom = Rooms.Unknown then
+        if Player_GetCurrentRoom() = Rooms.Unknown then
             LD2_put 1450, 144, 12, idSCENE, 1
             LD2_put 1450, 144, 14, idSCENE, 1
         else
@@ -1597,7 +1596,7 @@ sub SceneCheck (player as PlayerType)
         end if
     end if
     
-    if (CurrentRoom = Rooms.WeaponsLocker) then
+    if (Player_GetCurrentRoom() = Rooms.WeaponsLocker) then
         if Player_NotItem(ItemIds.SceneWeapons2) and Player_HasItem(ItemIds.SceneRooftopGotCard) then
             LD2_put 388, 144, 50, idSCENE, 0
             LD2_put 388, 144, 45, idSCENE, 0
@@ -1615,7 +1614,7 @@ sub SceneCheck (player as PlayerType)
     end if
     
     if Player_NotItem(ItemIds.SceneSteveGone) and Player_HasItem(ItemIds.SceneWeapons1) then
-        if (CurrentRoom = Rooms.LarrysOffice) and (player.x <= Guides.SceneSteveGone) then
+        if (Player_GetCurrentRoom() = Rooms.LarrysOffice) and (player.x <= Guides.SceneSteveGone) then
             SceneSteveGone
         end if
     end if
@@ -1648,7 +1647,7 @@ sub BossCheck (player as PlayerType)
     
     static bossMusicStarted as integer
     
-    if Player_NotItem(ItemIds.SceneRooftopGotCard) and (CurrentRoom = Rooms.Rooftop) then
+    if Player_NotItem(ItemIds.SceneRooftopGotCard) and (Player_GetCurrentRoom() = Rooms.Rooftop) then
         if (player.x <= 888) and Player_NotItem(ItemIds.BossRooftopBegin) then
             Mobs_Add 500, 144, BOSS1
             LD2_SetBossBar BOSS1
@@ -1864,7 +1863,7 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
         case "list"
             response = "Valid room options are\ \"+optlist
         case "status"
-            id = Player_GetItemQty(ItemIds.CurrentRoom)
+            id = Player_GetCurrentRoom()
             response = "Room id "+str(id)+"\ \"
             select case id
             case 1, 21: suffix = "st"
@@ -1900,8 +1899,6 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
                 else
                     id = val(args(1))
                     if (id >= 0) and (id <= 23) then
-                        CurrentRoom = id
-                        Player_SetItemQty(ItemIds.CurrentRoom, id)
                         Map_Load str(id)+"th.ld2"
                         select case id
                         case 1, 21: suffix = "st"
@@ -1913,11 +1910,11 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
                     else
                         response = "!Room id must be between 0 and 23"
                     end if
-                    LD2_PlayMusic GetFloorMusicId(CurrentRoom)
+                    LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
                 end if
             end if
         case "reload"
-            id = Player_GetItemQty(ItemIds.CurrentRoom)
+            id = Player_GetCurrentRoom()
             Map_Load str(id)+"th.ld2"
             select case id
             case 1, 21: suffix = "st"
@@ -1927,7 +1924,7 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             end select
             response = str(id)+suffix+" floor\ \"+GetRoomName(id)
             LD2_StopMusic
-            LD2_PlayMusic GetFloorMusicId(CurrentRoom)
+            LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
         case else
             response = !"!Invalid option\\ \\Use \"list\" to see options"
         end select
@@ -2144,6 +2141,7 @@ end function
 
 sub FlagsCheck (player as PlayerType)
     
+    dim prevRoom as integer
     dim itemId as integer
     dim item as InventoryType
     static musictimer as double
@@ -2156,10 +2154,9 @@ sub FlagsCheck (player as PlayerType)
 	end if
     if LD2_HasFlag(ELEVATORMENU) then
         LD2_ClearFlag ELEVATORMENU
-        EStatusScreen CurrentRoom
-        if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
-            CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
-            LD2_PlayMusic GetFloorMusicId(CurrentRoom)
+        EStatusScreen Player_GetCurrentRoom()
+        if prevRoom <> Player_GetCurrentRoom() then
+            LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
             if GooScene = 1 then GooScene = 0
         end if
         Player_Unhide
@@ -2222,31 +2219,29 @@ end sub
 
 sub PlayerCheck (player as PlayerType)
     
+    dim prevRoom as integer
     dim p as PlayerType
     dim xshift as double
     
     p = player
     xshift = Map_GetXShift()
+    prevRoom = Player_GetCurrentRoom()
     
     if Player.y < -12 then
-        Player_AddItem(ItemIds.CurrentRoom, 1)
-        Map_Load str(Player_GetItemQty(ItemIds.CurrentRoom))+"th.ld2"
+        Map_Load str(Player_GetCurrentRoom()+1)+"th.ld2"
         Player_SetXY p.x, p.y+(13*16)-4
         Map_SetXShift xshift
-        if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
-            CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
-            LD2_PlayMusic GetFloorMusicId(CurrentRoom)
+        if prevRoom <> Player_GetCurrentRoom() then
+            LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
             if GooScene = 1 then GooScene = 0
         end if
     end if
     if Player.y > 196 then
-        Player_AddItem(ItemIds.CurrentRoom, -1)
-        Map_Load str(Player_GetItemQty(ItemIds.CurrentRoom))+"th.ld2"
+        Map_Load str(Player_GetCurrentRoom()-1)+"th.ld2"
         Player_SetXY p.x, p.y-(13*16)+4
         Map_SetXShift xshift
-        if CurrentRoom <> Player_GetItemQty(ItemIds.CurrentRoom) then
-            CurrentRoom = Player_GetItemQty(ItemIds.CurrentRoom)
-            LD2_PlayMusic GetFloorMusicId(CurrentRoom)
+        if prevRoom <> Player_GetCurrentRoom() then
+            LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
             if GooScene = 1 then GooScene = 0
         end if
     end if
@@ -2398,8 +2393,6 @@ SUB Start
         LD2_GenerateSky 
     end if
     'LD2_LoadBitmap DATA_DIR+"gfx/origback.bmp", 2, 0
-    CurrentRoom = 14
-    Player_SetItemQty ItemIds.CurrentRoom, CurrentRoom
     Map_Load "14th.ld2", LD2_isTestMode()
     
     IF LD2_isTestMode() THEN
@@ -2676,7 +2669,7 @@ sub SaveFloor()
     dim savePath as string
     dim roomId as integer
     
-    roomId = Player_GetItemQty(ItemIds.currentRoom)
+    roomId = Player_GetCurrentRoom()
     
     savePath = DATA_DIR+"save/"
     if dir(savePath, fbDirectory) <> savePath then

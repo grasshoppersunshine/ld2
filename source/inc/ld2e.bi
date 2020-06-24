@@ -195,6 +195,7 @@ declare function Player_ShootRepeat() as integer
 declare sub Player_SetAccessLevel (accessLevel as integer)
 declare sub Player_SetTempAccess (accessLevel as integer)
 declare function Player_GetCollisionBox() as BoxType
+declare function Player_GetCurrentRoom () as integer
 declare function Player_GetGotItem() as integer
 declare sub Player_DoAction ()
 
@@ -259,6 +260,9 @@ DECLARE SUB LD2_WriteText (Text AS STRING)
 DECLARE SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, _flip AS INTEGER, isFixed as integer = 0)
 declare sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
 
+declare sub Game_Save(filename as string)
+declare sub Game_Load(filename as string, roomId as integer = -1)
+
 declare sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
 declare sub LD2_RenderElement(e as ElementType ptr)
 declare sub LD2_ClearElements()
@@ -293,11 +297,12 @@ const FONT_h = 5
 CONST MAXGUTS      = 100
 CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)
 CONST MAXDOORS     =  16 '- per room
+CONST MAXMOBS      = 100 '- per room
 CONST MAXELEVATORS =  12
 CONST MAXSWAPS     =  12
 CONST MAXTELEPORTS =  12
-CONST MAXFLOORS    =  23
-CONST MAXINVENTORY =  127
-CONST MAXINVSLOTS  =   7
-CONST MAXTILES     = 120
+CONST MAXFLOORS    =  24
+CONST MAXINVENTORY =  128
+CONST MAXINVSLOTS  =   8
+CONST MAXTILES     = 251
 CONST MAXEVENTS    =   9

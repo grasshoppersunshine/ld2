@@ -11,6 +11,7 @@
     #include once "inc/ld2.bi"
     #include once "inc/title.bi"
     #include once "file.bi"
+    #include once "dir.bi"
     
     property GutsIncorporated.facingLeft() as integer
         return (this.facing = 0)
@@ -222,6 +223,7 @@
     dim shared InventoryMax (MAXINVENTORY) as integer
     dim shared InvSlots     (MAXINVSLOTS) as integer
     dim shared WentToRoom   (MAXFLOORS) as integer  
+    dim shared LoadedRoom   (MAXFLOORS) as integer
     dim shared NumInvSlots as integer
     dim shared Player AS PlayerType
     
@@ -1024,6 +1026,8 @@ sub LD2_RenderBackground(height as double)
     dim h as integer
     static xmod as double
     
+    exit sub
+    
     xmod += 0.1
     if xmod >= 320 then xmod = 0
     
@@ -1118,6 +1122,10 @@ END SUB
 
 sub Map_BeforeLoad(byref skipItems as integer)
     
+    '// current room should be the one before the next room is loaded
+    if LoadedRoom(Inventory(ItemIds.CurrentRoom)) then
+        Game_Save "gamesave0.ld2"
+    end if
     if WentToRoom(Inventory(ItemIds.CurrentRoom)) then
         skipItems = 0
     else
@@ -1149,6 +1157,8 @@ sub Map_AfterLoad(skipMobs as integer = 0)
     NumSwaps = 0
     NumSwitches = 0
     NumTeleports = 0
+    
+    Game_Load "gamesave0.ld2", Inventory(ItemIds.CurrentRoom)
     
     for y = 0 to 12
         for x = 0 to 200
@@ -1216,7 +1226,7 @@ sub Map_AfterLoad(skipMobs as integer = 0)
         end select
     next i
     
-    if CurrentRoom = Rooms.WeaponsLocker then
+    if Inventory(ItemIds.CurrentRoom) = Rooms.WeaponsLocker then
         for i = 0 to NumItems-1
             Items(i).y -= 4
         next i
@@ -1232,10 +1242,11 @@ sub Map_AfterLoad(skipMobs as integer = 0)
     
 end sub
 
-SUB Map_Load (Filename as string, skipMobs as integer = 0, skipItems as integer = 0)
+sub Map_Load (filename as string, skipMobs as integer = 0, skipItems as integer = 0)
     
     LD2_LogDebug "Map_Load ( "+filename+" )"
     
+    print "Map_Load "+filename
     dim mapFile as integer
     dim _byte as ubyte
     dim _word as ushort
@@ -1249,10 +1260,12 @@ SUB Map_Load (Filename as string, skipMobs as integer = 0, skipItems as integer 
     dim author as string
     dim created as string
     dim comments as string
+    dim roomId as integer
     
     dim x as integer, y as integer
     dim n as integer
     dim i as integer
+    dim j as integer
     
     versiontag = ""
     levelname  = ""
@@ -1267,7 +1280,14 @@ SUB Map_Load (Filename as string, skipMobs as integer = 0, skipItems as integer 
         filename = DATA_DIR+"rooms/" + filename
     end if
     
+    
     Map_BeforeLoad skipItems
+    
+    i = instrrev(filename, "/")
+    j = instrrev(lcase(filename), "th.ld2")
+    roomId = val(mid(filename, i+1, j-i-1))
+    print "Map_Load room id: "+str(roomId)
+    Inventory(ItemIds.CurrentRoom) = roomId
     
     mapFile = freefile
     open filename for binary as mapFile
@@ -1370,7 +1390,9 @@ SUB Map_Load (Filename as string, skipMobs as integer = 0, skipItems as integer 
     
     LD2_SetFlag MAPISLOADED
     
-END SUB
+    LoadedRoom(roomId) = 1
+    
+end sub
 
 SUB LoadSprites (Filename as string, BufferNum as integer)
   
@@ -2077,7 +2099,7 @@ SUB LD2_RenderFrame
     rotators(9) = int(rotClock)
     
     LD2_CopyBuffer 2, 1
-    LD2_RenderBackground int((CurrentRoom+1)/24)
+    LD2_RenderBackground int((Inventory(ItemIds.CurrentRoom)+1)/24)
     
     dim xp as integer, yp as integer
     dim x as integer, y as integer
@@ -3627,12 +3649,12 @@ sub Player_Animate()
             'LD2_PopText "Lives Left:" + str(Inventory(ItemIds.Lives))
             '
             'Inventory(ItemIds.Hp) = Maxes.Hp
-            'if (BossBarId > 0) and (CurrentRoom = Rooms.Rooftop) then
+            'if (BossBarId > 0) and (Inventory(ItemIds.CurrentRoom) = Rooms.Rooftop) then
             '    Inventory(ItemIds.Shotgun) = 40
             '    Inventory(ItemIds.Pistol) = 50
             '    XShift = 1200
             '    Player.x = 80
-            'elseif (BossBarId > 0) and (CurrentRoom = Rooms.PortalRoom) then
+            'elseif (BossBarId > 0) and (Inventory(ItemIds.CurrentRoom) = Rooms.PortalRoom) then
             '    Inventory(ItemIds.Shotgun) = 40
             '    Inventory(ItemIds.Pistol) = 50
             '    XShift = 300
@@ -4493,12 +4515,12 @@ end sub
 sub Player_Respawn ()
     
     Inventory(ItemIds.Hp) = Maxes.Hp
-    if (BossBarId > 0) and (CurrentRoom = Rooms.Rooftop) then
+    if (BossBarId > 0) and (Inventory(ItemIds.CurrentRoom) = Rooms.Rooftop) then
         Inventory(ItemIds.Shotgun) = 40
         Inventory(ItemIds.Pistol) = 50
         XShift = 1200
         Player.x = 80
-    elseif (BossBarId > 0) and (CurrentRoom = Rooms.PortalRoom) then
+    elseif (BossBarId > 0) and (Inventory(ItemIds.CurrentRoom) = Rooms.PortalRoom) then
         Inventory(ItemIds.Shotgun) = 40
         Inventory(ItemIds.Pistol) = 50
         XShift = 300
@@ -4840,6 +4862,12 @@ function Player_GetCollisionBox() as BoxType
     box.padRgt = SPRITE_W-(x+w)
     
     return box
+    
+end function
+
+function Player_GetCurrentRoom () as integer
+    
+    return Inventory(ItemIds.CurrentRoom)
     
 end function
 
@@ -5449,3 +5477,278 @@ function FontVal(ch as string) as integer
     return v
     
 end function
+
+type FileHeader
+    version as string*8
+    numRooms as ubyte
+    locRooms(MAXFLOORS-1) as ulong
+end type
+
+type PlayerFileData
+    x as ushort
+    y as ushort
+    weapon as ushort
+    isFlipped as ubyte
+    upper as ubyte
+    lower as ubyte
+    still as ubyte
+    roomId as ubyte
+    inventory(MAXINVENTORY-1) as ubyte
+    invslots(MAXINVSLOTS-1) as ubyte
+end type
+
+type ItemFileData
+    x as ubyte
+    y as ubyte
+    id as ubyte
+    qty as ushort
+end type
+
+type MobFileData
+    typeId as ubyte
+    x as ushort
+    y as ushort
+    hp as ubyte
+    state as ubyte
+    isFlipped as ubyte
+end type
+
+type RoomFileHeader
+    numItems as ubyte
+    numMobs as ubyte
+end type
+
+type RoomFileData
+    header as RoomFileHeader
+    tiles(MAPW-1, MAPH-1) as ubyte
+    lightbg(MAPW-1, MAPH-1) as ubyte
+    lightfg(MAPW-1, MAPH-1) as ubyte
+    animations(MAPW-1, MAPH-1) as ubyte
+    items(MAXITEMS-1) as ItemFileData
+    mobs(MAXMOBS-1) as MobFileData
+end type
+
+sub Game_Save (filename as string)
+    
+    dim pdata as PlayerFileData
+    dim roomdata as RoomFileData
+    dim header as FileHeader
+    dim mob as Mobile
+    dim savePath as string
+    dim roomLoc as ulong
+    dim roomId as integer
+    dim x as integer
+    dim y as integer
+    dim n as integer
+    dim i as integer
+    dim j as integer
+    dim itemId as ubyte
+    dim qty as ubyte
+    
+    savePath = DATA_DIR+"save/"
+    if dir(savePath, fbDirectory) <> savePath then
+        mkdir savePath
+    end if
+    
+    roomId = Inventory(ItemIds.CurrentRoom)
+    
+    roomdata.header.numItems = NumItems
+    roomdata.header.numMobs  = Mobs.count()
+    for y = 0 to MAPH-1
+        for x = 0 to MAPW-1
+            roomdata.tiles(x, y) = cast(ubyte, TileMap(x, y))
+            roomdata.lightbg(x, y) = cast(ubyte, LightMapBG(x, y))
+            roomdata.lightfg(x, y) = cast(ubyte, LightMapFG(x, y))
+            roomdata.animations(x, y) = cast(ubyte, AniMap(x, y))
+        next x
+    next y
+    for n = 0 to MAXITEMS-1
+        roomdata.items(n).x = cast(ubyte, int(Items(n).x/SPRITE_W))
+        roomdata.items(n).y = cast(ubyte, int(Items(n).y/SPRITE_H))
+        roomdata.items(n).id = cast(ubyte, int(Items(n).id))
+        roomdata.items(n).qty = cast(ushort, int(Items(n).qty))
+    next n
+    i = 0
+    Mobs.resetNext
+    while Mobs.canGetNext()
+        Mobs.getNext mob
+        roomdata.mobs(i).typeId = cast(ubyte, mob.id)
+        roomdata.mobs(i).x = cast(ushort, mob.x)
+        roomdata.mobs(i).y = cast(ushort, mob.y)
+        roomdata.mobs(i).hp = cast(ubyte, mob.life)
+        roomdata.mobs(i).state = cast(ubyte, mob.state)
+        roomdata.mobs(i).isFlipped = cast(ubyte, mob.flip)
+        i += 1
+    wend
+    for j = i to MAXMOBS-1
+        roomdata.mobs(j).typeId = 0
+        roomdata.mobs(j).x = 0
+        roomdata.mobs(j).y = 0
+        roomdata.mobs(j).hp = 0
+        roomdata.mobs(i).state = 0
+        roomdata.mobs(i).isFlipped = 0
+    next j
+    
+    pdata.x         = cast(ushort, int(Player.x))
+    pdata.y         = cast(ushort, int(Player.y))
+    pdata.weapon    = cast(ushort, Player.weapon)
+    pdata.isFlipped = cast(ubyte, Player.flip)
+    pdata.upper     = cast(ubyte, int(Player.uAni))
+    pdata.lower     = cast(ubyte, int(Player.lAni))
+    pdata.still     = cast(ubyte, int(Player.stillAni))
+    pdata.roomId    = cast(ubyte, roomId)
+    for n = 0 to MAXINVENTORY-1
+        pdata.inventory(n) = cast(ubyte, Inventory(n))
+    next n
+    for n = 0 to MAXINVSLOTS-1
+        pdata.invslots(n) = cast(ubyte, InvSlots(n))
+    next n
+    
+    dim loadfile as integer
+    dim savefile as integer
+    
+    filename = savePath+filename
+    if fileexists(filename) then
+        loadfile = freefile
+        open filename for binary as loadfile
+            get #loadfile, , header
+        close #loadfile
+        if header.locRooms(roomId) > 0 then
+            roomLoc = header.locRooms(roomId)
+        else
+            roomLoc = sizeof(header)+sizeof(pdata)+sizeof(roomdata)*header.numRooms
+            header.numRooms += 1
+            header.locRooms(roomId) = roomLoc
+        end if
+        print "save room id : "+str(roomId)
+        print "save room loc: "+str(roomLoc)
+    else
+        header.version = "1.01.150"
+        header.numRooms = 1
+        for n = 0 to MAXFLOORS-1
+            header.locRooms(n) = 0
+        next n
+        roomLoc = sizeof(header)+sizeof(pdata)+1
+        header.locRooms(roomId) = roomLoc
+    end if
+    
+    savefile = freefile
+    open filename for binary as savefile
+        put #savefile, , header
+        put #savefile, , pdata
+        seek #savefile, roomLoc
+        put #savefile, , roomdata
+    close #savefile
+    
+end sub
+
+sub Game_Load (filename as string, roomId as integer = -1)
+    
+    dim pdata as PlayerFileData
+    dim roomdata as RoomFileData
+    dim header as FileHeader
+    dim mob as Mobile
+    dim savePath as string
+    dim roomLoc as ulong
+    dim numMobs as integer
+    dim x as integer
+    dim y as integer
+    dim n as integer
+    dim i as integer
+    dim j as integer
+    dim itemId as ubyte
+    dim qty as ubyte
+    
+    savePath = DATA_DIR+"save/"
+    if dir(savePath, fbDirectory) <> savePath then
+        mkdir savePath
+    end if
+    
+    filename = savePath+filename
+    if (fileexists(filename) = 0) then
+        exit sub
+    end if
+    
+    dim loadfile as integer
+    dim loadPlayerData as integer
+    dim loadRoomData as integer
+    
+    if roomId >= 0 then
+        loadRoomData   = 1
+        loadPlayerData = 0
+    else
+        loadRoomData   = 1
+        loadPlayerData = 1
+    end if
+    
+    loadfile = freefile
+    open filename for binary as #loadfile
+        get #loadfile, , header
+        if loadPlayerData then
+            get #loadfile, , pdata
+            if roomId = -1 then
+                roomId = pdata.roomId
+            end if
+        end if
+        if loadRoomData then
+            roomLoc = header.locRooms(roomId)
+print "load room id : "+str(roomId)
+print "load room loc: "+str(roomLoc)
+            if roomLoc = 0 then
+                close #loadfile
+                exit sub
+            end if
+            seek #loadfile, roomLoc
+            get #loadfile, , roomdata
+        end if
+    close #loadfile
+    
+    if loadPlayerData then
+        Player.x = pdata.x
+        Player.y = pdata.y
+        Player.weapon = pdata.weapon
+        Player.flip = pdata.isFlipped
+        Player.uAni = pdata.upper
+        Player.lAni = pdata.lower
+        Player.stillAni = pdata.still
+        for n = 0 to MAXINVENTORY-1
+            Inventory(n) = pdata.inventory(n)
+        next n
+        for n = 0 to MAXINVSLOTS-1
+            InvSlots(n) = pdata.invslots(n)
+            '// call addtostatus?
+        next n
+    end if
+    
+    if loadRoomData then
+        NumItems = roomdata.header.numItems
+        numMobs = roomdata.header.numMobs
+        for y = 0 to MAPH-1
+            for x = 0 to MAPW-1
+                TileMap(x, y) = roomdata.tiles(x, y)
+                LightMapBG(x, y) = roomdata.lightbg(x, y)
+                LightMapFG(x, y) = roomdata.lightfg(x, y)
+                AniMap(x, y) = roomdata.animations(x, y)
+            next x
+        next y
+        for n = 0 to NumItems-1
+            Items(n).x = roomdata.items(n).x
+            Items(n).y = roomdata.items(n).y
+            Items(n).id = roomdata.items(n).id
+            Items(n).qty = roomdata.items(n).qty
+            Items(n).x *= SPRITE_W
+            Items(n).y *= SPRITE_H
+        next n
+        Mobs.clear()
+        for n = 0 to numMobs-1
+            mob.id = roomdata.mobs(n).typeId
+            mob.x = roomdata.mobs(n).x
+            mob.y = roomdata.mobs(n).y
+            mob.life = roomdata.mobs(n).hp
+            mob.state = roomdata.mobs(n).state
+            mob.flip = roomdata.mobs(n).isFlipped
+            Mobs.add mob
+        next n
+    end if
+    
+end sub
