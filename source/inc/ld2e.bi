@@ -179,6 +179,7 @@ declare sub Player_SetItemMaxQty(itemId as integer, qty as integer)
 declare function Player_GetItemMaxQty(itemId as integer) as integer
 declare function Player_AddAmmo (weaponId as integer, qty as integer) as integer
 declare function Player_AtElevator () as integer
+declare sub Player_Respawn ()
 declare sub Player_SetFlip (flipped as integer)
 declare sub Player_SetXY (x as integer, y as integer)
 declare function Player_GetX() as integer

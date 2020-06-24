@@ -16,7 +16,7 @@ DECLARE SUB LD2_fill (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, co
 DECLARE SUB LD2_fillm (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER, aph as integer = &h7f)
 declare SUB LD2_outline (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
 DECLARE SUB LD2_pset (x AS INTEGER, y AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
-DECLARE SUB LD2_CopyBuffer (buffer1 AS INTEGER, buffer2 AS INTEGER)
+declare sub LD2_CopyBuffer (buffer1 as integer, buffer2 as integer, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = null)
 declare sub LD2_SetSpritesColor(sprites as VideoSprites ptr, c as integer)
 
 DECLARE SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)

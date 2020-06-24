@@ -307,6 +307,7 @@ enum Tracks
     Theme
     Uhoh
     Wandering
+    YouDied
     '// rooms
     Wind1
     Wind2

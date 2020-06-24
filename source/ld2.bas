@@ -89,6 +89,7 @@
   DECLARE SUB SetAllowedEntities (codeString AS STRING)
   DECLARE SUB Start ()
   declare sub NewGame ()
+  declare sub YouDied ()
   
   
   
@@ -830,6 +831,7 @@ sub LoadMusic ()
     AddMusic Tracks.Title     , DATA_DIR+"sound/music/title.ogg"  , 1
     AddMusic Tracks.Uhoh      , DATA_DIR+"sound/music/uhoh.ogg"   , 0
     AddMusic Tracks.Wandering , DATA_DIR+"sound/music/creepy.ogg" , 1
+    AddMusic Tracks.YouDied   , DATA_DIR+"sound/music/youdied.ogg" , 0
 
     AddMusic Tracks.Wind1     , DATA_DIR+"sound/msplice/wind0.wav"   , 1
     AddMusic Tracks.Wind2     , DATA_DIR+"sound/msplice/wind1.wav"   , 1
@@ -986,8 +988,7 @@ end function
 
 SUB Main
   
-    dim i as integer
-    dim n as integer
+    dim deadTimer as double
     dim PlayerIsRunning as integer
     dim player as PlayerType
     dim newShot as integer
@@ -1001,6 +1002,8 @@ SUB Main
     dim consoleLog(99) as string
     dim numLogs as integer
     dim logPointer as integer
+    dim i as integer
+    dim n as integer
     
     CustomActions(1).actionId = ActionIds.Equip
     CustomActions(1).itemId   = ItemIds.Fist
@@ -1148,6 +1151,18 @@ SUB Main
         continue do
     end if
     if LD2_HasFlag(REVEALDONE) then
+        continue do
+    end if
+    
+    if LD2_HasFlag(PLAYERDIED) then
+        if deadTimer = 0 then
+            deadTimer = timer
+        end if
+        if (timer - deadTimer) > 3.0 then
+            LD2_ClearFlag(PLAYERDIED)
+            deadTimer = 0
+            YouDied
+        end if
         continue do
     end if
     
@@ -2759,3 +2774,98 @@ function SceneFadeOut(seconds as double) as integer
     return 0
     
 end function
+
+sub YouDied ()
+    
+    dim title as ElementType
+    dim subtitle as ElementType
+    dim src as SDL_RECT
+    dim dst as SDL_RECT
+    dim delay as double
+    dim startTime as double
+    dim spacing as double
+    dim fontH as integer
+    
+    src.x = 0: src.y = 0
+    src.w = SCREEN_W: src.h = SCREEN_H
+    dst.x = 0: dst.y = 0
+    dst.w = SCREEN_W: dst.h = SCREEN_H
+    fontH = LD2_GetFontHeightWithSpacing()
+    spacing = 1.9
+    
+    LD2_cls 1, 0
+	
+    LD2_InitElement @title, "You Died", 31
+    title.y = 60
+    title.is_centered_x = 1
+    title.text_spacing = spacing
+    
+    LD2_InitElement @subtitle, str(Player_GetItemQty(ItemIds.Lives)), 31
+    subtitle.y = 60 + fontH * 2.5
+    subtitle.is_centered_x = 1
+    subtitle.text_spacing = 1.9
+    
+    LD2_RenderElement @title
+    LD2_RefreshScreen
+    
+    LD2_PlayMusic Tracks.YouDied
+    
+    while keyboard(KEY_SPACE) or keyboard(KEY_ENTER) or mouseLB()
+        PullEvents
+    wend
+    
+    startTime = timer
+    delay = timer
+    dim x as double, y as double
+    dim w as double, h as double
+    x = 0: y = 0
+    w = SCREEN_W: h = SCREEN_H
+    while (timer-startTime) < 6.0
+        PullEvents
+        if (((timer-startTime) <= 4.15) and ((timer-delay) > 0.07)) or _
+           (((timer-startTime)  > 4.15) and ((timer-delay) > 0.05)) then
+            spacing += 0.1
+            'title.text_spacing = spacing
+            LD2_RenderElement @title
+            x += 1: w -= 2
+            if (timer-startTime) > 4.15 then
+                x += 2: w -= 4
+                y += 1: h -= 200/62.5
+            end if
+            src.x = int(x): src.y = int(y)
+            src.w = int(w): src.h = int(h)
+            LD2_CopyBuffer 1, 0, @src, @dst
+            LD2_UpdateScreen
+            'LD2_RefreshScreen
+            delay = timer
+        end if
+        if keypress(KEY_SPACE) or keypress(KEY_ENTER) or mouseLB() then
+            exit while
+        end if
+    wend
+    
+    while keyboard(KEY_SPACE) or keyboard(KEY_ENTER) or mouseLB()
+        PullEvents
+    wend
+    
+    LD2_cls 1, 0
+    LD2_FadeOut 3
+    LD2_cls 1, 0
+    title.text = "Lives Left"
+    LD2_RenderElement @title
+    LD2_RenderElement @subtitle
+    LD2_FadeIn 3
+    
+    startTime = timer
+    while (timer-startTime) < 4.0
+        PullEvents
+        if keypress(KEY_SPACE) or keypress(KEY_ENTER) or mouseLB() then
+            exit while
+        end if
+    wend
+    
+    LD2_FadeOut 3
+    WaitSeconds 0.5
+    Player_Respawn
+    
+end sub

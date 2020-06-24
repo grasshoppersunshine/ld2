@@ -43,17 +43,17 @@ sub VideoBuffer.setAsTarget()
     
 end sub
 
-sub VideoBuffer.putToScreen()
+sub VideoBuffer.putToScreen(src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)
     
     SDL_SetRenderTarget( this._renderer, NULL )
-    SDL_RenderCopy( this._renderer, this._data, NULL, NULL )
+    SDL_RenderCopy( this._renderer, this._data, src, dst )
     
 end sub
 
-sub VideoBuffer.copy(buffer as VideoBuffer ptr)
+sub VideoBuffer.copy(buffer as VideoBuffer ptr, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)
     
     buffer->setAsTarget()
-    SDL_RenderCopy( this._renderer, this._data, NULL, NULL )
+    SDL_RenderCopy( this._renderer, this._data, src, dst )
     
 end sub
 

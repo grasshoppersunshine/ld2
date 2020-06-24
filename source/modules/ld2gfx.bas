@@ -218,22 +218,22 @@ SUB LD2_fillm (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS IN
     
 END SUB
 
-SUB LD2_CopyBuffer (buffer1 AS INTEGER, buffer2 AS INTEGER)
+sub LD2_CopyBuffer (buffer1 as integer, buffer2 as integer, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = null)
     
     dim texture as SDL_Texture ptr
     
     if buffer1 = 0 then
         VideoBuffers(buffer2-1).setAsTarget()
         texture = VideoHandle.getData()
-        SDL_RenderCopy( VideoHandle.getRenderer(), texture, NULL, NULL )
+        SDL_RenderCopy( VideoHandle.getRenderer(), texture, src, dst )
         SDL_DestroyTexture( texture )
     elseif buffer2 = 0 then
-        VideoBuffers(buffer2-1).putToScreen()
+        VideoBuffers(buffer1-1).putToScreen(src, dst)
     else
-        VideoBuffers(buffer1-1).copy(@VideoBuffers(buffer2-1))
+        VideoBuffers(buffer1-1).copy(@VideoBuffers(buffer2-1), src, dst)
     end if
     
-END SUB
+end sub
 
 SUB LD2_pset (x AS INTEGER, y AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
     

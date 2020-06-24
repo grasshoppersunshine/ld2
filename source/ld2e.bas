@@ -3587,38 +3587,50 @@ sub Player_Animate()
     static pistolTimer as double
     dim prevX as double
     dim f as double
+    dim radius as integer
+    dim x as integer, y as integer
+    dim n as integer
     
     if (Player.state = PlayerStates.EnteringElevator) or (Player.state = PlayerStates.ExitingElevator) then
         exit sub
     end if
     
-    if Inventory(ItemIds.Hp) <= 0 then
+    if (Inventory(ItemIds.Hp) <= 0) and LD2_NotFlag(PLAYERDIED) then
+        LD2_SetFlag PLAYERDIED
+        LD2_PlaySound Sounds.splatter
         LD2_PlaySound Sounds.larryDie
         Inventory(ItemIds.Lives) -= 1
+        x = Player.x+7: y = Player.y+7
+        radius = 16
+        Guts_Add GutsIds.Gibs, x, y, 3+int(4*rnd(1))
+        for n = 0 to 15
+            Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+            Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+        next n
         if Inventory(ItemIds.Lives) <= 0 then
-            LD2_PopText "Game Over"
-            LD2_ShutDown
+            'LD2_PopText "Game Over"
+            'LD2_ShutDown
         else
-            LD2_PopText "Lives Left:" + str(Inventory(ItemIds.Lives))
-            LD2_SetFlag PLAYERDIED
-            Inventory(ItemIds.Hp) = Maxes.Hp
-            if (BossBarId > 0) and (CurrentRoom = Rooms.Rooftop) then
-                Inventory(ItemIds.Shotgun) = 40
-                Inventory(ItemIds.Pistol) = 50
-                XShift = 1200
-                Player.x = 80
-            elseif (BossBarId > 0) and (CurrentRoom = Rooms.PortalRoom) then
-                Inventory(ItemIds.Shotgun) = 40
-                Inventory(ItemIds.Pistol) = 50
-                XShift = 300
-                Player.x = 80
-            else
-                Inventory(ItemIds.CurrentRoom) = Rooms.WeaponsLocker
-                Map_Load "7th.LD2"
-                XShift = 560
-                Player.x = 80
-                Player.y = 144
-            end if
+            'LD2_PopText "Lives Left:" + str(Inventory(ItemIds.Lives))
+            '
+            'Inventory(ItemIds.Hp) = Maxes.Hp
+            'if (BossBarId > 0) and (CurrentRoom = Rooms.Rooftop) then
+            '    Inventory(ItemIds.Shotgun) = 40
+            '    Inventory(ItemIds.Pistol) = 50
+            '    XShift = 1200
+            '    Player.x = 80
+            'elseif (BossBarId > 0) and (CurrentRoom = Rooms.PortalRoom) then
+            '    Inventory(ItemIds.Shotgun) = 40
+            '    Inventory(ItemIds.Pistol) = 50
+            '    XShift = 300
+            '    Player.x = 80
+            'else
+            '    Inventory(ItemIds.CurrentRoom) = Rooms.WeaponsLocker
+            '    Map_Load "7th.LD2"
+            '    XShift = 560
+            '    Player.x = 80
+            '    Player.y = 144
+            'end if
         end if
     end if
     
@@ -3756,6 +3768,9 @@ sub Player_Draw()
     dim idx as integer
     
     if (SceneMode = 1) or (Player.is_visible = 0) then
+        exit sub
+    end if
+    if LD2_HasFlag(PLAYERDIED) then
         exit sub
     end if
     
@@ -4230,13 +4245,11 @@ function Player_GetY() as integer
     
 end function
 
-SUB Player_Init(p AS PlayerType)
+sub Player_Init(p as PlayerType)
     
     Player = p
     
-    
-    
-END SUB
+end sub
 
 sub Player_Hide()
     
@@ -4445,6 +4458,29 @@ sub Player_DoAction ()
     responses(1) = "Nothing interesting."
     responses(2) = "Nothing here."
     GameRevealText = responses(int(3*rnd(1)))
+    
+end sub
+
+sub Player_Respawn ()
+    
+    Inventory(ItemIds.Hp) = Maxes.Hp
+    if (BossBarId > 0) and (CurrentRoom = Rooms.Rooftop) then
+        Inventory(ItemIds.Shotgun) = 40
+        Inventory(ItemIds.Pistol) = 50
+        XShift = 1200
+        Player.x = 80
+    elseif (BossBarId > 0) and (CurrentRoom = Rooms.PortalRoom) then
+        Inventory(ItemIds.Shotgun) = 40
+        Inventory(ItemIds.Pistol) = 50
+        XShift = 300
+        Player.x = 80
+    else
+        Inventory(ItemIds.CurrentRoom) = Rooms.WeaponsLocker
+        Map_Load "7th.LD2"
+        Player.x = 28*SPRITE_W
+        XShift = Player.x - int(SCREEN_W/2)
+        Player.y = 144
+    end if
     
 end sub
 
