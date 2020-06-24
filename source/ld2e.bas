@@ -1174,7 +1174,7 @@ sub Map_AfterLoad(skipMobs as integer = 0)
                 Switches_Add x, y
             case TileIds.SpinningFan
                 AniMap(x, y) = AnimationIds.FastRotate
-            case 80 to 109, 125, 133, 141, 143
+            case 80 to 109, 122, 125, 133, 141, 143
                 FloorMap(x, y) = 1
             case TileIds.ColaTopLeft, TileIds.ColaTopRIght
                 FloorMap(x, y) = 15
@@ -1756,6 +1756,19 @@ sub Doors_Draw()
     dim n as integer
     dim d as double
     
+    dim closed(5) as integer
+    dim activated(5) as integer
+    closed(GREENACCESS)  = TileIds.DoorGreen
+    closed(BLUEACCESS)   = TileIds.DoorBlue
+    closed(YELLOWACCESS) = TileIds.DoorYellow
+    closed(WHITEACCESS)  = TileIds.DoorWhite
+    closed(REDACCESS)    = TileIds.DoorRed
+    activated(GREENACCESS)  = TileIds.DoorGreenActivated
+    activated(BLUEACCESS)   = TileIds.DoorBlueActivated
+    activated(YELLOWACCESS) = TileIds.DoorYellowActivated
+    activated(WHITEACCESS)  = TileIds.DoorWhiteActivated
+    activated(REDACCESS)    = TileIds.DoorRedActivated
+    
     crop.w = SPRITE_W
     for n = 0 to NumDoors-1
         d = Doors(n).percentOpen
@@ -1767,9 +1780,9 @@ sub Doors_Draw()
         y = int(Doors(n).y)
         crop.y = offset: crop.h = SPRITE_H-offset
         if doorIsMoving then
-            SpritesTile.putToScreenEx x, y, TileIds.DoorGreen + Doors(n).accessLevel + 11 - 1, 0, 0, @crop
+            SpritesTile.putToScreenEx x, y, activated(Doors(n).accessLevel), 0, 0, @crop
         else
-            SpritesTile.putToScreenEx x, y, TileIds.DoorGreen + Doors(n).accessLevel - 1, 0, 0, @crop
+            SpritesTile.putToScreenEx x, y, closed(Doors(n).accessLevel), 0, 0, @crop
         end if
     next n
     
@@ -3917,6 +3930,9 @@ function Player_Fall() as integer
     dim fallingDown as integer
     dim box as BoxType
     dim f as double
+    dim radius as integer
+    dim x as integer, y as integer
+    dim n as integer
     
     box = Player_GetCollisionBox()
     fallingDown = iif(Player.vy >= 0, 1, 0)
@@ -3938,6 +3954,19 @@ function Player_Fall() as integer
             Player.vy = 9
         end if
     else
+        if Player.vy >= 7 then
+            Inventory(ItemIds.Hp) = 0
+        elseif Player.vy >= 5 then
+            Inventory(ItemIds.Hp) -= 50
+            LD2_PlaySound Sounds.blood1
+            LD2_PlaySound Sounds.larryHurt
+            x = Player.x + 7: y = Player.y + 7
+            Guts_Add GutsIds.Blood, x, y, 1
+            for n = 0 to 3
+                Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+                Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+            next n
+        end if
         if isFalling then
             isFalling = 0
             if Player.weapon = ItemIds.Fist then

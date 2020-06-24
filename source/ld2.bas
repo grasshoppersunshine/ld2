@@ -2857,7 +2857,7 @@ sub YouDied ()
     LD2_FadeIn 3
     
     startTime = timer
-    while (timer-startTime) < 4.0
+    while (timer-startTime) < 3.0
         PullEvents
         if keypress(KEY_SPACE) or keypress(KEY_ENTER) or mouseLB() then
             exit while
