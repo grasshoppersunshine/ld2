@@ -302,14 +302,14 @@ function Player_AddAmmo (weaponId as integer, qty as integer) as integer
         return 0
     end select
     
-    'spaceLeft = qtyMax - Inventory(weaponId)
-    'if spaceLeft < qty then
-    '    qtyUnused = qty - spaceLeft
-    '    qty = spaceLeft
-    'end if
-    'if qty > 0 then
+    spaceLeft = qtyMax - Inventory(weaponId)
+    if spaceLeft < qty then
+        qtyUnused = qty - spaceLeft
+        qty = spaceLeft
+    end if
+    if qty > 0 then
         Player_AddItem weaponId, qty
-    'end if
+    end if
 
   'IF Kind = 1 THEN Inventory(SHELLS) = Inventory(SHELLS) + Amount
   'IF Kind = 2 THEN Inventory(BULLETS) = Inventory(BULLETS) + Amount
@@ -4824,7 +4824,7 @@ sub Stats_Draw ()
     if Player.weapon = ItemIds.Fist then
         LD2_PutTextCol pad+16, pad+12+3, " INF", 15, 1
     else
-        LD2_PutTextCol pad+16, pad+12+3, str(Inventory(Player.weapon)), 15, 1
+        LD2_PutTextCol pad+16, pad+12+3, " "+str(Inventory(Player.weapon)), 15, 1
     end if
     
 end sub
@@ -5166,6 +5166,7 @@ sub LD2_RenderElement(e as ElementType ptr)
     end if
     SpritesFont.setAlphaMod(int(e->text_alpha * 255))
     
+    w -= e->padding_x*2: h -= e->padding_y*2
     x = e->x+e->padding_x+e->border_width+parentX: y = e->y+e->padding_y+e->border_width+parentY
     if e->text_is_centered then x += int((w-textWidth)/2) '- center for each line break -- todo
     if e->text_align_right then x = (e->x+e->padding_x+e->border_width+w)-textWidth

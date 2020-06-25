@@ -995,13 +995,13 @@ function UseItem (item AS InventoryType) as integer
         discard = Inventory_GetUseItemDiscard()
         if discard then
             LD2_AddToStatus item.id, -qty
-            RefreshStatusScreen
         end if
         if UseItemCallback <> 0 then
             UseItemCallback(id, qty, exitMenu)
         else
             message = "ERROR - No callback for UseItem"
         end if
+        RefreshStatusScreen
         textColor = STATUS_COLOR_SUCCESS
     else
         LD2_PlaySound Sounds.uiDenied

@@ -2302,14 +2302,8 @@ sub Start
             exit do
         end if
 
-        LD2_LogDebug "Starting game..."
+        LD2_LogDebug "Starting intro..."
         
-        if Game_hasFlag(CLASSICMODE) then
-            LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp", 2, 0 '- add function to load bsv file?
-        else
-            LD2_GenerateSky 
-        end if
-
         if Game_notFlag(LOADGAME) and Game_notFlag(TESTMODE) then
             LD2_FadeOutMusic
             if Game_hasFlag(CLASSICMODE) then
@@ -2317,6 +2311,14 @@ sub Start
             else
                 TITLE_Intro
             end if
+        end if
+        
+        LD2_LogDebug "Starting game..."
+        
+        if Game_hasFlag(CLASSICMODE) then
+            LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp", 2, 0 '- add function to load bsv file?
+        else
+            LD2_GenerateSky 
         end if
         
         if Game_notFlag(EXITGAME) then
@@ -2501,6 +2503,22 @@ sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as in
             DoAction ActionIds.Equip, id
         elseif qty > 1 then
             qtyUnused = Player_AddAmmo(id, qty)
+            if qtyUnused = 1 then
+                select case id
+                case ItemIds.Shotgun   : LD2_AddToStatus ItemIds.ShotgunAmmo   , 2: LD2_AddToStatus ItemIds.ShotgunAmmo   , -1
+                case ItemIds.Pistol    : LD2_AddToStatus ItemIds.PistolAmmo    , 2: LD2_AddToStatus ItemIds.PistolAmmo    , -1
+                case ItemIds.MachineGun: LD2_AddToStatus ItemIds.MachineGunAmmo, 2: LD2_AddToStatus ItemIds.MachineGunAmmo, -1
+                case ItemIds.Magnum    : LD2_AddToStatus ItemIds.MagnumAmmo    , 2: LD2_AddToStatus ItemIds.MagnumAmmo    , -1
+                end select
+            else
+                select case id
+                case ItemIds.Shotgun   : LD2_AddToStatus ItemIds.ShotgunAmmo   , qtyUnused
+                case ItemIds.Pistol    : LD2_AddToStatus ItemIds.PistolAmmo    , qtyUnused
+                case ItemIds.MachineGun: LD2_AddToStatus ItemIds.MachineGunAmmo, qtyUnused
+                case ItemIds.Magnum    : LD2_AddToStatus ItemIds.MagnumAmmo    , qtyUnused
+                end select
+            end if
+            LD2_PlaySound Sounds.equip
         end if
     case ItemIds.Hp
         Player_AddItem id, qty
@@ -2682,6 +2700,7 @@ sub YouDied ()
     LD2_RenderElement @title
     LD2_RefreshScreen
     
+    LD2_PlaySound Sounds.noScream
     LD2_PlayMusic Tracks.YouDied
     
     while keyboard(KEY_SPACE) or keyboard(KEY_ENTER) or mouseLB()
