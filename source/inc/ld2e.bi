@@ -121,8 +121,9 @@ declare function MapItems_Api (args as string) as string
 declare sub MapItems_Add (x as integer, y as integer, id as integer)
 declare sub MapItems_Draw ()
 declare function MapItems_Pickup () as integer
-declare function MapItems_Append(fileNo as integer) as integer
 declare function MapItems_GetCount() as integer
+declare function MapItems_GetCardLevel(itemId as integer) as integer
+declare function MapItems_isCard(itemId as integer) as integer
 
 declare function Swaps_Api (args as string) as string
 declare function Swaps_Add (x0 as integer, y0 as integer, x1 as integer, y1 as integer, dx as integer, dy as integer) as integer
@@ -135,9 +136,9 @@ declare sub Switches_Trigger (x as integer, y as integer)
 declare sub Teleports_Add (x as integer, y as integer, groupId as integer)
 declare sub Teleports_Check (x as integer, y as integer, byref toX as integer, byref toY as integer)
 
-declare sub Map_AfterLoad(skipMobs as integer = 0)
-declare sub Map_BeforeLoad(byref skipItems as integer)
-declare sub Map_Load (filename as string, skipMobs as integer = 0, skipItems as integer = 0)
+declare sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
+declare sub Map_BeforeLoad()
+declare sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as integer = 0)
 declare sub Map_LockElevators ()
 declare sub Map_UnlockElevators ()
 declare function Map_GetXShift () as integer
@@ -155,7 +156,6 @@ declare sub Mobs_Kill (mob as Mobile)
 declare sub Mobs_KillAll ()
 declare sub Mobs_Clear ()
 declare sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
-declare function Mobs_Append(fileNo as integer) as integer
 declare function Mobs_GetCount() as integer
 declare function Mobs_GetTypeName(typeId as integer) as string
 
@@ -188,6 +188,7 @@ declare sub Player_Hide ()
 declare sub Player_Unhide ()
 DECLARE SUB Player_Init (p AS PlayerType)
 declare function Player_LookUp () as integer
+declare sub Player_RemoveItem(itemId as integer)
 declare function Player_SetWeapon (itemId as integer) as integer
 declare sub Player_SetDamageMod (factor as integer)
 DECLARE function Player_Shoot (is_repeat as integer = 0) as integer
@@ -199,10 +200,27 @@ declare function Player_GetCurrentRoom () as integer
 declare function Player_GetGotItem() as integer
 declare sub Player_DoAction ()
 
-declare function LD2_HasCommandArg(argcsv as string) as integer
-declare sub LD2_ReadyCommandArgs()
-declare function LD2_HasNextCommandArg() as integer
-declare function LD2_GetNextCommandArg() as string
+declare sub Game_Init ()
+declare function Game_isTestMode () as integer
+declare function Game_isDebugMode () as integer
+declare function Game_HasFlag (flag as integer) as integer
+declare function Game_NotFlag (flag as integer) as integer
+declare sub Game_SetFlag (flag as integer)
+declare sub Game_UnsetFlag (flag as integer)
+declare sub Game_Save(filename as string)
+declare function Game_SaveCopy (srcfile as string, dstfile as string) as integer
+declare function Game_Load(filename as string, roomId as integer = -1) as integer
+declare sub Game_Reset()
+declare sub Game_SetGravity (g as double)
+declare function Game_GetGravity () as double
+declare sub Game_SetBossBar (mobId as integer)
+declare sub Game_ShutDown ()
+declare sub Game_SetSessionFile (filename as string)
+
+declare function Boot_HasCommandArg(argcsv as string) as integer
+declare sub Boot_ReadyCommandArgs()
+declare function Boot_HasNextCommandArg() as integer
+declare function Boot_GetNextCommandArg() as string
 
 declare function LD2_AddToStatus (item as integer, qty as integer) as integer
 declare sub LD2_ClearInventorySlot (slot as integer)
@@ -215,25 +233,17 @@ DECLARE SUB LD2_Drop (item as integer)
 DECLARE SUB LD2_GenerateSky ()
 DECLARE FUNCTION LD2_GetStatusAmount (slot AS INTEGER) as integer
 DECLARE FUNCTION LD2_GetStatusItem (slot AS INTEGER) as integer
-DECLARE SUB LD2_Init ()
-DECLARE FUNCTION LD2_isTestMode () as integer
-DECLARE FUNCTION LD2_isDebugMode () as integer
-
-
 
 DECLARE SUB LD2_ProcessEntities ()
 DECLARE SUB LD2_PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
 DECLARE SUB LD2_PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, BufferNum AS INTEGER)
 declare sub LD2_RenderBackground(height as double)
 DECLARE SUB LD2_RenderFrame ()
-DECLARE SUB LD2_SetPlayerlAni (Num AS INTEGER)
+
 DECLARE SUB LD2_SetNotice (message AS STRING)
 DECLARE SUB LD2_SetSceneMode (OnOff AS INTEGER)
 DECLARE SUB LD2_SetSceneNo (Num AS INTEGER)
-declare sub LD2_SetGravity (g as double)
-declare function LD2_GetGravity () as double
-DECLARE SUB LD2_ShutDown ()
-DECLARE SUB LD2_SetBossBar (mobId AS INTEGER)
+declare sub LD2_SetRevealText (message as string)
 
 declare sub LD2_LightingToggle (id as integer)
 declare sub LD2_LightingSetEnabled (id as integer, enabled as integer)
@@ -249,19 +259,11 @@ declare function LD2_TileIsSolid(tileId as integer) as integer
 'DECLARE FUNCTION LD2_PlayerHasItem% (id AS INTEGER)
 '-----------------------------------
 
-DECLARE FUNCTION LD2_HasFlag (flag AS INTEGER) as integer
-DECLARE FUNCTION LD2_NotFlag (flag AS INTEGER) as integer
-DECLARE SUB LD2_SetFlag (flag AS INTEGER)
-DECLARE SUB LD2_ClearFlag (flag AS INTEGER)
-
 DECLARE SUB LD2_PopText (Message AS STRING)
 DECLARE SUB LD2_WriteText (Text AS STRING)
 
 DECLARE SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, _flip AS INTEGER, isFixed as integer = 0)
 declare sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
-
-declare sub Game_Save(filename as string)
-declare sub Game_Load(filename as string, roomId as integer = -1)
 
 declare sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
 declare sub LD2_RenderElement(e as ElementType ptr)
@@ -275,7 +277,10 @@ declare function LD2_GetRootParent() as ElementType ptr
 declare function LD2_GetFontWidthWithSpacing(spacing as double = 1.2) as integer
 declare function LD2_GetFontHeightWithSpacing (spacing as double = 1.4) as integer
 declare function LD2_GetElementTextWidth (e as ElementType ptr) as integer
+declare function LD2_GetParentX(e as ElementType ptr, x as integer = -999999) as integer
 declare function LD2_GetParentY(e as ElementType ptr, y as integer = -999999) as integer
+declare function LD2_GetParentW(e as ElementType ptr) as integer
+declare function LD2_GetParentH(e as ElementType ptr) as integer
 enum ElementFlags
     CenterX = &h01
     CenterY = &h02

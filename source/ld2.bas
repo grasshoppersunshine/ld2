@@ -57,116 +57,63 @@
     #include once "inc/scene.bi"
     #include once "inc/scenes.bi"
     #include once "SDL2/SDL.bi"
+    #include once "file.bi"
     #include once "dir.bi"
 
 
-  
-'    TYPE PoseType
-'        id AS INTEGER
-'        x AS INTEGER
-'        y AS INTEGER
-'        top AS INTEGER
-'        btm AS INTEGER
-'        topMod as integer
-'        btmMod as integer
-'        topXmod as integer
-'        topYmod as integer
-'        btmXmod as integer
-'        btmYmod as integer
-'        flipped AS INTEGER
-'        chatBox AS INTEGER
-'        isSpeaking AS INTEGER
-'        spriteSetId as integer
-'    END TYPE
-'======================
-'= PRIVATE METHODS
-'======================
-  DECLARE FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseId as integer, chatBox as integer) as integer
-  DECLARE FUNCTION DoDialogue () as integer
-  
-  declare sub CharacterDoCommands(characterId AS INTEGER)
-  DECLARE SUB Main ()
-  DECLARE SUB SetAllowedEntities (codeString AS STRING)
-  DECLARE SUB Start ()
-  declare sub NewGame ()
-  declare sub YouDied ()
-  
-  
-  
-  
+'***********************************************************************
+'* PRIVATE METHODS
+'***********************************************************************
+    declare sub Start ()
     declare sub LoadSounds ()
+    declare sub Main ()
+    declare sub NewGame ()
+    declare sub YouDied ()
+    declare function ContinueGame() as integer
+    
+    declare sub BeforeMobKill (mob as Mobile ptr)
+    declare function GetRoomName(id as integer) as string
+    
+    declare sub GenerateRoofCode ()
     declare sub Rooms_DoRooftop (player as PlayerType)
     declare sub Rooms_DoBasement (player as PlayerType)
+    
+    declare function ConsoleCheck (comstring as string, player as PlayerType) as string
     declare sub PlayerCheck (player as PlayerType)
     declare sub SceneCheck (player as PlayerType)
     declare sub BossCheck (player as PlayerType)
-    declare function ConsoleCheck (comstring as string, player as PlayerType) as string
     declare sub FlagsCheck (player as PlayerType)
     declare sub ItemsCheck (player as PlayerType)
-    declare sub GenerateRoofCode ()
-    declare function GetRoomName(id as integer) as string
-  
-'======================
-'= SCENE-RELATED
-'======================
-  
-  DECLARE SUB PutRestOfSceners ()
-
-  
-  DECLARE SUB GetPose (pose AS PoseType, poseId AS INTEGER)
-  declare sub UpdateLarryPos ()
-  DECLARE SUB UpdatePose (target AS PoseType, pose AS PoseType)
     
-    declare sub BeforeMobKill (mob as Mobile ptr)
-  
-  '- have walk-talky in inventory that you can look/use/(drop?)
-  
-    type SceneEntity
-        x as integer
-        y as integer
-    end type
-  
-	'facing AS INTEGER
-	'isThere AS INTEGER
-	'isSpeaking AS INTEGER
-	'hasWalkyTalky AS INTEGER
-  
-  CONST HASWALKYTALKY = 11
-  
-  'REM $DYNAMIC
+    '*******************************************************************
+    '* SCENE-RELATED
+    '*******************************************************************
+    declare function CharacterSpeak (characterId as integer, caption as string, talkingPoseId as integer, chatBox as integer) as integer
+    declare function DoDialogue () as integer
+    declare sub CharacterDoCommands(characterId as integer)
+    declare sub GetPose (pose as PoseType, poseIds as integer)
+    declare sub UpdatePose (target as PoseType, pose as PoseType)
 
-  REDIM SHARED Poses(0) AS PoseType ptr
-  DIM SHARED NumPoses AS INTEGER '- POSES module
-  
-  DIM SHARED SceneNo as integer
-  DIM SHARED RoofScene as integer
-  DIM SHARED SteveGoneScene as integer
-  DIM SHARED FlashLightScene as integer
-  DIM SHARED PortalScene as integer
-  DIM SHARED GooScene AS INTEGER
-  DIM SHARED Larry AS SceneEntity
-  DIM SHARED Steve AS SceneEntity
-  DIM SHARED Janitor AS SceneEntity
-  DIM SHARED Barney AS SceneEntity
-  DIM SHARED Trooper AS SceneEntity
-  DIM SHARED LarryIsThere as integer: DIM SHARED LarryPoint as integer: DIM SHARED LarryTalking as integer: DIM SHARED LarryPos as integer
-  DIM SHARED BarneyIsThere as integer: DIM SHARED BarneyPoint as integer: DIM SHARED BarneyTalking as integer: DIM SHARED BarneyPos as integer
-  DIM SHARED SteveIsThere as integer: DIM SHARED StevePoint as integer: DIM SHARED SteveTalking as integer: DIM SHARED StevePos as integer
-  DIM SHARED JanitorIsThere as integer: DIM SHARED JanitorPoint as integer: DIM SHARED JanitorTalking as integer: DIM SHARED JanitorPos as integer
-  DIM SHARED TrooperIsThere as integer: DIM SHARED TrooperPoint as integer: DIM SHARED TrooperTalking as integer: DIM SHARED TrooperPos as integer
-  
-  DIM SHARED RoofCode AS STRING
-  
-  const DATA_DIR = "data/"
-  
-  const KEYPAD_ENTRY_TEXT = "Enter in the 4-digit PIN:"
+    redim shared Poses(0) as PoseType ptr
+    dim shared NumPoses as integer
+    
+'***********************************************************************
+'* END PRIVATE METHODS
+'***********************************************************************
 
-  dim shared CustomActions(3) as ActionItem
-  dim shared SceneCallback as sub()
-  dim shared NextMusicId as integer
-  
-  Start
-  END
+    dim shared RoofCode as string
+    
+    const DATA_DIR = "data/"
+    const SESSION_FILE = "session.ld2"
+    const GAMESAVE_FILE = "gamesave.ld2"
+    const KEYPAD_ENTRY_TEXT = "Enter in the 4-digit PIN:"
+    
+    dim shared CustomActions(3) as ActionItem
+    dim shared SceneCallback as sub()
+    dim shared NextMusicId as integer
+    
+    Start
+    END
 
 sub GlobalControls()
     
@@ -186,7 +133,7 @@ end sub
 
 SUB AddPose (pose AS PoseType ptr)
     
-    IF LD2_isDebugMode() THEN LD2_Debug "AddPose ( pose )"
+    IF Game_isDebugMode() THEN LD2_Debug "AddPose ( pose )"
     
     NumPoses = NumPoses + 1
     
@@ -229,7 +176,7 @@ end sub
 
 FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseId as integer, chatBox as integer) as integer
     
-    IF LD2_isDebugMode() THEN LD2_Debug "CharacterSpeak% ("+STR(characterId)+", "+caption+" )"
+    IF Game_isDebugMode() THEN LD2_Debug "CharacterSpeak% ("+STR(characterId)+", "+caption+" )"
 	
 	DIM escapeFlag AS INTEGER
 	DIM renderPose AS PoseType
@@ -358,7 +305,7 @@ END FUNCTION
 
 SUB ClearPoses
     
-    IF LD2_isDebugMode() THEN LD2_Debug "ClearPoses ()"
+    IF Game_isDebugMode() THEN LD2_Debug "ClearPoses ()"
 	
 	NumPoses = 0
 	REDIM Poses(0) AS PoseType
@@ -367,7 +314,7 @@ END SUB
 
 sub CharacterDoCommands(characterId AS INTEGER)
     
-    if LD2_isDebugMode() then LD2_debug "DoCommands()"
+    if Game_isDebugMode() then LD2_debug "DoCommands()"
     
     dim comm as string
     dim param as string
@@ -426,7 +373,7 @@ FUNCTION DoDialogue() as integer
     dim poseId as integer
     dim chatBox as integer
 	
-	IF LD2_isDebugMode() THEN LD2_Debug "DoDialogue()"
+	IF Game_isDebugMode() THEN LD2_Debug "DoDialogue()"
 	
 	sid = UCASE(LTRIM(RTRIM(SCENE_GetSpeakerId())))
 	dialogue = LTRIM(RTRIM(SCENE_GetSpeakerDialogue()))
@@ -710,7 +657,7 @@ END SUB
 
 SUB GetPose (pose AS PoseType, poseId AS INTEGER)
 	
-    IF LD2_isDebugMode() THEN LD2_Debug "GetPose ( pose,"+STR(poseId)+" )"
+    IF Game_isDebugMode() THEN LD2_Debug "GetPose ( pose,"+STR(poseId)+" )"
     
 	DIM n AS INTEGER
 	
@@ -722,17 +669,6 @@ SUB GetPose (pose AS PoseType, poseId AS INTEGER)
 	NEXT n
 	
 END SUB
-
-sub UpdateLarryPos ()
-    
-    dim player as PlayerType
-    
-    Player_Get player
-    
-    Larry.x = player.x
-    Larry.y = player.y
-    
-end sub
 
 sub AddSound (id as integer, filepath as string, loops as integer = 0)
     
@@ -746,7 +682,7 @@ sub AddMusic (id as integer, filepath as string, loopmusic as integer)
     
     LD2_LogDebug "AddMusic ("+str(id)+", "+filepath+","+str(loopmusic)+" )"
     
-    LD2_AddMusic id, filepath, loopmusic
+    LD2_AddMusic id, DATA_DIR+"sound/music/"+filepath, loopmusic
     
 end sub
 
@@ -764,7 +700,7 @@ sub LoadSounds ()
     AddSound Sounds.uiMix    , "ui-mix.wav"
     
     AddSound Sounds.titleReveal, "ui-submenu.wav"
-    AddSound Sounds.titleSelect, "ui-arrows.wav"
+    AddSound Sounds.titleSelect, "use-medikit.wav"
     
     AddSound Sounds.pickup , "item-pickup.wav"
     AddSound Sounds.drop   , "item-drop.wav"
@@ -821,44 +757,40 @@ end sub
 sub LoadMusic ()
     
     
-    AddMusic Tracks.Boss      , DATA_DIR+"sound/orig/boss.ogg"    , 1
-    AddMusic Tracks.Chase     , DATA_DIR+"sound/music/march.ogg"  , 1
-    AddMusic Tracks.Elevator  , DATA_DIR+"sound/music/goingup.ogg", 0
-    AddMusic Tracks.Ending    , DATA_DIR+"sound/music/ending.ogg" , 1
-    AddMusic Tracks.Intro     , DATA_DIR+"sound/orig/intro.ogg"   , 0
-    AddMusic Tracks.Opening   , DATA_DIR+"sound/orig/creepy.ogg"  , 1
-    AddMusic Tracks.Title     , DATA_DIR+"sound/music/title.ogg"  , 1
-    AddMusic Tracks.Uhoh      , DATA_DIR+"sound/music/uhoh.ogg"   , 0
-    AddMusic Tracks.Wandering , DATA_DIR+"sound/music/creepy.ogg" , 1
-    AddMusic Tracks.YouDied   , DATA_DIR+"sound/music/youdied.ogg" , 0
+    AddMusic Tracks.Boss      , "../orig/boss.ogg", 1
+    AddMusic Tracks.Chase     , "march.ogg"  , 1
+    AddMusic Tracks.Elevator  , "goingup.ogg", 0
+    AddMusic Tracks.Ending    , "ending.ogg" , 1
+    AddMusic Tracks.Intro     , "../orig/intro.ogg" , 0
+    AddMusic Tracks.Opening   , "../orig/creepy.ogg", 1
+    AddMusic Tracks.Title     , "title.ogg"  , 1
+    AddMusic Tracks.Uhoh      , "uhoh.ogg"   , 0
+    AddMusic Tracks.Wandering , "creepy.ogg" , 1
+    AddMusic Tracks.YouDied   , "youdied.ogg", 0
 
-    AddMusic Tracks.Wind1     , DATA_DIR+"sound/msplice/wind0.wav"   , 1
-    AddMusic Tracks.Wind2     , DATA_DIR+"sound/msplice/wind1.wav"   , 1
-    'AddMusic Tracks.Ambient1  , DATA_DIR+"sound/msplice/room1.wav"   , 1
-    'AddMusic Tracks.Ambient2  , DATA_DIR+"sound/msplice/room5.wav"   , 1
-    'AddMusic Tracks.Ambient3  , DATA_DIR+"sound/msplice/basement.wav", 1
-    'AddMusic Tracks.Ambient4  , DATA_DIR+"sound/msplice/room7.wav"   , 1
-    AddMusic Tracks.Ambient1  , DATA_DIR+"sound/music/musicbox.ogg", 1
+    AddMusic Tracks.Wind1     , "../msplice/wind0.wav" , 1
+    AddMusic Tracks.Wind2     , "../msplice/wind1.wav" , 1
+    AddMusic Tracks.Ambient1  , "musicbox.ogg", 1
+    AddMusic Tracks.Ambient2  , "gameover.ogg", 1
+    AddMusic Tracks.Ambient3  , "motives.ogg" , 1
+    AddMusic Tracks.SmallRoom1, "../msplice/smallroom0.wav", 1
+    AddMusic Tracks.SmallRoom2, "../msplice/smallroom1.wav", 1
     
-    AddMusic Tracks.Ambient2  , DATA_DIR+"sound/music/gameover.ogg", 1
-    AddMusic Tracks.Ambient3  , DATA_DIR+"sound/music/motives.ogg" , 1
-    AddMusic Tracks.SmallRoom1, DATA_DIR+"sound/msplice/smallroom0.wav", 1
-    AddMusic Tracks.SmallRoom2, DATA_DIR+"sound/msplice/smallroom1.wav", 1
-    
-    AddMusic Tracks.Portal, DATA_DIR+"sound/music/portal.ogg"      , 1
-    AddMusic Tracks.Truth , DATA_DIR+"sound/msplice/thetruth.wav"  , 1
+    AddMusic Tracks.Portal, "portal.ogg"             , 1
+    AddMusic Tracks.Truth , "../msplice/thetruth.wav", 1
 
-    AddMusic Tracks.BossClassic     , DATA_DIR+"sound/orig/boss.ogg"  , 1
-    AddMusic Tracks.EndingClassic   , DATA_DIR+"2002/sfx/ending.mod"  , 0
-    AddMusic Tracks.IntroClassic    , DATA_DIR+"sound/orig/intro.ogg" , 0
-    AddMusic Tracks.ThemeClassic    , DATA_DIR+"2002/sfx/intro.mod"   , 0
-    AddMusic Tracks.WanderingClassic, DATA_DIR+"sound/orig/creepy,ogg", 1
+    AddMusic Tracks.BossClassic     , "../orig/boss.ogg"      , 1
+    AddMusic Tracks.EndingClassic   , "../2002/sfx/ending.mod", 0
+    AddMusic Tracks.IntroClassic    , "../orig/intro.ogg"     , 0
+    AddMusic Tracks.ThemeClassic    , "../2002/sfx/intro.mod" , 0
+    AddMusic Tracks.WanderingClassic, "../orig/creepy,ogg"    , 1
+    
     '// need to update SDL_Mixer for mp3 support
     '// also, linking with newer DLLs causes game to crash before initialization error handling (no error message)
-    'AddMusic Tracks.IntroClassic    , DATA_DIR+"2002/sfx/intro.mp3" , 0
-    'AddMusic Tracks.WanderingClassic, DATA_DIR+"2002/sfx/creepy.mp3", 1
-    'AddMusic Tracks.UhohClassic     , DATA_DIR+"2002/sfx/uhoh.mp3"  , 0
-    'AddMusic Tracks.BossClassic     , DATA_DIR+"2002/sfx/boss.mp3"  , 1
+    'AddMusic Tracks.IntroClassic    , "../2002/sfx/intro.mp3" , 0
+    'AddMusic Tracks.WanderingClassic, "../2002/sfx/creepy.mp3", 1
+    'AddMusic Tracks.UhohClassic     , "../2002/sfx/uhoh.mp3"  , 0
+    'AddMusic Tracks.BossClassic     , "../2002/sfx/boss.mp3"  , 1
     
 end sub
 
@@ -1010,7 +942,15 @@ SUB Main
     newShot = 1
     newJump = 1
     newReload = 1
-    NewGame
+    
+    if Game_HasFlag(LOADGAME) then
+        Game_unsetFlag(LOADGAME)
+        if ContinueGame() = 0 then
+            exit sub
+        end if
+    else
+        NewGame
+    end if
     
     dim nomouseRB as integer
     dim consoleStart as double
@@ -1027,11 +967,12 @@ SUB Main
     consoleDialog.h = SCREEN_H-consoleDialog.y-6
     LD2_InitElement @e, "", 31
     
+    SceneCheck player '* check for first scene
   DO
     
-    IF LD2_HasFlag(MAPISLOADED) THEN
+    IF Game_hasFlag(MAPISLOADED) THEN
 		'// play music here
-        LD2_ClearFlag MAPISLOADED
+        Game_unsetFlag MAPISLOADED
 	END IF
     
     PullEvents
@@ -1133,32 +1074,48 @@ SUB Main
     if keypress(KEY_ESCAPE) then
         LD2_PauseMusic
         if STATUS_DialogYesNo("Exit Game?") = Options.Yes then
-            LD2_SetFlag EXITGAME
+            Game_setFlag EXITGAME
             exit do
         else
             LD2_ContinueMusic
         end if
     end if
     
-    if LD2_HasFlag(REVEALTEXT) then
+    if Game_hasFlag(SAVEGAME) then
+        if STATUS_DialogYesNo("Save Progress?") = Options.Yes then
+            Game_Save SESSION_FILE
+            if Game_SaveCopy(SESSION_FILE, GAMESAVE_FILE) = 0 then
+                LD2_SetRevealText "Game Saved"
+            else
+                LD2_SetRevealText "Error Saving File"
+            end if
+        else
+            LD2_SetRevealText "Cancelled"
+        end if
+        Player_LookUp
+        Game_unsetFlag(SAVEGAME)
+    end if
+    
+    if Game_hasFlag(REVEALTEXT) then
         if keypress(KEY_SPACE) or keypress(KEY_ENTER) or keypress(KEY_ESCAPE) then
-            LD2_SetFlag REVEALDONE
+            Game_setFlag REVEALDONE
         end if
         if keypress(KEY_LEFT) or keypress(KEY_RIGHT) or keypress(KEY_DOWN) or mouseLB() or mouseRB() then
-            LD2_SetFlag REVEALDONE
+            Game_setFlag REVEALDONE
         end if
         continue do
     end if
-    if LD2_HasFlag(REVEALDONE) then
+    if Game_hasFlag(REVEALDONE) then
         continue do
     end if
     
-    if LD2_HasFlag(PLAYERDIED) then
+    if Game_hasFlag(PLAYERDIED) then
         if deadTimer = 0 then
             deadTimer = timer
+            LD2_StopMusic
         end if
         if (timer - deadTimer) > 3.0 then
-            LD2_ClearFlag(PLAYERDIED)
+            Game_unsetFlag(PLAYERDIED)
             deadTimer = 0
             YouDied
         end if
@@ -1208,7 +1165,7 @@ SUB Main
     if mouseRelX() < -115 then Player_SetFlip 1
     if mouseRelX() >  115 then Player_SetFlip 0
     
-    if LD2_isTestMode() then
+    if Game_isTestMode() then
         if keypress(KEY_R) or ((mouseRB() > 0) and newReload) then
             Player_AddAmmo ItemIds.Shotgun, 99
             Player_AddAmmo ItemIds.Pistol, 99
@@ -1240,46 +1197,16 @@ SUB Main
 
 	FlagsCheck player
   
-  loop while LD2_NotFlag(EXITGAME)
+  loop while Game_notFlag(EXITGAME)
   
 end sub
-
-SUB PutRestOfSceners
-
-  '- Put the rest of the people in the scene that are there
-   
-	IF LarryIsThere = 1 AND LarryTalking = 0 THEN
-	  IF LarryPos = HASWALKYTALKY THEN
-	LD2_put Larry.x, Larry.y, 6, idSCENE, LarryPoint
-	  ELSE
-	LD2_put Larry.x, Larry.y, 3, idSCENE, LarryPoint
-	  END IF
-	  LD2_put Larry.x, Larry.y, 0, idSCENE, LarryPoint
-	END IF
-	IF SteveIsThere = 1 AND SteveTalking = 0 THEN
-	  LD2_put Steve.x, Steve.y, 12, idSCENE, StevePoint
-	  LD2_put Steve.x, Steve.y, 14, idSCENE, StevePoint
-	END IF
-	IF BarneyIsThere = 1 AND BarneyTalking = 0 THEN
-	  LD2_put Barney.x, Barney.y, 50, idSCENE, BarneyPoint
-	  LD2_put Barney.x, Barney.y, 45, idSCENE, BarneyPoint
-	END IF
-	IF JanitorIsThere = 1 AND JanitorTalking = 0 THEN
-	  LD2_put Janitor.x, Janitor.y, 28, idSCENE, JanitorPoint
-	END IF
-	IF TrooperIsThere = 1 AND TrooperTalking = 0 THEN
-	  LD2_put Trooper.x, Trooper.y, 72, idSCENE, TrooperPoint
-	END IF
-
-
-END SUB
 
 '- do (render pose/frames)
 '- then (fix btmMod adjustments)
 '- then (fix topMod adjustments)
 SUB RenderPoses ()
 	
-    IF LD2_isDebugMode() THEN LD2_Debug "RenderPoses ()"
+    IF Game_isDebugMode() THEN LD2_Debug "RenderPoses ()"
     
 	DIM pose AS PoseType ptr
     dim frame as PoseFrame ptr
@@ -1503,7 +1430,7 @@ sub SceneCheck (player as PlayerType)
     
     if Player_HasItem(ItemIds.SceneTheEnd) then
         Player_SetItemQty ItemIds.SceneTheEnd, 0
-        LD2_SetFlag EXITGAME
+        Game_setFlag EXITGAME
         LD2_FadeOut 1
         TITLE_TheEnd
     end if
@@ -1625,13 +1552,13 @@ sub BeforeMobKill (mob as Mobile ptr)
     
     select case mob->id
     case MobIds.Boss1
-        LD2_SetBossBar 0
-        LD2_SetFlag MUSICFADEOUT
+        Game_setBossBar 0
+        Game_setFlag MUSICFADEOUT
         MapItems_Add mob->x, mob->y, YELLOWCARD
         Player_AddItem ItemIds.BossRooftopEnd
     case MobIds.Boss2
         Player_SetAccessLevel REDACCESS
-        LD2_SetFlag MUSICCHANGE
+        Game_setFlag MUSICCHANGE
         NextMusicId = Tracks.Wandering
     case MobIds.Troop1, MobIds.Troop2
         if int(5*rnd(1)) = 0 then
@@ -1650,11 +1577,11 @@ sub BossCheck (player as PlayerType)
     if Player_NotItem(ItemIds.SceneRooftopGotCard) and (Player_GetCurrentRoom() = Rooms.Rooftop) then
         if (player.x <= 888) and Player_NotItem(ItemIds.BossRooftopBegin) then
             Mobs_Add 500, 144, BOSS1
-            LD2_SetBossBar BOSS1
+            Game_setBossBar BOSS1
             Player_AddItem ItemIds.BossRooftopBegin
         elseif (player.x <= 1300) and (bossMusicStarted = 0) then
             bossMusicStarted = 1
-            LD2_SetFlag MUSICCHANGE
+            Game_setFlag MUSICCHANGE
             NextMusicId = Tracks.Boss
         end if
     end if
@@ -2081,15 +2008,15 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
         case "list"
             response = "Valid gravity options are\ \"+optlist
         case "status"
-            response = "Gravity is set at " + left(str(LD2_GetGravity()), 6)
+            response = "Gravity is set at " + left(str(Game_getGravity()), 6)
         case "reset"
-            LD2_SetGravity 0.06
+            Game_setGravity 0.06
             response = "Reset gravity to 0.06"
         case "set"
             arg = args(1)
             if len(arg) then
                 if (arg = "0") or (val(arg) <> 0) then
-                    LD2_SetGravity val(arg)
+                    Game_setGravity val(arg)
                     response = "Changed gravity to "+str(val(arg))
                 else
                     response = "!Invalid gravity value"
@@ -2128,7 +2055,7 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             end select
         end if
     case "elevator"
-        LD2_SetFlag(ELEVATORMENU)
+        Game_setFlag(ELEVATORMENU)
     case else
         if len(trim(comstring)) then
             response = !"!Invalid command\\ \\Use \"list\" to see commands"
@@ -2147,35 +2074,35 @@ sub FlagsCheck (player as PlayerType)
     static musictimer as double
     static musicdelay as double
     
-    if LD2_HasFlag(GOTITEM) then
-        LD2_ClearFlag GOTITEM
+    if Game_hasFlag(GOTITEM) then
+        Game_unsetFlag GOTITEM
         itemId = Player_GetGotItem()
         LD2_SetNotice "Found "+Inventory_GetShortName(itemId)
 	end if
-    if LD2_HasFlag(ELEVATORMENU) then
-        LD2_ClearFlag ELEVATORMENU
+    if Game_hasFlag(ELEVATORMENU) then
+        Game_unsetFlag ELEVATORMENU
         EStatusScreen Player_GetCurrentRoom()
         if prevRoom <> Player_GetCurrentRoom() then
             LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
-            if GooScene = 1 then GooScene = 0
+            if Player_HasItem(ItemIds.SceneGoo) then Player_RemoveItem(ItemIds.SceneGoo)
         end if
         Player_Unhide
         Player_SetFlip 1
     end if
-    if LD2_HasFlag(MUSICCHANGE) or LD2_HasFlag(MUSICFADEOUT) then
+    if Game_hasFlag(MUSICCHANGE) or Game_hasFlag(MUSICFADEOUT) then
         if LD2_FadeOutMusic(3.0) = 0 then
-            if LD2_HasFlag(MUSICCHANGE) then
+            if Game_hasFlag(MUSICCHANGE) then
                 LD2_StopMusic
                 musicdelay = 1.5
                 musictimer = timer
-                LD2_ClearFlag MUSICCHANGE
+                Game_unsetFlag MUSICCHANGE
             end if
-            LD2_ClearFlag MUSICFADEOUT
+            Game_unsetFlag MUSICFADEOUT
         end if
     end if
-    if LD2_HasFlag(MUSICFADEIN) then
+    if Game_hasFlag(MUSICFADEIN) then
         if LD2_FadeInMusic(3.0) then
-            LD2_ClearFlag MUSICFADEIN
+            Game_unsetFlag MUSICFADEIN
         end if
     end if
     
@@ -2233,7 +2160,7 @@ sub PlayerCheck (player as PlayerType)
         Map_SetXShift xshift
         if prevRoom <> Player_GetCurrentRoom() then
             LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
-            if GooScene = 1 then GooScene = 0
+            if Player_HasItem(ItemIds.SceneGoo) then Player_RemoveItem(ItemIds.SceneGoo)
         end if
     end if
     if Player.y > 196 then
@@ -2242,7 +2169,7 @@ sub PlayerCheck (player as PlayerType)
         Map_SetXShift xshift
         if prevRoom <> Player_GetCurrentRoom() then
             LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
-            if GooScene = 1 then GooScene = 0
+            if Player_HasItem(ItemIds.SceneGoo) then Player_RemoveItem(ItemIds.SceneGoo)
         end if
     end if
     if Player.x < -12 then
@@ -2320,94 +2247,88 @@ SUB SetAllowedEntities (codeString AS STRING)
 	
 END SUB
 
-SUB Start
-  
-  dim i as integer
-  DIM firstLoop AS INTEGER
-  firstLoop = 1
-  
-  do
-    if Inventory_Init(16, 8) then
-        print "Error intializing inventory!"
-        end
-    end if
-    LD2_Init
+sub Start
+    
+    dim i as integer
+    dim firstLoop as integer
+    firstLoop = 1
+    
+    STATUS_SetUseItemCallback @LD2_UseItem
+    STATUS_SetLookItemCallback @LD2_LookItem
+    
+    Game_Init
     LD2_SetMusicMaxVolume 1.00
     LD2_SetSoundMaxVolume 0.50
     LD2_SetMusicVolume 1.0
     LD2_SetSoundVolume 1.0
     LoadSounds
     LoadMusic
+    Game_SetSessionFile SESSION_FILE
+    Mobs_SetBeforeKillCallback @BeforeMobKill
     
-    if LD2_HasFlag(CLASSICMODE) then
-        SCENE_SetScenesFile "2002/tables/scenes.txt"
+    if Inventory_Init(16, 8) then
+        STATUS_DialogOk "Error intializing inventory!"
+        Game_Shutdown
+        end
     end if
     
-    'Mobs.AddType ROCKMONSTER
-    'Mobs.AddType TROOP1
-    'Mobs.AddType TROOP2
-    'Mobs.AddType BLOBMINE
-    'Mobs.AddType JELLYBLOB
-    
-    IF (LD2_NotFlag(TESTMODE)) AND (LD2_NotFlag(SKIPOPENING)) THEN '(LD2_isDebugMode% = 0) AND
-      IF firstLoop THEN
-        if LD2_HasFlag(CLASSICMODE) then
-            TITLE_Opening_Classic
-        else
-            TITLE_Opening
-        end if
-      END IF
-        if LD2_HasFlag(CLASSICMODE) then
-            TITLE_Menu_Classic
-        else
-            TITLE_Menu
-        end if
-    ELSE
-      'LD2_Ad
-    END IF
-    
-    IF LD2_HasFlag(EXITGAME) THEN
-        EXIT DO
-    END IF
-    
-    IF (LD2_NotFlag(TESTMODE)) THEN '(LD2_isDebugMode% = 0) AND
-        LD2_FadeOutMusic
-        'i% = WaitSecondsUntilKey%(1.0)
-        if LD2_HasFlag(CLASSICMODE) then
-            TITLE_Intro_Classic
-        else
-            TITLE_Intro
-        end if
-    ELSE
-        'TITLE.Ad
-        'TITLE.AdTwo
-    END IF
-    
-    IF LD2_isDebugMode() THEN LD2_Debug "Starting game..."
-    
-    STATUS_SetUseItemCallback @LD2_UseItem
-    STATUS_SetLookItemCallback @LD2_LookItem
-    if LD2_hasFlag(CLASSICMODE) then
-        LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp", 2, 0 '- add function to load bsv file?
-    else
-        LD2_GenerateSky 
+    if Boot_HasCommandArg("continue") then
+        Game_SetFlag LOADGAME
     end if
-    'LD2_LoadBitmap DATA_DIR+"gfx/origback.bmp", 2, 0
-    Map_Load "14th.ld2", LD2_isTestMode()
     
-    IF LD2_isTestMode() THEN
-      SceneNo = -1
-    ELSE
-      Scene1
-    END IF
+    do  
+        Game_Reset
+
+        if Game_hasFlag(CLASSICMODE) then
+            SCENE_SetScenesFile "2002/tables/scenes.txt"
+        end if
+
+        if Game_notFlag(TESTMODE) and Game_notFlag(SKIPOPENING) and Game_notFlag(LOADGAME) then
+            if firstLoop then
+                if Game_hasFlag(CLASSICMODE) then
+                    TITLE_Opening_Classic
+                else
+                    TITLE_Opening
+                end if
+            end if
+            if Game_hasFlag(CLASSICMODE) then
+                TITLE_Menu_Classic
+            else
+                TITLE_Menu
+            end if
+        end if
+
+        if Game_hasFlag(EXITGAME) then
+            exit do
+        end if
+
+        LD2_LogDebug "Starting game..."
+        
+        if Game_hasFlag(CLASSICMODE) then
+            LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp", 2, 0 '- add function to load bsv file?
+        else
+            LD2_GenerateSky 
+        end if
+
+        if Game_notFlag(LOADGAME) and Game_notFlag(TESTMODE) then
+            LD2_FadeOutMusic
+            if Game_hasFlag(CLASSICMODE) then
+                TITLE_Intro_Classic
+            else
+                TITLE_Intro
+            end if
+        end if
+        
+        if Game_notFlag(EXITGAME) then
+            Main
+            Game_unsetFlag(EXITGAME)
+        end if
+        firstLoop = 0
     
-    Main
-    firstLoop = 0
-    
-  LOOP while (LD2_HasFlag(EXITGAME) = 0)
+    loop while Game_notFlag(EXITGAME)
   
   TITLE_Goodbye
-  LD2_ShutDown
+  Game_shutdown
   
 END SUB
 
@@ -2417,6 +2338,8 @@ sub NewGame
     
     dim player as PlayerType
     dim arg as string
+    
+    Map_Load "14th.ld2", 1
     
     player.x = 92
     player.y = 144
@@ -2433,7 +2356,7 @@ sub NewGame
     Player_SetItemMaxQty ItemIds.Magnum    , Maxes.Magnum
     Player_SetWeapon ItemIds.Fist '// must be called after Player_Init()
     
-    if LD2_isTestMode() then
+    if Game_isTestMode() then
         Player_SetItemQty ItemIds.Lives, 99
         
         Player_SetItemQty ItemIds.SceneIntro, 1
@@ -2443,21 +2366,21 @@ sub NewGame
         Player_SetItemQty ItemIds.SceneSteveGone, 1
         'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
         'LD2_PlayMusic mscWANDERING
-        if LD2_HasCommandArg("noelevator") = 0 then
+        if Boot_HasCommandArg("noelevator") = 0 then
             'LD2_AddToStatus(ItemIds.ElevatorMenu, 1)
         end if
-        if LD2_HasCommandArg("greencard,bluecard,yellowcard,whitecard,redcard") = 0 then
+        if Boot_HasCommandArg("greencard,bluecard,yellowcard,whitecard,redcard") = 0 then
             LD2_AddToStatus(ItemIds.RedCard, 1)
         end if
-        if (LD2_HasCommandArg("noguns") = 0) and (LD2_HasCommandArg("shotgun,pistol,machinegun,magnum,allguns") = 0) then
+        if (Boot_HasCommandArg("noguns") = 0) and (Boot_HasCommandArg("shotgun,pistol,machinegun,magnum,allguns") = 0) then
             LD2_AddToStatus(ItemIds.Pistol, 0)
             LD2_AddToStatus(ItemIds.MachineGun, 0)
             Player_AddAmmo ItemIds.Pistol, 99
             Player_AddAmmo ItemIds.MachineGun, 99
         end if
-        LD2_ReadyCommandArgs
-        while LD2_HasNextCommandArg()
-            arg = LD2_GetNextCommandArg()
+        Boot_ReadyCommandArgs
+        while Boot_HasNextCommandArg()
+            arg = Boot_GetNextCommandArg()
             select case arg
             case "shotgun"
                 LD2_AddToStatus(ItemIds.Shotgun, 1)
@@ -2516,15 +2439,43 @@ sub NewGame
         LD2_AddToStatus(GREENCARD, 1)
     end if
     
-    Mobs_SetBeforeKillCallback @BeforeMobKill
     GenerateRoofCode
     Map_SetXShift 0
     
 end sub
 
+function ContinueGame () as integer
+    
+    dim e as ElementType
+    
+    LD2_InitElement @e, "Loading...", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.y = 60
+    e.background_alpha = 0.0
+    
+    LD2_cls 1, 0
+    LD2_RenderElement @e
+    LD2_RefreshScreen
+    
+    WaitSeconds 0.75
+    if Game_Load(GAMESAVE_FILE) = 0 then
+        STATUS_DialogOk "Save File Not Found"
+        return 0
+    else
+        LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
+        LD2_cls 1, 0
+        LD2_RefreshScreen
+        WaitSeconds 0.25
+        LD2_RenderFrame
+        LD2_FadeIn 2
+    end if
+    
+    return 1
+    
+end function
+
 SUB UpdatePose (target AS PoseType, pose AS PoseType)
     
-    IF LD2_isDebugMode() THEN LD2_Debug "UpdatePose ( target, pose )"
+    IF Game_isDebugMode() THEN LD2_Debug "UpdatePose ( target, pose )"
 	
 	DIM n AS INTEGER
 	
@@ -2561,7 +2512,7 @@ sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as in
         SceneCallback = @SceneGooGone
         exitMenu = 1
     case ItemIds.ElevatorMenu
-        LD2_SetFlag(ELEVATORMENU)
+        Game_setFlag(ELEVATORMENU)
         exitMenu = 1
     end select
     
@@ -2621,76 +2572,6 @@ function FadeOutMusic(seconds as double = 3.0) as integer
     
 end function
 
-sub SaveInventory(fileNo as integer)
-    
-    type InvData
-        id as ubyte
-        qty as ushort
-    end type
-    
-    dim datum as InvData
-    dim n as integer
-    
-    for n = 0 to 127
-        datum.id = n
-        datum.qty = Player_GetItemQty(n)
-        put #fileNo, , datum
-    next n
-    
-end sub
-
-sub SaveStatusInventory(fileNo as integer)
-    
-    type InvData
-        id as ubyte
-        qty as ushort
-        visible as ubyte
-    end type
-    
-    dim item as InventoryType
-    dim datum as InvData
-    dim numItems as integer
-    dim n as integer
-    
-    numItems = Inventory_GetSize()
-    
-    for n = 0 to numItems-1
-        Inventory_GetItem item, n
-        datum.id = item.id
-        datum.qty = item.qty
-        datum.visible = item.visible
-        put #fileNo, , datum
-    next n
-    
-end sub
-
-sub SaveFloor()
-    
-    dim savePath as string
-    dim roomId as integer
-    
-    roomId = Player_GetCurrentRoom()
-    
-    savePath = DATA_DIR+"save/"
-    if dir(savePath, fbDirectory) <> savePath then
-        mkdir savePath
-    end if
-    
-    savePath += str(roomId)+".flr"
-    
-    type FloorHeader
-        id as ubyte
-        numItems as ubyte
-        numMobs as ubyte
-    end type
-    
-    dim header as FloorHeader
-    header.id = roomId
-    header.numItems = MapItems_GetCount()
-    header.numMobs  = Mobs_GetCount()
-    
-end sub
-
 function inputText(text as string, currentVal as string = "") as string
 	
 	return ""
@@ -2706,7 +2587,7 @@ function GetRoomName(id as integer) as string
     dim label as string
     dim allowed as string
     
-    roomsFile = iif(LD2_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
+    roomsFile = iif(Game_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
 	
     fileNo = freefile
 	open DATA_DIR+roomsFile for input as #fileNo
@@ -2818,18 +2699,19 @@ sub YouDied ()
         if (((timer-startTime) <= 4.15) and ((timer-delay) > 0.07)) or _
            (((timer-startTime)  > 4.15) and ((timer-delay) > 0.05)) then
             spacing += 0.1
-            'title.text_spacing = spacing
             LD2_RenderElement @title
             x += 1: w -= 2
             if (timer-startTime) > 4.15 then
                 x += 2: w -= 4
                 y += 1: h -= 200/62.5
+                if ((y and 1) = 1) and (h > 20) then
+                    y += 1: h -= 200/62.5
+                end if
             end if
             src.x = int(x): src.y = int(y)
             src.w = int(w): src.h = int(h)
             LD2_CopyBuffer 1, 0, @src, @dst
             LD2_UpdateScreen
-            'LD2_RefreshScreen
             delay = timer
         end if
         if keypress(KEY_SPACE) or keypress(KEY_ENTER) or mouseLB() then
@@ -2844,21 +2726,8 @@ sub YouDied ()
     LD2_cls 1, 0
     LD2_FadeOut 3
     LD2_cls 1, 0
-    title.text = "Lives Left"
-    LD2_RenderElement @title
-    LD2_RenderElement @subtitle
-    LD2_FadeIn 3
-    
-    startTime = timer
-    while (timer-startTime) < 3.0
-        PullEvents
-        if keypress(KEY_SPACE) or keypress(KEY_ENTER) or mouseLB() then
-            exit while
-        end if
-    wend
-    
-    LD2_FadeOut 3
-    WaitSeconds 0.5
-    Player_Respawn
+    WaitSeconds 0.75
+    Game_Reset
+    ContinueGame
     
 end sub

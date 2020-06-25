@@ -8,6 +8,7 @@
 #include once "inc/ld2e.bi"
 #include once "inc/ld2.bi"
 #include once "inc/title.bi"
+#include once "file.bi"
 
 'inc\LD2_bi -- only needed for music ids
 'inc\ld2e.bi -- only needed for text put (and setflag)
@@ -60,7 +61,7 @@ end sub
 
 SUB TITLE_Opening
     
-    IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Opening"
+    IF Game_isDebugMode() THEN LD2_Debug "TITLE_Opening"
     
     DIM e AS ElementType
     
@@ -131,7 +132,7 @@ sub TITLE_Menu_Classic
             WaitSeconds CLASSIC_SCREEN_DELAY
             LD2_cls
             WaitSeconds CLASSIC_SCREEN_DELAY
-            LD2_SetFlag EXITGAME
+            Game_setFlag EXITGAME
             exit do
         endif
     loop
@@ -140,22 +141,110 @@ end sub
 
 SUB TITLE_Menu
     
-    IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Menu"
+    LD2_LogDebug "TITLE_Menu"
     
-    'LD2_cls
-    'LD2_PlayMusic mscMARCHoftheUHOH
-    'i% = WaitSecondsUntilKey%(0.5)
-    
-    LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
+    LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 2, -1
+    LD2_CopyBuffer 2, 1
     LD2_FadeIn 3, 15
     
-    'LD2_PlaySound Sounds.titleReveal
+    dim menu as ElementType
+    dim menuNew as ElementType
+    dim menuLoad as ElementType
+    dim menuCredits as ElementType
+    dim menuExit as ElementType
+    dim menuItems(3) as ElementType ptr
+    dim disabled(3) as integer
+    dim canContinueGame as integer
+    dim nextSelected as integer
+    dim selected as integer
+    dim n as integer
     
-    'WaitSeconds(0.25)
-    'LD2_PlayMusic mscTHEME
+    LD2_InitElement @menu, "", 31
+    LD2_InitElement @menuNew    , "New Game", 31
+    LD2_InitElement @menuLoad   , "Continue Game", 31
+    LD2_InitElement @menuCredits, "Credits", 31
+    LD2_InitElement @menuExit   , "Exit Game", 31
+    menuItems(0) = @menuNew
+    menuItems(1) = @menuLoad
+    menuItems(2) = @menuCredits
+    menuItems(3) = @menuExit
+    
+    if FileExists(DATA_DIR+"save/gamesave.ld2") then
+        canContinueGame = 1
+    else
+        disabled(1) = 1
+        menuLoad.text_color = 8
+    end if
+    
+    LD2_AddElement @menu
+    for n = 0 to 3
+        menuItems(n)->parent = @menu
+        menuitems(n)->y = FONT_H*3*n
+        LD2_AddElement menuItems(n)
+    next n
+    
+    menu.x = 208
+    menu.y = 26
     
     DO
+        for n = 0 to 3
+            if n = selected then
+                menuItems(n)->text_color = 15
+            else
+                menuItems(n)->text_color = 7
+            end if
+            if disabled(n) then
+                menuItems(n)->text_color = 8
+            end if
+        next n
+        LD2_CopyBuffer 2, 1
+        LD2_RenderElements
+        LD2_RefreshScreen
         PullEvents
+        if keypress(KEY_UP) then
+            nextSelected = selected
+            do: nextSelected -= 1: loop while disabled(nextSelected) and (nextSelected > 0)
+            if disabled(nextSelected) = 0 then
+                selected = nextSelected
+            end if
+            LD2_PlaySound iif(nextSelected=selected, Sounds.uiArrows, Sounds.uiDenied)
+        end if
+        if keypress(KEY_DOWN) then
+            nextSelected = selected
+            do: nextSelected += 1: loop while disabled(nextSelected) and (nextSelected < 3)
+            if disabled(nextSelected) = 0 then
+                selected = nextSelected
+            end if
+            LD2_PlaySound iif(nextSelected=selected, Sounds.uiArrows, Sounds.uiDenied)
+        end if
+        if keypress(KEY_ENTER) then
+            select case selected
+            case 0
+                LD2_StopMusic
+                LD2_PlaySound Sounds.titleStart
+                LD2_FadeIn 8, 12
+                LD2_FadeIn 4, 15
+                WaitSeconds 1.0
+                exit do
+            case 1
+                LD2_StopMusic
+                LD2_PlaySound Sounds.titleSelect
+                Game_setFlag LOADGAME
+                exit do
+            case 2
+                LD2_PlaySound Sounds.titleSelect
+                WaitSeconds 0.15
+                LD2_FadeOut 3
+                TITLE_ShowCredits
+                LD2_cls
+                LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
+                LD2_FadeIn 3
+            case 3
+                Game_setFlag EXITGAME
+                LD2_PlaySound Sounds.titleSelect
+                exit do
+            end select
+        end if
         IF keyboard(KEY_1) OR keyboard(KEY_KP_1) THEN
           '- shatter glass
           LD2_StopMusic
@@ -175,7 +264,7 @@ SUB TITLE_Menu
           LD2_FadeIn 3
         END IF
         IF keyboard(KEY_3) OR keyboard(KEY_KP_3) THEN
-          LD2_SetFlag EXITGAME
+          Game_setFlag EXITGAME
           LD2_PlaySound Sounds.titleSelect
           EXIT DO
         END IF
@@ -476,7 +565,7 @@ end sub
 
 sub TITLE_ShowCredits
     
-    if LD2_isDebugMode() then LD2_Debug "TITLE_ShowCredits"
+    if Game_isDebugMode() then LD2_Debug "TITLE_ShowCredits"
 
     dim e as ElementType
     dim y as integer
@@ -502,13 +591,13 @@ sub TITLE_ShowCredits
     e.text_height = 2.4
     LD2_RenderELement @e
 
-    LD2_InitElement @e, "Press Space To Continue", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    LD2_InitElement @e, "Press Enter To Continue", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = SCREEN_H - LD2_GetFontHeightWithSpacing() * 2.5
     LD2_RenderElement @e
 
     LD2_FadeIn 3
 
-    WaitForKeydown(KEY_SPACE)
+    WaitForKeydown(KEY_ENTER)
 
     LD2_PlaySound Sounds.titleSelect
     WaitSeconds 0.3333
@@ -743,7 +832,7 @@ end sub
 
 SUB TITLE_TheEnd_Classic
     
-    IF LD2_isDebugMode() THEN LD2_Debug "TITLE_TheEnd"
+    IF Game_isDebugMode() THEN LD2_Debug "TITLE_TheEnd"
     
     LD2_PlayMusic Tracks.Ending
     LD2_PopText "THE END"
@@ -753,7 +842,7 @@ END SUB
 
 SUB TITLE_Goodbye
     
-    IF LD2_isDebugMode() THEN LD2_Debug "TITLE_Goodbye"
+    IF Game_isDebugMode() THEN LD2_Debug "TITLE_Goodbye"
     
     dim e as ElementType
     dim goodbyes(13) as string

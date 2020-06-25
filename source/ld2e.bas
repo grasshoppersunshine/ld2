@@ -51,6 +51,8 @@
         y as integer
         id as integer
         qty as integer
+        isVisible as integer
+        canPickup as integer
     end type
     
     type DoorType
@@ -63,14 +65,6 @@
         accessLevel as integer
         percentOpen as double
         speed as double
-    end type
-    
-    type RoomVarsType
-        numDoors as integer
-        numGuts  as integer
-        numItems as integer
-        numMobs  as integer
-        scrollx  as double
     end type
     
     type SwapType
@@ -151,9 +145,7 @@
     declare function CheckPlayerFloorHit () as integer
     declare function CheckPlayerWallHit () as integer
     declare sub LoadSprites (filename as string, BufferNum as integer)
-    declare sub RefreshPlayerAccess ()
-    declare sub SaveItems (filename as string)
-    declare sub SetPlayerState (state as integer)
+    declare sub Player_RefreshAccess ()
 
     '*******************************************************************
     '* SPRITES
@@ -222,8 +214,6 @@
     dim shared Inventory    (MAXINVENTORY) as integer
     dim shared InventoryMax (MAXINVENTORY) as integer
     dim shared InvSlots     (MAXINVSLOTS) as integer
-    dim shared WentToRoom   (MAXFLOORS) as integer  
-    dim shared LoadedRoom   (MAXFLOORS) as integer
     dim shared NumInvSlots as integer
     dim shared Player AS PlayerType
     
@@ -244,6 +234,9 @@
     dim shared ShowLightBG as integer
     dim shared ShowLightFG as integer
     
+    dim shared CanSaveMap as integer
+    dim shared MobsWereLoaded as integer
+    
     dim shared GameFlags as integer
     dim shared GameNoticeMsg as string
     dim shared GameNoticeExpire as single
@@ -251,6 +244,8 @@
     dim shared GameRevealText as string
     
     dim shared GotItemId as integer
+    
+    dim shared SessionSaveFile as string
     
     redim shared CommandArgs(0) as string
     dim shared NumCommandArgs as integer
@@ -377,10 +372,9 @@ function LD2_AddToStatus (item as integer, qty as integer) as integer
     end if
     
     if added then
-        select case item
-        case GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
-            RefreshPlayerAccess
-        end select
+        if MapItems_isCard(item) then
+            Player_RefreshAccess
+        end if
     end if
 
     if added then
@@ -399,10 +393,9 @@ sub LD2_ClearInventorySlot (slot as integer)
     Inventory(item) = 0
     InvSlots(slot) = 0
     
-    select case item
-    case GREENCARD, BLUECARD, YELLOWCARD, REDCARD, WHITECARD
-      RefreshPlayerAccess
-    end select
+    if MapItems_isCard(item) then
+        Player_RefreshAccess
+    end if
     
 end sub
 
@@ -696,53 +689,12 @@ sub LD2_Drop (item as integer)
     Items(n).y   = int(y / SPRITE_H) * SPRITE_H
     Items(n).id  = item
     Items(n).qty = Inventory(item)
+    Items(n).isVisible = 1
+    Items(n).canPickup = 1
     
 end sub
 
-'SUB LD2_FadeOut
-'  
-'  DIM bufferSeg as integer
-'  
-'  bufferSeg = VARSEG(Buffer1(0))
-'  
-'  LD2andcls bufferSeg, &HF7F7: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2_CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-'  LD2andcls bufferSeg, &HF3F3: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2_CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-'  LD2andcls bufferSeg, &HF1F1: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2_CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-'  LD2andcls bufferSeg, &HF0F0: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2_CopyBuffer 1, 0: FOR i% = 0 TO 5: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-'  LD2cls    bufferSeg, &H0000: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: LD2_CopyBuffer 1, 0: FOR i% = 0 TO 25: WAIT &H3DA, 8: WAIT &H3DA, 8, 8: NEXT i%
-'  
-'END SUB
-
-SUB RefreshPlayerAccess
-    
-    DIM i as integer
-    DIM item as integer
-    DIM maxLevel as integer
-    
-    Inventory(AUTH) = 0
-    
-    maxLevel = NOACCESS
-    FOR i = 0 TO 7
-        item = InvSlots(i)
-        SELECT CASE item
-        CASE GREENCARD
-            IF GREENACCESS > maxLevel  THEN maxLevel = GREENACCESS
-        CASE BLUECARD
-            IF BLUEACCESS > maxLevel   THEN maxLevel = BLUEACCESS
-        CASE YELLOWCARD
-            IF YELLOWACCESS > maxLevel THEN maxLevel = YELLOWACCESS
-        CASE WHITECARD
-            IF WHITEACCESS > maxLevel THEN maxLevel = WHITEACCESS
-        CASE REDCARD
-            IF REDACCESS > maxLevel    THEN maxLevel = REDACCESS
-        END SELECT
-    NEXT i
-    
-    Inventory(AUTH) = maxLevel
-
-END SUB
-
-function LD2_HasCommandArg(argcsv as string) as integer
+function Boot_HasCommandArg(argcsv as string) as integer
     
     dim char as string
     dim arg as string
@@ -763,24 +715,29 @@ function LD2_HasCommandArg(argcsv as string) as integer
             arg = ""
         end if
     next n
+    for i = 0 to NumCommandArgs-1
+        if trim(lcase(arg)) = CommandArgs(i) then
+            return 1
+        end if
+    next i
     
     return 0
     
 end function
 
-sub LD2_ReadyCommandArgs()
+sub Boot_ReadyCommandArgs()
     
     CommandArgIndex = 0
     
 end sub
 
-function LD2_HasNextCommandArg() as integer
+function Boot_HasNextCommandArg() as integer
     
     return (CommandArgIndex < NumCommandArgs)
     
 end function
 
-function LD2_GetNextCommandArg() as string
+function Boot_GetNextCommandArg() as string
     
     dim n as integer
     
@@ -795,7 +752,7 @@ function LD2_GetNextCommandArg() as string
     
 end function
 
-sub LD2_Init
+sub Game_Init
     
     dim arg as string
     dim i as integer
@@ -813,22 +770,22 @@ sub LD2_Init
         end if
         select case arg
         case "test"
-          LD2_SetFlag TESTMODE
+          Game_SetFlag TESTMODE
         case "debug"
-          LD2_SetFlag DEBUGMODE
+          Game_SetFlag DEBUGMODE
         case "nosound", "ns"
-          LD2_SetFlag NOSOUND
+          Game_SetFlag NOSOUND
         case "nomix"
-          LD2_SetFlag NOMIX
+          Game_SetFlag NOMIX
         case "skip"
-          LD2_SetFlag SKIPOPENING
+          Game_SetFlag SKIPOPENING
         case "classic"
-          LD2_SetFlag CLASSICMODE
+          Game_SetFlag CLASSICMODE
         end select
         i += 1
     loop
     
-    if LD2_isDebugMode() then
+    if Game_isDebugMode() then
         LD2_Debug "!debugstart!"
         LD2_Debug "LD2_Init"
     end if
@@ -837,7 +794,7 @@ sub LD2_Init
     
     print "Larry the Dinosaur II v1.1.130"
     
-    if LD2_hasFlag(CLASSICMODE) then
+    if Game_hasFlag(CLASSICMODE) then
         print "STARTING CLASSIC (2002) MODE"
     end if
     
@@ -848,7 +805,7 @@ sub LD2_Init
     
     WaitSeconds 0.3333
     
-    if LD2_HasFlag(CLASSICMODE) then
+    if Game_hasFlag(CLASSICMODE) then
         LarryFile   = DATA_DIR+"2002/gfx/larry2.put"
         TilesFile   = DATA_DIR+"2002/gfx/ld2tiles.put"
         LightFile   = DATA_DIR+"2002/gfx/ld2light.put"
@@ -885,8 +842,14 @@ sub LD2_Init
     NumTeleports = 0
     NumInvSlots = 8
     '///////////////////////////////////////////////////////////////////
+    CanSaveMap = 0
+    MobsWereLoaded = 0
+    '///////////////////////////////////////////////////////////////////
+    if SessionSaveFile = "" then
+        SessionSaveFile = "session.ld2"
+    end if
     
-    if LD2_NotFlag(NOSOUND) then
+    if Game_notFlag(NOSOUND) then
 
         print "Initializing sound...  ("+LD2_GetSoundInfo()+")"
         WaitSeconds 0.3333
@@ -907,11 +870,14 @@ sub LD2_Init
     if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL) <> 0 then
         print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
         end
+    else
+        LD2_cls 1, 0
+        LD2_cls 2, 0
     end if
     WaitSeconds 0.3333
     
     PaletteFile = DATA_DIR+"gfx/gradient.pal"
-    if LD2_HasFlag(CLASSICMODE) then
+    if Game_hasFlag(CLASSICMODE) then
         LD2_LoadPalette PaletteFile, 0
     else
         LD2_LoadPalette PaletteFile
@@ -1055,98 +1021,16 @@ sub LD2_RenderBackground(height as double)
     
 end sub
 
-SUB SaveItems (filename as string)
-    
-    DIM InFile as integer
-    DIM OutFile as integer
-    DIM item AS ItemType
-    DIM roomId as integer
-    DIM roomCount as integer
-    DIM roomItemCount as integer
-    DIM i as integer
-    
-    DIM tmpFile as string
-    tmpFile = DATA_DIR+"save/items.tmp"
-    
-    InFile = FREEFILE: OutFile = FREEFILE
-    OPEN filename FOR BINARY AS InFile
-    OPEN tmpFile FOR BINARY AS OutFile
-    
-    GET #InFile, , roomCount '- count of rooms that have been saved (not total floors)
-    'FOR roomId = 0 TO roomCount-1
-    '    IF roomId = Current
-    'NEXT roomId
-    
-    GET #InFile, , roomId
-    GET #InFile, , roomItemCount
-    
-    FOR roomId = 0 TO roomCount-1
-        IF roomId = Inventory(ItemIds.CurrentRoom) THEN
-            PUT #OutFile, , roomId
-            PUT #OutFile, , roomItemCount
-            FOR i = 0 TO NumItems-1
-                item = Items(i)
-                IF roomId = 7 THEN
-                    item.y = item.y + 4
-                END IF
-                PUT #OutFile, , item
-            NEXT i
-        ELSE
-            PUT #OutFile, , roomId
-            PUT #OutFile, , roomItemCount
-            FOR i = 0 TO roomItemCount-1
-                GET #InFile, , item
-                IF roomId = 7 THEN
-                    item.y = item.y + 4
-                END IF
-                PUT #OutFile, , item
-            NEXT i
-        END IF
-    NEXT roomId
-    
-    CLOSE InFile
-    CLOSE OutFile
-    
-    '- ERASE FILE
-    OPEN filename FOR OUTPUT AS OutFile
-    CLOSE OutFile
-    
-    OPEN tmpFile FOR BINARY AS InFile
-    OPEN filename FOR BINARY AS OutFile
-    DO WHILE NOT EOF(1)
-        GET #1, , i
-        PUT #1, , i
-    LOOP
-    
-END SUB
-
-sub Map_BeforeLoad(byref skipItems as integer)
+sub Map_BeforeLoad()
     
     '// current room should be the one before the next room is loaded
-    if LoadedRoom(Inventory(ItemIds.CurrentRoom)) then
-        Game_Save "gamesave0.ld2"
+    if CanSaveMap then '// basically, don't save an empty map
+        Game_Save SessionSaveFile
     end if
-    if WentToRoom(Inventory(ItemIds.CurrentRoom)) then
-        skipItems = 0
-    else
-        skipItems = 1
-    end if
-    
-    '// save enemies from previous room
-    '// save items from previous room
-    WentToRoom(Inventory(ItemIds.CurrentRoom)) = 1
-    
-    '// CLEAR KEYPAD ACCESS
-    Inventory(TEMPAUTH) = 0
-    
-    '// RESET MAP VARS
-    Mobs.Clear
-    NumDoors = 0
-    NumElevators = 0
     
 end sub
 
-sub Map_AfterLoad(skipMobs as integer = 0)
+sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
     
     dim tile as integer
     dim x as integer
@@ -1154,14 +1038,23 @@ sub Map_AfterLoad(skipMobs as integer = 0)
     dim i as integer
     dim j as integer
     
+    '// CLEAR KEYPAD ACCESS
+    Inventory(TEMPAUTH) = 0
+    
+    Mobs.clear()
+    NumDoors = 0
+    NumElevators = 0
     NumSwaps = 0
     NumSwitches = 0
     NumTeleports = 0
+    MobsWereLoaded = 0
     
-    Game_Load "gamesave0.ld2", Inventory(ItemIds.CurrentRoom)
+    if skipSessionLoad = 0 then
+        Game_Load "session.ld2", Inventory(ItemIds.CurrentRoom)
+    end if
     
-    for y = 0 to 12
-        for x = 0 to 200
+    for y = 0 to MAPH-1
+        for x = 0 to MAPW-1
             FloorMap(x, y) = 0
             tile = TileMap(x, y)
             select case tile
@@ -1205,34 +1098,22 @@ sub Map_AfterLoad(skipMobs as integer = 0)
     for i = 0 to NumItems-1
         select case Items(i).id
         case ItemIds.SwapSrcA0, ItemIds.SwapSrcA1, ItemIds.SwapDstA
-            NumItems -= 1
-            for j = i to NumItems-1
-                Items(j) = Items(j+1)
-            next j
-            i -= 1
-            if i >= NumItems-1 then
-                exit for
-            end if
+            Items(i).isVisible = 0
         case ItemIds.TeleportA
             Teleports_Add int(Items(i).x/SPRITE_W), int(Items(i).y/SPRITE_H), 0
-             NumItems -= 1
-            for j = i to NumItems-1
-                Items(j) = Items(j+1)
-            next j
-            i -= 1
-            if i >= NumItems-1 then
-                exit for
-            end if
+            Items(i).isVisible = 0
+        case ItemIds.DoorTop, ItemIds.DoorBottom
+            Items(i).canPickup = 0
         end select
     next i
     
-    if Inventory(ItemIds.CurrentRoom) = Rooms.WeaponsLocker then
-        for i = 0 to NumItems-1
-            Items(i).y -= 4
-        next i
-    end if
+    'if Inventory(ItemIds.CurrentRoom) = Rooms.WeaponsLocker then
+    '    for i = 0 to NumItems-1
+    '        Items(i).y -= 4
+    '    next i
+    'end if
     
-    if skipMobs = 0 then
+    if (MobsWereLoaded = 0) and (skipMobs = 0) then
         select case Inventory(ItemIds.CurrentRoom)
         case Rooms.Rooftop, Rooms.PortalRoom, Rooms.WeaponsLocker, Rooms.Lobby, Rooms.Basement
         case else
@@ -1242,11 +1123,10 @@ sub Map_AfterLoad(skipMobs as integer = 0)
     
 end sub
 
-sub Map_Load (filename as string, skipMobs as integer = 0, skipItems as integer = 0)
+sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as integer = 0)
     
     LD2_LogDebug "Map_Load ( "+filename+" )"
     
-    print "Map_Load "+filename
     dim mapFile as integer
     dim _byte as ubyte
     dim _word as ushort
@@ -1274,19 +1154,18 @@ sub Map_Load (filename as string, skipMobs as integer = 0, skipItems as integer 
     comments   = ""
     separator  = "|"
     
-    if LD2_hasFlag(CLASSICMODE) then
+    if Game_hasFlag(CLASSICMODE) then
         filename = DATA_DIR+"2002/rooms/"+filename
     else
         filename = DATA_DIR+"rooms/" + filename
     end if
     
     
-    Map_BeforeLoad skipItems
+    Map_BeforeLoad
     
     i = instrrev(filename, "/")
     j = instrrev(lcase(filename), "th.ld2")
     roomId = val(mid(filename, i+1, j-i-1))
-    print "Map_Load room id: "+str(roomId)
     Inventory(ItemIds.CurrentRoom) = roomId
     
     mapFile = freefile
@@ -1372,31 +1251,29 @@ sub Map_Load (filename as string, skipMobs as integer = 0, skipItems as integer 
     '* PICKUP ITEMS
     '*******************************************************************
     get #mapFile, , newLine
-    'if skipItems = 0 then
-        get #mapFile, , _byte: NumItems = _byte
-        for i = 0 to NumItems-1
-            get #MapFile, , _word: Items(i).x = _word
-            get #MapFile, , _word: Items(i).y = _word
-            get #MapFile, , _byte: Items(i).id = _byte+1
-            Items(i).qty = 1
-        next i
-    'else
-    '    '// load items here
-    'end if
+    get #mapFile, , _byte: NumItems = _byte
+    for i = 0 to NumItems-1
+        get #MapFile, , _word: Items(i).x = _word
+        get #MapFile, , _word: Items(i).y = _word
+        get #MapFile, , _byte: Items(i).id = _byte+1
+        Items(i).qty = 1
+        Items(i).isVisible = 1
+        Items(i).canPickup = 1
+    next i
     
     close #mapFile
     
-    Map_AfterLoad skipMobs
+    Map_AfterLoad skipMobs, skipSessionLoad
     
-    LD2_SetFlag MAPISLOADED
+    Game_SetFlag MAPISLOADED
     
-    LoadedRoom(roomId) = 1
+    CanSaveMap = 1
     
 end sub
 
 SUB LoadSprites (Filename as string, BufferNum as integer)
   
-  IF LD2_isDebugMode() THEN LD2_Debug "LoadSprite ( "+Filename+","+STR(BufferNum)+" )"
+  IF Game_isDebugMode() THEN LD2_Debug "LoadSprite ( "+Filename+","+STR(BufferNum)+" )"
 
   '- Load a sprite set into a given buffer
   '---------------------------------------
@@ -1429,7 +1306,7 @@ SUB LoadSprites (Filename as string, BufferNum as integer)
     CASE idFONT
 
       'LD2_InitSprites filename, @SpritesFont, FONT_W, FONT_H, SpriteFlags.Transparent
-    if LD2_hasFlag(CLASSICMODE) then
+    if Game_hasFlag(CLASSICMODE) then
         LD2_InitSprites filename, @SpritesFont, 6, 5, SpriteFlags.Transparent
     else
         LD2_InitSprites filename, @SpritesFont, 6, 5, SpriteFlags.Transparent or SpriteFlags.UseWhitePalette
@@ -1908,7 +1785,7 @@ sub Elevators_Animate ()
     if (Player.state = PlayerStates.EnteringElevator) and (countClosed = NumElevators) then
         Player.state = PlayerStates.ExitingElevator
         Player.is_visible = 0
-        LD2_SetFlag ELEVATORMENU
+        Game_SetFlag ELEVATORMENU
     end if
     if (Player.state = PlayerStates.ExitingElevator) and (countOpen = NumElevators) then
         Player.state = 0
@@ -2253,11 +2130,11 @@ SUB LD2_RenderFrame
     static waitUntil as double
     if len(GameRevealText) then
         text = GameRevealText
-        LD2_SetFlag REVEALTEXT
+        Game_SetFlag REVEALTEXT
         GameRevealText = ""
         revealCursor = -21
     end if
-    if LD2_HasFlag(REVEALTEXT) then
+    if Game_hasFlag(REVEALTEXT) then
         if revealCursor < len(text) then
             textReveal.text = left(text, revealCursor)
             revealCursor += 3
@@ -2266,25 +2143,25 @@ SUB LD2_RenderFrame
         end if
         LD2_RenderElement @textReveal
     end if
-    if LD2_HasFlag(REVEALDONE) then
-        if LD2_HasFlag(REVEALTEXT) then
-            LD2_ClearFlag REVEALTEXT
+    if Game_hasFlag(REVEALDONE) then
+        if Game_hasFlag(REVEALTEXT) then
+            Game_UnsetFlag REVEALTEXT
             waitUntil = timer+0.25
         end if
         if timer >= waitUntil then
-            LD2_ClearFlag REVEALDONE
+            Game_UnsetFlag REVEALDONE
         end if
     end if
     
 end sub
 
-function LD2_HasFlag (flag as integer) as integer
+function Game_hasFlag (flag as integer) as integer
     
     return ((GameFlags and flag) > 0)
     
 end function
 
-function LD2_NotFlag (flag as integer) as integer
+function Game_notFlag (flag as integer) as integer
     
     dim hasFlag as integer
     
@@ -2298,13 +2175,13 @@ function LD2_NotFlag (flag as integer) as integer
     
 end function
 
-sub LD2_SetFlag (flag as integer)
+sub Game_SetFlag (flag as integer)
     
     GameFlags = (GameFlags or flag)
     
 end sub
 
-sub LD2_ClearFlag (flag as integer)
+sub Game_UnsetFlag (flag as integer)
     
     GameFlags = (GameFlags or flag) xor flag
     
@@ -2316,9 +2193,15 @@ sub LD2_SetSceneMode (OnOff as integer)
     
 end sub
 
-sub LD2_SetBossBar (mobId as integer)
+sub Game_SetBossBar (mobId as integer)
     
     BossBarId = mobId
+    
+end sub
+
+sub Game_SetSessionFile (filename as string)
+    
+    SessionSaveFile = filename
     
 end sub
 
@@ -2329,17 +2212,23 @@ sub LD2_SetNotice (message as string)
     
 end sub
 
-sub LD2_SetGravity (g as double)
+sub Game_SetGravity (g as double)
     
     Gravity = g
     
 end sub
 
-function LD2_GetGravity () as double
+function Game_GetGravity () as double
     
     return Gravity
     
 end function
+
+sub LD2_SetRevealText (message as string)
+    
+    GameRevealText = message
+    
+end sub
 
 function Map_GetXShift () as integer
     
@@ -2457,7 +2346,9 @@ sub MapItems_Draw ()
     
     dim n as integer
     for n = 0 to NumItems-1
-        SpritesObject.putToScreen(int(Items(n).x - XShift), Items(n).y, Items(n).id)
+        if Items(n).isVisible then
+            SpritesObject.putToScreen(int(Items(n).x - XShift), Items(n).y, Items(n).id)
+        end if
     next n
     
 end sub
@@ -2476,10 +2367,13 @@ function MapItems_Pickup () as integer
     success = 0
 
     for i = 0 TO NumItems-1
+        if (Items(n).canPickup = 0) or (Items(n).isVisible = 0) then
+            continue for
+        end if
         if int(Player.x + 8) >= Items(i).x and int(Player.x + 8) <= Items(i).x + 16 then
             if LD2_AddToStatus(Items(i).id, Items(i).qty) = 0 then
                 success = 1
-                LD2_SetFlag GOTITEM
+                Game_SetFlag GOTITEM
                 GotItemId = items(i).id
                 for n = i to NumItems - 2
                     Items(n) = Items(n + 1)
@@ -2501,53 +2395,27 @@ function MapItems_GetCount() as integer
     
 end function
 
-function MapItems_Append(fileNo as integer) as integer
+function MapItems_GetCardLevel(itemId as integer) as integer
     
-    type ItemData
-        x as ubyte
-        y as ubyte
-        id as ubyte
-    end type
-    
-    dim datum as ItemData
-    dim n as integer
-    
-    seek #1, lof(fileNo)+1
-    
-    for n = 0 to NumItems-1
-        datum.x = int(Items(n).x/SPRITE_W)
-        datum.y = int(Items(n).y/SPRITE_H)
-        datum.id = Items(n).id
-        put #1, , datum
-    next n
-    
-    return 1
+    select case itemId
+        case GREENCARD : return GREENACCESS
+        case BLUECARD  : return BLUEACCESS
+        case YELLOWCARD: return YELLOWACCESS
+        case WHITECARD : return WHITEACCESS
+        case REDCARD   : return REDACCESS
+        case else      : return NOACCESS
+    end select
     
 end function
 
-function Mobs_Append(fileNo as integer) as integer
+function MapItems_isCard(itemId as integer) as integer
     
-    type MobData
-        x as ubyte
-        y as ubyte
-        id as ubyte
-    end type
-    
-    dim mob as Mobile
-    dim datum as MobData
-    
-    seek #1, lof(fileNo)+1
-    
-    Mobs.resetNext
-    do while Mobs.canGetNext()
-        Mobs.getNext mob
-        datum.x = int(mob.x/SPRITE_W)
-        datum.y = int(mob.y/SPRITE_H)
-        datum.id = mob.id
-        put #fileNo, , datum
-    loop
-    
-    return 1
+    select case itemId
+        case GREENCARD, BLUECARD, YELLOWCARD, WHITECARD, REDCARD
+            return 1
+        case else
+            return 0
+    end select
     
 end function
 
@@ -2849,17 +2717,17 @@ function Mobs_Api(args as string) as string
             end if
         loop
     case "status"
-        response = "Mobs are "+iif(LD2_NotFlag(NOMOBS),"enabled","disabled")
+        response = "Mobs are "+iif(Game_notFlag(NOMOBS),"enabled","disabled")
     case "off"
-        if LD2_NotFlag(NOMOBS) then
-            LD2_SetFlag(NOMOBS)
+        if Game_notFlag(NOMOBS) then
+            Game_SetFlag(NOMOBS)
             response = "Mobs disabled"
         else
             response = "Mobs already disabled"
         end if
     case "on"
-        if LD2_HasFlag(NOMOBS) then
-            LD2_ClearFlag(NOMOBS)
+        if Game_hasFlag(NOMOBS) then
+            Game_UnsetFlag(NOMOBS)
             response = "Mobs enabled"
         else
             response = "Mobs already enabled"
@@ -2890,7 +2758,7 @@ sub Mobs_Add (x as integer, y as integer, id as integer)
     
     dim mob as Mobile
     
-    if LD2_HasFlag(NOMOBS) then
+    if Game_hasFlag(NOMOBS) then
         exit sub
     end if
     
@@ -2971,7 +2839,7 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
         next x
     next y
     
-    numMobs = int(numFloors / 15)
+    numMobs = int(numFloors / 10)
     
     if forceNumMobs > 0 then
         numMobs = forceNumMobs
@@ -3011,10 +2879,13 @@ sub Mobs_Animate()
 
   dim mob as Mobile
   dim deleted as integer
+  dim radius as integer
   dim px as integer, py as integer
+  dim x as integer, y as integer
   dim ox as integer
   dim p as integer
   dim i as integer
+  dim n as integer
   dim f as double
   
   f = 1 'DELAYMOD
@@ -3111,11 +2982,19 @@ sub Mobs_Animate()
                     FOR i = 0 TO 14
                         Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1, -RND(1)*30
                         Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1, RND(1)*30
-                        LD2_PlaySound Sounds.boom
-                        LD2_PlaySound Sounds.larryDie
                     NEXT i
+                    x = Player.x + 7: y = Player.y + 7
+                    radius = SPRITE_W
+                    Guts_Add GutsIds.Blood, x, y, 1
+                    for n = 0 to 3
+                        Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+                        Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+                    next n
                     Player_Jump 2.0
                     Player.vx += 5-10*rnd(1)
+                    Inventory(ItemIds.Hp) -= 50
+                    LD2_PlaySound Sounds.boom
+                    LD2_PlaySound Sounds.larryHurt
                     deleted = 1
                 END IF
             END IF
@@ -3630,8 +3509,8 @@ sub Player_Animate()
         exit sub
     end if
     
-    if (Inventory(ItemIds.Hp) <= 0) and LD2_NotFlag(PLAYERDIED) then
-        LD2_SetFlag PLAYERDIED
+    if (Inventory(ItemIds.Hp) <= 0) and Game_notFlag(PLAYERDIED) then
+        Game_SetFlag PLAYERDIED
         LD2_PlaySound Sounds.splatter
         LD2_PlaySound Sounds.larryDie
         Inventory(ItemIds.Lives) -= 1
@@ -3744,7 +3623,7 @@ sub Player_Animate()
                 Player_SetWeapon Player.weapon '- reset upper-sprites back to normal
             end if
         case PlayerStates.LookingUp
-            if ((timer - player.stateTimestamp) > 0.07) and LD2_NotFlag(REVEALTEXT) and LD2_NotFlag(REVEALDONE) then
+            if ((timer - player.stateTimestamp) > 0.07) and Game_notFlag(REVEALTEXT) and Game_notFlag(REVEALDONE) then
                 Player.state = 0
                 Player_SetWeapon Player.weapon '- reset upper-sprites back to normal
             end if
@@ -3805,7 +3684,7 @@ sub Player_Draw()
     if (SceneMode = 1) or (Player.is_visible = 0) then
         exit sub
     end if
-    if LD2_HasFlag(PLAYERDIED) then
+    if Game_hasFlag(PLAYERDIED) then
         exit sub
     end if
     
@@ -3976,10 +3855,20 @@ function Player_Fall() as integer
             Player.vy = 9
         end if
     else
-        if Player.vy >= 7 then
+        if Player.vy > 7 then
             Inventory(ItemIds.Hp) = 0
-        elseif Player.vy >= 5 then
+        elseif Player.vy > 5 then
             Inventory(ItemIds.Hp) -= 50
+            LD2_PlaySound Sounds.blood1
+            LD2_PlaySound Sounds.larryHurt
+            x = Player.x + 7: y = Player.y + 7
+            Guts_Add GutsIds.Blood, x, y, 1
+            for n = 0 to 3
+                Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+                Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+            next n
+        elseif Player.vy > 4.4 then
+            Inventory(ItemIds.Hp) -= iif(player.vy > 4.7, 20, 10)
             LD2_PlaySound Sounds.blood1
             LD2_PlaySound Sounds.larryHurt
             x = Player.x + 7: y = Player.y + 7
@@ -4088,8 +3977,8 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     box = Player_GetCollisionBox()
     hitWall = 0
     if dx > 0 then
-        fromX = int(box.rgt / SPRITE_W)
-        toX = int((box.rgt + dx) / SPRITE_W)
+        fromX = int((Player.x + 2 + 5 - 1) / SPRITE_W)
+        toX = int(((Player.x + 2 + 5 - 1) + dx) / SPRITE_W)
         if toX > fromX then
             px = Player.x
             Player.x = fromX * SPRITE_W+box.padRgt
@@ -4100,7 +3989,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
             end if
             Player.x = px
         end if
-    else
+    elseif dx < 0 then
         fromX = int(box.lft / SPRITE_W)
         toX = int((box.lft + dx) / SPRITE_W)
         if toX < fromX then
@@ -4220,6 +4109,12 @@ sub Player_AddItem(itemId as integer, qty as integer = 1)
     if (InventoryMax(itemId) > 0) and (Inventory(itemId) > InventoryMax(itemId)) then
         Inventory(itemId) = InventoryMax(itemId)
     end if
+    
+end sub
+
+sub Player_RemoveItem(itemId as integer)
+    
+    Inventory(itemId) = 0
     
 end sub
 
@@ -4403,6 +4298,11 @@ sub Player_DoAction ()
         end if
         tile = TileMap(mapX, mapY)
         select case tile
+        case TileIds.SaveMachineA0, TileIds.SaveMachineA1, _
+             TileIds.SaveMachineB0, TileIds.SaveMachineB1, _
+             TileIds.SaveMachineC0, TileIds.SaveMachineC1 
+            Game_SetFlag(SAVEGAME)
+            exit sub
         case 159
             GameRevealText = "Load-bearing column."
             exit sub
@@ -4526,7 +4426,6 @@ sub Player_Respawn ()
         XShift = 300
         Player.x = 80
     else
-        Inventory(ItemIds.CurrentRoom) = Rooms.WeaponsLocker
         Map_Load "7th.LD2"
         Player.x = 28*SPRITE_W
         XShift = Player.x - int(SCREEN_W/2)
@@ -4576,6 +4475,28 @@ end sub
 sub Player_SetTempAccess (accessLevel as integer)
     
     Inventory(TEMPAUTH) = accessLevel
+    
+end sub
+
+sub Player_RefreshAccess
+    
+    dim i as integer
+    dim item as integer
+    dim maxLevel as integer
+    dim cardLevel as integer
+    
+    Inventory(ItemIds.Auth) = 0
+    
+    maxLevel = NOACCESS
+    for i = 0 to NumInvSlots-1
+        item = InvSlots(i)
+        cardLevel = MapItems_GetCardLevel(item)
+        if cardLevel > maxLevel then
+            maxLevel = cardLevel
+        end if
+    next i
+    
+    Inventory(ItemIds.Auth) = maxLevel
     
 end sub
 
@@ -4914,8 +4835,9 @@ function LD2_TileIsSolid(tileId as integer) as integer
     
 end function
 
-sub LD2_ShutDown
+sub Game_ShutDown
     
+    kill DATA_DIR+"save/session.ld2"
     LD2_StopMusic
     LD2_ReleaseSound
     FreeCommon
@@ -5002,21 +4924,21 @@ SUB LD2_CountFrame
 
 END SUB
 
-FUNCTION LD2_isTestMode() as integer
+FUNCTION Game_isTestMode() as integer
     
-    return LD2_HasFlag(TESTMODE)
+    return Game_hasFlag(TESTMODE)
     
 END FUNCTION
 
-FUNCTION LD2_isDebugMode() as integer
+FUNCTION Game_isDebugMode() as integer
     
-    return LD2_HasFlag(DEBUGMODE)
+    return Game_hasFlag(DEBUGMODE)
     
 END FUNCTION
 
 sub LD2_LogDebug(message as string)
     
-    if LD2_IsDebugMode() then
+    if Game_isDebugMode() then
         logdebug message
     end if
     
@@ -5126,7 +5048,10 @@ sub LD2_RenderElement(e as ElementType ptr)
     dim top as integer, btm as integer
     dim pixels as integer
     dim maxpixels as integer
-    dim relY as integer
+    dim parentX as integer
+    dim parentY as integer
+    dim parentW as integer
+    dim parentH as integer
     
     dim _word as string
     dim printWord as integer
@@ -5144,10 +5069,16 @@ sub LD2_RenderElement(e as ElementType ptr)
     if e->parent = 0 then
         if e->background = -1 then e->background = 0
     end if
-    relY = LD2_GetParentY(e)
-    if e->y + relY < relY then
+    parentY = LD2_GetParentY(e)
+    if e->y + parentY < parentY then
         exit sub
     end if
+    parentX = LD2_GetParentX(e)
+    if e->x + parentX < parentX then
+        exit sub
+    end if
+    parentW = LD2_GetParentW(e)
+    parentH = LD2_GetParentH(e)
     
     d = (FONT_H*e->text_height): textHeight = int(d)
     d = (FONT_W*e->text_spacing)-FONT_W: textSpacing = int(d)
@@ -5193,23 +5124,31 @@ sub LD2_RenderElement(e as ElementType ptr)
         maxLineChars = len(newText)
     end if
     
-    if e->w = -1 then e->is_auto_width = 1
+    w = e->w
+    h = e->h
+    if parentW = -1 then parentW = SCREEN_W
+    if parentH = -1 then parentH = SCREEN_H
+    if (e->w = -1) and (maxpixels > parentW) then
+        w = parentW
+    elseif e->w = -1 then
+        e->is_auto_width = 1
+    end if
     if e->h = -1 then e->is_auto_height = 1
-    if e->is_auto_width  then e->w = textWidth
-    if e->is_auto_height then e->h = (numLineBreaks+1)*textHeight
+    w = iif(e->is_auto_width, textWidth, w)
+    h = iif(e->is_auto_height, (numLineBreaks+1)*textHeight, h)
     
-    totalWidth  = e->w+e->padding_x+e->border_width
-    totalHeight = e->h+e->padding_y+e->border_width
+    totalWidth  = w+e->padding_x*2+e->border_width*2
+    totalHeight = h+e->padding_y*2+e->border_width*2
     
-    if e->is_centered_x then e->x = int((SCREEN_W-totalWidth)/2)
-    if e->is_centered_y then e->y = int((SCREEN_H-totalHeight)/2) '- parentH
+    if e->is_centered_x then e->x = int((parentW-totalWidth)/2)
+    if e->is_centered_y then e->y = int((parentH-totalHeight)/2) '- parentH
     
     if e->border_width > 0 then
 
-        lft = e->x
-        top = e->y + relY
-        rgt = lft+e->w+e->padding_x*2+e->border_width
-        btm = top+e->h+e->padding_y*2+e->border_width
+        lft = e->x + parentX
+        top = e->y + parentY
+        rgt = lft+w+e->padding_x*2+e->border_width
+        btm = top+h+e->padding_y*2+e->border_width
         
         LD2_fill lft, top, totalWidth, e->border_width, e->border_color, 1
         LD2_fill lft, top, e->border_width, totalHeight, e->border_color, 1
@@ -5218,8 +5157,8 @@ sub LD2_RenderElement(e as ElementType ptr)
 
     end if
 
-    x = e->x+e->border_width: y = e->y+e->border_width+relY
-    w = e->w+e->padding_x*2: h = e->h+e->padding_y*2
+    x = e->x+e->border_width+parentX: y = e->y+e->border_width+parentY
+    w += e->padding_x*2: h += e->padding_y*2
     
     if e->background >= 0 then
         backgroundAlpha = int(e->background_alpha * 255)
@@ -5227,9 +5166,9 @@ sub LD2_RenderElement(e as ElementType ptr)
     end if
     SpritesFont.setAlphaMod(int(e->text_alpha * 255))
     
-    x = e->x+e->padding_x+e->border_width: y = e->y+e->padding_y+e->border_width+relY
-    if e->text_is_centered then x += int((e->w-textWidth)/2) '- center for each line break -- todo
-    if e->text_align_right then x = (e->x+e->padding_x+e->border_width+e->w)-textWidth
+    x = e->x+e->padding_x+e->border_width+parentX: y = e->y+e->padding_y+e->border_width+parentY
+    if e->text_is_centered then x += int((w-textWidth)/2) '- center for each line break -- todo
+    if e->text_align_right then x = (e->x+e->padding_x+e->border_width+w)-textWidth
     fx = x: fy = y
 
     idx = 0
@@ -5263,7 +5202,7 @@ sub LD2_RenderElement(e as ElementType ptr)
                 _word = ltrim(_word)
                 doLtrim = 0
             end if
-            if pixels > e->w then
+            if pixels > w then
                 fy += textHeight
                 fx = x
                 _word = ltrim(_word)
@@ -5352,6 +5291,21 @@ function LD2_GetParentBackround(e as ElementType ptr) as integer
     
 end function
 
+function LD2_GetParentX(e as ElementType ptr, x as integer = -999999) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        if x = -999999 then x = 0
+        x += LD2_GetParentX(parent, x)
+        return x
+    else
+        return iif(x = -999999, 0, e->x)
+    end if
+    
+end function
+
 function LD2_GetParentY(e as ElementType ptr, y as integer = -999999) as integer
     
     dim parent as ElementType ptr
@@ -5363,6 +5317,40 @@ function LD2_GetParentY(e as ElementType ptr, y as integer = -999999) as integer
         return y
     else
         return iif(y = -999999, 0, e->y)
+    end if
+    
+end function
+
+function LD2_GetParentW(e as ElementType ptr) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        if parent->w = -1 then
+            return LD2_GetParentW(parent)
+        else
+            return parent->w
+        end if
+    else
+        return -1
+    end if
+    
+end function
+
+function LD2_GetParentH(e as ElementType ptr) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        if parent->h = -1 then
+            return LD2_GetParentH(parent)
+        else
+            return parent->h
+        end if
+    else
+        return -1
     end if
     
 end function
@@ -5485,15 +5473,17 @@ type FileHeader
 end type
 
 type PlayerFileData
-    x as ushort
-    y as ushort
-    weapon as ushort
+    x as short
+    y as short
+    weapon as ubyte
     isFlipped as ubyte
     upper as ubyte
     lower as ubyte
     still as ubyte
-    roomId as ubyte
+    isVisible as ubyte
+    numInvSlots as ubyte
     inventory(MAXINVENTORY-1) as ubyte
+    inventoryMax(MAXINVENTORY-1) as ubyte
     invslots(MAXINVSLOTS-1) as ubyte
 end type
 
@@ -5502,12 +5492,14 @@ type ItemFileData
     y as ubyte
     id as ubyte
     qty as ushort
+    isVisible as ubyte
+    canPickup as ubyte
 end type
 
 type MobFileData
     typeId as ubyte
-    x as ushort
-    y as ushort
+    x as short
+    y as short
     hp as ubyte
     state as ubyte
     isFlipped as ubyte
@@ -5516,6 +5508,7 @@ end type
 type RoomFileHeader
     numItems as ubyte
     numMobs as ubyte
+    scrollX as short
 end type
 
 type RoomFileData
@@ -5528,6 +5521,12 @@ type RoomFileData
     mobs(MAXMOBS-1) as MobFileData
 end type
 
+function Game_SaveCopy (srcfile as string, dstfile as string) as integer
+    
+    return FileCopy(DATA_DIR+"save/"+srcfile, DATA_DIR+"save/"+dstfile)
+    
+end function
+
 sub Game_Save (filename as string)
     
     dim pdata as PlayerFileData
@@ -5537,6 +5536,7 @@ sub Game_Save (filename as string)
     dim savePath as string
     dim roomLoc as ulong
     dim roomId as integer
+    dim tile as integer
     dim x as integer
     dim y as integer
     dim n as integer
@@ -5554,6 +5554,25 @@ sub Game_Save (filename as string)
     
     roomdata.header.numItems = NumItems
     roomdata.header.numMobs  = Mobs.count()
+    roomdata.header.scrollX  = cast(short, int(XShift))
+    for n = 0 to NumDoors-1
+        select case Doors(n).accessLevel
+        case GREENACCESS  : tile = TileIds.DOORGREEN
+        case BLUEACCESS   : tile = TileIds.DOORBLUE
+        case YELLOWACCESS : tile = TileIds.DOORYELLOW
+        case WHITEACCESS  : tile = TileIds.DOORWHITE
+        case REDACCESS    : tile = TileIds.DOORRED
+        end select
+        x = Doors(n).mapX
+        y = Doors(n).mapY
+        TileMap(x, y) = tile
+    next n
+    for n = 0 to NumElevators-1
+        x = Elevators(n).mapX
+        y = Elevators(n).mapY
+        TileMap(x, y) = TileIds.ElevatorDoorLeft
+        TileMap(x+1, y) = TileIds.ElevatorDoorRight
+    next n
     for y = 0 to MAPH-1
         for x = 0 to MAPW-1
             roomdata.tiles(x, y) = cast(ubyte, TileMap(x, y))
@@ -5565,16 +5584,18 @@ sub Game_Save (filename as string)
     for n = 0 to MAXITEMS-1
         roomdata.items(n).x = cast(ubyte, int(Items(n).x/SPRITE_W))
         roomdata.items(n).y = cast(ubyte, int(Items(n).y/SPRITE_H))
-        roomdata.items(n).id = cast(ubyte, int(Items(n).id))
-        roomdata.items(n).qty = cast(ushort, int(Items(n).qty))
+        roomdata.items(n).id = cast(ubyte, Items(n).id)
+        roomdata.items(n).qty = cast(ushort, Items(n).qty)
+        roomdata.items(n).isVisible = cast(ubyte, Items(n).isVisible)
+        roomdata.items(n).canPickup = cast(ubyte, Items(n).canPickup)
     next n
     i = 0
     Mobs.resetNext
     while Mobs.canGetNext()
         Mobs.getNext mob
         roomdata.mobs(i).typeId = cast(ubyte, mob.id)
-        roomdata.mobs(i).x = cast(ushort, mob.x)
-        roomdata.mobs(i).y = cast(ushort, mob.y)
+        roomdata.mobs(i).x = cast(short, mob.x)
+        roomdata.mobs(i).y = cast(short, mob.y)
         roomdata.mobs(i).hp = cast(ubyte, mob.life)
         roomdata.mobs(i).state = cast(ubyte, mob.state)
         roomdata.mobs(i).isFlipped = cast(ubyte, mob.flip)
@@ -5589,16 +5610,18 @@ sub Game_Save (filename as string)
         roomdata.mobs(i).isFlipped = 0
     next j
     
-    pdata.x         = cast(ushort, int(Player.x))
-    pdata.y         = cast(ushort, int(Player.y))
+    pdata.x         = cast(short, int(Player.x))
+    pdata.y         = cast(short, int(Player.y))
     pdata.weapon    = cast(ushort, Player.weapon)
     pdata.isFlipped = cast(ubyte, Player.flip)
     pdata.upper     = cast(ubyte, int(Player.uAni))
     pdata.lower     = cast(ubyte, int(Player.lAni))
     pdata.still     = cast(ubyte, int(Player.stillAni))
-    pdata.roomId    = cast(ubyte, roomId)
+    pdata.isVisible = cast(ubyte, Player.is_visible)
+    pdata.numInvSlots = cast(ubyte, NumInvSlots)
     for n = 0 to MAXINVENTORY-1
         pdata.inventory(n) = cast(ubyte, Inventory(n))
+        pdata.inventoryMax(n) = cast(ubyte, InventoryMax(n))
     next n
     for n = 0 to MAXINVSLOTS-1
         pdata.invslots(n) = cast(ubyte, InvSlots(n))
@@ -5616,12 +5639,10 @@ sub Game_Save (filename as string)
         if header.locRooms(roomId) > 0 then
             roomLoc = header.locRooms(roomId)
         else
-            roomLoc = sizeof(header)+sizeof(pdata)+sizeof(roomdata)*header.numRooms
+            roomLoc = sizeof(header)+sizeof(pdata)+sizeof(roomdata)*header.numRooms+1
             header.numRooms += 1
             header.locRooms(roomId) = roomLoc
         end if
-        print "save room id : "+str(roomId)
-        print "save room loc: "+str(roomLoc)
     else
         header.version = "1.01.150"
         header.numRooms = 1
@@ -5636,19 +5657,18 @@ sub Game_Save (filename as string)
     open filename for binary as savefile
         put #savefile, , header
         put #savefile, , pdata
-        seek #savefile, roomLoc
-        put #savefile, , roomdata
+        put #savefile, roomLoc, roomdata
     close #savefile
     
 end sub
 
-sub Game_Load (filename as string, roomId as integer = -1)
+function Game_Load (filename as string, roomId as integer = -1) as integer
     
     dim pdata as PlayerFileData
     dim roomdata as RoomFileData
     dim header as FileHeader
     dim mob as Mobile
-    dim savePath as string
+    dim loadPath as string
     dim roomLoc as ulong
     dim numMobs as integer
     dim x as integer
@@ -5659,14 +5679,14 @@ sub Game_Load (filename as string, roomId as integer = -1)
     dim itemId as ubyte
     dim qty as ubyte
     
-    savePath = DATA_DIR+"save/"
-    if dir(savePath, fbDirectory) <> savePath then
-        mkdir savePath
+    loadPath = DATA_DIR+"save/"
+    if dir(loadPath, fbDirectory) <> loadPath then
+        mkdir loadPath
     end if
     
-    filename = savePath+filename
+    filename = loadPath+filename
     if (fileexists(filename) = 0) then
-        exit sub
+        return 0
     end if
     
     dim loadfile as integer
@@ -5687,19 +5707,17 @@ sub Game_Load (filename as string, roomId as integer = -1)
         if loadPlayerData then
             get #loadfile, , pdata
             if roomId = -1 then
-                roomId = pdata.roomId
+                roomId = pdata.inventory(ItemIds.CurrentRoom)
+                Map_Load str(roomId)+"th.ld2", 1, 1
             end if
         end if
         if loadRoomData then
             roomLoc = header.locRooms(roomId)
-print "load room id : "+str(roomId)
-print "load room loc: "+str(roomLoc)
             if roomLoc = 0 then
                 close #loadfile
-                exit sub
+                return 1
             end if
-            seek #loadfile, roomLoc
-            get #loadfile, , roomdata
+            get #loadfile, roomLoc, roomdata
         end if
     close #loadfile
     
@@ -5711,18 +5729,21 @@ print "load room loc: "+str(roomLoc)
         Player.uAni = pdata.upper
         Player.lAni = pdata.lower
         Player.stillAni = pdata.still
+        Player.is_visible = pdata.isVisible
+        NumInvSlots = pdata.numInvSlots
         for n = 0 to MAXINVENTORY-1
             Inventory(n) = pdata.inventory(n)
+            InventoryMax(n) = pdata.inventoryMax(n)
         next n
         for n = 0 to MAXINVSLOTS-1
             InvSlots(n) = pdata.invslots(n)
-            '// call addtostatus?
         next n
     end if
     
     if loadRoomData then
         NumItems = roomdata.header.numItems
         numMobs = roomdata.header.numMobs
+        XShift = roomdata.header.scrollX
         for y = 0 to MAPH-1
             for x = 0 to MAPW-1
                 TileMap(x, y) = roomdata.tiles(x, y)
@@ -5731,11 +5752,13 @@ print "load room loc: "+str(roomLoc)
                 AniMap(x, y) = roomdata.animations(x, y)
             next x
         next y
-        for n = 0 to NumItems-1
+        for n = 0 to MAXITEMS-1
             Items(n).x = roomdata.items(n).x
             Items(n).y = roomdata.items(n).y
             Items(n).id = roomdata.items(n).id
             Items(n).qty = roomdata.items(n).qty
+            Items(n).isVisible = roomdata.items(n).isVisible
+            Items(n).canPickup = roomdata.items(n).canPickup
             Items(n).x *= SPRITE_W
             Items(n).y *= SPRITE_H
         next n
@@ -5749,6 +5772,60 @@ print "load room loc: "+str(roomLoc)
             mob.flip = roomdata.mobs(n).isFlipped
             Mobs.add mob
         next n
+        MobsWereLoaded = 1
     end if
+    
+    return 1
+    
+end function
+
+sub Game_Reset()
+    
+    dim n as integer
+    
+    '///////////////////////////////////////////////////////////////////
+    ShowLightBG = 1
+    ShowLightFG = 1
+    Gravity     = 0.06
+    XShift      = 0
+    '///////////////////////////////////////////////////////////////////
+    NumItems = 0
+    NumDoors = 0
+    NumElevators = 0
+    NumGuts = 0
+    NumSwaps = 0
+    NumSwitches = 0
+    NumTeleports = 0
+    NumInvSlots = 8
+    '///////////////////////////////////////////////////////////////////
+    CanSaveMap = 0
+    MobsWereLoaded = 0
+    '///////////////////////////////////////////////////////////////////
+    Player.x = 0
+    Player.y = 0
+    Player.vx = 0
+    Player.vy = 0
+    Player.state = 0
+    Player.stateTimestamp = 0
+    Player.landTime = 0
+    Player.actionStartTime = 0
+    Player.weapon = 0
+    Player.is_shooting = 0
+    Player.is_visible = 1
+    Player.is_lookingdown = 0
+    Player.flip = 0
+    Player.lAni = 0
+    Player.uAni = 0
+    Player.stillAni = 0
+    Player.moved = 0
+    '///////////////////////////////////////////////////////////////////
+    for n = 0 to MAXINVENTORY-1
+        Inventory(n) = 0
+        InventoryMax(n) = 0
+    next n
+    for n = 0 to MAXINVSLOTS-1
+        InvSlots(n) = 0
+    next n
+    '///////////////////////////////////////////////////////////////////
     
 end sub

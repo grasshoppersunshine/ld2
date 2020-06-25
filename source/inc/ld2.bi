@@ -45,6 +45,12 @@ enum TileIds
     RadiationSuitTorn    = 66
     RadiationSuitBloody  = 67
     RoofKeypad           = 49
+    SaveMachineA0        = 146
+    SaveMachineA1        = 147
+    SaveMachineB0        = 148
+    SaveMachineB1        = 149
+    SaveMachineC0        = 250
+    SaveMachineC1        = 251
     Sink                 = 117
     SpinningFan          = 3
     ToxicGas             = 61
@@ -95,6 +101,8 @@ enum ItemIds
     '=======================================
     Active410         = 60
     ElevatorMenu      = 61
+    DoorTop           = 60
+    DoorBottom        = 61
     '=======================================
     Lives             = 70
     HP                = 71
@@ -504,6 +512,8 @@ CONST MUSICCHANGE   = &h2000
 CONST NOMOBS        = &h4000
 CONST REVEALTEXT    = &h8000
 CONST REVEALDONE    = &h10000
+CONST SAVEGAME      = &h20000
+CONST LOADGAME      = &h40000
 
 '======================
 '= SCENE POSES

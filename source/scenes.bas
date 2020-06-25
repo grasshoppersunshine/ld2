@@ -142,7 +142,7 @@ end sub
 
 function Scene1Go () as integer
 
-	IF LD2_isDebugMode() THEN LD2_Debug "Scene1Go()"
+	IF Game_isDebugMode() THEN LD2_Debug "Scene1Go()"
 
     LD2_SetSceneMode LETTERBOX
 	Mobs_Clear
@@ -527,9 +527,8 @@ sub Scene5EndConditions()
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneElevator, 1
     
-    if Player_GetItemQty(ItemIds.CurrentRoom) <> Rooms.WeaponsLocker then
+    if Player_GetCurrentRoom() <> Rooms.WeaponsLocker then
         Map_Load "7th.ld2"
-        Player_SetItemQty ItemIds.CurrentRoom, Rooms.WeaponsLocker
     end if
     
     Map_PutTile 44, 9, 16, 1: Map_PutTile 45, 9, 16, 1
@@ -689,7 +688,6 @@ function Scene5Go() as integer
     
     '- 45,10
     LD2_WriteText ""
-    Player_SetItemQty ItemIds.CurrentRoom, 7
     Map_Load "7th.ld2"
     
     ClearPoses
@@ -794,9 +792,6 @@ function Scene7Go() as integer
     if DoScene("SCENE-7A") then return 1
     
     LD2_SetSceneMode MODEOFF
-    
-    Player_SetItemQty ItemIds.CurrentRoom,  7
-    
     Player_SetItemQty ItemIds.SceneWeapons1, 1
     
     return 0
@@ -834,7 +829,6 @@ function SceneBarneyPlanGo() as integer
     LD2_cls 1, 0
     LD2_RefreshScreen
     
-    Player_SetItemQty ItemIds.CurrentRoom, 20
     Map_Load "20th.ld2"
     Mobs_Clear
     LD2_SetSceneMode LETTERBOX
@@ -957,7 +951,6 @@ sub SceneLobbyEndConditions()
     Player_SetItemQty ItemIds.SceneLobby, 1
     
     Map_Load "7th.LD2"
-    Player_SetItemQty ItemIds.CurrentRoom, 7
     
 end sub
 
@@ -1367,7 +1360,7 @@ sub ScenePortalEndConditions
     
     Mobs_Clear
     Mobs_Add 208, 143, MobIds.Boss2
-    LD2_SetBossBar MobIds.Boss2
+    Game_setBossBar MobIds.Boss2
     Player_SetAccessLevel NOACCESS
     LD2_PlayMusic Tracks.Boss
     LD2_SetMusicVolume 1.0

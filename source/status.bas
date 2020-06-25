@@ -365,7 +365,7 @@ END SUB
 
 SUB EStatusScreen (currentRoomId AS INTEGER)
 	
-	IF LD2_isDebugMode() THEN LD2_Debug "LD2_EStatusScreen (" + STR(currentRoomId) + " )"
+	IF Game_isDebugMode() THEN LD2_Debug "LD2_EStatusScreen (" + STR(currentRoomId) + " )"
 	
 	DIM top AS INTEGER
 	DIM w AS INTEGER
@@ -411,7 +411,7 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
     LD2_PlaySound Sounds.uiMenu
 	
     dim roomsFile as string
-    roomsFile = iif(LD2_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
+    roomsFile = iif(Game_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
 	ElevatorFile = FREEFILE
 	OPEN DATA_DIR+roomsFile FOR INPUT AS ElevatorFile
 	DO WHILE NOT EOF(ElevatorFile)
@@ -591,7 +591,6 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
         END IF
         IF keypress(KEY_ENTER) or keypress(KEY_SPACE) or mouseLB() THEN
             LD2_PlaySound Sounds.uiSelect
-            Player_SetItemQty ItemIds.CurrentRoom, selectedRoom
             doLoadMap = 1
             EXIT DO
         END IF
@@ -1171,6 +1170,7 @@ function STATUS_DialogYesNo(message as string) as integer
     dialog.background_alpha = STATUS_DIALOG_ALPHA_UNIT
     dialog.border_width = 1
     dialog.border_color = 15
+    title.text_height = 2.0
     
     halfX = 160
     halfY = 100
@@ -1202,7 +1202,7 @@ function STATUS_DialogYesNo(message as string) as integer
     dialog.y = halfY - pixels * modh
     dialog.w = pixels * modw * 2
     dialog.h = pixels * modh * 2
-    title.x = dialog.x + fontW
+    title.x = fontW
     title.y = fontH
     optionYes.y = fontH*4.5
     optionYes.padding_x = fontW: optionYes.padding_y = 2
@@ -1287,3 +1287,119 @@ function STATUS_DialogYesNo(message as string) as integer
     return selections(selection)
     
 end function
+
+sub STATUS_DialogOk(message as string)
+    
+    dim e as double
+    dim pixels as integer
+    dim halfX as integer
+    dim halfY as integer
+    dim x as integer
+    dim y as integer
+    dim w as integer
+    dim h as integer
+    
+    dim dialog as ElementType
+    dim title as ElementType
+    dim optionOk as ElementType
+    
+    dim fontW as integer
+    dim fontH as integer
+    
+    fontW = LD2_GetFontWidthWithSpacing()
+    fontH = LD2_GetFontHeightWithSpacing()
+    
+    LD2_InitElement @dialog
+    LD2_InitElement @title, message, 31
+    LD2_InitElement @optionOk, "OK", 31, ElementFlags.CenterX
+    
+    dialog.background = STATUS_DIALOG_COLOR
+    dialog.background_alpha = STATUS_DIALOG_ALPHA_UNIT
+    dialog.border_width = 1
+    dialog.border_color = 15
+    title.text_height = 2.0
+    
+    halfX = 160
+    halfY = 100
+    
+    dim modw as double: modw = 1.6
+    dim modh as double: modh = 0.8
+    
+    LD2_PlaySound Sounds.uiMenu
+	
+	LD2_SaveBuffer 2
+	LD2_CopyBuffer 1, 2
+	
+    getEaseInInterval(1)
+	do
+        e = getEaseInInterval(0, 3)
+        pixels = int(e * 50)
+        dialog.x = halfX - pixels * modw
+        dialog.y = halfY - pixels * modh
+        dialog.w = pixels * modw * 2
+        dialog.h = pixels * modh * 2
+        LD2_CopyBuffer 2, 1
+        LD2_RenderElement @dialog
+        LD2_RefreshScreen
+        PullEvents
+	loop while e < 1
+
+    pixels = 50
+    dialog.x = halfX - pixels * modw
+    dialog.y = halfY - pixels * modh
+    dialog.w = pixels * modw * 2
+    dialog.h = pixels * modh * 2
+    title.x = fontW
+    title.y = fontH
+    optionOk.y = fontH*6.0
+    optionOk.padding_x = fontW: optionOk.padding_y = 2
+    optionOk.background = 70
+    optionOk.text_is_monospace = 1
+    
+    LD2_ClearElements
+    LD2_AddElement @dialog
+    LD2_AddElement @title, @dialog
+    LD2_AddElement @optionOk, @dialog
+    
+    do
+        LD2_CopyBuffer 2, 1
+        LD2_RenderElements
+		LD2_RefreshScreen
+        PullEvents
+        if keypress(KEY_ENTER) then
+            LD2_PlaySound Sounds.uiSelect
+            exit do
+        end if
+        if keypress(KEY_DOWN) then
+            LD2_PlaySound Sounds.uiInvalid
+        end if
+        if keypress(KEY_UP) then
+            LD2_PlaySound Sounds.uiInvalid
+        end if
+        if keypress(KEY_ESCAPE) then
+            LD2_PlaySound Sounds.uiCancel
+            exit do
+        end if
+    loop
+    
+    LD2_ClearElements
+    
+    getEaseOutInterval(1)
+	do
+        pixels = int(e * 50)
+        dialog.x = halfX - pixels * modw
+        dialog.y = halfY - pixels * modh
+        dialog.w = pixels * modw * 2
+        dialog.h = pixels * modh * 2
+        LD2_CopyBuffer 2, 1
+        LD2_RenderElement @dialog
+        LD2_RefreshScreen
+        PullEvents
+        e = getEaseOutInterval(0, 3)
+	loop while e > 0
+    
+    LD2_CopyBuffer 2, 1
+    LD2_RefreshScreen
+    LD2_RestoreBuffer 2
+    
+end sub
