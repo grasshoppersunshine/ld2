@@ -211,6 +211,7 @@ end enum
 enum UpperSprites
     HoldMachinegun     = 8
     HoldMagnum         = 14
+    HoldMagnumLeft     = 20
     HoldPistol         = 70 '69
     HoldShotgun        = 1
     JumpPistol         = 68
@@ -222,6 +223,8 @@ enum UpperSprites
     ShootMachineGunZ   = 10
     ShootMagnumA       = 15
     ShootMagnumZ       = 17
+    ShootMagnumLeftA   = 18
+    ShootMagnumLeftZ   = 20
     ShootPistolA       = 12
     ShootPistolZ       = 13
     ShootShotgunA      = 2

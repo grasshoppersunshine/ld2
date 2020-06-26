@@ -921,7 +921,7 @@ SCENE-PORTAL-1CC
     Whose?
     
     STEVE
-    The Surpreme Leader.
+    The Supreme Leader.
     
     LARRY
     Oh...
@@ -984,7 +984,7 @@ SCENE-PORTAL-1CF
     ...
     ... Larry...
     
-    LARRY
+    LARRY_SURPRISED
     ...
     
     STEVE_DYING
@@ -995,7 +995,7 @@ END
 
 SCENE-PORTAL-1D
     
-    LARRY
+    LARRY_SURPRISED
     Steve!!!
     
     BARNEY [face left]

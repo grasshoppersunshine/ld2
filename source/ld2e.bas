@@ -89,8 +89,8 @@
     end type
     
     type FlashType
-        x as integer
-        y as integer
+        x as double
+        y as double
         timestamp as double
     end type
     
@@ -939,14 +939,24 @@ end sub
 
 SUB LD2_GenerateSky()
     
-  LD2_cls 2, 66
+  LD2_cls 2, 64
   
   DIM x as integer
   DIM y as integer
   DIM r as integer
   DIM i as integer
   
-  FOR i = 0 TO 9999
+    for i = 0 to 9999
+        x = SCREEN_W*RND(1)
+      y = SCREEN_H*RND(1)
+        r = int(4*RND(1))
+        if r = 0 then
+            LD2_pset x, y, 65, 2
+        else
+            LD2_pset x, y, 64, 2
+        end if
+    next i
+  FOR i = 0 TO 1499
     'DO
       x = SCREEN_W*RND(1)
       y = SCREEN_H*RND(1)
@@ -964,10 +974,16 @@ SUB LD2_GenerateSky()
       '  END IF
       'END IF
     'LOOP
-    r = 2*RND(1)
-    LD2_pset x, y, 66+r, 2
+    r = int(2*RND(1))
+    LD2_pset x, y, 65+r, 2
   NEXT i
-  FOR i = 0 TO 99
+    FOR i = 0 TO 999
+        x = SCREEN_W*RND(1)
+      y = SCREEN_H*RND(1)
+        r = int(2*RND(1))
+    LD2_pset x, y, 66+r, 2
+    next i
+  FOR i = 0 TO 499
     'DO
       x = SCREEN_W*RND(1)
       y = SCREEN_H*RND(1)
@@ -988,12 +1004,12 @@ SUB LD2_GenerateSky()
     r = 4*RND(1)
     IF INT(4*RND(1)) = 1 THEN
       IF INT(2*RND(1)) = 1 THEN
-        r = r - 22
+        'r = r - 16
       ELSE
-        r = r + 12
+        'r = r + 16
       END IF
     END IF
-    LD2_pset x, y, 72+r, 2
+    LD2_pset x, y, 67+r, 2
   NEXT i
 
 END SUB
@@ -1046,15 +1062,39 @@ function toMapY(screenY as double) as integer
     
 end function
 
-function toScreenX(mapX as integer) as integer
+function toScreenX(mapX as double) as integer
     
-    return mapX * SPRITE_W
+    return int(mapX * SPRITE_W - XShift)
     
 end function
 
-function toScreenY(mapY as integer) as integer
+function toScreenY(mapY as double) as integer
     
-    return mapY * SPRITE_H
+    return int(mapY * SPRITE_H)
+    
+end function
+
+function toUnitX(screenX as double) as double
+    
+    return screenX / SPRITE_W
+    
+end function
+
+function toUnitY(screenY as double) as double
+    
+    return screenY / SPRITE_H
+    
+end function
+
+function toPixelsX(unitX as double) as integer
+    
+    return int(unitX * SPRITE_W)
+    
+end function
+
+function toPixelsY(unitY as double) as integer
+    
+    return int(unitY * SPRITE_H)
     
 end function
 
@@ -1900,7 +1940,7 @@ sub Elevators_Draw ()
     
 end sub
 
-sub Flashes_Add (x as integer, y as integer)
+sub Flashes_Add (x as double, y as double)
     
     dim n as integer
     
@@ -1917,6 +1957,7 @@ sub Flashes_Animate ()
     
     dim flash as FlashType ptr
     dim mapX as integer, mapY as integer
+    dim fmx as integer, fmy as integer
     dim off as integer
     dim x as integer, y as integer
     dim i as integer
@@ -1924,16 +1965,18 @@ sub Flashes_Animate ()
     
     for i = 0 to NumFlashes-1
         flash = @Flashes(i)
+        fmx = int(flash->x)
+        fmy = int(flash->y)
         off = 0
-        if (timer - flash->timestamp) > 0.10 then
+        if (timer - flash->timestamp) > 0.085 then
             off = 1
         end if
         if off = 0 then
             for y = -2 to 2
-                mapY = flash->y + y
+                mapY = fmy + y
                 if (mapY < 0) or (mapY >= MAPH) then continue for
                 for x = -3 to 3
-                    mapX = flash->x + x
+                    mapX = fmx + x
                     if (mapX < 0) or (mapX >= MAPW) then continue for
                     if FloorMap(mapX, mapY) = 0 then
                         LightMapFG(mapX, mapY) = (LightMapFG(mapX, mapY) or &h100)
@@ -1942,10 +1985,10 @@ sub Flashes_Animate ()
             next y
         else
             for y = -2 to 2
-                mapY = flash->y + y
+                mapY = fmy + y
                 if (mapY < 0) or (mapY >= MAPH) then continue for
                 for x = -3 to 3
-                    mapX = flash->x + x
+                    mapX = fmx + x
                     if (mapX < 0) or (mapX >= MAPW) then continue for
                     if FloorMap(mapX, mapY) = 0 then
                         LightMapFG(mapX, mapY) = (LightMapFG(mapX, mapY) or &h100) xor &h100
@@ -1964,6 +2007,18 @@ sub Flashes_Animate ()
             end if
         end if
     next i
+    
+end sub
+
+sub Flashes_Draw ()
+    
+    dim flash as FlashType ptr
+    dim n as integer
+    
+    for n = 0 to NumFlashes-1
+        flash = @Flashes(n)
+        LD2_fillm toScreenX(flash->x-1.5), toScreenY(flash->y-1.5), toPixelsX(3), toPixelsY(3), 15, 1, &h3f
+    next n
     
 end sub
 
@@ -2180,6 +2235,7 @@ SUB LD2_RenderFrame
     Doors_Draw
     MapItems_Draw
     Guts_Draw
+    Flashes_Draw
     
     if ShowLightFG then
         LD2_LogDebug "LD2_RenderFrame() - Draw Light FG"
@@ -3350,7 +3406,7 @@ sub Mobs_Animate_GruntMachineGun(mob as Mobile)
             end if
             if (mob.shooting and 7) = 0 then
                 LD2_PlaySound Sounds.machinegun2
-                Flashes_Add toMapX(mob.x+7), toMapY(mob.y+7)
+                Flashes_Add toUnitX(iif(mob.flip=0,mob.x+toPixelsX(1.0),mob.x)), toUnitY(mob.y+toPixelsY(0.5))
                 if mob.flip = 0 then
                     for i = mob.x + 15 to mob.x + SCREEN_W step 8
                         px = i \ 16: py = int(mob.y + 10) \ 16
@@ -3452,7 +3508,7 @@ sub Mobs_Animate_GruntPistol(mob as Mobile)
         if mob.shooting > 0 then
             if (mob.shooting and 15) = 0 then
                 LD2_PlaySound Sounds.pistol2
-                Flashes_Add toMapX(mob.x+7), toMapY(mob.y+7)
+                Flashes_Add toUnitX(iif(mob.flip=0,mob.x+toPixelsX(1.0),mob.x)), toUnitY(mob.y+toPixelsY(0.5))
                 if mob.flip = 0 then
                     for i = mob.x + 15 to mob.x + SCREEN_W step 8
                         px = i \ 16: py = int(mob.y + 10) \ 16
@@ -3914,7 +3970,7 @@ sub Player_Animate()
                 machineTimer = timer
             end if
         case ItemIds.Magnum
-            Player.uAni = Player.uAni + .15
+            Player.uAni = Player.uAni + .17
             if Player.uAni >= 18 then Player.uAni = 14: Player.is_shooting = 0
             Player.stillani = 14
         end select
@@ -4004,6 +4060,7 @@ sub Player_Draw()
     
     LD2_LogDebug "Player_Draw()"
     
+    dim offset as integer
     dim px as integer, py as integer
     dim lan as integer, uan as integer
     dim idx as integer
@@ -4049,24 +4106,20 @@ sub Player_Draw()
                 end if
             else
                 if lan = LowerSprites.Standing then '- legs still/standing-upright
-                    if Player.weapon = ItemIds.Pistol then
-                        SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 1, -1), py, lan, Player.flip)
-                    else
-                        SpritesLarry.putToScreenEx(px, py, lan, Player.flip)
-                    end if
+                    SpritesLarry.putToScreenEx(px, py, lan, Player.flip)
                 else
-                    if Player.weapon = ItemIds.Pistol then
-                        if Player.state = PlayerStates.Jumping then
-                            SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, -1, 1), py, lan, Player.flip)
-                        else
-                            SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, -1, 1), py, lan, Player.flip)
-                        end if
-                    else
-                        SpritesLarry.putToScreenEx(px+iif(Player.flip, 2, -2), py, lan, Player.flip)
-                    end if
+                    SpritesLarry.putToScreenEx(px+iif(Player.flip, 2, -2), py, lan, Player.flip)
                 end if
                 if (Player.is_shooting and (Player.weapon = ItemIds.Pistol)) or(int(uan) = UpperSprites.PointPistol) then
-                    SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 3, -3), py, uan, Player.flip)
+                    SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 4, -4), py, uan, Player.flip)
+                elseif Player.weapon = ItemIds.Magnum then
+                    offset = int(uan - int(UpperSprites.ShootMagnumA))
+                    SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 6, -6), py, UpperSprites.ShootMagnumA+offset, Player.flip)
+                    if Player.is_shooting then
+                        SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 2, -2), py, UpperSprites.ShootMagnumLeftA+offset, Player.flip)
+                    else
+                        SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 2, -2), py, UpperSprites.HoldMagnumLeft, Player.flip)
+                    end if
                 else
                     SpritesLarry.putToScreenEx(px, py, uan, Player.flip)
                 end if
@@ -4863,6 +4916,7 @@ end function
 function Player_Shoot(is_repeat as integer = 0) as integer
 
     dim mob AS Mobile
+    dim box as BoxType
     dim mapX as integer, mapY as integer
     dim tile as integer
     dim dist as integer
@@ -4921,9 +4975,17 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         
     case ItemIds.Magnum
         
+        if (is_repeat = 1 and timeSinceLastShot < 0.70) then return 0
+        if (is_repeat = 0 and timeSinceLastShot < 0.50) then return 0
         Inventory(ItemIds.Magnum) -= 1
         damage = HpDamage.Magnum
         fireY = iif(Player.state = PlayerStates.Crouching, 12, 8)
+        Player_Move iif(Player.flip=0,-6,+6), 0
+        
+        if Player.state <> PlayerStates.Jumping then
+            SetPlayerState( PlayerStates.Blocked )
+            Player.lAni = 21 '- make const for legs still/standing
+        end if
         
     case ItemIds.Fist
         
@@ -4947,7 +5009,8 @@ function Player_Shoot(is_repeat as integer = 0) as integer
 
         Player.uAni = Player.uAni + 1
         
-        Flashes_Add toMapX(Player.x+7), toMapY(Player.y+7)
+        box = Player_GetCollisionBox()
+        Flashes_Add toUnitX(iif(Player.flip=0,box.rgt+toPixelsX(0.5),box.lft-toPixelsX(0.5))), toUnitY(box.midY)
         
         if Player.is_lookingdown then
             
@@ -5137,6 +5200,8 @@ function Player_GetCollisionBox() as BoxType
     box.padBtm = SPRITE_H-(y+h)
     box.padLft = x
     box.padRgt = SPRITE_W-(x+w)
+    box.midX = int(Player.x+2.5)
+    box.midY = int(Player.y+8.0)
     
     return box
     
@@ -5177,6 +5242,8 @@ sub Stats_Draw ()
         SpritesLarry.putToScreen(pad, pad+12, 52)
     case ItemIds.MachineGun
         SpritesLarry.putToScreen(pad, pad+12, 53)
+    case ItemIds.Magnum
+        SpritesLarry.putToScreen(pad, pad+12, 80)
     end select
     
     LD2_putTextCol pad+16, pad+3, " "+str(Inventory(ItemIds.Hp)), 15, 1

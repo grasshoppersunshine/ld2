@@ -90,6 +90,8 @@ type BoxType
     padBtm as integer
     padLft as integer
     padRgt as integer
+    midX as integer
+    midY as integer
 end type
 
 enum LayerIds
@@ -113,6 +115,10 @@ declare sub Elevators_Animate ()
 declare sub Elevators_Close (id as integer)
 declare sub Elevators_Open (id as integer)
 declare sub Elevators_Draw ()
+
+declare sub Flashes_Add (x as double, y as double)
+declare sub Flashes_Animate ()
+declare sub Flashes_Draw ()
 
 declare sub Guts_Add (gutsId as integer, x as integer, y as integer, qty as integer, direction as integer = 0)
 declare sub Guts_Animate ()
@@ -149,8 +155,12 @@ declare sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
 
 declare function toMapX(screenX as double) as integer
 declare function toMapY(screenY as double) as integer
-declare function toScreenX(mapX as integer) as integer
-declare function toScreenY(mapY as integer) as integer
+declare function toScreenX(mapX as double) as integer
+declare function toScreenY(mapY as double) as integer
+declare function toUnitX(screenX as double) as double
+declare function toUnitY(screenY as double) as double
+declare function toPixelsX(unitX as double) as integer
+declare function toPixelsY(unitY as double) as integer
 
 declare function Mobs_Api (args as string) as string
 declare sub Mobs_Add (x as integer, y as integer, id as integer)
@@ -206,9 +216,6 @@ declare function Player_GetCurrentRoom () as integer
 declare function Player_GetGotItem() as integer
 declare sub Player_DoAction ()
 declare sub Player_Hurt(damage as integer, contactX as integer, contactY as integer)
-
-declare sub Flashes_Add (x as integer, y as integer)
-declare sub Flashes_Animate ()
 
 declare sub Game_Init ()
 declare function Game_isTestMode () as integer
