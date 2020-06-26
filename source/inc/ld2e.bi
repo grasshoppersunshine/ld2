@@ -72,6 +72,7 @@ end type
 enum GutsIds
     Blood = 1
     BloodSprite
+    Flash
     Glass
     Gibs
     Sparks
@@ -146,6 +147,11 @@ declare sub Map_SetXShift (x as integer)
 declare sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer = LayerIds.Tile)
 declare sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
 
+declare function toMapX(screenX as double) as integer
+declare function toMapY(screenY as double) as integer
+declare function toScreenX(mapX as integer) as integer
+declare function toScreenY(mapY as integer) as integer
+
 declare function Mobs_Api (args as string) as string
 declare sub Mobs_Add (x as integer, y as integer, id as integer)
 declare sub Mobs_GetFirstOfType (mob as Mobile, id as integer)
@@ -199,6 +205,10 @@ declare function Player_GetCollisionBox() as BoxType
 declare function Player_GetCurrentRoom () as integer
 declare function Player_GetGotItem() as integer
 declare sub Player_DoAction ()
+declare sub Player_Hurt(damage as integer, contactX as integer, contactY as integer)
+
+declare sub Flashes_Add (x as integer, y as integer)
+declare sub Flashes_Animate ()
 
 declare sub Game_Init ()
 declare function Game_isTestMode () as integer
@@ -306,8 +316,8 @@ CONST MAXMOBS      = 100 '- per room
 CONST MAXELEVATORS =  12
 CONST MAXSWAPS     =  12
 CONST MAXTELEPORTS =  12
+CONST MAXFLASHES   =  6
 CONST MAXFLOORS    =  24
 CONST MAXINVENTORY =  128
 CONST MAXINVSLOTS  =   8
 CONST MAXTILES     = 251
-CONST MAXEVENTS    =   9

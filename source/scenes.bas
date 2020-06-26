@@ -764,6 +764,7 @@ sub Scene7EndConditions()
     ClearPoses
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneWeapons1, 1
+    Player_SetItemQty ItemIds.Phase, 1
     
 end sub
 
@@ -895,6 +896,7 @@ sub SceneVentCrawlEndConditions()
     ClearPoses
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneVentCrawl, 1
+    Player_SetItemQty ItemIds.Phase, 3
     
     Map_SetXShift 1400
     Player_SetXY 1420, 144
@@ -1301,6 +1303,7 @@ sub SceneWeapons3EndConditions
     ClearPoses
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneWeapons3, 1
+    Player_SetItemQty ItemIds.Phase, 2
     Player_SetXY Player_GetX(), 144
     Player_SetFlip 0
     
@@ -1359,8 +1362,8 @@ sub ScenePortalEndConditions
     Player_SetFlip 1
     
     Mobs_Clear
-    Mobs_Add 208, 143, MobIds.Boss2
-    Game_setBossBar MobIds.Boss2
+    Mobs_Add 208, 143, MobIds.BossPortal
+    Game_setBossBar MobIds.BossPortal
     Player_SetAccessLevel NOACCESS
     LD2_PlayMusic Tracks.Boss
     LD2_SetMusicVolume 1.0
@@ -1372,8 +1375,8 @@ function ScenePortalGo () as integer
     dim Larry as PoseType
     dim Barney as PoseType
     dim Steve as PoseType
-    dim Trooper as PoseType
-    dim Boss2 as PoseType
+    dim Grunt as PoseType
+    dim PortalBoss as PoseType
     dim pausetime as double
     dim i as integer
     dim n as integer
@@ -1381,7 +1384,7 @@ function ScenePortalGo () as integer
     
     LD2_SetSceneMode LETTERBOX
     
-    AddSound Sounds.NoScream  , "scene-no.wav"
+    'AddSound Sounds.NoScream  , "scene-no.wav"
     AddSound Sounds.StevePain0, "steve-pain0.wav"
     AddSound Sounds.StevePain1, "steve-pain1.wav"
     AddSound Sounds.StevePain2, "steve-pain2.wav"
@@ -1389,18 +1392,18 @@ function ScenePortalGo () as integer
     GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
     GetCharacterPose Steve, CharacterIds.Steve, PoseIds.Talking
     GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Talking
-    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Talking
-    GetCharacterPose Boss2, CharacterIds.Boss2, PoseIds.Standing
+    GetCharacterPose Grunt, CharacterIds.Grunt, PoseIds.Talking
+    GetCharacterPose PortalBoss, CharacterIds.PortalBoss, PoseIds.Standing
     ClearPoses
     AddPose @Larry
     AddPose @Steve
     AddPose @Barney
-    AddPose @Trooper
+    AddPose @Grunt
     
     Larry.x = Player_GetX(): Larry.y =  144: Larry.isFlipped = 1
     Steve.x   = 260: Steve.y   = 144: Steve.isFlipped  = 0
     Barney.x  = 240: Barney.y  = 144: Barney.isFlipped = 0
-    Trooper.x = 200: Trooper.y = 144: Trooper.isFlipped = 0
+    Grunt.x   = 200: Grunt.y   = 144: Grunt.isFlipped  = 0
     
     'if DoScene("SCENE-PORTAL-1A") then return 1
     'if DoScene("SCENE-PORTAL-1B") then return 1
@@ -1418,7 +1421,7 @@ function ScenePortalGo () as integer
     'LD2_StopMusic
     if DoScene("SCENE-PORTAL-1CC") then return 1
     
-    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Angry
+    GetCharacterPose Grunt, CharacterIds.Grunt, PoseIds.Angry
     GetCharacterPose Steve, CharacterIds.Steve, PoseIds.Laughing
     if DoScene("SCENE-PORTAL-1CD") then return 1
     
@@ -1432,7 +1435,7 @@ function ScenePortalGo () as integer
     
     GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Surprised
     GetCharacterPose Steve, CharacterIds.Steve, PoseIds.GettingShot
-    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Shooting
+    GetCharacterPose Grunt, CharacterIds.Grunt, PoseIds.Shooting
     x = Steve.x
     
     LD2_SetMusicVolume 1.0
@@ -1440,7 +1443,7 @@ function ScenePortalGo () as integer
     '// Shot 1
     for n = 1 to 4
         PullEvents
-        Trooper.setFrame (n and 1)
+        Grunt.setFrame (n and 1)
         if (n and 1) = 1 then
             for i = 0 to 4
                 Guts_Add GutsIds.Blood, int(x+7), int(Steve.y+7),  1, -rnd(1)*3
@@ -1452,13 +1455,13 @@ function ScenePortalGo () as integer
         if ContinueAfterSeconds(0.0333) then return 1
         if keypress(KEY_ENTER) then return 1
     next n
-    Trooper.firstFrame
+    Grunt.firstFrame
     if ContinueAfterSeconds(1.0) then return 1
     
     '// Shot 2
     for n = 1 to 6
         PullEvents
-        Trooper.setFrame (n and 1)
+        Grunt.setFrame (n and 1)
         if (n and 1) = 1 then
             for i = 0 to 4
                 Guts_Add GutsIds.Blood, int(x+7), int(Steve.y+7),  1, -rnd(1)*3
@@ -1470,16 +1473,16 @@ function ScenePortalGo () as integer
         if ContinueAfterSeconds(0.0333) then return 1
         if keypress(KEY_ENTER) then return 1
     next n
-    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Angry
+    GetCharacterPose Grunt, CharacterIds.Grunt, PoseIds.Angry
     GetCharacterPose Steve, CharacterIds.Steve, PoseIds.Dying
     if ContinueWithBlood(2.0, Steve.x+7, Steve.y+7, 16, 0.5) then return 1
     
-    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Talking
+    GetCharacterPose Grunt, CharacterIds.Grunt, PoseIds.Talking
     if DoScene("SCENE-PORTAL-1CE") then return 1
     RenderScene
     LD2_PlaySound Sounds.noScream
     if ContinueAfterSeconds(1.0) then return 1
-    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Shooting
+    GetCharacterPose Grunt, CharacterIds.Grunt, PoseIds.Shooting
     if ContinueAfterSeconds(0.5) then return 1
     GetCharacterPose Steve, CharacterIds.Steve, PoseIds.GettingShot
     
@@ -1487,7 +1490,7 @@ function ScenePortalGo () as integer
         
         PullEvents
         
-        Trooper.setFrame (n and 1)
+        Grunt.setFrame (n and 1)
         Steve.setFrame int(n / 20)
         Steve.x = int(x)
         x += 0.4
@@ -1514,7 +1517,7 @@ function ScenePortalGo () as integer
         
     next n
     
-    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Angry
+    GetCharacterPose Grunt, CharacterIds.Grunt, PoseIds.Angry
     GetCharacterPose Steve, CharacterIds.Steve, PoseIds.Dying
     if ContinueWithBlood(1.5, Steve.x+7, Steve.y+7, 16, 0.5) then return 1
     
@@ -1537,14 +1540,14 @@ function ScenePortalGo () as integer
     
     GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Talking
     GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Talking
-    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.Talking
+    GetCharacterPose Grunt, CharacterIds.Grunt, PoseIds.Talking
     if DoScene("SCENE-PORTAL-1D") then return 1
     
     GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Shooting
-    GetCharacterPose Trooper, CharacterIds.Trooper, PoseIds.GettingShot
+    GetCharacterPose Grunt, CharacterIds.Grunt, PoseIds.GettingShot
     Barney.isFlipped = 1
     
-    x = Trooper.x
+    x = Grunt.x
     
     LD2_PlayMusic Tracks.Uhoh
     for n = 0 to 89
@@ -1552,7 +1555,7 @@ function ScenePortalGo () as integer
         PullEvents
         
         Barney.setFrame (n and 1)
-        Trooper.x = int(x)
+        Grunt.x = int(x)
         x -= 0.2
         
         if (n and 7) = 0 then
@@ -1573,7 +1576,7 @@ function ScenePortalGo () as integer
     next n
     
     Barney.firstFrame
-    RemovePose @Trooper
+    RemovePose @Grunt
     LD2_PlaySound Sounds.splatter
     Guts_Add GutsIds.Gibs, int(x + 8), 144, 8, 1
     Guts_Add GutsIds.Gibs, int(x + 8), 144, 8, -1
@@ -1610,9 +1613,9 @@ function ScenePortalGo () as integer
     x = Barney.x
     Guts_Add GutsIds.Gibs, int(x + 8), Barney.y - 16, 8, 1
     Guts_Add GutsIds.Gibs, int(x + 8), Barney.y - 16, 8, -1
-    GetCharacterPose Boss2, CharacterIds.Boss2, PoseIds.Standing
-    Boss2.x = Barney.x-32: Boss2.y = Barney.y-16: Boss2.isFlipped = 0
-    AddPose @Boss2
+    GetCharacterPose PortalBoss, CharacterIds.PortalBoss, PoseIds.Standing
+    PortalBoss.x = Barney.x-32: PortalBoss.y = Barney.y-16: PortalBoss.isFlipped = 0
+    AddPose @PortalBoss
     RemovePose @Barney
     if ContinueAfterSlowMo(4.0) then return 1
     

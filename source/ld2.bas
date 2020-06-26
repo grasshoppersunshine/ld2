@@ -111,6 +111,7 @@
     dim shared CustomActions(3) as ActionItem
     dim shared SceneCallback as sub()
     dim shared NextMusicId as integer
+    dim shared RecentDeathTime as double
     
     Start
     END
@@ -436,10 +437,10 @@ FUNCTION DoDialogue() as integer
         characterId = CharacterIds.Janitor
         poseId = PoseIds.Talking
         chatBox = ChatBoxes.Janitor
-	CASE "TROOPER"
-        characterId = CharacterIds.Trooper
+	CASE "GRUNT"
+        characterId = CharacterIds.Grunt
         poseId = PoseIds.Talking
-        chatBox = ChatBoxes.Trooper
+        chatBox = ChatBoxes.Grunt
 	END SELECT
     
     if characterId then
@@ -604,7 +605,7 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
 		case PoseIds.Tongue
             pose.addSprite 33: pose.takeSnapshot
 		END SELECT
-	CASE CharacterIds.Trooper
+	CASE CharacterIds.Grunt
         SELECT CASE poseId
 		CASE PoseIds.Talking
             pose.addSprite 72: pose.takeSnapshot
@@ -642,7 +643,7 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
         case PoseIds.Jumping
             pose.addSprite 119: pose.takeSnapshot
         end select
-    case CharacterIds.Boss2
+    case CharacterIds.PortalBoss
         select case poseId
         case PoseIds.Standing
             pose.addSprite 76,  0,  0
@@ -727,11 +728,11 @@ sub LoadSounds ()
     AddSound Sounds.larryHurt, "larry-hurt.wav"
     AddSound Sounds.larryDie , "larry-die.wav"
     
-    AddSound Sounds.laugh      , "troop-laugh.wav"
-    AddSound Sounds.troopHurt0 , "maybe/splice/alienhurt0.ogg"
-    AddSound Sounds.troopHurt1 , "maybe/splice/alienhurt1.ogg"
-    AddSound Sounds.troopHurt2 , "recorded/bleh.wav"
-    AddSound Sounds.troopDie   , "splice/fuck.wav"
+    AddSound Sounds.laugh      , "grunt-laugh.wav"
+    AddSound Sounds.gruntHurt0 , "maybe/splice/alienhurt0.ogg"
+    AddSound Sounds.gruntHurt1 , "maybe/splice/alienhurt1.ogg"
+    AddSound Sounds.gruntHurt2 , "recorded/bleh.wav"
+    AddSound Sounds.gruntDie   , "splice/fuck.wav"
     AddSound Sounds.machinegun2, "shoot-machinegun.wav"
     AddSound Sounds.pistol2    , "shoot-pistol.wav"
     
@@ -751,6 +752,8 @@ sub LoadSounds ()
     AddSound Sounds.titleStart , "start.wav"
     
     AddSound Sounds.lightSwitch, "lightswitch.wav"
+    
+    AddSound Sounds.NoScream  , "scene-no.wav"
     
 end sub
 
@@ -983,6 +986,7 @@ SUB Main
         Guts_Animate
         Doors_Animate
         Elevators_Animate
+        Flashes_Animate
     end if
 	LD2_RenderFrame
     
@@ -995,10 +999,22 @@ SUB Main
         end if
     end if
     
+    Player_Get player
+    
+    PlayerCheck player
+    SceneCheck player
+    BossCheck player
+    ItemsCheck player
+    
+    select case Player_GetCurrentRoom()
+        case Rooms.Rooftop
+            Rooms_DoRooftop player
+        case Rooms.Basement
+            Rooms_DoBasement player
+    end select
+    
 	LD2_RefreshScreen
 	LD2_CountFrame
-    
-    Player_Get player
     
     if showConsole then
         if keypress(KEY_ESCAPE) or keypress(KEY_SLASH) then
@@ -1121,18 +1137,6 @@ SUB Main
         end if
         continue do
     end if
-    
-    PlayerCheck player
-    SceneCheck player
-    BossCheck player
-    ItemsCheck player
-    
-    select case Player_GetCurrentRoom()
-        case Rooms.Rooftop
-            Rooms_DoRooftop player
-        case Rooms.Basement
-            Rooms_DoBasement player
-    end select
     
     PlayerIsRunning = 0
     if keyboard(KEY_LSHIFT) or keyboard(KEY_KP_0) then
@@ -1551,18 +1555,18 @@ end sub
 sub BeforeMobKill (mob as Mobile ptr)
     
     select case mob->id
-    case MobIds.Boss1
+    case MobIds.BossRooftop
         Game_setBossBar 0
         Game_setFlag MUSICFADEOUT
         MapItems_Add mob->x, mob->y, YELLOWCARD
         Player_AddItem ItemIds.BossRooftopEnd
-    case MobIds.Boss2
+    case MobIds.BossPortal
         Player_SetAccessLevel REDACCESS
         Game_setFlag MUSICCHANGE
         NextMusicId = Tracks.Wandering
-    case MobIds.Troop1, MobIds.Troop2
+    case MobIds.GruntMachineGun, MobIds.GruntPistol
         if int(5*rnd(1)) = 0 then
-            LD2_PlaySound Sounds.troopDie
+            LD2_PlaySound Sounds.gruntDie
         end if
     case MobIds.Rockmonster
         LD2_PlaySound Sounds.rockDie
@@ -1576,8 +1580,8 @@ sub BossCheck (player as PlayerType)
     
     if Player_NotItem(ItemIds.SceneRooftopGotCard) and (Player_GetCurrentRoom() = Rooms.Rooftop) then
         if (player.x <= 888) and Player_NotItem(ItemIds.BossRooftopBegin) then
-            Mobs_Add 500, 144, BOSS1
-            Game_setBossBar BOSS1
+            Mobs_Add 500, 144, MobIds.BossRooftop
+            Game_setBossBar MobIds.BossRooftop
             Player_AddItem ItemIds.BossRooftopBegin
         elseif (player.x <= 1300) and (bossMusicStarted = 0) then
             bossMusicStarted = 1
@@ -2154,6 +2158,10 @@ sub PlayerCheck (player as PlayerType)
     xshift = Map_GetXShift()
     prevRoom = Player_GetCurrentRoom()
     
+    if (timer - RecentDeathTime) > 60 then
+        Game_unsetFlag RECENTDEATH
+    end if
+    
     if Player.y < -12 then
         Map_Load str(Player_GetCurrentRoom()+1)+"th.ld2"
         Player_SetXY p.x, p.y+(13*16)-4
@@ -2234,10 +2242,10 @@ SUB SetAllowedEntities (codeString AS STRING)
 		EXIT DO
 	CASE "ROCK"
 		'Mobs.EnableType ROCKMONSTER
-	CASE "TRO1"
-		'Mobs.EnableType TROOP1
-	CASE "TRO2"
-		'Mobs.EnableType TROOP2
+	CASE "GRMG"
+		'Mobs.EnableType GRUNTMACHINEGUN
+	CASE "GRPS"
+		'Mobs.EnableType GRUNTPISTOL
 	CASE "MINE"
 		'Mobs.EnableType BLOBMINE
 	CASE "JELY"
@@ -2257,8 +2265,8 @@ sub Start
     STATUS_SetLookItemCallback @LD2_LookItem
     
     Game_Init
-    LD2_SetMusicMaxVolume 1.00
-    LD2_SetSoundMaxVolume 0.50
+    LD2_SetMusicMaxVolume 0.75
+    LD2_SetSoundMaxVolume 0.25
     LD2_SetMusicVolume 1.0
     LD2_SetSoundVolume 1.0
     LoadSounds
@@ -2283,7 +2291,7 @@ sub Start
             SCENE_SetScenesFile "2002/tables/scenes.txt"
         end if
 
-        if Game_notFlag(TESTMODE) and Game_notFlag(SKIPOPENING) and Game_notFlag(LOADGAME) then
+        if Game_notFlag(TESTMODE) and Game_notFlag(LOADGAME) and Game_notFlag(SKIPOPENING) then
             if firstLoop then
                 if Game_hasFlag(CLASSICMODE) then
                     TITLE_Opening_Classic
@@ -2297,6 +2305,7 @@ sub Start
                 TITLE_Menu
             end if
         end if
+        Game_UnsetFlag(SKIPOPENING)
 
         if Game_hasFlag(EXITGAME) then
             exit do
@@ -2323,7 +2332,9 @@ sub Start
         
         if Game_notFlag(EXITGAME) then
             Main
-            Game_unsetFlag(EXITGAME)
+            if Game_notFlag(TESTMODE) then
+                Game_unsetFlag(EXITGAME)
+            end if
         end if
         firstLoop = 0
     
@@ -2456,16 +2467,15 @@ function ContinueGame () as integer
     
     LD2_cls 1, 0
     LD2_RenderElement @e
-    LD2_RefreshScreen
+    LD2_FadeIn 3
     
-    WaitSeconds 0.75
+    WaitSeconds 1.5
     if Game_Load(GAMESAVE_FILE) = 0 then
         STATUS_DialogOk "Save File Not Found"
         return 0
     else
         LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
-        LD2_cls 1, 0
-        LD2_RefreshScreen
+        LD2_FadeOut 3
         WaitSeconds 0.25
         LD2_RenderFrame
         LD2_FadeIn 2
@@ -2677,6 +2687,9 @@ sub YouDied ()
     dim startTime as double
     dim spacing as double
     dim fontH as integer
+    dim playedSound as integer
+    
+    Game_setFlag RECENTDEATH: RecentDeathTime = timer
     
     src.x = 0: src.y = 0
     src.w = SCREEN_W: src.h = SCREEN_H
@@ -2700,7 +2713,6 @@ sub YouDied ()
     LD2_RenderElement @title
     LD2_RefreshScreen
     
-    LD2_PlaySound Sounds.noScream
     LD2_PlayMusic Tracks.YouDied
     
     while keyboard(KEY_SPACE) or keyboard(KEY_ENTER) or mouseLB()
@@ -2742,10 +2754,6 @@ sub YouDied ()
         PullEvents
     wend
     
-    LD2_cls 1, 0
-    LD2_FadeOut 3
-    LD2_cls 1, 0
-    WaitSeconds 0.75
     Game_Reset
     ContinueGame
     

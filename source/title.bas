@@ -845,23 +845,28 @@ SUB TITLE_Goodbye
     IF Game_isDebugMode() THEN LD2_Debug "TITLE_Goodbye"
     
     dim e as ElementType
-    dim goodbyes(13) as string
+    dim chances(6) as integer
+    dim goodbyes(6) as string
+    dim d20 as integer
+    dim d7 as integer
+    dim n as integer
     
-    goodbyes(0)  = "GOODBYE"
-    goodbyes(1)  = "SMELL YA LATER" '- 1/12
-    goodbyes(2)  = "GOODBYE"
-    goodbyes(3)  = "GOODBYE"
-    goodbyes(4)  = "GOODBYE" '"MOTHER OF GOD!"
-    goodbyes(5)  = "SAVE YOURSELF FROM HELL" '- 1/20
-    goodbyes(6)  = "GOODBYE"
-    goodbyes(7)  = "GOODBYE"
-    goodbyes(8)  = "GOODBYE"
-    goodbyes(9)  = "REALITY IS MUCH WORSE" '- 1/20
-    goodbyes(10) = "GOODBYE"
-    goodbyes(11) = "GOODBYE"
-    goodbyes(12) = "GOODBYE"
-    goodbyes(13) = "LIBERA TE TUTAMET EX INFERIS" '- 1/20
-    'goodbyes(3) = "CAN'T WIN THEM ALL" '- if died before exit?
+    chances(0) = 20: goodbyes(0) = "GOODBYE"
+    chances(1) =  2: goodbyes(1) = "SMELL YA LATER"
+    chances(2) =  1: goodbyes(2) = "MOTHER OF GOD!"
+    chances(3) =  1: goodbyes(3) = "SAVE YOURSELF FROM HELL"
+    chances(4) =  1: goodbyes(4) = "REALITY IS MUCH WORSE"
+    chances(5) =  1: goodbyes(5) = "LIBERA TE TUTAMET EX INFERIS"
+    chances(6) =  2: goodbyes(6) = "CAN'T WIN THEM ALL"
+    
+    do
+        d7  = iif(Game_hasFlag(RECENTDEATH),int(7*rnd(1)),int(6*rnd(1)))
+        d20 = int(20*rnd(1))
+        if d20 <= chances(d7) then
+            n = d7
+            exit do
+        end if
+    loop
     
     LD2_cls
     WaitSecondsUntilKey(0.1)
@@ -871,7 +876,7 @@ SUB TITLE_Goodbye
     LD2_InitElement(@e)
     e.y = 60
     e.is_centered_x = 1
-    e.text = goodbyes(int((ubound(goodbyes)+1)*rnd(1)))
+    e.text = goodbyes(n)
     e.text_spacing = 1.9
     e.text_color = 31
     LD2_RenderElement @e

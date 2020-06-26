@@ -871,14 +871,14 @@ SCENE-PORTAL-1CB
     ...
     Barrax!
     
-    TROOPER
+    GRUNT
     Sir!
     
     BARNEY
     Open the portal.
     It's time to send these two through.
     
-    TROOPER
+    GRUNT
     ...
     No.
     
@@ -888,7 +888,7 @@ SCENE-PORTAL-1CB
     BARNEY [face left]
     What do you mean, no?
     
-    TROOPER
+    GRUNT
     They killed the Supreme Leader!
     Now they get a trial?!
     I won't give them the chance!
@@ -900,7 +900,7 @@ SCENE-PORTAL-1CB
     Holster your weapon, now!
     ...
     
-    TROOPER
+    GRUNT
     ...
     Yes... sir.
     
@@ -933,13 +933,13 @@ SCENE-PORTAL-1CC
     LARRY
     Yeah... it doesn't make sense, I know.
     
-    TROOPER
+    GRUNT
     Ahem!
     
     BARNEY [face left]
     STEVE [face left]
     
-    TROOPER
+    GRUNT
     It is *not* Xenophobe. That was the short name, but only phonetically.
     His full name is Sire Zeu Xenophobos!
     
@@ -947,7 +947,7 @@ SCENE-PORTAL-1CC
     ...
     *Was* his full name.
     
-    TROOPER
+    GRUNT
     You dare insult the Supreme Leader?
     
 END
@@ -971,7 +971,7 @@ SCENE-PORTAL-1CE
     ...
     
     BARNEY [face left]
-    TROOPER
+    GRUNT
     No one disrespects the Supreme Leader!
     
     BARNEY [face right]
@@ -1002,7 +1002,7 @@ SCENE-PORTAL-1D
     Barrax!
     You killed us all!
     
-    TROOPER
+    GRUNT
     No one disrespects the Supreme Leader!
     No one.
     

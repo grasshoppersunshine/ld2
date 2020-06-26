@@ -21,6 +21,11 @@ type Mobile
     nxt as integer
     vacant as integer
     top as integer
+    spawnX as integer
+    spawnY as integer
+    target as integer
+    targetX as integer
+    targetY as integer
 end type
 
 type MobileType

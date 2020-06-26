@@ -88,6 +88,12 @@
         groupId as integer
     end type
     
+    type FlashType
+        x as integer
+        y as integer
+        timestamp as double
+    end type
+    
     '*******************************************************************
     '* MAP PROPS
     '*******************************************************************
@@ -116,16 +122,20 @@
     '*******************************************************************
     '* MOB STATES
     '*******************************************************************
-    const SPAWNED   = 1
-    const GO        = 2
-    const GOING     = 3
-    const HURT      = 4
-    const HURTING   = 5
-    const ATTACK    = 6
-    const ATTACKING = 7
-    const RETREAT   = 8
-    const RETRATING = 9
-  
+    enum MobStates
+        Attack = 1
+        Attacking
+        Chase
+        Go
+        Going
+        Hurt
+        Hurting
+        Investigate
+        Investigating
+        Retreat
+        Retreating
+        Spawned
+    end enum
     '*******************************************************************
     '* OH, BOY! WHAT FLAVOR?
     '* PIE FLAVOR!!!
@@ -197,6 +207,7 @@
     dim shared Swaps      (MAXSWAPS) as SwapType
     dim shared Switches   (MAXSWAPS) as SwitchType
     dim shared Teleports  (MAXTELEPORTS) as TeleportType
+    dim shared Flashes    (MAXFLASHES) as FlashType
     dim shared NumItems as integer
     dim shared NumDoors as integer
     dim shared NumElevators as integer
@@ -204,9 +215,11 @@
     dim shared NumSwaps as integer
     dim shared NumSwitches as integer
     dim shared NumTeleports as integer
+    dim shared NumFlashes as integer
     dim shared XShift as double
     dim shared Mobs as MobileCollection
     dim shared Mobs_BeforeKillCallback as sub(mob as Mobile ptr)
+    dim shared RoomPhase as integer
     
     '*******************************************************************
     '* PLAYER VARS
@@ -915,8 +928,8 @@ sub Game_Init
     
     '// add method for LD2_addmobtype, move these to LD2_bas
     Mobs.AddType MobIds.Rockmonster
-    Mobs.AddType MobIds.Troop1
-    Mobs.AddType MobIds.Troop2
+    Mobs.AddType MobIds.GruntMachineGun
+    Mobs.AddType MobIds.GruntPistol
     Mobs.AddType MobIds.BlobMine
     Mobs.AddType MobIds.JellyBlob
     
@@ -1021,6 +1034,30 @@ sub LD2_RenderBackground(height as double)
     
 end sub
 
+function toMapX(screenX as double) as integer
+    
+    return int(screenX / SPRITE_W)
+    
+end function
+
+function toMapY(screenY as double) as integer
+    
+    return int(screenY / SPRITE_H)
+    
+end function
+
+function toScreenX(mapX as integer) as integer
+    
+    return mapX * SPRITE_W
+    
+end function
+
+function toScreenY(mapY as integer) as integer
+    
+    return mapY * SPRITE_H
+    
+end function
+
 sub Map_BeforeLoad()
     
     '// current room should be the one before the next room is loaded
@@ -1113,6 +1150,8 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
     '    next i
     'end if
     
+    if RoomPhase < Inventory(ItemIds.Phase) then
+    end if
     if (MobsWereLoaded = 0) and (skipMobs = 0) then
         select case Inventory(ItemIds.CurrentRoom)
         case Rooms.Rooftop, Rooms.PortalRoom, Rooms.WeaponsLocker, Rooms.Lobby, Rooms.Basement
@@ -1355,6 +1394,10 @@ sub Guts_Add (gutsId as integer, x as integer, y as integer, qty as integer, dir
             Guts(n).count = int(4 * rnd(1))
         case GutsIds.BloodSprite
             Guts(n).sprite = 8
+        case GutsIds.Flash
+            Guts(n).colour = 95
+            Guts(n).x = x
+            Guts(n).y = y
         case GutsIds.Glass
             Guts(n).sprite = 12 + int(4 * rnd(1))
         case GutsIds.Gibs
@@ -1413,6 +1456,11 @@ sub Guts_Animate
             if Guts(i).y > SCREEN_H or Guts(i).y < -15 or Guts(i).count > 30 then
                 deleteGut = 1
             end if
+        case GutsIds.Flash
+            Guts(i).count += 1
+            if Guts(i).count > 6 then
+                deleteGut = 1
+            end if
         case else
             Guts(i).x = Guts(i).x + Guts(i).vx*f
             Guts(i).y = Guts(i).y + Guts(i).vy*f
@@ -1461,6 +1509,12 @@ sub Guts_Draw()
         if Guts(n).sprite then
             SpritesGuts.putToScreenEx x, y, Guts(n).sprite, Guts(n).facingLeft, int(Guts(n).angle)
         else
+            if Guts(n).colour = 95 then
+                cx = int(Guts(n).x - XShift)
+                cy = int(Guts(n).y    )
+                sz = 60
+                LD2_fill cx-sz, cy-sz, sz*2, sz*2, Guts(n).colour, 1
+            end if
             if Guts(n).colour >= 38 then
                 cx = int(Guts(n).x - XShift)
                 cy = int(Guts(n).y    )
@@ -1846,6 +1900,73 @@ sub Elevators_Draw ()
     
 end sub
 
+sub Flashes_Add (x as integer, y as integer)
+    
+    dim n as integer
+    
+    if NumFlashes < MAXFLASHES then
+        n = NumFlashes: NumFlashes += 1
+        Flashes(n).x = x
+        Flashes(n).y = y
+        Flashes(n).timestamp = timer
+    end if
+    
+end sub
+
+sub Flashes_Animate ()
+    
+    dim flash as FlashType ptr
+    dim mapX as integer, mapY as integer
+    dim off as integer
+    dim x as integer, y as integer
+    dim i as integer
+    dim j as integer
+    
+    for i = 0 to NumFlashes-1
+        flash = @Flashes(i)
+        off = 0
+        if (timer - flash->timestamp) > 0.10 then
+            off = 1
+        end if
+        if off = 0 then
+            for y = -2 to 2
+                mapY = flash->y + y
+                if (mapY < 0) or (mapY >= MAPH) then continue for
+                for x = -3 to 3
+                    mapX = flash->x + x
+                    if (mapX < 0) or (mapX >= MAPW) then continue for
+                    if FloorMap(mapX, mapY) = 0 then
+                        LightMapFG(mapX, mapY) = (LightMapFG(mapX, mapY) or &h100)
+                    end if
+                next x
+            next y
+        else
+            for y = -2 to 2
+                mapY = flash->y + y
+                if (mapY < 0) or (mapY >= MAPH) then continue for
+                for x = -3 to 3
+                    mapX = flash->x + x
+                    if (mapX < 0) or (mapX >= MAPW) then continue for
+                    if FloorMap(mapX, mapY) = 0 then
+                        LightMapFG(mapX, mapY) = (LightMapFG(mapX, mapY) or &h100) xor &h100
+                    end if
+                next x
+            next y
+        end if
+        if off then
+            NumFlashes -= 1
+            for j = i to NumFlashes-1
+                Flashes(j) = Flashes(j+1)
+            next j
+            i -= 1
+            if i >= NumFlashes-1 then
+                exit for
+            end if
+        end if
+    next i
+    
+end sub
+
 sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
     
     LD2_put x, y, numSprite, id, _flip, 1
@@ -1981,6 +2102,8 @@ SUB LD2_RenderFrame
     dim xp as integer, yp as integer
     dim x as integer, y as integer
     dim mapX as integer, mapY as integer
+    dim mapXstart as integer
+    dim xpStart as integer
     dim skipStaticLighting as integer
     dim m as integer
     dim a as integer
@@ -1988,16 +2111,18 @@ SUB LD2_RenderFrame
     dim l as integer
     
     dim playerMapX as integer, playerMapY as integer
-    playerMapX = int((Player.x+7) / SPRITE_W)
-    playerMapY = int((Player.y+7) / SPRITE_H)
+    playerMapX = toMapX(Player.x+7)
+    playerMapY = toMapY(Player.y+7)
+    mapXstart = toMapX(XShift)
+    xpStart = 0 - (int(XShift) and 15)
     
     LD2_SetTargetBuffer 1
     if ShowLightBG then
         LD2_LogDebug "LD2_RenderFrame() - Draw Light BG"
         yp = 0
         for y = 0 to 12
-            xp = 0 - (int(XShift) and 15)
-            mapX = (int(XShift) \ 16)
+            xp = xpStart
+            mapX = mapXstart
             mapY = y
             for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
                 m = TileMap(mapX, mapY)
@@ -2014,16 +2139,16 @@ SUB LD2_RenderFrame
                     SpritesLight.putToScreen(xp, yp, l)
                 end if
                 mapX += 1
-                xp = xp + 16
+                xp = xp + SPRITE_W
             next x
-            yp = yp + 16
+            yp = yp + SPRITE_H
         next y
     else
         LD2_LogDebug "LD2_RenderFrame() - Draw Tiles"
         yp = 0
         for y = 0 to 12
-            xp = 0 - (int(XShift) and 15)
-            mapX = (int(XShift) \ 16)
+            xp = xpStart
+            mapX = mapXstart
             mapY = y
             for x = 0 to 20
                 m = TileMap(mapX, mapY)
@@ -2061,18 +2186,13 @@ SUB LD2_RenderFrame
         playerIsLit = Player.is_shooting and (Player.weapon <> ItemIds.Fist) and ((Player.uAni-Player.stillAni) < 1.5)
         yp = 0
         for y = 0 to 12
-            xp = 0 - (int(XShift) and 15)
-            mapX = (int(XShift) \ 16)
+            xp = xpStart
+            mapX = mapXstart
             mapY = y
             for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
                 l = LightMapFg(mapx, mapY)
-                if l then
-                    m = FloorMap(mapX, mapY)
-                    if (m = 0) and playerIsLit and (abs(playerMapX-mapX) <= 3) and (abs(playerMapY-mapY) <= 2) then
-                        '// skip
-                    else
-                        SpritesLight.putToScreen(xp, yp, l)
-                    end if
+                if (l > 0) and ((l and &h1000) = 0) then
+                    SpritesLight.putToScreen(xp, yp, l)
                 end if
                 mapX += 1
                 xp = xp + 16
@@ -2787,17 +2907,56 @@ end sub
 
 sub Mobs_Kill (mob as Mobile)
 
+    dim m as Mobile
+    dim top as integer
+    dim lft as integer
+    dim rgt as integer
+    dim btm as integer
+    dim x as integer
+    dim y as integer
     dim i as integer
     
     if Mobs_BeforeKillCallback <> 0 then
         Mobs_BeforeKillCallback(@mob)
     end if
-
-    Guts_Add GutsIds.Gibs, mob.x + 8, mob.y + 8, 3+int(4*rnd(1))
-    for i = 0 to 4
-        Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1, -rnd(1)*5
-        Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1,  rnd(1)*5
-    next i
+    
+    select case mob.id
+    case MobIds.BlobMine
+        lft = mob.x-SPRITE_W
+        rgt = mob.x+SPRITE_W*2
+        top = mob.y-SPRITE_H
+        btm = mob.y+SPRITE_W
+        Mobs.resetNext
+        while Mobs.canGetNext()
+            Mobs.getNext m
+            if m.uid = mob.uid then
+                continue while
+            end if
+            x = int(m.x + 7)
+            y = int(m.y + 7)
+            if (x >= lft) and (x <= rgt) and (y >= top) and (y <= btm) then
+                m.life = 0
+                Mobs.update m
+                LD2_PlaySound Sounds.splatter
+                for i = 0 to 2
+                    Guts_Add GutsIds.Blood, m.x + 7, m.y + 8,  1, -rnd(1)*5
+                    Guts_Add GutsIds.Blood, m.x + 7, m.y + 8,  1,  rnd(1)*5
+                next i
+            end if
+        wend
+        for i = 0 to 14
+            Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1, -rnd(1)*30
+            Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1, rnd(1)*30
+        next i
+        Guts_Add GutsIds.Flash, mob.x + 7, mob.y + 8,  1
+        LD2_PlaySound Sounds.boom
+    case else
+        Guts_Add GutsIds.Gibs, mob.x + 8, mob.y + 8, 3+int(4*rnd(1))
+        for i = 0 to 4
+            Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1, -rnd(1)*5
+            Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1,  rnd(1)*5
+        next i
+    end select
     
     Mobs.remove mob
     
@@ -2861,9 +3020,9 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
             case 0 to 14
                 mobType = MobIds.Rockmonster
             case 20 to 49
-                mobType = MobIds.Troop1
+                mobType = MobIds.GruntMachineGun
             case 50 to 79
-                mobType = MobIds.Troop2
+                mobType = MobIds.GruntPistol
             case 15 to 19, 80 to 89
                 mobType = MobIds.BlobMine
             case 90 to 99
@@ -2875,526 +3034,694 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
     
 end sub
 
-sub Mobs_Animate()
+enum TargetIds
+    Player = 1
+    Mob
+    XY
+end enum
 
-  dim mob as Mobile
-  dim deleted as integer
-  dim radius as integer
-  dim px as integer, py as integer
-  dim x as integer, y as integer
-  dim ox as integer
-  dim p as integer
-  dim i as integer
-  dim n as integer
-  dim f as double
-  
-  f = 1 'DELAYMOD
-  
-  Mobs.resetNext
-  DO WHILE Mobs.canGetNext()
+type VectorFloat
+    x as double
+    y as double
+    declare sub init(x as double, y as double)
+end type
+sub VectorFloat.init(x as double, y as double)
+    this.x = x
+    this.y = y
+end sub
+const FLIP_RIGHT = 0
+const FLIP_LEFT  = 1
+function MobFacesRight(mob as Mobile) as integer
     
-    Mobs.getNext mob
+    return (mob.flip = FLIP_RIGHT)
     
-    deleted = 0
-    ox = INT(mob.x)
-   
-    SELECT CASE mob.id
-     
-    CASE MobIds.Rockmonster
-        
-        SELECT CASE mob.state
-        CASE SPAWNED
-
-            mob.life  = 8
-            mob.ani   = 1
-            mob.state = GO
-        
-        CASE HURT
-            
-            mob.ani = 6
-            mob.counter = 0.1
-            mob.state = HURTING
-            if int(3*rnd(1)) = 0 then
-                LD2_PlaySound Sounds.rockHurt
-            end if
-        
-        CASE HURTING
-            
-            mob.counter -= DELAYMOD*0.0167
-            IF mob.counter <= 0 THEN
-                mob.state = GO
-            END IF
-        
-        CASE GO
-            
-            mob.state = GOING
-
-        CASE GOING
-
-            mob.ani = mob.ani + .1
-            IF mob.ani > 6 THEN mob.ani = 1
-            
-            IF mob.x < Player.x THEN mob.x = mob.x + .5*f: mob.flip = 0
-            IF mob.x > Player.x THEN mob.x = mob.x - .5*f: mob.flip = 1
-            
-            IF mob.x + 7 >= Player.x AND mob.x + 7 <= Player.x + 15 THEN
-                IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
-                    IF INT(10 * RND(1)) + 1 = 1 THEN
-                        LD2_PlaySound Sounds.blood2
-                    END IF
-                    Inventory(ItemIds.Hp) -= 1
-                    Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8, 1, (1+2*rnd(1))*iif(int(2*rnd(1)),1,-1)
-                END IF
-            END IF
-
-        END SELECT
-        
-    CASE MobIds.BlobMine
-        
-        SELECT CASE mob.state
-        CASE SPAWNED
-        
-            mob.life  = 2
-            mob.ani   = 7
-            mob.top   = 11
-            mob.state = GO
-        
-        CASE HURT
-            
-            mob.state = GO
-            
-        CASE GO
-            
-            IF mob.x < Player.x THEN mob.vx =  0.3333*f: mob.flip = 0
-            IF mob.x > Player.x THEN mob.vx = -0.3333*f: mob.flip = 1
-            mob.counter = RND(1)*2+1
-            mob.state = GOING
-        
-        CASE GOING
-        
-            mob.ani = mob.ani + .1*f
-            IF mob.ani >= 9 THEN mob.ani = 7
-            
-            mob.x = mob.x + mob.vx
-            
-            IF mob.x + 7 >= Player.x AND mob.x + 7 <= Player.x + 15 THEN
-                IF mob.y + 10 >= Player.y AND mob.y + 15 <= Player.y + 15 THEN
-                    FOR i = 0 TO 14
-                        Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1, -RND(1)*30
-                        Guts_Add GutsIds.Sparks, mob.x + 7, mob.y + 8,  1, RND(1)*30
-                    NEXT i
-                    x = Player.x + 7: y = Player.y + 7
-                    radius = SPRITE_W
-                    Guts_Add GutsIds.Blood, x, y, 1
-                    for n = 0 to 3
-                        Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
-                        Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
-                    next n
-                    Player_Jump 2.0
-                    Player.vx += 5-10*rnd(1)
-                    Inventory(ItemIds.Hp) -= 50
-                    LD2_PlaySound Sounds.boom
-                    LD2_PlaySound Sounds.larryHurt
-                    deleted = 1
-                END IF
-            END IF
-            
-            mob.counter = mob.counter - DELAYMOD*0.0167
-            IF mob.counter <= 0 THEN
-                mob.state = GO
-            END IF
-            
-        END SELECT
-        
-    CASE MobIds.Troop1
-        
-        SELECT CASE mob.state
-        CASE SPAWNED
-            
-            mob.life  = 3+3*rnd(1)
-            mob.ani   = 20
-            mob.state = GO
-        
-        CASE HURT
-            
-            mob.ani = 29
-            mob.counter = 0.1
-            mob.state = HURTING
-            if int(3*rnd(1)) = 0 then
-                i = int(3*rnd(1))
-                if i = 0 then LD2_PlaySound Sounds.troopHurt0
-                if i = 1 then LD2_PlaySound Sounds.troopHurt1
-                if i = 2 then LD2_PlaySound Sounds.troopHurt2
-            end if
-        
-        CASE HURTING
-            
-            mob.counter -= DELAYMOD*0.0167
-            IF mob.counter <= 0 THEN
-                mob.state = GO
-            END IF
-        
-        CASE GO
-            
-            mob.state = GOING
-        
-        CASE GOING
-        
-            IF ABS(mob.x - Player.x) < 50 AND mob.shooting = 0 THEN
-                IF Player.y + 8 >= mob.y AND Player.y + 8 <= mob.y + 15 THEN
-                    IF Player.x > mob.x AND mob.flip = 0 THEN mob.shooting = 100
-                    IF Player.x < mob.x AND mob.flip = 1 THEN mob.shooting = 100
-                END IF
-            END IF
-            
-            IF mob.shooting = 0 THEN
-                IF mob.counter = 0 THEN
-                    mob.counter = -INT(150 * RND(1)) + 1
-                    mob.flag = INT(2 * RND(1)) + 1
-                ELSEIF mob.counter > 0 THEN
-                    mob.ani = mob.ani + .1
-                    IF mob.ani > 27 THEN mob.ani = 21
-                    IF mob.flag = 1 THEN mob.x = mob.x + .5*f: mob.flip = 0
-                    IF mob.flag = 2 THEN mob.x = mob.x - .5*f: mob.flip = 1
-                    mob.counter = mob.counter - 1
-                ELSE
-                    mob.counter = mob.counter + 1
-                    mob.ani = 20
-                    IF mob.counter > -1 THEN mob.counter = INT(150 * RND(1)) + 1
-                END IF
-            END IF
-            
-            IF mob.shooting > 0 THEN
-                IF INT(30 * RND(1)) + 1 = 1 THEN
-                    LD2_PlaySound Sounds.laugh
-                END IF
-                IF (mob.shooting AND 7) = 0 THEN
-                    LD2_PlaySound Sounds.machinegun2
-                    IF mob.flip = 0 THEN
-                        FOR i = mob.x + 15 TO mob.x + SCREEN_W STEP 8
-                            px = i \ 16: py = INT(mob.y + 10) \ 16
-                            p = TileMap(px, py)
-                            IF p >= 80 AND p <= 109 THEN EXIT FOR
-                            IF i > Player.x AND i < Player.x + 15 THEN
-                                IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
-                                    Guts_Add GutsIds.Blood, i, mob.y + 8, 1
-                                    Inventory(ItemIds.Hp) -= 1
-                                    IF INT(10 * RND(1)) + 1 = 1 THEN
-                                        LD2_PlaySound Sounds.blood1
-                                        LD2_PlaySound Sounds.larryHurt
-                                    END IF
-                                END IF
-                            END IF
-                        NEXT i
-                    ELSE
-                        FOR i = mob.x TO mob.x - SCREEN_W STEP -8
-                            px = i \ 16: py = INT(mob.y + 10) \ 16
-                            p = TileMap(px, py)
-                            IF p >= 80 AND p <= 109 THEN EXIT FOR
-                            IF i > Player.x AND i < Player.x + 15 THEN
-                                IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
-                                    Guts_Add GutsIds.Blood, i, mob.y + 8, 1
-                                    Inventory(ItemIds.Hp) -= 1
-                                    IF INT(10 * RND(1)) + 1 = 1 THEN
-                                        LD2_PlaySound Sounds.blood1
-                                        LD2_PlaySound Sounds.larryHurt
-                                    END IF
-                                END IF
-                            END IF
-                        NEXT i
-                    END IF
-                END IF
-                mob.ani = 27 + (mob.shooting AND 7) \ 4
-                mob.shooting = mob.shooting - 1
-            END IF
-        
-        END SELECT
+end function
+function MobFacesLeft(mob as Mobile) as integer
     
-    CASE MobIds.Troop2
-        
-        SELECT CASE mob.state
-        CASE SPAWNED
-            
-            mob.life  = 3+3*rnd(1)
-            mob.ani   = 30
-            mob.state = GO
-        
-        CASE HURT
-            
-            mob.ani = 39
-            mob.counter = 0.1
-            mob.state = HURTING
-            if int(3*rnd(1)) = 0 then
-                i = int(3*rnd(1))
-                if i = 0 then LD2_PlaySound Sounds.troopHurt0
-                if i = 1 then LD2_PlaySound Sounds.troopHurt1
-                if i = 2 then LD2_PlaySound Sounds.troopHurt2
+    return (mob.flip = FLIP_LEFT)
+    
+end function
+function PlayerBehindMob(mob as Mobile) as integer
+    
+    return (MobFacesRight(mob) and (Player.x < mob.x)) _
+        or ( MobFacesLeft(mob) and (Player.x > mob.x))
+    
+end function
+
+function MobCanSeePlayer(mob as Mobile) as integer
+    
+    dim zero as VectorFloat
+    dim zerostep as VectorFloat
+    dim one as VectorFloat
+    dim onestep as VectorFloat
+    dim u0 as VectorFloat
+    dim u1 as VectorFloat
+    dim v as VectorFloat
+    dim f as double
+    dim facesRight as integer
+    dim facesLeft as integer
+    dim mapX as integer
+    dim mapY as integer
+    
+    if PlayerBehindMob(mob) then
+        return 0
+    end if
+    
+    dim mb as VectorFloat
+    dim pl as VectorFloat
+    
+    mb.init (mob.x+7)/SPRITE_W, (mob.y+7)/SPRITE_H
+    pl.init (Player.x+7)/SPRITE_W, (player.y+7)/SPRITE_H
+    
+    facesRight = MobFacesRight(mob)
+    facesLeft  = MobFacesLeft(mob)
+    
+    u0.init mb.x, mb.y
+    u1.init pl.x, pl.y
+    
+    v.init u1.x-u0.x, u1.y-u0.y
+    
+    if v.x > 0 then
+        f = iif(MobFacesRight(mob), (int(mb.x)+1)-mb.x, mb.x-int(mb.x))
+        f /= abs(v.x)
+        if f > 0 then
+            zerostep.init v.x * f, v.y * f
+            zero.init mb.x, mb.y
+            zero.x += zerostep.x
+            zero.y += zerostep.y
+            mapX = int(zero.x)+iif(v.x>0,0,-1)
+            mapY = int(zero.y)+iif(v.y>0,0,-1)
+            if FloorMap(mapX, mapY) > 0 then
+                return 0
             end if
+        end if
         
-        CASE HURTING
-            
-            mob.counter -= DELAYMOD*0.0167
-            IF mob.counter <= 0 THEN
-                mob.state = GO
-            END IF
+        f = 1 / abs(v.x)
+        onestep.init v.x * f, v.y * f
+        one.init zero.x, zero.y
+        do
+            one.x += onestep.x
+            one.y += onestep.y
+            if (facesRight and (one.x > pl.x)) or (facesLeft and (one.x < pl.x)) then
+                return 1
+            end if
+            mapX = int(one.x)+iif(v.x>0,0,-1)
+            mapY = int(one.y)+iif(v.y>0,0,-1)
+            if FloorMap(mapX, mapY) > 0 then
+                return 0
+            end if
+        loop
+    end if
+    
+end function
+
+sub Mobs_Animate_Rockmonster(mob as Mobile)
+    
+    dim f as double
+    f = 1 'DELAYMOD
+    
+    select case mob.state
+    case MobStates.Spawned
         
-        CASE GO
-            
-            mob.state = GOING
-            
-        CASE GOING
-            
-            IF ABS(mob.x - Player.x) < 50 AND mob.shooting = 0 THEN
-                IF Player.y + 8 >= mob.y AND Player.y + 8 <= mob.y + 15 THEN
-                    IF Player.x > mob.x AND mob.flip = 0 THEN mob.shooting = 100
-                    IF Player.x < mob.x AND mob.flip = 1 THEN mob.shooting = 100
-                END IF
-            END IF
-            
-            IF mob.shooting = 0 THEN
-                IF mob.counter = 0 THEN
-                    mob.counter = -INT(150 * RND(1)) + 1
-                    mob.flag = INT(2 * RND(1)) + 1
-                ELSEIF mob.counter > 0 THEN
-                    mob.ani = mob.ani + .1
-                    IF mob.ani > 37 THEN mob.ani = 31
-                    IF mob.flag = 1 THEN mob.x = mob.x + .5*f: mob.flip = 0
-                    IF mob.flag = 2 THEN mob.x = mob.x - .5*f: mob.flip = 1
-                    mob.counter = mob.counter - 1
-                ELSE
-                    mob.counter = mob.counter + 1
-                    mob.ani = 30
-                    IF mob.counter > -1 THEN mob.counter = INT(150 * RND(1)) + 1
-                END IF
-            END IF
-            
-            IF mob.shooting > 0 THEN
-                IF (mob.shooting AND 15) = 0 THEN
-                    LD2_PlaySound Sounds.pistol2
-                    IF mob.flip = 0 THEN
-                        FOR i = mob.x + 15 TO mob.x + SCREEN_W STEP 8
-                            px = i \ 16: py = INT(mob.y + 10) \ 16
-                            p = TileMap(px, py)
-                            IF p >= 80 AND p <= 109 THEN EXIT FOR
-                            IF i > Player.x AND i < Player.x + 15 THEN
-                                IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
-                                    Guts_Add GutsIds.Blood, i, mob.y + 8, 1
-                                    Inventory(ItemIds.Hp) -= 2
-                                    IF INT(10 * RND(1)) + 1 = 1 THEN
-                                        LD2_PlaySound Sounds.blood1
-                                        LD2_PlaySound Sounds.larryHurt
-                                    END IF
-                                END IF
-                            END IF
-                        NEXT i
-                    ELSE
-                        FOR i = mob.x TO mob.x - SCREEN_W STEP -8
-                            px = i \ 16: py = INT(mob.y + 10) \ 16
-                            p = TileMap(px, py)
-                            IF p >= 80 AND p <= 109 THEN EXIT FOR
-                            IF i > Player.x AND i < Player.x + 15 THEN
-                                IF mob.y + 8 > Player.y AND mob.y + 8 < Player.y + 15 THEN
-                                    Guts_Add GutsIds.Blood, i, mob.y + 8, 1
-                                    Inventory(ItemIds.Hp) -= 2
-                                    IF INT(10 * RND(1)) + 1 = 1 THEN
-                                        LD2_PlaySound Sounds.blood1
-                                        LD2_PlaySound Sounds.larryHurt
-                                    END IF
-                                END IF
-                            END IF
-                        NEXT i
-                    END IF
-                END IF
-                mob.ani = 37 + (mob.shooting AND 15) \ 8
-                mob.shooting = mob.shooting - 1
-            END IF
+        mob.life  = MobHps.Rockmonster
+        mob.ani   = 1
+        mob.state = MobStates.Go
         
-        END SELECT
-       
-    CASE MobIds.JellyBlob
+    case MobStates.Hurt
         
-        SELECT CASE mob.state
-        CASE SPAWNED
-            
-            mob.life = 10
-            'mob.ani = 11
-            mob.ani = 47
-            mob.state = GO
-            mob.y -= 7
+        mob.ani = 6
+        mob.counter = 0.1
+        mob.state = MobStates.Hurting
+        if int(3*rnd(1)) = 0 then
+            LD2_PlaySound Sounds.rockHurt
+        end if
         
-        CASE HURT
-            
-            mob.ani = 51
-            mob.counter = 0.1
-            mob.state = HURTING
+    case MobStates.Hurting
         
-        CASE HURTING
-            
-            mob.counter -= DELAYMOD*0.0167
-            IF mob.counter <= 0 THEN
-                mob.state = GO
-            END IF
+        mob.counter -= f*0.0167
+        if mob.counter <= 0 then
+            mob.state = MobStates.Go
+        end if
         
-        CASE GO
-            
-            IF mob.x < Player.x THEN mob.vx =  0.7: mob.flip = 0
-            IF mob.x > Player.x THEN mob.vx = -0.7: mob.flip = 1
-            mob.counter = RND(1)*4+1
-            mob.state = GOING
+    case MobStates.Go
         
-        CASE GOING
-            
-            mob.ani = mob.ani + .1
-            IF mob.ani > 50 THEN mob.ani = 47
-                
-            IF ABS(mob.x - Player.x) < 100 THEN
-                IF mob.x < Player.x THEN
-                    mob.x += mob.vx*f: mob.flip = 0
-                ELSE
-                    mob.x -= mob.vx*f: mob.flip = 1
-                END IF
-            END IF
-            
-            IF mob.x + 7 >= Player.x AND mob.x + 7 <= Player.x + 15 THEN
-                IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
-                    IF INT(10 * RND(1)) + 1 = 1 THEN
-                        LD2_PlaySound Sounds.blood1
-                        LD2_PlaySound Sounds.larryHurt
-                    END IF
-                    Inventory(ItemIds.Hp) -= 1
-                    Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8, 1
-                END IF
-            END IF
-            
-            mob.counter = mob.counter - DELAYMOD*0.0167
-            IF mob.counter <= 0 THEN
-                mob.state = GO
-            END IF
-            
-        END SELECT
+        mob.state = MobStates.Going
         
-    CASE MobIds.Boss1
-        
-        select case mob.state
-        case SPAWNED
-            mob.life = 100
-            mob.ani = 41
-        end select
-        
-        if mob.ani < 1 then mob.ani = 41
+    case MobStates.Going
         
         mob.ani = mob.ani + .1
-        if mob.ani > 43 then mob.ani = 41
-              
-        if mob.hit > 0 then
-            mob.ani = 45
-        else
-            if mob.x < Player.x then mob.x += .6*f: mob.flip = 1
-            if mob.x > Player.x then mob.x -= .6*f: mob.flip = 0
-        end if
-
-        if (abs(mob.x - Player.x) < 50) and (mob.counter < 10) then
-            mob.ani = 44
-            if mob.x < Player.x then mob.x += .5*f: mob.flip = 1
-            if mob.x > Player.x then mob.x -= .5*f: mob.flip = 0
-        end if
-
-        mob.counter -= .1
-        if mob.counter < 0 then mob.counter = 20
+        if mob.ani > 6 then mob.ani = 1
         
-        if (mob.x + 7) >= Player.x and (mob.x + 7) <= (Player.x + 15) then
-            if (mob.y + 10) >= Player.y and (mob.y + 10) <= (Player.y + 15) then
-                if int(10 * rnd(1)) + 1 = 1 then
-                    LD2_PlaySound Sounds.blood2
-                end if
-                Inventory(ItemIds.Hp) -= 1
-                Guts_Add GutsIds.Blood, mob.x + 7, mob.y + 8, 1
+        if mob.x < Player.x then mob.x = mob.x + .5*f: mob.flip = 0
+        if mob.x > Player.x then mob.x = mob.x - .5*f: mob.flip = 1
+        
+        if mob.x + 7 >= Player.x and mob.x + 7 <= Player.x + 15 then
+            if mob.y + 10 >= Player.y and mob.y + 10 <= Player.y + 15 then
+                Player_Hurt HpDamage.RockmonsterBite, int(mob.x + 7), int(mob.y + 8)
             end if
         end if
-   
-    CASE MobIds.Boss2
+        
+    end select
+    
+end sub
 
-        select case mob.state
-        case SPAWNED
-            mob.life = 100
-            mob.ani = 0
+sub Mobs_Animate_Blobmine(mob as Mobile)
+    
+    dim f as double
+    dim radius as integer
+    dim x as integer
+    dim y as integer
+    dim n as integer
+    
+    f = 1 'DELAYMOD
+    
+    select case mob.state
+    case MobStates.Spawned
+        
+        mob.life  = MobHps.Blobmine
+        mob.ani   = 7
+        mob.top   = 11
+        mob.state = MobStates.Go
+        mob.spawnX = int(mob.x+7)
+        mob.spawnY = int(mob.y+15)
+        
+    case MobStates.Hurt
+        
+        mob.state = MobStates.Go
+        
+    case MobStates.Go
+        
+        select case int(mob.x-mob.spawnX)
+        case is > 10
+            mob.vx = -0.3333*f: mob.flip = 1
+        case is < -10
+            mob.vx = 0.3333*f: mob.flip = 0
+        case else
+            if int(2*rnd(1)) then
+                mob.vx = -0.3333*f: mob.flip = 1
+            else
+                mob.vx =  0.3333*f: mob.flip = 0
+            end if
         end select
+        mob.counter = rnd(1)*2+1
+        mob.state = MobStates.Going
+        
+    case MobStates.Going
+        
+        mob.ani = mob.ani + .1*f
+        if mob.ani >= 9 then mob.ani = 7
+        
+        mob.x = mob.x + mob.vx
+        
+        if mob.x + 7 >= Player.x and mob.x + 7 <= Player.x + 15 then
+            if mob.y + 10 >= Player.y and mob.y + 15 <= Player.y + 15 then
+                x = Player.x + 7: y = Player.y + 7
+                radius = SPRITE_W
+                Guts_Add GutsIds.Blood, x, y, 1
+                for n = 0 to 3
+                    Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+                    Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
+                next n
+                Player_Jump 2.0
+                Player.vx += 5-10*rnd(1)
+                Inventory(ItemIds.Hp) -= HpDamage.BlobmineExplode
+                LD2_PlaySound Sounds.larryHurt
+                mob.life = 0
+            end if
+        end if
+        
+        mob.counter -= f*0.0167
+        if mob.counter <= 0 then
+            mob.state = MobStates.Go
+        end if
+        
+    end select
+    
+end sub
 
-        mob.ani = mob.ani + 20
-        IF mob.ani >= 360 THEN mob.ani = 0
-
-        mob.y = mob.y + 1
-        IF CheckMobFloorHit(mob) = 1 THEN
-          mob.y = mob.y - mob.velocity
-          IF mob.counter = 0 THEN
-            IF ABS(mob.x - Player.x) < 50 THEN
-              mob.velocity = -1.2
-            END IF
-          
-            IF mob.x < Player.x THEN
-              mob.x = mob.x + 1.1
-              mob.flip = 0
-            ELSE
-              mob.x = mob.x - 1.1
-              mob.flip = 1
-            END IF
-          END IF
-        ELSE
-          IF mob.counter = 0 THEN
-            IF ABS(mob.x - Player.x + 7) < 4 AND mob.counter = 0 AND mob.velocity >= 0 THEN
-              mob.velocity = INT(2 * RND(1)) + 2
-              mob.counter = 50
-            END IF
-          
-            IF mob.flip = 0 THEN mob.x = mob.x + 1.7*f
-            IF mob.flip = 1 THEN mob.x = mob.x - 1.7*f
-          END IF
+sub Mobs_Animate_GruntMachineGun(mob as Mobile)
+    
+    dim f as double
+    dim px as integer
+    dim py as integer
+    dim p as integer
+    dim i as integer
+    
+    f = 1 'DELAYMOD
+    
+    select case mob.state
+    case MobStates.Spawned
+        
+        mob.life  = MobHps.GruntMachineGun+(MobHps.GruntMachineGun*0.5*rnd(1))
+        mob.ani   = 20
+        mob.state = MobStates.Go
+        mob.spawnX = mob.x
+        mob.spawnY = mob.y
+        
+    case MobStates.Hurt
+        
+        mob.ani = 29
+        mob.counter = 0.1
+        mob.state = MobStates.Hurting
+        if int(3*rnd(1)) = 0 then
+            i = int(3*rnd(1))
+            if i = 0 then LD2_PlaySound Sounds.gruntHurt0
+            if i = 1 then LD2_PlaySound Sounds.gruntHurt1
+            if i = 2 then LD2_PlaySound Sounds.gruntHurt2
+        end if
+        
+    case MobStates.Hurting
+        
+        mob.counter -= f*0.0167
+        IF mob.counter <= 0 THEN
+            mob.state = MobStates.Go
         END IF
-        mob.counter = mob.counter - 1
-        IF mob.counter < 0 THEN mob.counter = 0
-        mob.y = mob.y - 1
+        
+    case MobStates.Investigate
+        
+        if mob.x > mob.targetX then
+            mob.x -= 0.5*f: mob.flip = 1
+        else
+            mob.y += 0.5*f: mob.flip = 0
+        end if
+        
+        if MobCanSeePlayer(mob) then
+            mob.state = MobStates.Chase
+        end if
+        
+    case MobStates.Chase
+        
+        if mob.target = TargetIds.Player then
+        end if
+        
+    case MobStates.Go
+        
+        mob.state = MobStates.Going
+        
+    case MobStates.Going
+        
+        if (abs(mob.x - Player.x) < 50) and (mob.shooting = 0) then
+            if (Player.y + 8 >= mob.y) and (Player.y + 8 <= mob.y + 15) then
+                if Player.x > mob.x and mob.flip = 0 then mob.shooting = 100
+                if Player.x < mob.x and mob.flip = 1 then mob.shooting = 100
+            end if
+        end if
+        
+        if mob.shooting = 0 then
+            if mob.counter = 0 then
+                mob.counter = -int(150 * rnd(1)) + 1
+                mob.flag = int(2 * rnd(1)) + 1
+            elseif mob.counter > 0 then
+                mob.ani = mob.ani + .1
+                if mob.ani > 27 then mob.ani = 21
+                if mob.flag = 1 then mob.x = mob.x + .5*f: mob.flip = 0
+                if mob.flag = 2 then mob.x = mob.x - .5*f: mob.flip = 1
+                mob.counter = mob.counter - 1
+            else
+                mob.counter = mob.counter + 1
+                mob.ani = 20
+                if mob.counter > -1 then mob.counter = int(150 * rnd(1)) + 1
+            end if
+        end if
+        
+        if mob.shooting > 0 then
+            if int(30 * rnd(1)) + 1 = 1 then
+                LD2_PlaySound Sounds.laugh
+            end if
+            if (mob.shooting and 7) = 0 then
+                LD2_PlaySound Sounds.machinegun2
+                Flashes_Add toMapX(mob.x+7), toMapY(mob.y+7)
+                if mob.flip = 0 then
+                    for i = mob.x + 15 to mob.x + SCREEN_W step 8
+                        px = i \ 16: py = int(mob.y + 10) \ 16
+                        p = TileMap(px, py)
+                        if p >= 80 and p <= 109 then exit for
+                        if i > Player.x and i < Player.x + 15 then
+                            if mob.y + 8 > Player.y and mob.y + 8 < Player.y + 15 then
+                                 Player_Hurt HpDamage.GruntMachineGun, i, int(mob.y + 8)
+                            end if
+                        end if
+                    next i
+                else
+                    for i = mob.x to mob.x - SCREEN_W step -8
+                        px = i \ 16: py = int(mob.y + 10) \ 16
+                        p = TileMap(px, py)
+                        if p >= 80 and p <= 109 then exit for
+                        if i > Player.x and i < Player.x + 15 then
+                            if mob.y + 8 > Player.y and mob.y + 8 < Player.y + 15 then
+                                 Player_Hurt HpDamage.GruntMachineGun, i, int(mob.y + 8)
+                            end if
+                        end if
+                    next i
+                end if
+            end if
+            mob.ani = 27 + (mob.shooting and 7) \ 4
+            mob.shooting = mob.shooting - 1
+        end if
+        
+    end select
+    
+end sub
 
-        IF mob.x + 7 >= Player.x AND mob.x + 7 <= Player.x + 15 THEN
-          IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
-           Inventory(ItemIds.Hp) -= 1
-          END IF
-        END IF
+sub Mobs_Animate_GruntPistol(mob as Mobile)
+    
+    dim f as double
+    dim px as integer
+    dim py as integer
+    dim p as integer
+    dim i as integer
+    
+    f = 1 'DELAYMOD
+    
+    select case mob.state
+    case SPAWNED
+        
+        mob.life  = MobHps.GruntPistol+(MobHps.GruntPistol*0.5*rnd(1))
+        mob.ani   = 30
+        mob.state = MobStates.Go
+        
+    case MobStates.Hurt
+        
+        mob.ani = 39
+        mob.counter = 0.1
+        mob.state = MobStates.Hurting
+        if int(3*rnd(1)) = 0 then
+            i = int(3*rnd(1))
+            if i = 0 then LD2_PlaySound Sounds.gruntHurt0
+            if i = 1 then LD2_PlaySound Sounds.gruntHurt1
+            if i = 2 then LD2_PlaySound Sounds.gruntHurt2
+        end if
+        
+    case MobStates.Hurting
+        
+        mob.counter -= f*0.0167
+        if mob.counter <= 0 then
+            mob.state = MobStates.Go
+        end if
+        
+    case MobStates.Go
+        
+        mob.state = MobStates.Going
+        
+    case MobStates.Going
+        
+        if abs(mob.x - Player.x) < 50 and mob.shooting = 0 then
+            if Player.y + 8 >= mob.y and Player.y + 8 <= mob.y + 15 then
+                if Player.x > mob.x and mob.flip = 0 then mob.shooting = 100
+                if Player.x < mob.x and mob.flip = 1 then mob.shooting = 100
+            end if
+        end if
+        
+        if mob.shooting = 0 then
+            if mob.counter = 0 then
+                mob.counter = -int(150 * rnd(1)) + 1
+                mob.flag = int(2 * rnd(1)) + 1
+            elseif mob.counter > 0 then
+                mob.ani = mob.ani + .1
+                if mob.ani > 37 then mob.ani = 31
+                if mob.flag = 1 then mob.x = mob.x + .5*f: mob.flip = 0
+                if mob.flag = 2 then mob.x = mob.x - .5*f: mob.flip = 1
+                mob.counter = mob.counter - 1
+            else
+                mob.counter = mob.counter + 1
+                mob.ani = 30
+                if mob.counter > -1 then mob.counter = int(150 * rnd(1)) + 1
+            end if
+        end if
+        
+        if mob.shooting > 0 then
+            if (mob.shooting and 15) = 0 then
+                LD2_PlaySound Sounds.pistol2
+                Flashes_Add toMapX(mob.x+7), toMapY(mob.y+7)
+                if mob.flip = 0 then
+                    for i = mob.x + 15 to mob.x + SCREEN_W step 8
+                        px = i \ 16: py = int(mob.y + 10) \ 16
+                        p = TileMap(px, py)
+                        if p >= 80 and p <= 109 then exit for
+                        if i > Player.x and i < Player.x + 15 then
+                            if mob.y + 8 > Player.y and mob.y + 8 < Player.y + 15 then
+                                 Player_Hurt HpDamage.GruntPistol, i, int(mob.y + 8)
+                            end if
+                        end if
+                    next i
+                else
+                    for i = mob.x to mob.x - SCREEN_W step -8
+                        px = i \ 16: py = int(mob.y + 10) \ 16
+                        p = TileMap(px, py)
+                        if p >= 80 and p <= 109 then exit for
+                        if i > Player.x and i < Player.x + 15 then
+                            if mob.y + 8 > Player.y and mob.y + 8 < Player.y + 15 then
+                                 Player_Hurt HpDamage.GruntPistol, i, int(mob.y + 8)
+                            end if
+                        end if
+                    next i
+                end if
+            end if
+            mob.ani = 37 + (mob.shooting and 15) \ 8
+            mob.shooting = mob.shooting - 1
+        end if
+        
+    end select
+    
+end sub
+
+sub Mobs_Animate_Jellyblob(mob as Mobile)
+    
+    dim f as double
+    f = 1 'DELAYMOD
+    
+    select case mob.state
+    case MobStates.Spawned
+        
+        mob.life = MobHps.Jellyblob
+        'mob.ani = 11
+        mob.ani = 47
+        mob.state = MobStates.Go
+        mob.y -= 7
+        
+    case MobStates.Hurt
+        
+        mob.ani = 51
+        mob.counter = 0.1
+        mob.state = MobStates.Hurting
+        
+    case MobStates.Hurting
+        
+        mob.counter -= f*0.0167
+        if mob.counter <= 0 then
+            mob.state = MobStates.Go
+        end if
+        
+    case MobStates.Go
+        
+        if mob.x < Player.x then mob.vx =  0.7: mob.flip = 0
+        if mob.x > Player.x then mob.vx = -0.7: mob.flip = 1
+        mob.counter = rnd(1)*4+1
+        mob.state = MobStates.Going
+        
+    case MobStates.Going
+        
+        mob.ani = mob.ani + .1
+        if mob.ani > 50 then mob.ani = 47
+            
+        if abs(mob.x - Player.x) < 100 then
+            if mob.x < Player.x then
+                mob.x += mob.vx*f: mob.flip = 0
+            else
+                mob.x -= mob.vx*f: mob.flip = 1
+            end if
+        end if
+        
+        if mob.x + 7 >= Player.x and mob.x + 7 <= Player.x + 15 then
+            if mob.y + 10 >= Player.y and mob.y + 10 <= Player.y + 15 then
+                 Player_Hurt HpDamage.JellyblobBite, int(mob.x + 7), int(mob.y + 8)
+            end if
+        end if
+        
+        mob.counter = mob.counter - f*0.0167
+        if mob.counter <= 0 then
+            mob.state = MobStates.Go
+        end if
+        
+    end select
+    
+end sub
+
+sub Mobs_Animate_BossRooftop(mob as Mobile)
+    
+    dim f as double
+    f = 1 'DELAYMOD
+    
+    select case mob.state
+    case MobStates.Spawned
+        mob.life = MobHps.BossRooftop
+        mob.ani = 41
+    end select
+    
+    if mob.ani < 1 then mob.ani = 41
+    
+    mob.ani = mob.ani + .1
+    if mob.ani > 43 then mob.ani = 41
+          
+    if mob.hit > 0 then
+        mob.ani = 45
+    else
+        if mob.x < Player.x then mob.x += .6*f: mob.flip = 1
+        if mob.x > Player.x then mob.x -= .6*f: mob.flip = 0
+    end if
+
+    if (abs(mob.x - Player.x) < 50) and (mob.counter < 10) then
+        mob.ani = 44
+        if mob.x < Player.x then mob.x += .5*f: mob.flip = 1
+        if mob.x > Player.x then mob.x -= .5*f: mob.flip = 0
+    end if
+
+    mob.counter -= .1
+    if mob.counter < 0 then mob.counter = 20
+    
+    if (mob.x + 7) >= Player.x and (mob.x + 7) <= (Player.x + 15) then
+        if (mob.y + 10) >= Player.y and (mob.y + 10) <= (Player.y + 15) then
+            Player_Hurt HpDamage.BossRooftopBite, int(mob.x + 7), int(mob.y + 8)
+        end if
+    end if
+    
+end sub
+
+sub Mobs_Animate_BossPortal(mob as Mobile)
+    
+    dim f as double
+    f = 1 'DELAYMOD
+    
+    select case mob.state
+    case MobStates.Spawned
+        mob.life = MobHps.BossPortal
+        mob.ani = 0
+    end select
+    
+    mob.ani = mob.ani + 20
+    if mob.ani >= 360 then mob.ani = 0
+    
+    mob.y = mob.y + 1
+    if CheckMobFloorHit(mob) = 1 then
+        mob.y = mob.y - mob.velocity
+        if mob.counter = 0 then
+            if abs(mob.x - Player.x) < 50 then
+                mob.velocity = -1.2
+            end if
+            if mob.x < Player.x then
+                mob.x = mob.x + 1.1
+                mob.flip = 0
+            else
+                mob.x = mob.x - 1.1
+                mob.flip = 1
+            end if
+        end if
+    else
+        if mob.counter = 0 then
+            if abs(mob.x - Player.x + 7) < 4 and mob.counter = 0 and mob.velocity >= 0 then
+                mob.velocity = int(2 * rnd(1)) + 2
+                mob.counter = 50
+            end if
+            if mob.flip = 0 then mob.x = mob.x + 1.7*f
+            if mob.flip = 1 then mob.x = mob.x - 1.7*f
+        end if
+    end if
+    mob.counter = mob.counter - 1
+    if mob.counter < 0 then mob.counter = 0
+    mob.y = mob.y - 1
+    
+    if mob.x + 7 >= Player.x and mob.x + 7 <= Player.x + 15 then
+        if mob.y + 10 >= Player.y and mob.y + 10 <= Player.y + 15 then
+            Inventory(ItemIds.Hp) -= HpDamage.BossPortalStomp
+        end if
+    end if
+    
+end sub
+
+'* if noise then
+'* foreach mob: mob.event = MobEvents.heardNoise: mob.target = noise.x, noise.y
+'* mob.state = Investigate
+'* Investigate: after timer (15-20 seconds), return to spawn area (target xy = spawn.x, spawn.y), state = BackToPost/Guard/Patrol
+'* if shot then, mob.event = MobEvents.attacked: mob.target = shooter.x, shooter.y; mob.state = fightback/chasetarget (return after maybe 45-60 seconds)
+sub Mobs_Animate()
+    
+    dim mob as Mobile
+    dim ox as integer
+    
+    Mobs.resetNext
+    while Mobs.canGetNext()
+        
+        Mobs.getNext mob
+        
+        ox = int(mob.x)
        
-    END SELECT
- 
-    IF mob.hit > 0 THEN
-        mob.hit = 0
-        mob.state = HURT
-    END IF
+        select case mob.id
+         
+        case MobIds.Rockmonster
+            
+            Mobs_Animate_Rockmonster mob
+        
+        case MobIds.BlobMine
+            
+            Mobs_Animate_Blobmine mob
+        
+        case MobIds.GruntMachineGun
+            
+            Mobs_Animate_GruntMachineGun mob
+            
+        case MobIds.GruntPistol
+            
+            Mobs_Animate_GruntPistol mob
+            
+        case MobIds.JellyBlob
+            
+            Mobs_Animate_Jellyblob mob
+            
+        case MobIds.BossRooftop
+            
+            Mobs_Animate_BossRooftop mob
+            
+        case MobIds.BossPortal
+            
+            Mobs_Animate_BossPortal mob
+            
+        end select
+        
+        if mob.hit > 0 then
+            mob.hit = 0
+            mob.state = MobStates.Hurt
+        end if
 
-    IF CheckMobWallHit(mob) THEN
-      mob.x = ox
-      IF mob.id = MobIds.Troop1 THEN mob.counter = 0
-      IF mob.id = MobIds.Troop2 THEN mob.counter = 0
-    END IF
-   
-    IF CheckMobFloorHit(mob) = 0 THEN
-      mob.y = mob.y + mob.velocity
-      mob.velocity = mob.velocity + Gravity
-        if mob.id = MobIds.JellyBlob then mob.velocity = 0
-      IF mob.velocity > 3 THEN mob.velocity = 3
-      IF CheckMobFloorHit(mob) THEN
-        IF mob.velocity >= 0 THEN
-          mob.y = (mob.y \ 16) * 16
-        END IF
-      END IF
-    ELSE
-      mob.velocity = 0
-    END IF
+        if CheckMobWallHit(mob) then
+            mob.x = ox
+            if mob.id = MobIds.GruntMachineGun then mob.counter = 0
+            if mob.id = MobIds.GruntPistol then mob.counter = 0
+        end if
+       
+        if CheckMobFloorHit(mob) = 0 then
+            mob.y += mob.velocity
+            mob.velocity += Gravity
+            if mob.id = MobIds.JellyBlob then
+                mob.velocity = 0
+            end if
+            if mob.velocity > 3 then
+                mob.velocity = 3
+            end if
+            if CheckMobFloorHit(mob) and (mob.velocity > 0) then
+                mob.y = int(mob.y / SPRITE_H) * SPRITE_H
+            end if
+        else
+            mob.velocity = 0
+        end if
+        
+        if mob.life <= 0 then
+            Mobs_Kill mob
+        else
+            Mobs.update mob
+        end if
+        
+    wend
     
-    IF deleted THEN
-        Mobs_Kill mob
-    ELSE
-        Mobs.update mob
-    END IF
-    
-  LOOP
-  
 end sub
 
 '- TODO: only draw entities in frame
@@ -3419,7 +3746,7 @@ sub Mobs_Draw()
         x = int(mob.x - XShift)
         y = int(mob.y)
         sprite = int(mob.ani)
-        if mob.id <> MobIds.Boss2 then
+        if mob.id <> MobIds.BossPortal then
             SpritesEnemy.putToScreenEx(x, y, sprite, mob.flip)
         else
             cos180 = cos((mob.ani+180)*torad)
@@ -3455,9 +3782,9 @@ sub Mobs_Draw()
         id = BossBarId
         Mobs.GetFirstOfType mob, id
         select case id
-        case MobIds.Boss1
+        case MobIds.BossRooftop
             LD2_putFixed 272, 180, 40, idENEMY, 1
-        case MobIds.Boss2
+        case MobIds.BossPortal
             LD2_putFixed 270 - 3, 180, 76, idSCENE, 0
             LD2_putFixed 270 + 13, 180, 77, idSCENE, 0
         end select
@@ -3476,17 +3803,17 @@ function Mobs_GetTypeName(typeId as integer) as string
     select case typeId
     case MobIds.Rockmonster
         return "Rock Monster"
-    case MobIds.Troop1
-        return "Trooper A"
-    case MobIds.Troop2
-        return "Trooper B"
+    case MobIds.GruntMachineGun
+        return "Grunt MachineGun"
+    case MobIds.GruntPistol
+        return "Grunt Pistol"
     case MobIds.Blobmine
         return "Blob Mine"
     case MobIds.Jellyblob
         return "Jelly Blob"
-    case MobIds.Boss1
+    case MobIds.BossRooftop
         return "Rooftop Boss"
-    case MobIds.Boss2
+    case MobIds.BossPortal
         return "Portal Boss"
     case else
         return "Name not defined"
@@ -4079,6 +4406,33 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     
 end function
 
+sub Player_Hurt(damage as integer, contactX as integer, contactY as integer)
+    
+    dim n as integer
+    dim d as integer
+    
+    if Inventory(ItemIds.Hp) <= 0 then
+        exit sub
+    end if
+    
+    n = int(20*rnd(1))
+    select case n
+    case 0
+        LD2_PlaySound Sounds.blood1
+    case 1
+        LD2_PlaySound Sounds.blood2
+    case 2
+        LD2_PlaySound Sounds.larryHurt
+    end select
+    
+    d = (1+2*rnd(1)) * iif(int(2*rnd(1)),1,-1)
+    
+    Guts_Add GutsIds.Blood, contactX, contactY, 1, d
+    
+    Inventory(ItemIds.Hp) -= damage
+    
+end sub
+
 function Player_GetAccessLevel() as integer
     
     return iif(Inventory(AUTH) > Inventory(TEMPAUTH), Inventory(AUTH), Inventory(TEMPAUTH))
@@ -4539,7 +4893,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     case ItemIds.Shotgun
         
         Inventory(ItemIds.Shotgun) -= 1
-        damage = 5
+        damage = HpDamage.Shotgun
         fireY = iif(Player.state = PlayerStates.Crouching, 12, 8)
         
     case ItemIds.Pistol
@@ -4552,7 +4906,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             if (is_repeat = 0 and timeSinceLastShot < 0.25) then return 0
         end if
         Inventory(ItemIds.Pistol) -= 1
-        damage = 2
+        damage = HpDamage.Pistol
         fireY = iif(Player.state = PlayerStates.Crouching, 12, 5)
         Player.uAni = int(iif(Player.state = PlayerStates.Crouching, UpperSprites.PistolCrouchShootA-1, UpperSprites.ShootPistolA-1))
         Player.stillAni = Player.uAni
@@ -4561,21 +4915,21 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         
         if timeSinceLastShot < 0.12 then return 0
         Inventory(ItemIds.MachineGun) -= 1
-        damage = 1
+        damage = HpDamage.MachineGun
         fireY = iif(Player.state = PlayerStates.Crouching, 7, 5)
         Player.uAni = 8: Player.stillAni = 8
         
     case ItemIds.Magnum
         
         Inventory(ItemIds.Magnum) -= 1
-        damage = 7
+        damage = HpDamage.Magnum
         fireY = iif(Player.state = PlayerStates.Crouching, 12, 8)
         
     case ItemIds.Fist
         
         if (is_repeat = 1 and timeSinceLastShot < 0.30) then return 0
         if (is_repeat = 0 and timeSinceLastShot < 0.10) then return 0
-        damage = 2
+        damage = HpDamage.Fist
         
     case else
         
@@ -4592,6 +4946,8 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     if (Player.weapon <> ItemIds.Fist) and (Player.uAni = Player.stillAni) then
 
         Player.uAni = Player.uAni + 1
+        
+        Flashes_Add toMapX(Player.x+7), toMapY(Player.y+7)
         
         if Player.is_lookingdown then
             
@@ -4678,10 +5034,10 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             case ItemIds.Shotgun
                 dist = abs(contactX - (Player.x+7))
                 select case dist
-                case  0 to 15: mob.life -= (damage - 0)
-                case 16 to 47: mob.life -= (damage - 1)
-                case 48 to 79: mob.life -= (damage - 2)
-                case else    : mob.life -= (damage - 3)
+                case  0 to 31: mob.life -= (damage - 0)
+                case 32 to 63: mob.life -= (damage - int(HpDamage.Shotgun*0.2))
+                case 64 to 95: mob.life -= (damage - int(HpDamage.Shotgun*0.3))
+                case else    : mob.life -= (damage - int(HpDamage.Shotgun*0.5))
                 end select
             case ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum
                 mob.life -= damage
@@ -4803,6 +5159,10 @@ sub Stats_Draw ()
     LD2_LogDebug "Stats_Draw()"
     
     dim pad as integer
+    
+    if Inventory(ItemIds.Hp) < 0 then
+        Inventory(ItemIds.Hp) = 0
+    end if
     
     pad = 3
     
@@ -5510,6 +5870,7 @@ type RoomFileHeader
     numItems as ubyte
     numMobs as ubyte
     scrollX as short
+    phase as ubyte
 end type
 
 type RoomFileData
@@ -5556,6 +5917,7 @@ sub Game_Save (filename as string)
     roomdata.header.numItems = NumItems
     roomdata.header.numMobs  = Mobs.count()
     roomdata.header.scrollX  = cast(short, int(XShift))
+    roomdata.header.phase    = cast(ubyte, Inventory(ItemIds.Phase))
     for n = 0 to NumDoors-1
         select case Doors(n).accessLevel
         case GREENACCESS  : tile = TileIds.DOORGREEN

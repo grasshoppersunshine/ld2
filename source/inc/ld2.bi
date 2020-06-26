@@ -112,6 +112,7 @@ enum ItemIds
     PoweredArmor      = 82
     QuadDamage        = 83
     DamageMod         = 84
+    Phase             = 85
     '=======================================
     CurrentRoom          = 90
     BossRooftopBegin     = 91
@@ -282,13 +283,40 @@ CONST REDACCESS    = 5
 '======================
 enum MobIds
     Rockmonster = 1
-    Troop1
-    Troop2
+    GruntMachineGun
+    GruntPistol
     Blobmine
     Jellyblob
     Plant
-    Boss1
-    Boss2
+    BossRooftop
+    BossPortal
+end enum
+
+enum MobHps
+    Rockmonster = 20
+    GruntMachineGun = 10
+    GruntPistol = 6
+    Blobmine = 3
+    Jellyblob = 14
+    Plant = 8
+    BossRooftop = 100
+    BossPortal = 100
+end enum
+
+enum HpDamage
+    RockmonsterBite = 1
+    GruntMachineGun = 2
+    GruntPistol = 4
+    BlobmineExplode = 40
+    JellyblobBite = 2
+    PlantWhip = 5
+    BossRooftopBite = 1
+    BossPortalStomp = 1
+    Fist = 1
+    Shotgun = 10
+    Pistol = 4
+    MachineGun = 2
+    Magnum = 15
 end enum
 
 '======================
@@ -381,10 +409,10 @@ enum Sounds
     '// blood
     blood1
     blood2
-    troopHurt0
-    troopHurt1
-    troopHurt2
-    troopDie
+    gruntHurt0
+    gruntHurt1
+    gruntHurt2
+    gruntDie
     rockJump
     rockHurt
     rockDie
@@ -514,6 +542,7 @@ CONST REVEALTEXT    = &h8000
 CONST REVEALDONE    = &h10000
 CONST SAVEGAME      = &h20000
 CONST LOADGAME      = &h40000
+CONST RECENTDEATH   = &h80000
 
 '======================
 '= SCENE POSES
@@ -523,32 +552,14 @@ CONST POSEJANITOR = 28
 CONST BARNEYBOX = 45
 CONST BARNEYEXITELEVATOR = 50
 
-'======================
-'= CHARACTER IDS SCENES
-'======================
-'CONST enLARRY = 1
-'CONST enSTEVE = 2
-'CONST enBARNEY = 3
-'CONST enJANITOR = 4
-'CONST enTROOPER = 5
-'CONST enMANAGER = 6
-'CONST enLADYSPY = 7
-'CONST enBATHER = 8
-'CONST enSECRETARY = 9 '- chatting at front desk on phone
-'CONST enSUICIDAL = 10
-'CONST enSURVIVOR = 11 '- hiding in basement/somewhere; using radio/walkie-talkie to reach out for help
-'CONST enNARRATOR = 12
-'const enSTEVESICK = 13
-'const enROCKMONSTER = 14
-
 enum CharacterIds
     Barney = 1
     Janitor
     Larry
     Rockmonster
     Steve
-    Trooper
-    Boss2
+    Grunt
+    PortalBoss
 end enum
 
 enum PoseIds
@@ -598,7 +609,7 @@ enum ChatBoxes
     Barney               = 43
     BarneyRadio          = 70
     Janitor              = 41
-    Trooper              = 74
+    Grunt                = 74
 end enum
 
 enum Guides
