@@ -306,6 +306,10 @@ end type
     
     dim noticeMessage as string
     dim noticeTimer as double
+    
+    dim dimensions as string
+    dim w as integer
+    dim h as integer
 
   DO
     
@@ -330,6 +334,13 @@ end type
         else
             drawSpriteLine 1, lastClick.x-XScroll, lastClick.y, cursor.x, cursor.y, sprite, activeLayer, LayerIds.Video
         end if
+        x0 = lastClick.x-XScroll: x1 = cursor.x
+        y0 = lastClick.y: y1 = cursor.y
+        if x0 > x1 then swap x0, x1
+        if y0 > y1 then swap y0, y1
+        w = (x1-x0)+1: h = (y1-y0)+1
+        dimensions = str(w)+" "+str(h)
+        putText dimensions, SCREEN_W-len(dimensions)*FONT_W, FONT_H*34.5
     end if
     
     if selectingBox then

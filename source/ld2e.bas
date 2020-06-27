@@ -295,49 +295,38 @@ end sub
 
 function Player_AddAmmo (weaponId as integer, qty as integer) as integer
     
-    dim spaceLeft as integer
-    dim qtyUnused as integer
-    dim qtyMax as integer
-    dim itemId as integer
+    dim loaded as integer
+    dim maxload as integer
+    dim canload as integer
+    dim leftover as integer
     
-    qtyUnused = 0
+    leftover = 0
     
     select case weaponId
     case ItemIds.Shotgun
-        qtyMax = Maxes.Shotgun
+        maxload = Maxes.Shotgun
     case ItemIds.Pistol
-        qtyMax = Maxes.Pistol
-    case ItemIds.Magnum
-        qtyMax = Maxes.Magnum
+        maxload = Maxes.Pistol
     case ItemIds.MachineGun
-        qtyMax = Maxes.MachineGun
+        maxload = Maxes.MachineGun
+    case ItemIds.Magnum
+        maxload = Maxes.Magnum
     case else
-        return 0
+        return qty
     end select
     
-    spaceLeft = qtyMax - Inventory(weaponId)
-    if spaceLeft < qty then
-        qtyUnused = qty - spaceLeft
-        qty = spaceLeft
+    loaded = Inventory(weaponId)
+    
+    canload = maxload - loaded
+    if qty > canload then
+        leftover = qty - canload
+        qty = canload
     end if
     if qty > 0 then
         Player_AddItem weaponId, qty
     end if
-
-  'IF Kind = 1 THEN Inventory(SHELLS) = Inventory(SHELLS) + Amount
-  'IF Kind = 2 THEN Inventory(BULLETS) = Inventory(BULLETS) + Amount
-  'IF Kind = 3 THEN Inventory(DEAGLES) = Inventory(DEAGLES) + Amount
-  'IF Kind = -1 THEN Player.life = Player.life + Amount
-  '
-  '
-  'IF Player.life > MAXLIFE THEN Player.life = MAXLIFE
-  'IF Inventory(SHELLS) > MAXSHELLS THEN Inventory(SHELLS) = MAXSHELLS
-  'IF Inventory(BULLETS) > MAXBULLETS THEN Inventory(BULLETS) = MAXBULLETS
-  'IF Inventory(DEAGLES) > MAXDEAGLES THEN Inventory(DEAGLES) = MAXDEAGLES
-  '
-  'LD2_PlaySound Sounds.equip
     
-    return qtyUnused
+    return leftover
 
 end function
 
@@ -939,7 +928,7 @@ end sub
 
 SUB LD2_GenerateSky()
     
-  LD2_cls 2, 64
+  LD2_cls 2, 66
   
   DIM x as integer
   DIM y as integer
@@ -951,9 +940,9 @@ SUB LD2_GenerateSky()
       y = SCREEN_H*RND(1)
         r = int(4*RND(1))
         if r = 0 then
-            LD2_pset x, y, 65, 2
+            LD2_pset x, y, 67, 2
         else
-            LD2_pset x, y, 64, 2
+            LD2_pset x, y, 66, 2
         end if
     next i
   FOR i = 0 TO 1499
@@ -975,13 +964,13 @@ SUB LD2_GenerateSky()
       'END IF
     'LOOP
     r = int(2*RND(1))
-    LD2_pset x, y, 65+r, 2
+    LD2_pset x, y, 67+r, 2
   NEXT i
     FOR i = 0 TO 999
         x = SCREEN_W*RND(1)
       y = SCREEN_H*RND(1)
         r = int(2*RND(1))
-    LD2_pset x, y, 66+r, 2
+    LD2_pset x, y, 68+r, 2
     next i
   FOR i = 0 TO 499
     'DO
@@ -1009,7 +998,7 @@ SUB LD2_GenerateSky()
         'r = r + 16
       END IF
     END IF
-    LD2_pset x, y, 67+r, 2
+    LD2_pset x, y, 72+r, 2
   NEXT i
 
 END SUB
@@ -1179,7 +1168,18 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
         case ItemIds.TeleportA
             Teleports_Add int(Items(i).x/SPRITE_W), int(Items(i).y/SPRITE_H), 0
             Items(i).isVisible = 0
+        case ItemIds.TeleportB
+            Teleports_Add int(Items(i).x/SPRITE_W), int(Items(i).y/SPRITE_H), 1
+            Items(i).isVisible = 0
+        case ItemIds.TeleportC
+            Teleports_Add int(Items(i).x/SPRITE_W), int(Items(i).y/SPRITE_H), 2
+            Items(i).isVisible = 0
+        case ItemIds.TeleportD
+            Teleports_Add int(Items(i).x/SPRITE_W), int(Items(i).y/SPRITE_H), 3
+            Items(i).isVisible = 0
         case ItemIds.DoorTop, ItemIds.DoorBottom
+            Items(i).canPickup = 0
+        case ItemIds.SpinningFan, ItemIds.SpinningGear
             Items(i).canPickup = 0
         end select
     next i
@@ -2113,12 +2113,8 @@ SUB LD2_RenderFrame
     static fastClock as double
     static slowTimer as double
     static slowClock as double
-    static rotTimer as double
-    static rotClock as double
     dim timediff as double
-    
     dim animators(9) as integer
-    dim rotators(9) as integer
     dim n as integer
     
     dim playerIsLit as integer
@@ -2140,16 +2136,6 @@ SUB LD2_RenderFrame
     next n
     animators(0) = 0
     animators(9) = 0
-    
-    timediff = (timer - rotTimer)
-    if timediff >= 0.02 then
-        rotClock = (rotClock + 6*timediff/0.02) mod 360
-        rotTimer = timer
-    end if
-    for n = 0 to 8
-        rotators(n) = 0
-    next n
-    rotators(9) = int(rotClock)
     
     LD2_CopyBuffer 2, 1
     LD2_RenderBackground int((Inventory(ItemIds.CurrentRoom)+1)/24)
@@ -2182,13 +2168,7 @@ SUB LD2_RenderFrame
             for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
                 m = TileMap(mapX, mapY)
                 a = animators(AniMap(mapX, mapY))
-                rot = rotators(AniMap(mapX, mapY))
-                if rot then
-                    SpritesTile.putToScreen(xp, yp, 1)
-                    SpritesTile.putToScreenEx(xp, yp, m+a, 0, rot)
-                else
-                    SpritesTile.putToScreen(xp, yp, m+a)
-                end if
+                SpritesTile.putToScreen(xp, yp, m+a)
                 l = LightMapBg(mapX, mapY)
                 if l then
                     SpritesLight.putToScreen(xp, yp, l)
@@ -2209,13 +2189,7 @@ SUB LD2_RenderFrame
                 m = TileMap(mapX, mapY)
                 if m then
                     a = animators(AniMap(mapX, mapY))
-                    rot = rotators(AniMap(mapX, mapY))
-                    if rot then
-                        SpritesTile.putToScreen(xp, yp, 1)
-                        SpritesTile.putToScreenEx(xp, yp, m+a, 0, rot)
-                    else
-                        SpritesTile.putToScreen(xp, yp, m+a)
-                    end if
+                    SpritesTile.putToScreen(xp, yp, m+a)
                 end if
                 mapX += 1
                 xp = xp + 16
@@ -2520,10 +2494,34 @@ sub MapItems_Draw ()
     
     LD2_LogDebug "MapItems_Draw()"
     
+    static fastTime as double
+    static slowTime as double
+    static fastClock as double
+    static slowClock as double
+    dim timediff as double
     dim n as integer
+    
+    timediff = (timer - fastTime)
+    if timediff >= 0.02 then
+        fastClock = (fastClock + 6*timediff/0.02) mod 360
+        fastTime = timer
+    end if
+    timediff = (timer - slowTime)
+    if timediff >= 0.01 then
+        slowClock = (slowClock + 1*timediff/0.01) mod 360
+        slowTime = timer
+    end if
+    
     for n = 0 to NumItems-1
         if Items(n).isVisible then
-            SpritesObject.putToScreen(int(Items(n).x - XShift), Items(n).y, Items(n).id)
+            select case Items(n).id
+            case ItemIds.SpinningFan
+                SpritesObject.putToScreenEx(int(Items(n).x - XShift), Items(n).y, Items(n).id, 0, int(fastClock))
+            case ItemIds.SpinningGear
+                SpritesObject.putToScreenEx(int(Items(n).x - XShift), Items(n).y, Items(n).id, 0, int(slowClock))
+            case else
+                SpritesObject.putToScreen(int(Items(n).x - XShift), Items(n).y, Items(n).id)
+            end select
         end if
     next n
     
@@ -3047,9 +3045,11 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
     
     numFloors = 0
     for y = 0 to MAPH-2
-        for x = 0 to MAPW-1
+        for x = 1 to MAPW-2
             if FloorMap(x, y) = 0 and FloorMap(x, y+1) = 1 then
-                numFloors += 1
+                if FloorMap(x-1, y) = 0 and FloorMap(x+1, y) = 0 then
+                    numFloors += 1
+                end if
             end if
         next x
     next y
@@ -3065,7 +3065,9 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
             x = int(80*rnd(1)) 'int((Elevator.mapX-5) * rnd(1))
             y = int((MAPH-2) * rnd(1))
             if (FloorMap(x, y) = 0) and (FloorMap(x, y+1) <> 0) then
-                exit do
+                if FloorMap(x-1, y) = 0 and FloorMap(x+1, y) = 0 then
+                    exit do
+                end if
             end if
         loop
         if forceMobType > 0 then
@@ -3612,6 +3614,7 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
     case MobStates.Spawned
         mob.life = MobHps.BossRooftop
         mob.ani = 41
+        mob.state = MobStates.Go
     end select
     
     if mob.ani < 1 then mob.ani = 41
@@ -3652,6 +3655,7 @@ sub Mobs_Animate_BossPortal(mob as Mobile)
     case MobStates.Spawned
         mob.life = MobHps.BossPortal
         mob.ani = 0
+        mob.state = MobStates.Go
     end select
     
     mob.ani = mob.ani + 20
@@ -3785,6 +3789,7 @@ sub Mobs_Draw()
     
     LD2_LogDebug "Mobs_Draw()"
     
+    dim dst as SDL_Rect
     dim mob as Mobile
     dim x as integer, y as integer
     dim sprite as integer
@@ -3802,9 +3807,12 @@ sub Mobs_Draw()
         x = int(mob.x - XShift)
         y = int(mob.y)
         sprite = int(mob.ani)
-        if mob.id <> MobIds.BossPortal then
-            SpritesEnemy.putToScreenEx(x, y, sprite, mob.flip)
-        else
+        select case mob.id
+        case MobIds.BossRooftop
+            dst.x = x-SPRITE_W*0.5: dst.y = y-SPRITE_H
+            dst.w = SPRITE_W*2: dst.h = SPRITE_H*2
+            SpritesEnemy.putToScreenEx(x, y, sprite, mob.flip, 0, 0, @dst)
+        case MobIds.BossPortal
             cos180 = cos((mob.ani+180)*torad)
             sin180 = sin((mob.ani+180)*torad)
             cos0   = cos(mob.ani*torad)
@@ -3829,7 +3837,9 @@ sub Mobs_Draw()
                 SpritesScene.putToScreenEx(x + 18 - cos270, y - 10 + sin270, arm, mob.flip)
                 SpritesScene.putToScreenEx(x + 18 - cos270, y + 6 + sin270, claws, mob.flip)
             end if
-        end if
+        case else
+            SpritesEnemy.putToScreenEx(x, y, sprite, mob.flip)
+        end select
     loop
     if BossBarId then
         for x = 1 to 4

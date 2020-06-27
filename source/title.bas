@@ -853,7 +853,7 @@ SUB TITLE_Goodbye
     
     chances(0) = 20: goodbyes(0) = "GOODBYE"
     chances(1) =  2: goodbyes(1) = "SMELL YA LATER"
-    chances(2) =  1: goodbyes(2) = "MOTHER OF GOD!"
+    chances(2) =  1: goodbyes(2) = "MOTHER OF GOD"
     chances(3) =  1: goodbyes(3) = "SAVE YOURSELF FROM HELL"
     chances(4) =  1: goodbyes(4) = "REALITY IS MUCH WORSE"
     chances(5) =  1: goodbyes(5) = "LIBERA TE TUTAMET EX INFERIS"

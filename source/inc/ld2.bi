@@ -93,9 +93,10 @@ enum ItemIds
     MachineGun        = 22
     Pistol            = 23
     Magnum            = 24
-    WalkieTalkie      = 25
-    MachineGunAmmo    = 26
+    MachineGunAmmo    = 25
+    Wrench            = 26
     ExtraLife         = 27
+    WalkieTalkie      = 28
     Auth              = 50
     TempAuth          = 51
     '=======================================
@@ -103,6 +104,8 @@ enum ItemIds
     ElevatorMenu      = 61
     DoorTop           = 60
     DoorBottom        = 61
+    SpinningFan       = 64
+    SpinningGear      = 65
     '=======================================
     Lives             = 70
     HP                = 71
@@ -143,6 +146,8 @@ enum ItemIds
     SwapDstA             = 52
     TeleportA            = 58
     TeleportB            = 59
+    TeleportC            = 62
+    TeleportD            = 63
 end enum
 
 enum AnimationIds

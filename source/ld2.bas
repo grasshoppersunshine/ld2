@@ -729,9 +729,9 @@ sub LoadSounds ()
     AddSound Sounds.larryDie , "larry-die.wav"
     
     AddSound Sounds.laugh      , "grunt-laugh.wav"
-    AddSound Sounds.gruntHurt0 , "maybe/splice/alienhurt0.ogg"
-    AddSound Sounds.gruntHurt1 , "maybe/splice/alienhurt1.ogg"
-    AddSound Sounds.gruntHurt2 , "recorded/bleh.wav"
+    AddSound Sounds.gruntHurt0 , "splice/alienhurt0.ogg"
+    AddSound Sounds.gruntHurt1 , "splice/alienhurt1.ogg"
+    AddSound Sounds.gruntHurt2 , "grunt-hurt.wav"
     AddSound Sounds.gruntDie   , "splice/fuck.wav"
     AddSound Sounds.machinegun2, "shoot-machinegun.wav"
     AddSound Sounds.pistol2    , "shoot-pistol.wav"
@@ -2503,7 +2503,9 @@ END SUB
 
 sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as integer)
     
-    dim qtyUnused as integer
+    dim leftover as integer
+    dim carrying as integer
+    dim ammoId as integer
     
     select case id
     case ItemIds.Shotgun, ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum '// need to separate use from add
@@ -2512,21 +2514,19 @@ sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as in
             CustomActions(0).itemId   = id
             DoAction ActionIds.Equip, id
         elseif qty > 1 then
-            qtyUnused = Player_AddAmmo(id, qty)
-            if qtyUnused = 1 then
-                select case id
-                case ItemIds.Shotgun   : LD2_AddToStatus ItemIds.ShotgunAmmo   , 2: LD2_AddToStatus ItemIds.ShotgunAmmo   , -1
-                case ItemIds.Pistol    : LD2_AddToStatus ItemIds.PistolAmmo    , 2: LD2_AddToStatus ItemIds.PistolAmmo    , -1
-                case ItemIds.MachineGun: LD2_AddToStatus ItemIds.MachineGunAmmo, 2: LD2_AddToStatus ItemIds.MachineGunAmmo, -1
-                case ItemIds.Magnum    : LD2_AddToStatus ItemIds.MagnumAmmo    , 2: LD2_AddToStatus ItemIds.MagnumAmmo    , -1
-                end select
-            else
-                select case id
-                case ItemIds.Shotgun   : LD2_AddToStatus ItemIds.ShotgunAmmo   , qtyUnused
-                case ItemIds.Pistol    : LD2_AddToStatus ItemIds.PistolAmmo    , qtyUnused
-                case ItemIds.MachineGun: LD2_AddToStatus ItemIds.MachineGunAmmo, qtyUnused
-                case ItemIds.Magnum    : LD2_AddToStatus ItemIds.MagnumAmmo    , qtyUnused
-                end select
+            select case id
+            case ItemIds.Shotgun   : ammoId = ItemIds.ShotgunAmmo
+            case ItemIds.Pistol    : ammoId = ItemIds.PistolAmmo
+            case ItemIds.MachineGun: ammoId = ItemIds.MachineGunAmmo
+            case ItemIds.Magnum    : ammoId = ItemIds.MagnumAmmo
+            end select
+            carrying = Player_GetItemQty(ammoId)
+            qty = iif(qty > carrying, carrying, qty)
+            leftover = Player_AddAmmo(id, qty)
+            if leftover = 1 then
+                LD2_AddToStatus ammoId, 2: LD2_AddToStatus ammoId, -1
+            elseif leftover > 1 then
+                LD2_AddToStatus ammoId, leftover
             end if
             LD2_PlaySound Sounds.equip
         end if

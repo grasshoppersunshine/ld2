@@ -130,7 +130,7 @@ sub VideoSprites.putToScreen(x as integer, y as integer, spriteNum as integer = 
     
 end sub
 
-sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer, flipHorizontal as integer = 0, rotateAngle as double = 0, crop as SDL_RECT ptr = 0)
+sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer, flipHorizontal as integer = 0, rotateAngle as double = 0, crop as SDL_RECT ptr = 0, dest as SDL_RECT ptr = 0)
     
     dim src as SDL_RECT
     dim dst as SDL_RECT
@@ -138,13 +138,21 @@ sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer,
     if crop = 0 then
         src.x = this._w*spriteNum: src.y = 0
         src.w = this._w: src.h = this._h
-        dst.x = x: dst.y = y
-        dst.w = this._w: dst.h = this._h
+        if dest = 0 then
+            dst.x = x: dst.y = y
+            dst.w = this._w: dst.h = this._h
+        end if
     else
         src.x = this._w*spriteNum+crop->x: src.y = crop->y
         src.w = crop->w: src.h = crop->h
-        dst.x = x: dst.y = y
-        dst.w = crop->w: dst.h = crop->h
+        if dest = 0 then
+            dst.x = x: dst.y = y
+            dst.w = crop->w: dst.h = crop->h
+        end if
+    end if
+
+    if dest <> 0 then
+        dst = *dest
     end if
     
     dim center as SDL_POINT

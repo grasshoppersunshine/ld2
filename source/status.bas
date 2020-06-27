@@ -993,13 +993,13 @@ function UseItem (item AS InventoryType) as integer
         id  = Inventory_GetUseItem()
         qty = Inventory_GetUseQty()
         discard = Inventory_GetUseItemDiscard()
-        if discard then
-            LD2_AddToStatus item.id, -qty
-        end if
         if UseItemCallback <> 0 then
             UseItemCallback(id, qty, exitMenu)
         else
             message = "ERROR - No callback for UseItem"
+        end if
+        if discard then
+            LD2_AddToStatus item.id, -qty
         end if
         RefreshStatusScreen
         textColor = STATUS_COLOR_SUCCESS
