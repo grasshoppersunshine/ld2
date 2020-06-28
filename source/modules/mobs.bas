@@ -1,5 +1,110 @@
 #include once "inc/mobs.bi"
 
+sub Mobile.setAnimation(frameStart as integer, frameEnd as integer = -1, seconds as double = 0)
+    
+    if (frameEnd = -1) or (seconds = 0) then
+        this.frameStart = frameStart
+        this.frameEnd = frameStart
+        this.frameDelay = 0
+        this.frameCounter = 0
+    else
+        this.frameStart = frameStart
+        this.frameEnd = frameEnd
+        this.frameDelay = seconds
+        this.frameCounter = 0
+    end if
+    
+end sub
+
+sub Mobile.animate (gravity as double)
+    
+    dim timediff as double
+    dim numFrames as integer
+    
+    numFrames = (this.frameEnd - this.frameStart) + 1
+    
+    if (this.frameDelay > 0) then
+        timediff = (timer - this.frameClock)
+        if timediff > this.frameDelay then
+            this.frameCounter = (this.frameCounter+1*(timediff/this.frameDelay)) mod numFrames
+            this.frameClock = timer
+        end if
+    end if
+    
+    if (this.moveDelay > 0) then
+        timediff = (timer - this.moveClock)
+        if timediff > this.moveDelay then
+            this.x += this.vx*(timediff/this.moveDelay)
+            this.moveClock = timer
+        end if
+    end if
+    
+    if (this.fallDelay > 0) then
+        timediff = (timer - this.fallClock)
+        if timediff > this.fallDelay then
+            this.velocity += gravity*(timediff/this.fallDelay)
+            this.y += this.velocity
+            this.fallClock = timer
+        end if
+    end if
+    
+    if (this.stateExpireTime > 0) and (this._stateExpired = 0) then
+        timediff = (timer - this.stateClock)
+        if timediff > this.stateExpireTime then
+            this._stateExpired = 1
+        end if
+    end if
+    
+end sub
+
+function Mobile.getCurrentFrame () as integer
+    
+    return int(this.frameStart + this.frameCounter)
+    
+end function
+
+sub Mobile.setState (id as integer, expireTime as double = 0)
+    
+    this.state = id
+    this.stateExpireTime = expireTime
+    this._stateExpired = 0
+    this.stateClock = timer
+    this.frameClock = timer
+    this.moveClock = timer
+    this.fallClock = timer
+    
+end sub
+
+function Mobile.stateExpired () as integer
+    
+    return this._stateExpired
+    
+end function
+
+function Mobile.percentExpired () as double
+    
+    dim timediff as double
+    
+    if this._stateExpired then
+        return 1.0
+    elseif this.stateExpireTime > 0 then
+        timediff = (timer - this.stateClock)
+        return timediff / this.stateExpireTime
+    else
+        return -1
+    end if
+    
+end function
+
+sub Mobile.resetClocks()
+    
+    this.stateClock = timer
+    this.frameClock = timer
+    this.moveClock = timer
+    this.fallClock = timer
+    
+end sub
+
 sub MobileCollection.add (mob AS Mobile)
     
     static uid as integer

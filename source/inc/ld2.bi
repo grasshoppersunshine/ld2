@@ -253,6 +253,10 @@ enum FullBodySprites
     RunningA           = 36
     RunningZ           = 43
     TurningToWall      = 77
+    RooftopBoss        = 40
+    RooftopBossWalking = 41
+    RooftopBossCharging = 43
+    RooftopBossHurt     = 44
 end enum
 
 type ActionItem
@@ -307,8 +311,8 @@ enum MobHps
     Blobmine = 3
     Jellyblob = 14
     Plant = 8
-    BossRooftop = 100
-    BossPortal = 100
+    BossRooftop = 300
+    BossPortal = 300
 end enum
 
 enum HpDamage

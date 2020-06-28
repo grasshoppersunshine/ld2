@@ -166,7 +166,7 @@ declare function Mobs_Api (args as string) as string
 declare sub Mobs_Add (x as integer, y as integer, id as integer)
 declare sub Mobs_GetFirstOfType (mob as Mobile, id as integer)
 declare sub Mobs_Generate  (forceNumMobs as integer = 0, forceMobType as integer = 0)
-declare sub Mobs_Animate ()
+declare sub Mobs_Animate (resetClocks as integer = 0)
 declare sub Mobs_Draw ()
 declare sub Mobs_Kill (mob as Mobile)
 declare sub Mobs_KillAll ()

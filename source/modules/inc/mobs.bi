@@ -26,6 +26,25 @@ type Mobile
     target as integer
     targetX as integer
     targetY as integer
+    moveClock as double
+    moveDelay as double
+    fallClock as double
+    fallDelay as double
+    stateClock as double
+    stateExpireTime as double
+    _stateExpired as integer
+    frameStart as integer
+    frameEnd as integer
+    frameDelay as double
+    frameClock as double
+    frameCounter as double
+    declare sub animate(gravity as double)
+    declare function stateExpired() as integer
+    declare function percentExpired() as double
+    declare sub setAnimation(frameStart as integer, frameEnd as integer = -1, seconds as double = 0)
+    declare function getCurrentFrame () as integer
+    declare sub setState (id as integer, expireTime as double = 0)
+    declare sub resetClocks()
 end type
 
 type MobileType

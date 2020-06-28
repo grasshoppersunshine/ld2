@@ -135,6 +135,8 @@
         Retreat
         Retreating
         Spawned
+        Charge
+        Charging
     end enum
     '*******************************************************************
     '* OH, BOY! WHAT FLAVOR?
@@ -794,7 +796,7 @@ sub Game_Init
     
     randomize timer
     
-    print "Larry the Dinosaur II v1.1.130"
+    print "Larry the Dinosaur II v1.1.155"
     
     if Game_hasFlag(CLASSICMODE) then
         print "STARTING CLASSIC (2002) MODE"
@@ -3287,7 +3289,7 @@ sub Mobs_Animate_Blobmine(mob as Mobile)
     case MobStates.Going
         
         mob.ani = mob.ani + .1*f
-        if mob.ani >= 9 then mob.ani = 7
+        if mob.ani >= 11 then mob.ani = 7
         
         mob.x = mob.x + mob.vx
         
@@ -3607,37 +3609,69 @@ end sub
 
 sub Mobs_Animate_BossRooftop(mob as Mobile)
     
+    static clocked as double
+    dim walkSpeed as double
+    dim chargeSpeed as double
+    dim timediff as double
     dim f as double
     f = 1 'DELAYMOD
     
+    walkSpeed   = f*1.0
+    chargeSpeed = f*1.5
+    
     select case mob.state
     case MobStates.Spawned
+        
         mob.life = MobHps.BossRooftop
-        mob.ani = 41
         mob.state = MobStates.Go
+        mob.moveDelay = 1/60
+        
+    case MobStates.Go
+        
+        mob.setAnimation RooftopBossWalking, RooftopBossWalking+1, 0.2
+        mob.setState MobStates.Going, 3*rnd(1)+1
+        mob.vx = walkSpeed*iif(mob.x+7 < Player.x, 1, -1)
+        mob.flip = iif(mob.vx > 0, 0, 1)
+        
+    case MobStates.Going
+        
+        mob.animate(GRAVITY)
+        if mob.stateExpired() then
+            mob.state = MobStates.Go
+        end if
+        if (mob.percentExpired() > 0.5) and (abs(mob.x-Player.x) < 50) then
+            mob.setState MobStates.Charge, mob.stateExpireTime*0.5
+        end if
+        
+    case MobStates.Hurt
+        
+        mob.setAnimation FullBodySprites.RooftopBossHurt
+        mob.setState MobStates.Hurting, 0.3
+        mob.vx = walkspeed * 0.5
+        
+    case MobStates.Hurting
+        
+        mob.animate(GRAVITY)
+        if mob.stateExpired() then
+            mob.setState MobStates.Go
+        end if
+        
+    case MobStates.Charge
+        
+        mob.setAnimation FullBodySprites.RooftopBossCharging
+        mob.setState MobStates.Charging, mob.stateExpireTime
+        mob.vx = chargeSpeed*iif(mob.x+7 < Player.x, 1, -1)
+        mob.flip = iif(mob.vx > 0, 0, 1)
+        
+    case MobStates.Charging
+        
+        mob.animate(GRAVITY)
+        if mob.stateExpired() then
+            mob.setState MobStates.Go
+        end if
+        
     end select
-    
-    if mob.ani < 1 then mob.ani = 41
-    
-    mob.ani = mob.ani + .1
-    if mob.ani > 43 then mob.ani = 41
-          
-    if mob.hit > 0 then
-        mob.ani = 45
-    else
-        if mob.x < Player.x then mob.x += .6*f: mob.flip = 1
-        if mob.x > Player.x then mob.x -= .6*f: mob.flip = 0
-    end if
 
-    if (abs(mob.x - Player.x) < 50) and (mob.counter < 10) then
-        mob.ani = 44
-        if mob.x < Player.x then mob.x += .5*f: mob.flip = 1
-        if mob.x > Player.x then mob.x -= .5*f: mob.flip = 0
-    end if
-
-    mob.counter -= .1
-    if mob.counter < 0 then mob.counter = 20
-    
     if (mob.x + 7) >= Player.x and (mob.x + 7) <= (Player.x + 15) then
         if (mob.y + 10) >= Player.y and (mob.y + 10) <= (Player.y + 15) then
             Player_Hurt HpDamage.BossRooftopBite, int(mob.x + 7), int(mob.y + 8)
@@ -3703,7 +3737,7 @@ end sub
 '* mob.state = Investigate
 '* Investigate: after timer (15-20 seconds), return to spawn area (target xy = spawn.x, spawn.y), state = BackToPost/Guard/Patrol
 '* if shot then, mob.event = MobEvents.attacked: mob.target = shooter.x, shooter.y; mob.state = fightback/chasetarget (return after maybe 45-60 seconds)
-sub Mobs_Animate()
+sub Mobs_Animate(resetClocks as integer = 0)
     
     dim mob as Mobile
     dim ox as integer
@@ -3712,6 +3746,10 @@ sub Mobs_Animate()
     while Mobs.canGetNext()
         
         Mobs.getNext mob
+        
+        if resetClocks then
+            mob.resetClocks
+        end if
         
         ox = int(mob.x)
        
@@ -3809,9 +3847,9 @@ sub Mobs_Draw()
         sprite = int(mob.ani)
         select case mob.id
         case MobIds.BossRooftop
-            dst.x = x-SPRITE_W*0.5: dst.y = y-SPRITE_H
-            dst.w = SPRITE_W*2: dst.h = SPRITE_H*2
-            SpritesEnemy.putToScreenEx(x, y, sprite, mob.flip, 0, 0, @dst)
+            dst.x = x-SPRITE_W*0.25: dst.y = y-SPRITE_H*0.5
+            dst.w = SPRITE_W*1.5: dst.h = SPRITE_H*1.5
+            SpritesEnemy.putToScreenEx(x, y, mob.getCurrentFrame(), mob.flip, 0, 0, @dst)
         case MobIds.BossPortal
             cos180 = cos((mob.ani+180)*torad)
             sin180 = sin((mob.ani+180)*torad)
@@ -4108,30 +4146,45 @@ sub Player_Draw()
                 SpritesLarry.putToScreenEx(px, py, 55, Player.flip)
             end if
         else
+            dim ux as integer, uy as integer
+            dim lx as integer, ly as integer
+            ux = px: uy = py
+            lx = px: ly = py
+            select case Player.weapon
+            case ItemIds.Fist
+            case ItemIds.Pistol
+                if Player.vy = 0 then
+                    ux += iif(Player.flip = 0, 2, -2)
+                end if
+                if lan <> LowerSprites.Standing then
+                    'lx += iif(Player.flip = 0, -2, 2)
+                end if
+            case ItemIds.Magnum
+                ux += iif(Player.flip = 0, 2, -2)
+            case else
+                
+            end select
+            if (Player.vy <> 0) or (lan <> LowerSprites.Standing) then
+                lx += iif(Player.flip = 0, -2, 2)
+            end if
             if (Player.weapon = ItemIds.Fist) and (lan >= 36) then '- full-body sprites
                 if (Player.state = PlayerStates.Jumping) and Player.is_shooting then
-                    SpritesLarry.putToScreenEx(px, py, iif(Player.vy > -0.5 and Player.vy < 0.5, 29, 30), Player.flip)
+                    SpritesLarry.putToScreenEx(lx, ly, iif(Player.vy > -0.5 and Player.vy < 0.5, 29, 30), Player.flip)
                 else
-                    SpritesLarry.putToScreenEx(px, py, lan, Player.flip)
+                    SpritesLarry.putToScreenEx(lx, ly, lan, Player.flip)
                 end if
             else
-                if lan = LowerSprites.Standing then '- legs still/standing-upright
-                    SpritesLarry.putToScreenEx(px, py, lan, Player.flip)
-                else
-                    SpritesLarry.putToScreenEx(px+iif(Player.flip, 2, -2), py, lan, Player.flip)
-                end if
-                if (Player.is_shooting and (Player.weapon = ItemIds.Pistol)) or(int(uan) = UpperSprites.PointPistol) then
-                    SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 4, -4), py, uan, Player.flip)
-                elseif Player.weapon = ItemIds.Magnum then
+                SpritesLarry.putToScreenEx(lx, ly, lan, Player.flip)
+                if Player.weapon = ItemIds.Magnum then
                     offset = int(uan - int(UpperSprites.ShootMagnumA))
-                    SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 6, -6), py, UpperSprites.ShootMagnumA+offset, Player.flip)
+                    SpritesLarry.putToScreenEx(ux+iif(Player.flip = 0, 4, -4), uy, UpperSprites.ShootMagnumA+offset, Player.flip)
                     if Player.is_shooting then
-                        SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 2, -2), py, UpperSprites.ShootMagnumLeftA+offset, Player.flip)
+                        SpritesLarry.putToScreenEx(ux, uy, UpperSprites.ShootMagnumLeftA+offset, Player.flip)
                     else
-                        SpritesLarry.putToScreenEx(px+iif(Player.flip = 0, 2, -2), py, UpperSprites.HoldMagnumLeft, Player.flip)
+                        SpritesLarry.putToScreenEx(ux, uy, UpperSprites.HoldMagnumLeft, Player.flip)
                     end if
                 else
-                    SpritesLarry.putToScreenEx(px, py, uan, Player.flip)
+                    SpritesLarry.putToScreenEx(ux, uy, uan, Player.flip)
                 end if
             end if
         end if

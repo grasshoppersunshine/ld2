@@ -936,6 +936,7 @@ SUB Main
     dim consoleLog(99) as string
     dim numLogs as integer
     dim logPointer as integer
+    dim resetClocks as integer
     dim i as integer
     dim n as integer
     
@@ -982,11 +983,12 @@ SUB Main
  
     if showConsole = 0 then
         Player_Animate
-        Mobs_Animate
+        Mobs_Animate resetClocks
         Guts_Animate
         Doors_Animate
         Elevators_Animate
         Flashes_Animate
+        resetClocks = 0
     end if
 	LD2_RenderFrame
     
@@ -1089,6 +1091,7 @@ SUB Main
     
     if keypress(KEY_ESCAPE) then
         LD2_PauseMusic
+        resetClocks = 1
         if STATUS_DialogYesNo("Exit Game?") = Options.Yes then
             Game_setFlag EXITGAME
             exit do
@@ -1098,6 +1101,7 @@ SUB Main
     end if
     
     if Game_hasFlag(SAVEGAME) then
+        resetClocks = 1
         if STATUS_DialogYesNo("Save Progress?") = Options.Yes then
             Game_Save SESSION_FILE
             if Game_SaveCopy(SESSION_FILE, GAMESAVE_FILE) = 0 then
@@ -1188,6 +1192,7 @@ SUB Main
     
 	if keyboard(KEY_E) or (keyboard(KEY_TAB) or mouseMB()) then
         StatusScreen
+        resetClocks = 1
     end if
 	
     atKeypad  = (Player_GetCurrentRoom() = Rooms.Rooftop) and (player.x >= 1376 and player.x <= 1408)
