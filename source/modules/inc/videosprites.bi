@@ -7,6 +7,8 @@ type VideoSprites
 private:
     _w as integer
     _h as integer
+    _centerX as integer
+    _centerY as integer
     _count as integer
     _data as SDL_Texture ptr
     _renderer as SDL_Renderer ptr
@@ -14,6 +16,8 @@ private:
     _transparentColor as integer
 public:
     declare sub init(v as Video ptr, w as integer = 0, h as integer = 0)
+    declare sub setCenter(x as integer, y as integer)
+    declare sub resetCenter()
     declare sub setPalette(p as Palette256 ptr)
     declare sub setAsTarget()
     declare sub load(filename as string)

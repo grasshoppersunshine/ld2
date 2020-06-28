@@ -5,8 +5,24 @@ sub VideoSprites.init(v as Video ptr, w as integer = 0, h as integer = 0)
     this._renderer = v->getRenderer()
     this._w = w
     this._h = h
+    this._centerX = int(w/2)-1
+    this._centerY = int(h/2)-1
     this._transparentColor = -1
     this._count = 0
+    
+end sub
+
+sub VideoSprites.setCenter(x as integer, y as integer)
+    
+    this._centerX = x
+    this._centerY = y
+    
+end sub
+
+sub VideoSprites.resetCenter()
+    
+    this._centerX = int(this._w/2)-1
+    this._centerY = int(this._h/2)-1
     
 end sub
 
@@ -159,7 +175,7 @@ sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer,
     if rotateAngle = 0 then
         center.x = 0: center.y = 0
     else
-        center.x = 9: center.y = 9
+        center.x = this._centerX: center.y = this._centerY
     end if
     
     SDL_RenderCopyEx( this._renderer, this._data, @src, @dst, rotateAngle, @center, iif(flipHorizontal, SDL_FLIP_HORIZONTAL, 0))

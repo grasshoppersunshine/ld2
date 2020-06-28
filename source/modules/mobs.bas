@@ -48,9 +48,9 @@ sub Mobile.animate (gravity as double)
         end if
     end if
     
-    if (this.stateExpireTime > 0) and (this._stateExpired = 0) then
+    if (this._stateExpireTime > 0) and (this._stateExpired = 0) then
         timediff = (timer - this.stateClock)
-        if timediff > this.stateExpireTime then
+        if timediff > this._stateExpireTime then
             this._stateExpired = 1
         end if
     end if
@@ -65,15 +65,17 @@ end function
 
 sub Mobile.setState (id as integer, expireTime as double = 0)
     
-    this.state = id
-    this.stateExpireTime = expireTime
-    this._stateExpired = 0
-    this.stateClock = timer
-    this.frameClock = timer
-    this.moveClock = timer
-    this.fallClock = timer
+    this._nextState = id
+    this._nextStateExpireTime = expireTime
     
 end sub
+
+function Mobile.stateNew() as integer
+    
+    this._newCheck = 1
+    return this._stateNew
+    
+end function
 
 function Mobile.stateExpired () as integer
     
@@ -87,9 +89,9 @@ function Mobile.percentExpired () as double
     
     if this._stateExpired then
         return 1.0
-    elseif this.stateExpireTime > 0 then
+    elseif this._stateExpireTime > 0 then
         timediff = (timer - this.stateClock)
-        return timediff / this.stateExpireTime
+        return timediff / this._stateExpireTime
     else
         return -1
     end if
@@ -102,6 +104,26 @@ sub Mobile.resetClocks()
     this.frameClock = timer
     this.moveClock = timer
     this.fallClock = timer
+    
+end sub
+
+sub Mobile._beforeNext()
+    
+    if this._nextState then
+        this.state = this._nextState
+        this._nextState    = 0
+        this._stateExpireTime = this._nextStateExpireTime
+        this._nextStateExpireTime = 0
+        this._stateNew     = 1
+        this._newCheck     = 0
+        this._stateExpired = 0
+        this.resetClocks()
+    else
+        if this._newCheck then
+            this._newCheck = 0
+            this._stateNew = 0
+        end if
+    end if
     
 end sub
 
@@ -292,6 +314,14 @@ sub MobileCollection.getMob (mob as Mobile, id as integer)
 end sub
 
 sub MobileCollection.getNext (mob as Mobile)
+    
+    static prevMob as Mobile ptr = 0
+    
+    if prevMob = 0 then
+        prevMob = @this._mobs(this._curMob)
+    else
+        prevMob->_beforeNext()
+    end if
     
     mob = this._mobs(this._curMob)
     this._curMob = mob.nxt

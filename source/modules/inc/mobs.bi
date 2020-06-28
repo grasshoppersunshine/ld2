@@ -12,40 +12,46 @@ type Mobile
     counter as double
     flag as integer
     hit as double
-    life as integer
+    life as short
     shooting as integer
     state as integer
     uid as integer
-    idx as integer
-    prv as integer
-    nxt as integer
-    vacant as integer
-    top as integer
-    spawnX as integer
-    spawnY as integer
-    target as integer
-    targetX as integer
-    targetY as integer
+    idx as short
+    prv as short
+    nxt as short
+    vacant as byte
+    top as byte
+    spawnX as short
+    spawnY as short
+    target as short
+    targetX as short
+    targetY as short
     weight as double
     moveClock as double
     moveDelay as double
     fallClock as double
     fallDelay as double
     stateClock as double
-    stateExpireTime as double
+    _stateExpireTime as double
     _stateExpired as integer
-    frameStart as integer
-    frameEnd as integer
+    _stateNew as byte
+    _newCheck as byte
+    _nextState as integer
+    _nextStateExpireTime as double
+    frameStart as ubyte
+    frameEnd as ubyte
     frameDelay as double
     frameClock as double
     frameCounter as double
     declare sub animate(gravity as double)
+    declare function stateNew() as integer
     declare function stateExpired() as integer
     declare function percentExpired() as double
     declare sub setAnimation(frameStart as integer, frameEnd as integer = -1, seconds as double = 0)
     declare function getCurrentFrame () as integer
     declare sub setState (id as integer, expireTime as double = 0)
     declare sub resetClocks()
+    declare sub _beforeNext()
 end type
 
 type MobileType
