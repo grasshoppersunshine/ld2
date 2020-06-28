@@ -125,6 +125,8 @@
     enum MobStates
         Attack = 1
         Attacking
+        Charge
+        Charging
         Chase
         Go
         Going
@@ -134,9 +136,9 @@
         Investigating
         Retreat
         Retreating
-        Spawned
-        Charge
-        Charging
+        Roll
+        Rolling
+        Spawn
     end enum
     '*******************************************************************
     '* OH, BOY! WHAT FLAVOR?
@@ -307,8 +309,8 @@ function Player_AddAmmo (weaponId as integer, qty as integer) as integer
     select case weaponId
     case ItemIds.Shotgun
         maxload = Maxes.Shotgun
-    case ItemIds.Pistol
-        maxload = Maxes.Pistol
+    case ItemIds.Handgun
+        maxload = Maxes.Handgun
     case ItemIds.MachineGun
         maxload = Maxes.MachineGun
     case ItemIds.Magnum
@@ -341,13 +343,13 @@ function LD2_AddToStatus (item as integer, qty as integer) as integer
     
     if qty = 1 then '// assuming pick-up item
         select case item
-        case ItemIds.ShotgunAmmo
+        case ItemIds.SgAmmo
             qty = AmmoBoxQtys.Shotgun
-        case ItemIds.PistolAmmo
-            qty = AmmoBoxQtys.Pistol
-        case ItemIds.MachineGunAmmo
+        case ItemIds.HgAmmo
+            qty = AmmoBoxQtys.Handgun
+        case ItemIds.MgAmmo
             qty = AmmoBoxQtys.MachineGun
-        case ItemIds.MagnumAmmo
+        case ItemIds.MaAmmo
             qty = AmmoBoxQtys.Magnum
         end select
     end if
@@ -919,8 +921,8 @@ sub Game_Init
     
     '// add method for LD2_addmobtype, move these to LD2_bas
     Mobs.AddType MobIds.Rockmonster
-    Mobs.AddType MobIds.GruntMachineGun
-    Mobs.AddType MobIds.GruntPistol
+    Mobs.AddType MobIds.GruntMg
+    Mobs.AddType MobIds.GruntHg
     Mobs.AddType MobIds.BlobMine
     Mobs.AddType MobIds.JellyBlob
     
@@ -2942,7 +2944,7 @@ sub Mobs_Add (x as integer, y as integer, id as integer)
     mob.y     = y
     mob.id    = id
     mob.life  = 0
-    mob.state = SPAWNED
+    mob.state = MobStates.Spawn
     mob.top   = 0
     
     Mobs.add mob
@@ -3080,9 +3082,9 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
             case 0 to 14
                 mobType = MobIds.Rockmonster
             case 20 to 49
-                mobType = MobIds.GruntMachineGun
+                mobType = MobIds.GruntMg
             case 50 to 79
-                mobType = MobIds.GruntPistol
+                mobType = MobIds.GruntHg
             case 15 to 19, 80 to 89
                 mobType = MobIds.BlobMine
             case 90 to 99
@@ -3201,7 +3203,7 @@ sub Mobs_Animate_Rockmonster(mob as Mobile)
     f = 1 'DELAYMOD
     
     select case mob.state
-    case MobStates.Spawned
+    case MobStates.Spawn
         
         mob.life  = MobHps.Rockmonster
         mob.ani   = 1
@@ -3256,14 +3258,13 @@ sub Mobs_Animate_Blobmine(mob as Mobile)
     f = 1 'DELAYMOD
     
     select case mob.state
-    case MobStates.Spawned
+    case MobStates.Spawn
         
-        mob.life  = MobHps.Blobmine
-        mob.ani   = 7
-        mob.top   = 11
-        mob.state = MobStates.Go
-        mob.spawnX = int(mob.x+7)
-        mob.spawnY = int(mob.y+15)
+        mob.life   = MobHps.Blobmine
+        mob.ani    = 7
+        mob.top    = 11
+        mob.weight = 1.0
+        mob.state  = MobStates.Go
         
     case MobStates.Hurt
         
@@ -3319,7 +3320,7 @@ sub Mobs_Animate_Blobmine(mob as Mobile)
     
 end sub
 
-sub Mobs_Animate_GruntMachineGun(mob as Mobile)
+sub Mobs_Animate_GruntMg(mob as Mobile)
     
     dim f as double
     dim px as integer
@@ -3330,11 +3331,12 @@ sub Mobs_Animate_GruntMachineGun(mob as Mobile)
     f = 1 'DELAYMOD
     
     select case mob.state
-    case MobStates.Spawned
+    case MobStates.Spawn
         
-        mob.life  = MobHps.GruntMachineGun+(MobHps.GruntMachineGun*0.5*rnd(1))
-        mob.ani   = 20
-        mob.state = MobStates.Go
+        mob.life   = MobHps.GruntMg+(MobHps.GruntMg*0.5*rnd(1))
+        mob.ani    = 20
+        mob.weight = 1.0
+        mob.state  = MobStates.Go
         mob.spawnX = mob.x
         mob.spawnY = mob.y
         
@@ -3406,10 +3408,10 @@ sub Mobs_Animate_GruntMachineGun(mob as Mobile)
         
         if mob.shooting > 0 then
             if int(30 * rnd(1)) + 1 = 1 then
-                LD2_PlaySound Sounds.laugh
+                LD2_PlaySound Sounds.GruntLaugh
             end if
             if (mob.shooting and 7) = 0 then
-                LD2_PlaySound Sounds.machinegun2
+                LD2_PlaySound Sounds.GruntMgShoot
                 Flashes_Add toUnitX(iif(mob.flip=0,mob.x+toPixelsX(1.0),mob.x)), toUnitY(mob.y+toPixelsY(0.5))
                 if mob.flip = 0 then
                     for i = mob.x + 15 to mob.x + SCREEN_W step 8
@@ -3418,7 +3420,7 @@ sub Mobs_Animate_GruntMachineGun(mob as Mobile)
                         if p >= 80 and p <= 109 then exit for
                         if i > Player.x and i < Player.x + 15 then
                             if mob.y + 8 > Player.y and mob.y + 8 < Player.y + 15 then
-                                 Player_Hurt HpDamage.GruntMachineGun, i, int(mob.y + 8)
+                                 Player_Hurt HpDamage.GruntMg, i, int(mob.y + 8)
                             end if
                         end if
                     next i
@@ -3429,7 +3431,7 @@ sub Mobs_Animate_GruntMachineGun(mob as Mobile)
                         if p >= 80 and p <= 109 then exit for
                         if i > Player.x and i < Player.x + 15 then
                             if mob.y + 8 > Player.y and mob.y + 8 < Player.y + 15 then
-                                 Player_Hurt HpDamage.GruntMachineGun, i, int(mob.y + 8)
+                                 Player_Hurt HpDamage.GruntMg, i, int(mob.y + 8)
                             end if
                         end if
                     next i
@@ -3443,7 +3445,7 @@ sub Mobs_Animate_GruntMachineGun(mob as Mobile)
     
 end sub
 
-sub Mobs_Animate_GruntPistol(mob as Mobile)
+sub Mobs_Animate_GruntHg(mob as Mobile)
     
     dim f as double
     dim px as integer
@@ -3454,11 +3456,12 @@ sub Mobs_Animate_GruntPistol(mob as Mobile)
     f = 1 'DELAYMOD
     
     select case mob.state
-    case SPAWNED
+    case MobStates.Spawn
         
-        mob.life  = MobHps.GruntPistol+(MobHps.GruntPistol*0.5*rnd(1))
-        mob.ani   = 30
-        mob.state = MobStates.Go
+        mob.life   = MobHps.GruntHg+(MobHps.GruntHg*0.5*rnd(1))
+        mob.ani    = 30
+        mob.weight = 1.0
+        mob.state  = MobStates.Go
         
     case MobStates.Hurt
         
@@ -3511,7 +3514,7 @@ sub Mobs_Animate_GruntPistol(mob as Mobile)
         
         if mob.shooting > 0 then
             if (mob.shooting and 15) = 0 then
-                LD2_PlaySound Sounds.pistol2
+                LD2_PlaySound Sounds.GruntHgShoot
                 Flashes_Add toUnitX(iif(mob.flip=0,mob.x+toPixelsX(1.0),mob.x)), toUnitY(mob.y+toPixelsY(0.5))
                 if mob.flip = 0 then
                     for i = mob.x + 15 to mob.x + SCREEN_W step 8
@@ -3520,7 +3523,7 @@ sub Mobs_Animate_GruntPistol(mob as Mobile)
                         if p >= 80 and p <= 109 then exit for
                         if i > Player.x and i < Player.x + 15 then
                             if mob.y + 8 > Player.y and mob.y + 8 < Player.y + 15 then
-                                 Player_Hurt HpDamage.GruntPistol, i, int(mob.y + 8)
+                                 Player_Hurt HpDamage.GruntHg, i, int(mob.y + 8)
                             end if
                         end if
                     next i
@@ -3531,7 +3534,7 @@ sub Mobs_Animate_GruntPistol(mob as Mobile)
                         if p >= 80 and p <= 109 then exit for
                         if i > Player.x and i < Player.x + 15 then
                             if mob.y + 8 > Player.y and mob.y + 8 < Player.y + 15 then
-                                 Player_Hurt HpDamage.GruntPistol, i, int(mob.y + 8)
+                                 Player_Hurt HpDamage.GruntHg, i, int(mob.y + 8)
                             end if
                         end if
                     next i
@@ -3551,13 +3554,12 @@ sub Mobs_Animate_Jellyblob(mob as Mobile)
     f = 1 'DELAYMOD
     
     select case mob.state
-    case MobStates.Spawned
+    case MobStates.Spawn
         
-        mob.life = MobHps.Jellyblob
-        'mob.ani = 11
-        mob.ani = 47
-        mob.state = MobStates.Go
-        mob.y -= 7
+        mob.life   = MobHps.Jellyblob
+        mob.ani    = 47
+        mob.y      = mob.spawnY-7
+        mob.state  = MobStates.Go
         
     case MobStates.Hurt
         
@@ -3594,7 +3596,7 @@ sub Mobs_Animate_Jellyblob(mob as Mobile)
         
         if mob.x + 7 >= Player.x and mob.x + 7 <= Player.x + 15 then
             if mob.y + 10 >= Player.y and mob.y + 10 <= Player.y + 15 then
-                 Player_Hurt HpDamage.JellyblobBite, int(mob.x + 7), int(mob.y + 8)
+                 Player_Hurt HpDamage.JellyBite, int(mob.x + 7), int(mob.y + 8)
             end if
         end if
         
@@ -3613,23 +3615,24 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
     dim walkSpeed as double
     dim chargeSpeed as double
     dim timediff as double
+    static flashClock as double
     dim f as double
     f = 1 'DELAYMOD
     
-    walkSpeed   = f*1.0
-    chargeSpeed = f*1.5
+    walkSpeed   = f*1.5
+    chargeSpeed = f*3.5
     
     select case mob.state
-    case MobStates.Spawned
+    case MobStates.Spawn
         
         mob.life = MobHps.BossRooftop
         mob.state = MobStates.Go
-        mob.moveDelay = 1/60
+        
         
     case MobStates.Go
         
-        mob.setAnimation RooftopBossWalking, RooftopBossWalking+1, 0.2
-        mob.setState MobStates.Going, 3*rnd(1)+1
+        mob.setAnimation MobSprites.RoofBossWalk0, MobSprites.RoofBossWalk1, 0.2
+        mob.setState MobStates.Going, 1.5*rnd(1)+1
         mob.vx = walkSpeed*iif(mob.x+7 < Player.x, 1, -1)
         mob.flip = iif(mob.vx > 0, 0, 1)
         
@@ -3639,15 +3642,22 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
         if mob.stateExpired() then
             mob.state = MobStates.Go
         end if
-        if (mob.percentExpired() > 0.5) and (abs(mob.x-Player.x) < 50) then
-            mob.setState MobStates.Charge, mob.stateExpireTime*0.5
+        if (mob.percentExpired() > 0.5) and (abs(mob.x-Player.x) < 80) then
+            if int(5*rnd(1)) = 0 then
+                'mob.setState MobStates.Roll, mob.stateExpireTime*0.5
+                mob.setState MobStates.Roll, 0.5*rnd(1)+0.5
+            else
+                'mob.setState MobStates.Charge, 0.5*rnd(1)+0.5
+                mob.setState MobStates.Roll, 0.5*rnd(1)+0.5
+            end if
         end if
         
     case MobStates.Hurt
         
-        mob.setAnimation FullBodySprites.RooftopBossHurt
+        mob.setAnimation MobSprites.RoofBossHurt
         mob.setState MobStates.Hurting, 0.3
-        mob.vx = walkspeed * 0.5
+        mob.vx = walkSpeed*iif(mob.x+7 < Player.x, 1, -1)
+        mob.flip = iif(mob.vx > 0, 0, 1)
         
     case MobStates.Hurting
         
@@ -3658,10 +3668,11 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
         
     case MobStates.Charge
         
-        mob.setAnimation FullBodySprites.RooftopBossCharging
+        mob.setAnimation MobSprites.RoofBossCharge
         mob.setState MobStates.Charging, mob.stateExpireTime
         mob.vx = chargeSpeed*iif(mob.x+7 < Player.x, 1, -1)
         mob.flip = iif(mob.vx > 0, 0, 1)
+        LD2_PlaySound Sounds.quad
         
     case MobStates.Charging
         
@@ -3669,12 +3680,37 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
         if mob.stateExpired() then
             mob.setState MobStates.Go
         end if
+        if (timer-flashClock) > 0.1 then
+            Flashes_Add toMapX(mob.x+iif(mob.flip=0,15,0)), toMapY(mob.y+7)
+            flashClock = timer
+        end if
+    
+    case MobStates.Roll
+        
+        mob.setAnimation MobSprites.RoofBossRoll
+        mob.setState MobStates.Rolling, mob.stateExpireTime
+        mob.vx = chargeSpeed*iif(mob.x+7 < Player.x, 1, -1)
+        mob.y = mob.spawnY - 15
+        mob.flip = iif(mob.vx > 0, 0, 1)
+        LD2_PlaySound Sounds.quad
+    
+    case MobStates.Rolling
+        
+        mob.animate(GRAVITY)
+        if mob.stateExpired() then
+            mob.y = mob.spawnY
+            mob.setState MobStates.Go
+        end if
+        if (timer-flashClock) > 0.1 then
+            Flashes_Add toMapX(mob.x+iif(mob.flip=0,15,0)), toMapY(mob.y+7)
+            flashClock = timer
+        end if
         
     end select
 
     if (mob.x + 7) >= Player.x and (mob.x + 7) <= (Player.x + 15) then
-        if (mob.y + 10) >= Player.y and (mob.y + 10) <= (Player.y + 15) then
-            Player_Hurt HpDamage.BossRooftopBite, int(mob.x + 7), int(mob.y + 8)
+        if (mob.y + 7) >= Player.y and (mob.y + 7) <= (Player.y + 15) then
+            Player_Hurt HpDamage.BossRoofBite, int(mob.x + 7), int(mob.y + 8)
         end if
     end if
     
@@ -3686,9 +3722,10 @@ sub Mobs_Animate_BossPortal(mob as Mobile)
     f = 1 'DELAYMOD
     
     select case mob.state
-    case MobStates.Spawned
+    case MobStates.Spawn
         mob.life = MobHps.BossPortal
         mob.ani = 0
+        mob.weight = 1.0
         mob.state = MobStates.Go
     end select
     
@@ -3747,6 +3784,13 @@ sub Mobs_Animate(resetClocks as integer = 0)
         
         Mobs.getNext mob
         
+        if mob.state = MobStates.Spawn then
+            mob.spawnX = mob.x
+            mob.spawnY = mob.y
+            mob.weight = 1.0
+            mob.moveDelay = 1/60
+        end if
+        
         if resetClocks then
             mob.resetClocks
         end if
@@ -3763,13 +3807,13 @@ sub Mobs_Animate(resetClocks as integer = 0)
             
             Mobs_Animate_Blobmine mob
         
-        case MobIds.GruntMachineGun
+        case MobIds.GruntMg
             
-            Mobs_Animate_GruntMachineGun mob
+            Mobs_Animate_GruntMg mob
             
-        case MobIds.GruntPistol
+        case MobIds.GruntHg
             
-            Mobs_Animate_GruntPistol mob
+            Mobs_Animate_GruntHg mob
             
         case MobIds.JellyBlob
             
@@ -3792,24 +3836,26 @@ sub Mobs_Animate(resetClocks as integer = 0)
 
         if CheckMobWallHit(mob) then
             mob.x = ox
-            if mob.id = MobIds.GruntMachineGun then mob.counter = 0
-            if mob.id = MobIds.GruntPistol then mob.counter = 0
+            if mob.id = MobIds.GruntMg then mob.counter = 0
+            if mob.id = MobIds.GruntHg then mob.counter = 0
         end if
        
-        if CheckMobFloorHit(mob) = 0 then
-            mob.y += mob.velocity
-            mob.velocity += Gravity
-            if mob.id = MobIds.JellyBlob then
+        if mob.weight > 0 then
+            if CheckMobFloorHit(mob) = 0 then
+                mob.y += mob.velocity
+                mob.velocity += Gravity
+                if mob.id = MobIds.JellyBlob then
+                    mob.velocity = 0
+                end if
+                if mob.velocity > 3 then
+                    mob.velocity = 3
+                end if
+                if CheckMobFloorHit(mob) and (mob.velocity > 0) then
+                    mob.y = int(mob.y / SPRITE_H) * SPRITE_H
+                end if
+            else
                 mob.velocity = 0
             end if
-            if mob.velocity > 3 then
-                mob.velocity = 3
-            end if
-            if CheckMobFloorHit(mob) and (mob.velocity > 0) then
-                mob.y = int(mob.y / SPRITE_H) * SPRITE_H
-            end if
-        else
-            mob.velocity = 0
         end if
         
         if mob.life <= 0 then
@@ -3839,6 +3885,7 @@ sub Mobs_Draw()
     dim arm as integer
     dim claws as integer
     dim foot as integer
+    dim ang as double
     Mobs.resetNext
     do while Mobs.canGetNext()
         Mobs.getNext mob
@@ -3847,9 +3894,14 @@ sub Mobs_Draw()
         sprite = int(mob.ani)
         select case mob.id
         case MobIds.BossRooftop
-            dst.x = x-SPRITE_W*0.25: dst.y = y-SPRITE_H*0.5
-            dst.w = SPRITE_W*1.5: dst.h = SPRITE_H*1.5
-            SpritesEnemy.putToScreenEx(x, y, mob.getCurrentFrame(), mob.flip, 0, 0, @dst)
+            dst.x = x-SPRITE_W*0.125: dst.y = y-SPRITE_H*0.25
+            dst.w = SPRITE_W*1.25: dst.h = SPRITE_H*1.25
+            if mob.state = MobStates.Rolling then
+                ang = mob.percentExpired()*360
+                SpritesEnemy.putToScreenEx(x, y, mob.getCurrentFrame(), mob.flip, ang, 0, @dst)
+            else
+                SpritesEnemy.putToScreenEx(x, y, mob.getCurrentFrame(), mob.flip, 0, 0, @dst)
+            end if
         case MobIds.BossPortal
             cos180 = cos((mob.ani+180)*torad)
             sin180 = sin((mob.ani+180)*torad)
@@ -3907,10 +3959,10 @@ function Mobs_GetTypeName(typeId as integer) as string
     select case typeId
     case MobIds.Rockmonster
         return "Rock Monster"
-    case MobIds.GruntMachineGun
-        return "Grunt MachineGun"
-    case MobIds.GruntPistol
-        return "Grunt Pistol"
+    case MobIds.GruntMg
+        return "Grunt Machine Gun"
+    case MobIds.GruntHg
+        return "Grunt Handgun"
     case MobIds.Blobmine
         return "Blob Mine"
     case MobIds.Jellyblob
@@ -3929,7 +3981,7 @@ sub Player_Animate()
     
     static falling as integer
     static machineTimer as double
-    static pistolTimer as double
+    static handgunTimer as double
     dim prevX as double
     dim f as double
     dim radius as integer
@@ -3961,12 +4013,12 @@ sub Player_Animate()
             'Inventory(ItemIds.Hp) = Maxes.Hp
             'if (BossBarId > 0) and (Inventory(ItemIds.CurrentRoom) = Rooms.Rooftop) then
             '    Inventory(ItemIds.Shotgun) = 40
-            '    Inventory(ItemIds.Pistol) = 50
+            '    Inventory(ItemIds.Handgun) = 50
             '    XShift = 1200
             '    Player.x = 80
             'elseif (BossBarId > 0) and (Inventory(ItemIds.CurrentRoom) = Rooms.PortalRoom) then
             '    Inventory(ItemIds.Shotgun) = 40
-            '    Inventory(ItemIds.Pistol) = 50
+            '    Inventory(ItemIds.Handgun) = 50
             '    XShift = 300
             '    Player.x = 80
             'else
@@ -3995,19 +4047,19 @@ sub Player_Animate()
             Player.uAni = Player.uAni + .15
             if Player.uAni >= 8 then Player.uAni = 1: Player.is_shooting = 0
             Player.stillani = 1
-        case ItemIds.Pistol
+        case ItemIds.Handgun
             if Player.state = PlayerStates.Crouching then
                 Player.uAni += 0.23
-                if Player.uAni >= (UpperSprites.PistolCrouchShootZ+1) then
-                    Player.uAni = int(UpperSprites.PistolCrouchShootZ): Player.is_shooting = 0
-                    Player.stillani = UpperSprites.PistolCrouchShootA
+                if Player.uAni >= (UpperSprites.HgCrouchShoot0+1) then
+                    Player.uAni = int(UpperSprites.HgCrouchShoot1): Player.is_shooting = 0
+                    Player.stillani = UpperSprites.HgCrouchShoot0
                 end if
             else
                 Player.uAni += 0.19
-                if Player.uAni >= (UpperSprites.ShootPistolZ+1) then
-                    Player.uAni = int(UpperSprites.PointPistol): Player.is_shooting = 0
-                    Player.stillani = UpperSprites.PointPistol
-                    pistolTimer = timer
+                if Player.uAni >= (UpperSprites.HgShoot1+1) then
+                    Player.uAni = int(UpperSprites.HgAim): Player.is_shooting = 0
+                    Player.stillani = UpperSprites.HgAim
+                    handgunTimer = timer
                 end if
             end if
         case ItemIds.MachineGun
@@ -4028,10 +4080,10 @@ sub Player_Animate()
             Player.stillAni = 8
             machineTimer = 0
         end if
-        if (pistolTimer > 0) and ((timer-pistolTimer) > 1.5) then
-            'Player.uAni = int(UpperSprites.HoldPistol)
-            'Player.stillAni = UpperSprites.HoldPistol
-            pistolTimer = 0
+        if (handgunTimer > 0) and ((timer-handgunTimer) > 1.5) then
+            'Player.uAni = int(UpperSprites.HgHold)
+            'Player.stillAni = UpperSprites.HgHold
+            handgunTimer = 0
         end if
         'select case Player.weapon
         'case MACHINEGUN
@@ -4064,7 +4116,7 @@ sub Player_Animate()
             end if
         case else
             if Player.vx = 0 then
-                Player.lAni = int(LowerSprites.Standing)
+                Player.lAni = int(LowerSprites.Stand)
             end if
     end select
     
@@ -4124,20 +4176,20 @@ sub Player_Draw()
     lan = int(Player.lAni): uan = int(Player.uAni)
     select case Player.state
     case PlayerStates.Crouching
-        if Player.weapon = ItemIds.Pistol then
+        if Player.weapon = ItemIds.Handgun then
             SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player.flip)
             if Player.is_shooting then
                 SpritesLarry.putToScreenEx(px+iif(Player.flip=0,2,-2), py, int(Player.uAni), Player.flip)
             else
-                SpritesLarry.putToScreenEx(px+iif(Player.flip=0,2,-2), py, UpperSprites.PistolCrouch, Player.flip)
+                SpritesLarry.putToScreenEx(px+iif(Player.flip=0,2,-2), py, UpperSprites.HgCrouch, Player.flip)
             end if
         else
-            SpritesLarry.putToScreenEx(px, py, FullBodySprites.Crouching, Player.flip)
+            SpritesLarry.putToScreenEx(px, py, FullBodySprites.FsCrouch, Player.flip)
         end if
     case PlayerStates.LookingUp, PlayerStates.EnteringElevator
         idx =  int((timer - player.actionStartTime) / 0.075)
         if idx > 2 then idx = 2
-        SpritesLarry.putToScreenEx(px, py, FullBodySprites.TurningToWall+idx, Player.flip)
+        SpritesLarry.putToScreenEx(px, py, FullBodySprites.TurnToWall+idx, Player.flip)
     case else
         if Player.is_lookingdown then
             if Player.is_shooting then
@@ -4152,11 +4204,11 @@ sub Player_Draw()
             lx = px: ly = py
             select case Player.weapon
             case ItemIds.Fist
-            case ItemIds.Pistol
+            case ItemIds.Handgun
                 if Player.vy = 0 then
                     ux += iif(Player.flip = 0, 2, -2)
                 end if
-                if lan <> LowerSprites.Standing then
+                if lan <> LowerSprites.Stand then
                     'lx += iif(Player.flip = 0, -2, 2)
                 end if
             case ItemIds.Magnum
@@ -4164,7 +4216,7 @@ sub Player_Draw()
             case else
                 
             end select
-            if (Player.vy <> 0) or (lan <> LowerSprites.Standing) then
+            if (Player.vy <> 0) or (lan <> LowerSprites.Stand) then
                 lx += iif(Player.flip = 0, -2, 2)
             end if
             if (Player.weapon = ItemIds.Fist) and (lan >= 36) then '- full-body sprites
@@ -4176,12 +4228,12 @@ sub Player_Draw()
             else
                 SpritesLarry.putToScreenEx(lx, ly, lan, Player.flip)
                 if Player.weapon = ItemIds.Magnum then
-                    offset = int(uan - int(UpperSprites.ShootMagnumA))
-                    SpritesLarry.putToScreenEx(ux+iif(Player.flip = 0, 4, -4), uy, UpperSprites.ShootMagnumA+offset, Player.flip)
+                    offset = int(uan - int(UpperSprites.MaShoot0))
+                    SpritesLarry.putToScreenEx(ux+iif(Player.flip = 0, 4, -4), uy, UpperSprites.MaShoot0+offset, Player.flip)
                     if Player.is_shooting then
-                        SpritesLarry.putToScreenEx(ux, uy, UpperSprites.ShootMagnumLeftA+offset, Player.flip)
+                        SpritesLarry.putToScreenEx(ux, uy, UpperSprites.MaShootLeft0+offset, Player.flip)
                     else
-                        SpritesLarry.putToScreenEx(ux, uy, UpperSprites.HoldMagnumLeft, Player.flip)
+                        SpritesLarry.putToScreenEx(ux, uy, UpperSprites.MaHoldLeft, Player.flip)
                     end if
                 else
                     SpritesLarry.putToScreenEx(ux, uy, uan, Player.flip)
@@ -4287,7 +4339,7 @@ function Player_Fall() as integer
         isFalling = 1
         if Player.weapon = ItemIds.Fist then
             Player.lAni = iif(Player.vy < -0.5, 48, 49)
-        elseif Player.weapon = ItemIds.Pistol then
+        elseif Player.weapon = ItemIds.Handgun then
             Player.lAni = 67 '66
             Player.uAni = 68
         else
@@ -4325,10 +4377,10 @@ function Player_Fall() as integer
             isFalling = 0
             if Player.weapon = ItemIds.Fist then
                 Player.lAni = 42
-            elseif Player.weapon = ItemIds.Pistol then
-                Player.uAni = int(UpperSprites.HoldPistol)
+            elseif Player.weapon = ItemIds.Handgun then
+                Player.uAni = int(UpperSprites.HgHold)
                 Player.lAni = 24
-                Player.stillAni = UpperSprites.HoldPistol
+                Player.stillAni = UpperSprites.HgHold
             else
                 Player.lAni = 24
             end if
@@ -4887,12 +4939,12 @@ sub Player_Respawn ()
     Inventory(ItemIds.Hp) = Maxes.Hp
     if (BossBarId > 0) and (Inventory(ItemIds.CurrentRoom) = Rooms.Rooftop) then
         Inventory(ItemIds.Shotgun) = 40
-        Inventory(ItemIds.Pistol) = 50
+        Inventory(ItemIds.Handgun) = 50
         XShift = 1200
         Player.x = 80
     elseif (BossBarId > 0) and (Inventory(ItemIds.CurrentRoom) = Rooms.PortalRoom) then
         Inventory(ItemIds.Shotgun) = 40
-        Inventory(ItemIds.Pistol) = 50
+        Inventory(ItemIds.Handgun) = 50
         XShift = 300
         Player.x = 80
     else
@@ -4910,19 +4962,19 @@ function Player_SetWeapon (itemId as integer) as integer
     
     select case itemId
     case ItemIds.Fist
-        Player.uAni = int(UpperSprites.Standing)
+        Player.uAni = int(UpperSprites.FsStand)
     case ItemIds.Shotgun
-        Player.uAni = int(UpperSprites.HoldShotgun)
-    case ItemIds.Pistol
-        Player.uAni = int(UpperSprites.HoldPistol)
+        Player.uAni = int(UpperSprites.SgHold)
+    case ItemIds.Handgun
+        Player.uAni = int(UpperSprites.HgHold)
     case ItemIds.MachineGun
-        Player.uAni = int(UpperSprites.HoldMachineGun)
+        Player.uAni = int(UpperSprites.MgHold)
     case ItemIds.Magnum
-        Player.uAni = int(UpperSprites.HoldMagnum)
+        Player.uAni = int(UpperSprites.MaHold)
     end select
     
     select case itemId
-    case ItemIds.Fist, ItemIds.Shotgun, ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum
+    case ItemIds.Fist, ItemIds.Shotgun, ItemIds.Handgun, ItemIds.MachineGun, ItemIds.Magnum
         Player.stillani = Player.uAni
     end select
     
@@ -5000,7 +5052,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     if Player.is_shooting then return 0
 
     if Player.weapon = ItemIds.Shotgun    and Inventory(ItemIds.Shotgun)    = 0 then return -1
-    if Player.weapon = ItemIds.Pistol     and Inventory(ItemIds.Pistol)     = 0 then return -1
+    if Player.weapon = ItemIds.Handgun    and Inventory(ItemIds.Handgun)    = 0 then return -1
     if Player.weapon = ItemIds.MachineGun and Inventory(ItemIds.MachineGun) = 0 then return -1
     if Player.weapon = ItemIds.Magnum     and Inventory(ItemIds.Magnum)     = 0 then return -1
 
@@ -5013,7 +5065,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         damage = HpDamage.Shotgun
         fireY = iif(Player.state = PlayerStates.Crouching, 12, 8)
         
-    case ItemIds.Pistol
+    case ItemIds.Handgun
         
         if Player.state = PlayerStates.Crouching then
             if (is_repeat = 1 and timeSinceLastShot < 0.33) then return 0
@@ -5022,10 +5074,10 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             if (is_repeat = 1 and timeSinceLastShot < 0.45) then return 0
             if (is_repeat = 0 and timeSinceLastShot < 0.25) then return 0
         end if
-        Inventory(ItemIds.Pistol) -= 1
-        damage = HpDamage.Pistol
+        Inventory(ItemIds.Handgun) -= 1
+        damage = HpDamage.Handgun
         fireY = iif(Player.state = PlayerStates.Crouching, 12, 5)
-        Player.uAni = int(iif(Player.state = PlayerStates.Crouching, UpperSprites.PistolCrouchShootA-1, UpperSprites.ShootPistolA-1))
+        Player.uAni = int(iif(Player.state = PlayerStates.Crouching, UpperSprites.HgCrouchShoot0-1, UpperSprites.HgShoot0-1))
         Player.stillAni = Player.uAni
         
     case ItemIds.MachineGun
@@ -5165,7 +5217,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
                 case 64 to 95: mob.life -= (damage - int(HpDamage.Shotgun*0.3))
                 case else    : mob.life -= (damage - int(HpDamage.Shotgun*0.5))
                 end select
-            case ItemIds.Pistol, ItemIds.MachineGun, ItemIds.Magnum
+            case ItemIds.Handgun, ItemIds.MachineGun, ItemIds.Magnum
                 mob.life -= damage
             end select
             if mob.life <= 0 then
@@ -5301,7 +5353,7 @@ sub Stats_Draw ()
         SpritesLarry.putToScreen(pad, pad+12, 46)
     case ItemIds.Shotgun
         SpritesLarry.putToScreen(pad, pad+12, 45)
-    case ItemIds.Pistol
+    case ItemIds.Handgun
         SpritesLarry.putToScreen(pad, pad+12, 52)
     case ItemIds.MachineGun
         SpritesLarry.putToScreen(pad, pad+12, 53)

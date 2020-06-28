@@ -26,6 +26,7 @@ type Mobile
     target as integer
     targetX as integer
     targetY as integer
+    weight as double
     moveClock as double
     moveDelay as double
     fallClock as double

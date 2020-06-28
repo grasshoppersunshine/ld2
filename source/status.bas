@@ -236,8 +236,8 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
         valueWeapon.text = "Shotgun"
     CASE ItemIds.MachineGun
         valueWeapon.text = "Machinegun"
-    CASE ItemIds.Pistol
-        valueWeapon.text = "Pistol"
+    CASE ItemIds.Handgun
+        valueWeapon.text = "Handgun"
     CASE ItemIds.Magnum
         valueWeapon.text = "Magnum"
     END SELECT

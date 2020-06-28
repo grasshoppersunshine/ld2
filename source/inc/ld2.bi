@@ -67,55 +67,55 @@ end enum
 '= ids correspond to location in OBJECTS.PUT
 '===========================================
 enum ItemIds
-    Nothing           = 0
-    Fist              = 0
-    Medikit50         = 1
-    Medikit100        = 2
-    Grenade           = 3
-    ShotgunAmmo       = 4
-    PistolAmmo        = 5
-    MagnumAmmo        = 6
-    WhiteCard         = 7
-    WhiteCard1        = 8
-    WhiteCard2        = 9
-    FlashlightNoBat   = 10
-    MysteryMeat       = 11
-    Chemical409       = 12
-    Chemical410       = 13
-    JanitorNote       = 14
-    Batteries         = 15
-    Flashlight        = 16
-    GreenCard         = 17
-    BlueCard          = 18
-    YellowCard        = 19
-    RedCard           = 20
-    Shotgun           = 21
-    MachineGun        = 22
-    Pistol            = 23
-    Magnum            = 24
-    MachineGunAmmo    = 25
-    Wrench            = 26
-    ExtraLife         = 27
-    WalkieTalkie      = 28
-    Auth              = 50
-    TempAuth          = 51
+    Nothing         = 0
+    Fist            = 0
+    Medikit50       = 1
+    Medikit100      = 2
+    Grenade         = 3
+    SgAmmo          = 4
+    HgAmmo          = 5
+    MaAmmo          = 6
+    WhiteCard       = 7
+    WhiteCard1      = 8
+    WhiteCard2      = 9
+    FlashlightNoBat = 10
+    MysteryMeat     = 11
+    Chemical409     = 12
+    Chemical410     = 13
+    JanitorNote     = 14
+    Batteries       = 15
+    Flashlight      = 16
+    GreenCard       = 17
+    BlueCard        = 18
+    YellowCard      = 19
+    RedCard         = 20
+    Shotgun         = 21
+    MachineGun      = 22
+    Handgun         = 23
+    Magnum          = 24
+    MgAmmo          = 25
+    Wrench          = 26
+    ExtraLife       = 27
+    WalkieTalkie    = 28
+    Auth            = 50
+    TempAuth        = 51
     '=======================================
-    Active410         = 60
-    ElevatorMenu      = 61
-    DoorTop           = 60
-    DoorBottom        = 61
-    SpinningFan       = 64
-    SpinningGear      = 65
+    Active410       = 60
+    ElevatorMenu    = 61
+    DoorTop         = 60
+    DoorBottom      = 61
+    SpinningFan     = 64
+    SpinningGear    = 65
     '=======================================
-    Lives             = 70
-    HP                = 71
+    Lives           = 70
+    HP              = 71
     '=======================================
-    NovaHeart         = 80
-    BlockOfDoom       = 81
-    PoweredArmor      = 82
-    QuadDamage        = 83
-    DamageMod         = 84
-    Phase             = 85
+    NovaHeart       = 80
+    BlockOfDoom     = 81
+    PoweredArmor    = 82
+    QuadDamage      = 83
+    DamageMod       = 84
+    Phase           = 85
     '=======================================
     CurrentRoom          = 90
     BossRooftopBegin     = 91
@@ -164,99 +164,91 @@ enum AnimationIds
 end enum
 
 enum AmmoBoxQtys
-    Shotgun    = 8
-    Pistol     = 15
+    Handgun    = 15
     MachineGun = 30
     Magnum     = 6
+    Shotgun    = 8
 end enum
 
 enum Maxes
+    Handgun    = 15
     Hp         = 100
-    Shotgun    = 8
-    Pistol     = 15
     MachineGun = 30
     Magnum     = 6
+    Shotgun    = 8
 end enum
 
 enum StartVals
     Lives = 3
 end enum
 
-enum PlayerSprites
-    Crouching          = 28
-    HoldingMachinegun  = 8
-    HoldingMagnum      = 14
-    HoldingPistol      = 11
-    HoldingShotgun     = 1
-    Jumping            = 48
-    LegsCrouchWeapon   = 58
-    LegsJumping        = 66
-    LegsStanding       = 21
-    LegsRunningA       = 22
-    LegsRunningZ       = 26
-    MachineGunShootA   = 9
-    MachineGunShootZ   = 10
-    MagnumShootA       = 15
-    MagnumShootZ       = 17
-    PistolCrouch       = 59
-    PistolCrouchShootA = 60
-    PistolCrouchShootZ = 61
-    PistolDown         = 55
-    PistolShootA       = 12
-    PistolShootZ       = 13
-    PistolShootDownA   = 56
-    PistolShootDownZ   = 57
-    RunningA           = 36
-    RunningZ           = 43
-    ShotgunShootA      = 2
-    ShotgunShootZ      = 7
-    Standing           = 26
-end enum
-
 enum UpperSprites
-    HoldMachinegun     = 8
-    HoldMagnum         = 14
-    HoldMagnumLeft     = 20
-    HoldPistol         = 70 '69
-    HoldShotgun        = 1
-    JumpPistol         = 68
-    PistolCrouch       = 59
-    PistolCrouchShootA = 60
-    PistolCrouchShootZ = 61
-    PointPistol        = 70
-    ShootMachineGunA   = 9
-    ShootMachineGunZ   = 10
-    ShootMagnumA       = 15
-    ShootMagnumZ       = 17
-    ShootMagnumLeftA   = 18
-    ShootMagnumLeftZ   = 20
-    ShootPistolA       = 12
-    ShootPistolZ       = 13
-    ShootShotgunA      = 2
-    ShootShotgunZ      = 7
-    Standing           = 26
+    FsStand        = 26
+    HgAim          = 70
+    HgHold         = 70 '69
+    HgCrouch       = 59
+    HgCrouchShoot0 = 60
+    HgCrouchShoot1 = 61
+    HgJump         = 68
+    HgShoot0       = 12
+    HgShoot1       = 13
+    MaHold        = 14
+    MaHoldLeft    = 20
+    MaShoot0      = 15
+    MaShoot1      = 17
+    MaShootLeft0  = 18
+    MaShootLeft1  = 20
+    MgHold         = 8
+    MgShoot0       = 9
+    MgShoot1       = 10
+    SgHold         = 1
+    SgShoot0       = 2
+    SgShoot1       = 7
 end enum
 enum LowerSprites
-    CrouchWeapon   = 58
-    Jumping        = 66
-    Standing       = 21
-    RunningA       = 22
-    RunningZ       = 26
+    CrouchWeapon = 58
+    Jump         = 66
+    Stand        = 21
+    Run0         = 22
+    Run1         = 26
 end enum
 enum FullBodySprites
-    Crouching          = 28
-    Jumping            = 48
-    LookingUp          = 50
-    PistolDown         = 55
-    PistolShootDownA   = 56
-    PistolShootDownZ   = 57
-    RunningA           = 36
-    RunningZ           = 43
-    TurningToWall      = 77
-    RooftopBoss        = 40
-    RooftopBossWalking = 41
-    RooftopBossCharging = 43
-    RooftopBossHurt     = 44
+    FsCrouch      = 28
+    FsJump        = 48
+    FsLookUp      = 50
+    FsRun0        = 36
+    FsRun1        = 43
+    HgAimDown     = 55
+    HgShootDown0  = 56
+    HgShootDown1  = 57
+    TurnToWall    = 77
+end enum
+
+enum MobSprites
+    Blobmine0       = 7
+    Blobmine1       = 11
+    GruntHg         = 30
+    GruntHgWalk0    = 31
+    GruntHgWalk1    = 36
+    GruntHgShoot    = 37
+    GruntHgHurt     = 39
+    GruntMg         = 20
+    GruntMgWalk0    = 21
+    GruntMgWalk1    = 26
+    GruntMgShoot    = 27
+    GruntMgHurt     = 29
+    Jellyblob0      = 47
+    Jellyblob1      = 50
+    JellyblobHurt   = 51
+    Rockmonster     = 0
+    RockmonsterRun0 = 1
+    RockmonsterRun1 = 6
+    RoofBoss        = 40
+    RoofBossWalk0   = 41
+    RoofBossWalk1   = 42
+    RoofBossCharge  = 43
+    RoofBossHurt    = 45
+    RoofBossRoll    = 46
 end enum
 
 type ActionItem
@@ -294,41 +286,40 @@ CONST REDACCESS    = 5
 '= ENTITIES
 '======================
 enum MobIds
-    Rockmonster = 1
-    GruntMachineGun
-    GruntPistol
-    Blobmine
-    Jellyblob
-    Plant
+    Blobmine = 1
     BossRooftop
     BossPortal
+    GruntHg             '* Grunt Handgun
+    GruntMg             '* Grunt Machine Gun
+    Jellyblob
+    Plant
+    Rockmonster
 end enum
 
 enum MobHps
-    Rockmonster = 20
-    GruntMachineGun = 10
-    GruntPistol = 6
     Blobmine = 3
-    Jellyblob = 14
-    Plant = 8
     BossRooftop = 300
     BossPortal = 300
+    GruntHg = 6
+    GruntMg = 10
+    Jellyblob = 14
+    Plant = 8
+    Rockmonster = 20
 end enum
 
 enum HpDamage
-    RockmonsterBite = 1
-    GruntMachineGun = 2
-    GruntPistol = 4
-    BlobmineExplode = 40
-    JellyblobBite = 2
-    PlantWhip = 5
-    BossRooftopBite = 1
+    BlobmineExplode = 49
+    BossRoofBite    = 1
     BossPortalStomp = 1
-    Fist = 1
-    Shotgun = 10
-    Pistol = 4
-    MachineGun = 2
-    Magnum = 15
+    GruntHg         = 4
+    GruntMg         = 2
+    JellyBite       = 2
+    RockmonsterBite = 1
+    Fist            = 1
+    Handgun         = 4
+    MachineGun      = 2
+    Magnum          = 15
+    Shotgun         = 10
 end enum
 
 '======================
@@ -411,10 +402,10 @@ enum Sounds
     drop
     equip
     '// weapons
-    shotgun
+    handgun
     machinegun
-    pistol
     magnum
+    shotgun
     '// doors
     doorup
     doordown
@@ -431,9 +422,9 @@ enum Sounds
     larryHurt
     larryDie
     '// enemies
-    laugh
-    machinegun2
-    pistol2
+    gruntLaugh
+    gruntHgShoot
+    gruntMgShoot
     '// scene 1
     kickvending
     sodacanopen
