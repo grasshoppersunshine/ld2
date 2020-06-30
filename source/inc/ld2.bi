@@ -321,7 +321,7 @@ end enum
 
 enum MobHps
     Blobmine = 3
-    BossRooftop = 200
+    BossRooftop = 300
     BossPortal = 300
     GruntHg = 10
     GruntMg = 10
@@ -341,7 +341,7 @@ enum HpDamage
     Fist            = 1
     Handgun         = 4
     MachineGun      = 2
-    Magnum          = 15
+    Magnum          = 12
     Shotgun         = 6
 end enum
 
@@ -352,6 +352,7 @@ enum MobFlags
     ShotFromRight = &h08
     ShotFromTop   = &h10
     Adrenaline    = &h20
+    Charge        = &h40
 end enum
 
 enum PlayerFlags

@@ -1285,7 +1285,7 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
         end select
     end if
     
-    if Inventory(ItemIds.CurrentRoom) = 13 then
+    if Inventory(ItemIds.CurrentRoom) = 5 then
         Mobs_Add 0, 0, MobIds.TrapRoom
         Switches_Add 2, 2
     end if
@@ -4032,9 +4032,11 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
     dim f as double
     f = 1 'DELAYMOD
     
-    walkSpeed   = f*1.75
+    walkSpeed   = f*1.6
     chargeSpeed = f*3.5
     lft0 = mob.x: rgt0 = mob.x+15
+    
+    static rollHeight as double
     
     if mob.hasFlag(MobFlags.Hit) and (mob.state <> MobStates.Spawn) then
         mob.unsetFlag(MobFlags.Hit)
@@ -4057,9 +4059,13 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
     case MobStates.Go
         
         mob.setAnimation MobSprites.RoofBossWalk0, MobSprites.RoofBossWalk1, 0.2
-        mob.setState MobStates.Going, 1.5*rnd(1)+1
+        mob.setState MobStates.Going, 0.5*rnd(1)+0.5
         mob.vx = walkSpeed*iif(mob.x+7 < Player.x, 1, -1)
         mob._flip = iif(mob.vx > 0, 0, 1)
+        mob.unsetFlag(MobFlags.Charge)
+        if roll(4)<3 then
+            mob.setFlag(MobFlags.Charge)
+        end if
         
     case MobStates.Going
         
@@ -4067,8 +4073,8 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
         if mob.stateExpired() then
             mob.state = MobStates.Go
         end if
-        if (mob.percentExpired() > 0.5) and (abs(mob.x-Player.x) < 80) then
-            if int(6*rnd(1)) = 0 then
+        if (mob.percentExpired() > 0.5) and (abs(mob.x-Player.x) < 80) and mob.hasFlag(MobFlags.Charge) then '* and boss is facing player
+            if int(5*rnd(1)) = 0 then
                 mob.setState MobStates.Roll
             else
                 mob.setState MobStates.Charge, 0.5*rnd(1)+0.5
@@ -4086,11 +4092,11 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
         
         mob.animate(0)
         if mob.stateExpired() then
-            if (abs(mob.x-Player.x) < 80) then
-                if int(6*rnd(1)) = 0 then
+            if (abs(mob.x-Player.x) < 80) and mob.hasFlag(MobFlags.Charge) then
+                if int(5*rnd(1)) = 0 then
                     mob.setState MobStates.Roll
                 else
-                    mob.setState MobStates.Charge, 0.5*rnd(1)+0.5
+                    mob.setState MobStates.Charge, 0.5
                 end if
             else
                 mob.setState MobStates.Go
@@ -4108,7 +4114,7 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
         
         mob.setAnimation MobSprites.RoofBossCharge
         mob.setState MobStates.Charging, mob._stateExpireTime
-        mob.vx = chargeSpeed*iif(mob.x+7 < Player.x, 1, -1)
+        mob.vx = chargeSpeed*iif(mob.vx>0,1,-1)
         mob._flip = iif(mob.vx > 0, 0, 1)
         LD2_PlaySound Sounds.quad
         
@@ -4126,26 +4132,23 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
     case MobStates.Roll
         
         if mob.stateNew() then
-            mob._stateExpireTime = 0.5*rnd(1)+1.0
-            mob.vy = -0.05
+            mob._stateExpireTime = 0.55
             mob.vx = 0
             mob.setAnimation MobSprites.RoofBossRoll
+            rollHeight = iif(roll(3)<2,7,17)
         end if
         if mob.stateExpired() then
-            mob.vy = 0
-            mob.setState MobStates.Rolling, mob._stateExpireTime
+            mob.y = mob.getQty(MobItems.SpawnY)-rollHeight
+            mob.setState MobStates.Rolling, 0.9
         else
             mob.animate(0)
-            if mob.y <= mob.getQty(MobItems.SpawnY)-7 then
-                mob.y = mob.getQty(MobItems.SpawnY)-7
-            end if
+            mob.y = -rollHeight*mob.percentExpired()+mob.getQty(MobItems.SpawnY)
         end if
     
     case MobStates.Rolling
         
         if mob.stateNew() then
             mob.vx = chargeSpeed*iif(mob.x+7 < Player.x, 1, -1)
-            mob.y = mob.getQty(MobItems.SpawnY)-7
             mob._flip = iif(mob.vx > 0, 0, 1)
             LD2_PlaySound Sounds.quad
         end if
