@@ -28,6 +28,7 @@ type Mobile
     frameDelay as double
     frameClock as double
     frameCounter as double
+    lastClock as double
     '*******************************************************************
     '* used for collection
     '*******************************************************************
@@ -46,6 +47,7 @@ type Mobile
     declare function getCurrentFrame () as integer
     declare sub setState (id as integer, expireTime as double = 0)
     declare sub resetClocks()
+    declare sub catchupClocks()
     declare sub _beforeNext()
     declare function hasFlag(flag as integer) as integer
     declare function notflag(flag as integer) as integer

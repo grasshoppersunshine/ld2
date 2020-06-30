@@ -49,6 +49,8 @@ sub Mobile.animate (gravity as double)
         end if
     end if
     
+    this.lastClock = timer
+    
 end sub
 
 function Mobile.getCurrentFrame () as integer
@@ -97,6 +99,17 @@ sub Mobile.resetClocks()
     this.stateClock = timer
     this.frameClock = timer
     this.moveClock = timer
+    
+end sub
+
+sub Mobile.catchupClocks()
+    
+    dim timediff as double
+    
+    timediff = (timer - this.lastClock)
+    this.stateClock += timediff
+    this.frameClock += timediff
+    this.moveClock += timediff
     
 end sub
 

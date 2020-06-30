@@ -1286,8 +1286,8 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
     end if
     
     if Inventory(ItemIds.CurrentRoom) = 13 then
-        Mobs_Add 18, 0, MobIds.TrapRoom
-        Switches_Add 20, 2
+        Mobs_Add 0, 0, MobIds.TrapRoom
+        Switches_Add 2, 2
     end if
     
 end sub
@@ -4301,23 +4301,21 @@ sub Mobs_Animate_TrapRoom(mob as Mobile)
     case MobStates.Spawn
         
         mob.setQty MobItems.Hp, 100
-        mob.x = 18
-        mob.y = 0
         mob.moveDelay = 1/60
         mob.setState MobStates.Pause
     
     case MobStates.Pause
         
-        if Player.x > (mob.x+2)*SPRITE_W and Player.x < (mob.x+18)*SPRITE_W then
-            mob.setState MobStates.Go, 2
+        if Player.x > (mob.x+8)*SPRITE_W and Player.x < (mob.x+12)*SPRITE_W then
+            mob.setState MobStates.Go, 1.5
             LD2_StopMusic
         end if
         
-        if (Player.x > 18*16) and (Player.x < 38*16) then
-            XShift = 18*16
-        elseif Player.x >= 38*16 then
-            if XShift < 38*16 then XShift = 38*16
-        elseif Player.x <= 18*16 then
+        if (Player.x > 18*16) and (Player.x < (mob.x+20)*16) then
+            XShift = mob.x*16
+        elseif Player.x >= (mob.x+20)*16 then
+            if XShift < (mob.x+20)*16 then XShift = (mob.x+20)*16
+        elseif Player.x <= mob.x*16 then
             if XShift > 0 then XShift = 0
         end if
         
@@ -4325,7 +4323,7 @@ sub Mobs_Animate_TrapRoom(mob as Mobile)
         
         if mob.stateNew() then
             LD2_PlaySound Sounds.rumble
-            XShift = 18*16
+            XShift = mob.x*16
             LockShift = 1
         end if
         
@@ -4355,7 +4353,7 @@ sub Mobs_Animate_TrapRoom(mob as Mobile)
     case MobStates.Going
         
         if mob.stateNew() then
-            mob._stateExpireTime = 60
+            mob._stateExpireTime = 50
             LD2_PlayMusic Tracks.Chase
             LD2_PlaySound Sounds.rumble
             for i = 0 to NumItems-1
@@ -4413,7 +4411,7 @@ sub Mobs_Animate(resetClocks as integer = 0)
         end if
         
         if resetClocks then
-            mob.resetClocks
+            mob.catchupClocks
         end if
         
         ox = mob.x
