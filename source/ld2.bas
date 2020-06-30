@@ -755,6 +755,8 @@ sub LoadSounds ()
     
     AddSound Sounds.NoScream  , "scene-no.wav"
     
+    AddSound Sounds.rumble, "rumble.wav", 1
+    
 end sub
 
 sub LoadMusic ()
@@ -1563,7 +1565,7 @@ sub BeforeMobKill (mob as Mobile ptr)
     case MobIds.BossRooftop
         Game_setBossBar 0
         Game_setFlag MUSICFADEOUT
-        MapItems_Add mob->x, mob->y, YELLOWCARD
+        MapItems_Add mob->x, mob->y, ItemIds.YellowCard
         Player_AddItem ItemIds.BossRooftopEnd
     case MobIds.BossPortal
         Player_SetAccessLevel REDACCESS
@@ -2271,7 +2273,7 @@ sub Start
     
     Game_Init
     LD2_SetMusicMaxVolume 0.75
-    LD2_SetSoundMaxVolume 0.25
+    LD2_SetSoundMaxVolume 0.35
     LD2_SetMusicVolume 1.0
     LD2_SetSoundVolume 1.0
     LoadSounds

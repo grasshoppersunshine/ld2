@@ -183,38 +183,59 @@ enum StartVals
 end enum
 
 enum UpperSprites
+    FsCrouch       = 28
+    FsCrouchPunch  = 31
+    FsPunch        = 27
     FsStand        = 26
-    HgAim          = 70
-    HgHold         = 70 '69
+    HgAim          = 11
+    HgHold         = 11 '69
     HgCrouch       = 59
     HgCrouchShoot0 = 60
     HgCrouchShoot1 = 61
     HgJump         = 68
     HgShoot0       = 12
     HgShoot1       = 13
+    MaCrouch       = 84
+    MaCrouchLeft   = 90
+    MaCrouchShootLeft0 = 88
+    MaCrouchShootLeft1 = 90
+    MaCrouchShoot0 = 85
+    MaCrouchShoot1 = 87
     MaHold        = 14
     MaHoldLeft    = 20
     MaShoot0      = 15
     MaShoot1      = 17
     MaShootLeft0  = 18
     MaShootLeft1  = 20
+    MgCrouch       = 81
+    MgCrouchShoot0 = 82
+    MgCrouchShoot1 = 83
     MgHold         = 8
     MgShoot0       = 9
     MgShoot1       = 10
     SgHold         = 1
     SgShoot0       = 2
     SgShoot1       = 7
+    SgCrouch       = 70
+    SgCrouchShoot0 = 71
+    SgCrouchShoot1 = 76
 end enum
 enum LowerSprites
+    FsCrouch     = 35
+    FsPunch      = 34
     CrouchWeapon = 58
     Jump         = 66
     Stand        = 21
     Run0         = 22
-    Run1         = 26
+    Run1         = 25
 end enum
 enum FullBodySprites
-    FsCrouch      = 28
-    FsJump        = 48
+    BlownAway0    = 32
+    BlownAway1    = 33
+    FsJump0       = 48
+    FsJump1       = 49
+    FsJumpPunch0  = 29
+    FsJumpPunch1  = 30
     FsLookUp      = 50
     FsRun0        = 36
     FsRun1        = 43
@@ -226,7 +247,7 @@ end enum
 
 enum MobSprites
     Blobmine0       = 7
-    Blobmine1       = 11
+    Blobmine1       = 10
     GruntHg         = 30
     GruntHgWalk0    = 31
     GruntHgWalk1    = 36
@@ -242,7 +263,8 @@ enum MobSprites
     JellyblobHurt   = 51
     Rockmonster     = 0
     RockmonsterRun0 = 1
-    RockmonsterRun1 = 6
+    RockmonsterRun1 = 5
+    RockmonsterHurt = 6
     RoofBoss        = 40
     RoofBossWalk0   = 41
     RoofBossWalk1   = 42
@@ -294,15 +316,16 @@ enum MobIds
     Jellyblob
     Plant
     Rockmonster
+    TrapRoom
 end enum
 
 enum MobHps
     Blobmine = 3
-    BossRooftop = 300
+    BossRooftop = 200
     BossPortal = 300
-    GruntHg = 6
+    GruntHg = 10
     GruntMg = 10
-    Jellyblob = 14
+    Jellyblob = 18
     Plant = 8
     Rockmonster = 20
 end enum
@@ -319,9 +342,36 @@ enum HpDamage
     Handgun         = 4
     MachineGun      = 2
     Magnum          = 15
-    Shotgun         = 10
+    Shotgun         = 6
 end enum
 
+enum MobFlags
+    Hit           = &h01
+    HitWall       = &h02
+    ShotFromLeft  = &h04
+    ShotFromRight = &h08
+    ShotFromTop   = &h10
+    Adrenaline    = &h20
+end enum
+
+enum PlayerFlags
+    Blocked   = &h01
+    Falling   = &h02
+    Crouching = &h04
+    StillCrouching = &h08
+end enum
+
+enum MobItems
+    Ammo = 1
+    Hp
+    Shooting
+    SpawnX
+    SpawnY
+    TargetId
+    TargetX
+    TargetY
+    Weight
+end enum
 '======================
 '= SPRITE SETS
 '======================
@@ -459,6 +509,8 @@ enum Sounds
     keypadInput
     keypadGranted
     keypadDenied
+    '//
+    rumble
     '// editor
     editorPlace
     editorCopy

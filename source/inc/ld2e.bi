@@ -17,11 +17,16 @@ type PlayerType
     is_shooting as integer
     is_visible as integer
     is_lookingdown as integer
-    flip as integer
+    flags as integer
+    _flip as integer
     lAni as double
     uAni as double
     stillani as integer
     moved as integer
+    declare function hasFlag(flag as integer) as integer
+    declare function notFlag(flag as integer) as integer
+    declare sub setFlag(flag as integer)
+    declare sub unsetFlag(flag as integer)
 end type
 
 type ElementType
@@ -63,6 +68,8 @@ type GutsIncorporated
     spin as double
     sprite as integer
     facing as integer
+    expireTime as double
+    startTime as double
     declare property facingLeft() as integer
     declare property facingLeft(isFacingLeft as integer)
     declare property facingRight() as integer
@@ -77,6 +84,7 @@ enum GutsIds
     Gibs
     Sparks
     Smoke
+    Plasma
 end enum
 
 type BoxType
@@ -125,7 +133,7 @@ declare sub Guts_Animate ()
 declare sub Guts_Draw ()
 
 declare function MapItems_Api (args as string) as string
-declare sub MapItems_Add (x as integer, y as integer, id as integer)
+declare sub MapItems_Add (x as integer, y as integer, id as integer, qty as integer = 1)
 declare sub MapItems_Draw ()
 declare function MapItems_Pickup () as integer
 declare function MapItems_GetCount() as integer
@@ -143,6 +151,7 @@ declare sub Switches_Trigger (x as integer, y as integer)
 declare sub Teleports_Add (x as integer, y as integer, groupId as integer)
 declare sub Teleports_Check (x as integer, y as integer, byref toX as integer, byref toY as integer)
 
+declare function Map_InBounds(x as integer, y as integer) as integer
 declare sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
 declare sub Map_BeforeLoad()
 declare sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as integer = 0)

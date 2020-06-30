@@ -230,7 +230,7 @@ sub SOUND_PlaySound (id as integer)
 			next i
 			
 			if channelSlot >= 0 then
-				cid = Mix_PlayChannel(-1, GLOBAL_Sounds(n).sfxId, GLOBAL_Sounds(n).loops)
+				cid = Mix_PlayChannel(-1, GLOBAL_Sounds(n).sfxId, iif(GLOBAL_Sounds(n).loops,-1,0))
 				if cid >= 0 then
 					GLOBAL_Sounds(n).channels(channelSlot) = cid
 					GLOBAL_Sounds(n).numChannels += 1

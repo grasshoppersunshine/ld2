@@ -1776,32 +1776,79 @@ SUB GenerateSky()
     
   LD2_cls 2, 66
   
-  DIM x AS INTEGER
-  DIM y AS INTEGER
-  DIM r AS INTEGER
-  DIM i AS INTEGER
+  DIM x as integer
+  DIM y as integer
+  DIM r as integer
+  DIM i as integer
   
-  FOR i = 0 TO 9999
+    for i = 0 to 9999
+        x = SCREEN_W*RND(1)
+      y = SCREEN_H*RND(1)
+        r = int(4*RND(1))
+        if r = 0 then
+            LD2_pset x, y, 67, 2
+        else
+            LD2_pset x, y, 66, 2
+        end if
+    next i
+  FOR i = 0 TO 1499
+    'DO
       x = SCREEN_W*RND(1)
       y = SCREEN_H*RND(1)
-    r = 2*RND(1)
-    LD2_pset x, y, 66+r, 2
+      'IF (x > 150-y) AND (x < 350-y) THEN
+      '  IF (x > 225-y) AND (x < 275-y) THEN
+      '    EXIT DO
+      '  END IF
+      '  IF (x > 175-y) AND (x < 325-y) THEN
+      '    IF INT(2*RND(1)) = 0 THEN EXIT DO
+      '  END IF
+      '  IF INT(3*RND(1)) = 0 THEN EXIT DO
+      'ELSE
+      '  IF INT(5*RND(1)) = 0 THEN
+      '      EXIT DO
+      '  END IF
+      'END IF
+    'LOOP
+    r = int(2*RND(1))
+    LD2_pset x, y, 67+r, 2
   NEXT i
-  FOR i = 0 TO 99
+    FOR i = 0 TO 999
+        x = SCREEN_W*RND(1)
+      y = SCREEN_H*RND(1)
+        r = int(2*RND(1))
+    LD2_pset x, y, 68+r, 2
+    next i
+  FOR i = 0 TO 499
+    'DO
       x = SCREEN_W*RND(1)
       y = SCREEN_H*RND(1)
+      'IF (x > 150-y) AND (x < 350-y) THEN
+      '  IF (x > 225-y) AND (x < 275-y) THEN
+      '    EXIT DO
+      '  END IF
+      '  IF (x > 175-y) AND (x < 325-y) THEN
+      '    IF INT(2*RND(1)) = 0 THEN EXIT DO
+      '  END IF
+      '  IF INT(3*RND(1)) = 0 THEN EXIT DO
+      'ELSE
+      '  IF INT(5*RND(1)) = 0 THEN
+      '      EXIT DO
+      '  END IF
+      'END IF
+    'LOOP
     r = 4*RND(1)
     IF INT(4*RND(1)) = 1 THEN
       IF INT(2*RND(1)) = 1 THEN
-        r = r - 22
+        'r = r - 16
       ELSE
-        r = r + 12
+        'r = r + 16
       END IF
     END IF
     LD2_pset x, y, 72+r, 2
   NEXT i
 
 END SUB
+
 
 sub Notice(message as string)
     

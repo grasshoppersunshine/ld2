@@ -20,6 +20,7 @@ sub Mobile.animate (gravity as double)
     
     dim timediff as double
     dim numFrames as integer
+    dim d as double
     
     numFrames = (this.frameEnd - this.frameStart) + 1
     
@@ -34,17 +35,10 @@ sub Mobile.animate (gravity as double)
     if (this.moveDelay > 0) then
         timediff = (timer - this.moveClock)
         if timediff > this.moveDelay then
-            this.x += this.vx*(timediff/this.moveDelay)
+            d = (timediff/this.moveDelay)
+            this.x += this.vx*d
+            this.y += this.vy*d
             this.moveClock = timer
-        end if
-    end if
-    
-    if (this.fallDelay > 0) then
-        timediff = (timer - this.fallClock)
-        if timediff > this.fallDelay then
-            this.velocity += gravity*(timediff/this.fallDelay)
-            this.y += this.velocity
-            this.fallClock = timer
         end if
     end if
     
@@ -103,7 +97,6 @@ sub Mobile.resetClocks()
     this.stateClock = timer
     this.frameClock = timer
     this.moveClock = timer
-    this.fallClock = timer
     
 end sub
 
@@ -127,10 +120,138 @@ sub Mobile._beforeNext()
     
 end sub
 
+function Mobile.hasFlag (flag as integer) as integer
+    
+    return ((this.flags and flag) > 0)
+    
+end function
+
+function Mobile.notFlag (flag as integer) as integer
+    
+    dim _hasFlag as integer
+    
+    _hasFlag = (this.flags and flag)
+    
+    if _hasFlag then
+        return 0
+    else
+        return 1
+    end if
+    
+end function
+
+sub Mobile.setFlag (flag as integer)
+    
+    this.flags = (this.flags or flag)
+    
+end sub
+
+sub Mobile.unsetFlag (flag as integer)
+    
+    this.flags = (this.flags or flag) xor flag
+    
+end sub
+
+function Mobile.getQty(id as integer) as integer
+    
+    if (id >= 0) and (id <= 15) then
+        return this.inventory(id)
+    else
+        return 0
+    end if
+    
+end function
+
+function Mobile.hasItem(id as integer) as integer
+    
+    if (id >= 0) and (id <= 15) then
+        return (this.inventory(id) > 0)
+    else
+        return 0
+    end if
+    
+end function
+
+sub Mobile.addItem(id as integer, qty as integer = 1)
+    
+    if (id >= 0) and (id <= 15) then
+        this.inventory(id) += qty
+    end if
+    
+end sub
+
+sub Mobile.removeItem(id as integer)
+    
+    if (id >= 0) and (id <= 15) then
+        this.inventory(id) = 0
+    end if
+    
+end sub
+
+sub Mobile.setQty(id as integer, qty as integer)
+    
+    if (id >= 0) and (id <= 15) then
+        this.inventory(id) = qty
+    end if
+    
+end sub
+
+sub Mobile.emptyItems()
+    
+    dim n as integer
+    
+    for n = 0 to 15
+        this.inventory(n) = 0
+    next n
+    
+end sub
+
+sub Mobile.resetFrames()
+    
+    this.frameStart   = 0
+    this.frameEnd     = 0
+    this.frameDelay   = 0
+    this.frameClock   = 0
+    this.frameCounter = 0
+    
+end sub
+
+sub Mobile.resetStateData()
+    
+    this.state = 0
+    this._stateExpired = 0
+    this._stateExpireTime = 0
+    this._nextState = 0
+    this._nextStateExpireTime = 0
+    this._stateNew = 0
+    this._newCheck = 0
+    this.stateClock = 0
+    
+end sub
+
+sub Mobile.resetAll()
+    
+    this.id = 0
+    this.flags = 0
+    this.x = 0
+    this.y = 0
+    this.vx = 0
+    this.vy = 0
+    this._flip = 0
+    this.state = 0
+    this.emptyItems()
+    this.resetClocks()
+    this.resetFrames()
+    this.resetStateData()
+    this.moveDelay = 0
+    
+end sub
+
 sub MobileCollection.add (mob AS Mobile)
     
     static uid as integer
     dim i as integer
+    dim n as integer
     
     uid = uid + 1
     if uid >= &H7FFF then uid = 1
@@ -138,25 +259,14 @@ sub MobileCollection.add (mob AS Mobile)
     i = this.findVacantSlot()
     
     if (i >= 0) and (i < MAXMOBILES) then
-        this._mobs(i).id = mob.id
-        this._mobs(i).vx = mob.vx
-        this._mobs(i).x = mob.x
-        this._mobs(i).y = mob.y
-        this._mobs(i).flip = mob.flip
-        this._mobs(i).velocity = mob.velocity
-        this._mobs(i).ani = mob.ani
-        this._mobs(i).counter = mob.counter
-        this._mobs(i).flag = mob.flag
-        this._mobs(i).hit = mob.hit
-        this._mobs(i).life = mob.life
-        this._mobs(i).shooting = mob.shooting
-        this._mobs(i).state = mob.state
-        'this._mobs(i)          =  mob '- try this after everything else works
+        this._mobs(i) = mob
         this._mobs(i).uid = uid
         this._mobs(i).nxt = -1
         this._mobs(i).vacant = 0
-        this._mobs(i).top = 0
         this._mobs(i).idx = i
+        for n = 0 to 15
+            this._mobs(i).inventory(n) = mob.inventory(n)
+        next n
         if this._firstMob = -1 then
             this._firstMob = i
             this._mobs(i).prv = -1
@@ -317,9 +427,8 @@ sub MobileCollection.getNext (mob as Mobile)
     
     static prevMob as Mobile ptr = 0
     
-    if prevMob = 0 then
-        prevMob = @this._mobs(this._curMob)
-    else
+    prevMob = @this._mobs(this._curMob)
+    if prevMob <> 0 then
         prevMob->_beforeNext()
     end if
     

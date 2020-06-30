@@ -204,6 +204,14 @@ SUB LD2_StopMusic
 
 END SUB
 
+sub LD2_StopSound (id as integer)
+    
+    if LD2soundEnabled then
+        SOUND_StopSound id
+    end if
+    
+end sub
+
 SUB LD2_PauseMusic
 
     IF LD2soundEnabled THEN

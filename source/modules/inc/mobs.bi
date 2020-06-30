@@ -3,34 +3,19 @@
 
 type Mobile
     id as integer
-    vx as double
+    flags as integer
     x as double
     y as double
-    flip as integer
-    velocity as double
-    ani as double
-    counter as double
-    flag as integer
-    hit as double
-    life as short
-    shooting as integer
+    vx as double
+    vy as double
+    _flip as integer
     state as integer
-    uid as integer
-    idx as short
-    prv as short
-    nxt as short
-    vacant as byte
-    top as byte
-    spawnX as short
-    spawnY as short
-    target as short
-    targetX as short
-    targetY as short
-    weight as double
+    inventory(15) as integer
+    '*******************************************************************
+    '* clocks and counters
+    '*******************************************************************
     moveClock as double
     moveDelay as double
-    fallClock as double
-    fallDelay as double
     stateClock as double
     _stateExpireTime as double
     _stateExpired as integer
@@ -43,6 +28,16 @@ type Mobile
     frameDelay as double
     frameClock as double
     frameCounter as double
+    '*******************************************************************
+    '* used for collection
+    '*******************************************************************
+    uid as integer
+    idx as short
+    prv as short
+    nxt as short
+    vacant as byte
+    '*******************************************************************
+    '*******************************************************************
     declare sub animate(gravity as double)
     declare function stateNew() as integer
     declare function stateExpired() as integer
@@ -52,6 +47,19 @@ type Mobile
     declare sub setState (id as integer, expireTime as double = 0)
     declare sub resetClocks()
     declare sub _beforeNext()
+    declare function hasFlag(flag as integer) as integer
+    declare function notflag(flag as integer) as integer
+    declare sub setFlag(flag as integer)
+    declare sub unsetFlag(flag as integer)
+    declare function getQty(id as integer) as integer
+    declare function hasItem(id as integer) as integer
+    declare sub addItem(id as integer, qty as integer = 1)
+    declare sub removeItem(id as integer)
+    declare sub setQty(id as integer, qty as integer)
+    declare sub emptyItems()
+    declare sub resetFrames()
+    declare sub resetStateData()
+    declare sub resetAll()
 end type
 
 type MobileType
