@@ -209,7 +209,7 @@
     dim shared LarryFile   as string
     dim shared TilesFile   as string
     dim shared LightFile   as string
-    dim shared EnemiesFile as string
+    dim shared MobsFile    as string
     dim shared GutsFile    as string
     dim shared SceneFile   as string
     dim shared ObjectsFile as string
@@ -220,7 +220,7 @@
     dim shared SpritesTile as VideoSprites
     dim shared SpritesOpaqueTile as VideoSprites
     dim shared SpritesLight as VideoSprites
-    dim shared SpritesEnemy as VideoSprites
+    dim shared SpritesMobs as VideoSprites
     dim shared SpritesGuts as VideoSprites
     dim shared SpritesScene as VideoSprites
     dim shared SpritesObject as VideoSprites
@@ -882,7 +882,7 @@ sub Game_Init
         LarryFile   = DATA_DIR+"2002/gfx/larry2.put"
         TilesFile   = DATA_DIR+"2002/gfx/ld2tiles.put"
         LightFile   = DATA_DIR+"2002/gfx/ld2light.put"
-        EnemiesFile = DATA_DIR+"2002/gfx/enemies.put"
+        MobsFile    = DATA_DIR+"2002/gfx/enemies.put"
         GutsFile    = DATA_DIR+"2002/gfx/ld2guts.put"
         SceneFile   = DATA_DIR+"2002/gfx/ld2scene.put"
         ObjectsFile = DATA_DIR+"2002/gfx/objects.put"
@@ -892,7 +892,7 @@ sub Game_Init
         LarryFile   = DATA_DIR+"gfx/larry2.put"
         TilesFile   = DATA_DIR+"gfx/ld2tiles.put"
         LightFile   = DATA_DIR+"gfx/ld2light.put"
-        EnemiesFile = DATA_DIR+"gfx/enemies.put"
+        MobsFile    = DATA_DIR+"gfx/mobs.put"
         GutsFile    = DATA_DIR+"gfx/ld2guts.put"
         SceneFile   = DATA_DIR+"gfx/ld2scene.put"
         ObjectsFile = DATA_DIR+"gfx/objects.put"
@@ -966,7 +966,7 @@ sub Game_Init
     LoadSprites LarryFile  , idLARRY  
     LoadSprites TilesFile  , idTILE
     LoadSprites LightFile  , idLIGHT
-    LoadSprites EnemiesFile, idENEMY
+    LoadSprites MobsFile   , idMOBS
     LoadSprites GutsFile   , idGUTS
     LoadSprites SceneFile  , idSCENE
     LoadSprites ObjectsFile, idOBJECT
@@ -1281,7 +1281,7 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
         select case Inventory(ItemIds.CurrentRoom)
         case Rooms.Rooftop, Rooms.PortalRoom, Rooms.WeaponsLocker, Rooms.Lobby, Rooms.Basement
         case else
-            'Mobs_Generate
+            Mobs_Generate
         end select
     end if
     
@@ -1454,9 +1454,9 @@ SUB LoadSprites (Filename as string, BufferNum as integer)
       LD2_InitSprites filename, @SpritesTile, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
       LD2_InitSprites filename, @SpritesOpaqueTile, SPRITE_W, SPRITE_H
 
-    CASE idENEMY
+    CASE idMOBS
 
-      LD2_InitSprites filename, @SpritesEnemy, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
+      LD2_InitSprites filename, @SpritesMobs, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
 
     CASE idLARRY
 
@@ -1507,6 +1507,9 @@ sub Guts_Add (gutsId as integer, x as integer, y as integer, qty as integer, dir
     for i = 0 to qty-1
         n = NumGuts
         NumGuts += 1
+        'if gutsId = GutsIds.Blood then gutsId = GutsIds.Smoke
+        'if gutsId = GutsIds.BloodSprite then gutsId = GutsIds.Smoke
+        'if gutsId = GutsIds.Gibs then gutsId = GutsIds.Smoke
         Guts(n).id = gutsId
         Guts(n).count = 0
         Guts(n).colour = 0
@@ -2152,9 +2155,9 @@ SUB LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _f
 
       SpritesTile.putToScreenEx(px, y, NumSprite, _flip)
 
-    CASE idENEMY
+    CASE idMOBS
 
-      SpritesEnemy.putToScreenEx(px, y, NumSprite, _flip)
+      SpritesMobs.putToScreenEx(px, y, NumSprite, _flip)
 
     CASE idLARRY
 
@@ -4514,13 +4517,13 @@ sub Mobs_Draw()
             dst.w = SPRITE_W*1.25: dst.h = SPRITE_H*1.25
             if (mob.state = MobStates.Roll) or (mob.state = MobStates.Rolling) then
                 ang = mob.percentExpired()*360
-                SpritesEnemy.setCenter 9, 9
-                SpritesEnemy.putToScreenEx(x, y, mob.getCurrentFrame(), mob._flip, ang, 0, @dst)
+                SpritesMobs.setCenter 9, 9
+                SpritesMobs.putToScreenEx(x, y, mob.getCurrentFrame(), mob._flip, ang, 0, @dst)
             else
-                SpritesEnemy.setCenter 9, 9
-                SpritesEnemy.putToScreenEx(x, y, mob.getCurrentFrame(), mob._flip, 0, 0, @dst)
+                SpritesMobs.setCenter 9, 9
+                SpritesMobs.putToScreenEx(x, y, mob.getCurrentFrame(), mob._flip, 0, 0, @dst)
             end if
-            SpritesEnemy.resetCenter
+            SpritesMobs.resetCenter
         case MobIds.BossPortal
             cos180 = cos((mob.frameCounter+180)*torad)
             sin180 = sin((mob.frameCounter+180)*torad)
@@ -4597,7 +4600,7 @@ sub Mobs_Draw()
             end select
         case else
             sprite = mob.getCurrentFrame()
-            SpritesEnemy.putToScreenEx(x, y, sprite, mob._flip)
+            SpritesMobs.putToScreenEx(x, y, sprite, mob._flip)
         end select
     loop
     if BossBarId then
@@ -4608,7 +4611,7 @@ sub Mobs_Draw()
         Mobs.GetFirstOfType mob, id
         select case id
         case MobIds.BossRooftop
-            LD2_putFixed 272, 180, 40, idENEMY, 1
+            LD2_putFixed 272, 180, 40, idMOBS, 1
         case MobIds.BossPortal
             LD2_putFixed 270 - 3, 180, 76, idSCENE, 0
             LD2_putFixed 270 + 13, 180, 77, idSCENE, 0

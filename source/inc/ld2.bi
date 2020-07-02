@@ -376,16 +376,15 @@ end enum
 '======================
 '= SPRITE SETS
 '======================
-CONST idTILE = 400
-CONST idENEMY = 401
-CONST idLARRY = 402
-CONST idGUTS = 403
-CONST idLIGHT = 404
-CONST idFONT = 405
-CONST idSCENE = 406
+CONST idTILE   = 400
+CONST idMOBS   = 401
+CONST idLARRY  = 402
+CONST idGUTS   = 403
+CONST idLIGHT  = 404
+CONST idFONT   = 405
+CONST idSCENE  = 406
 CONST idOBJECT = 407
-CONST idBOSS = 408
-CONST idBOSS2 = 409
+CONST idBOSS   = 408
 
 '======================
 '= MUSIC
