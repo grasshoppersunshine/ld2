@@ -175,6 +175,7 @@
         Shoot0
         Shoot1
         Shooting
+        Waiting
         Spawn
     end enum
     '*******************************************************************
@@ -201,8 +202,9 @@
     declare function randF(fromN as double, toN as double) as double
     declare function randInt(fromN as integer, toN as integer) as integer
     declare function roll(limit as integer) as integer
-
-
+    
+    declare function encodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
+    declare function decodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
     '*******************************************************************
     '* SPRITES
     '*******************************************************************
@@ -254,6 +256,7 @@
     dim shared Switches   (MAXSWAPS) as SwitchType
     dim shared Teleports  (MAXTELEPORTS) as TeleportType
     dim shared Flashes    (MAXFLASHES) as FlashType
+    dim shared Sectors    (MAXSECTORS) as SectorType
     dim shared NumItems as integer
     dim shared NumDoors as integer
     dim shared NumElevators as integer
@@ -262,6 +265,7 @@
     dim shared NumSwitches as integer
     dim shared NumTeleports as integer
     dim shared NumFlashes as integer
+    dim shared NumSectors as integer
     dim shared XShift as double
     dim shared Mobs as MobileCollection
     dim shared Mobs_BeforeKillCallback as sub(mob as Mobile ptr)
@@ -913,6 +917,8 @@ sub Game_Init
     NumSwaps = 0
     NumSwitches = 0
     NumTeleports = 0
+    NumFlashes = 0
+    NumSectors = 0
     NumInvSlots = 8
     '///////////////////////////////////////////////////////////////////
     CanSaveMap = 0
@@ -1172,6 +1178,8 @@ end function
 
 sub Map_BeforeLoad()
     
+    NumSectors = 0
+    
     '// current room should be the one before the next room is loaded
     if CanSaveMap then '// basically, don't save an empty map
         Game_Save SessionSaveFile
@@ -1196,6 +1204,7 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
     NumSwaps = 0
     NumSwitches = 0
     NumTeleports = 0
+    NumFlashes = 0
     MobsWereLoaded = 0
     BossBarId = 0
     
@@ -1296,6 +1305,58 @@ sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as in
     
     LD2_LogDebug "Map_Load ( "+filename+" )"
     
+    dim versiontag as string*12
+    dim mapFile as integer
+    dim roomId as integer
+    dim i as integer
+    dim j as integer
+    
+    Map_BeforeLoad
+    
+    i = instrrev(filename, "/")
+    j = instrrev(lcase(filename), "th.ld2")
+    roomId = val(mid(filename, i+1, j-i-1))
+    Inventory(ItemIds.CurrentRoom) = roomId
+    
+    if Game_hasFlag(CLASSICMODE) then
+        filename = DATA_DIR+"2002/rooms/"+filename
+    else
+        filename = DATA_DIR+"rooms/" + filename
+    end if
+    
+    mapFile = freefile
+    
+    if FileExists(filename) = 0 then
+        LD2_LogDebug "Map_Load ( "+filename+" )   !!! ERROR: FILE NOT FOUND"
+    end if
+    
+    open filename for binary as mapFile
+    get #mapFile, , versiontag
+    close #mapFile
+    
+    select case versiontag
+    case "[LD2L-V0.45]"
+        Map_Load045 filename
+    case "[LD2L-V1.01]"
+        Map_Load101 filename
+    case else
+        LD2_LogDebug "Map_Load ( "+filename+" )   !!! ERROR: INVALID VERSION TAG"
+        LD2_LogDebug !"Expected \"[LD2L-V0.45]\" but got \""+versiontag+!"\""
+        exit sub
+    end select
+    
+    Map_AfterLoad skipMobs, skipSessionLoad
+    
+    Game_SetFlag MAPISLOADED
+    
+    CanSaveMap = 1
+    
+end sub
+
+sub Map_Load045 (filename as string)
+    
+    LD2_LogDebug "Map_Load045 ( "+filename+" )"
+    
     dim mapFile as integer
     dim _byte as ubyte
     dim _word as ushort
@@ -1309,12 +1370,9 @@ sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as in
     dim author as string
     dim created as string
     dim comments as string
-    dim roomId as integer
     
     dim x as integer, y as integer
-    dim n as integer
     dim i as integer
-    dim j as integer
     
     versiontag = ""
     levelname  = ""
@@ -1323,29 +1381,25 @@ sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as in
     comments   = ""
     separator  = "|"
     
-    if Game_hasFlag(CLASSICMODE) then
-        filename = DATA_DIR+"2002/rooms/"+filename
-    else
-        filename = DATA_DIR+"rooms/" + filename
-    end if
-    
-    
-    Map_BeforeLoad
-    
-    i = instrrev(filename, "/")
-    j = instrrev(lcase(filename), "th.ld2")
-    roomId = val(mid(filename, i+1, j-i-1))
-    Inventory(ItemIds.CurrentRoom) = roomId
-    
     mapFile = freefile
-    open filename for binary as mapFile
+    
+    if FileExists(filename) = 0 then
+        LD2_LogDebug "Map_Load045 ( "+filename+" )   !!! ERROR: FILE NOT FOUND"
+        exit sub
+    end if
+
+    if open(filename for binary as mapFile) <> 0 then
+        LD2_LogDebug "Map_Load045 ( "+filename+" )   !!! ERROR OPENING FILE"
+        exit sub
+    end if
     
     '*******************************************************************
     '* VERSION CHECK
     '*******************************************************************
     get #mapFile, , versiontag
     if versiontag <> "[LD2L-V0.45]" then
-        LD2_LogDebug "Map_Load ( "+filename+" )   !!! ERROR: INVALID VERSION TAG"
+        LD2_LogDebug "Map_Load045 ( "+filename+" )   !!! ERROR: INVALID VERSION TAG"
+        LD2_LogDebug !"Expected \"[LD2L-V0.45]\" but got \""+versiontag+!"\""
         exit sub
     end if
     
@@ -1432,13 +1486,145 @@ sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as in
     
     close #mapFile
     
-    Map_AfterLoad skipMobs, skipSessionLoad
+end sub
+
+sub Map_Load101 (filename as string)
     
-    Game_SetFlag MAPISLOADED
+    LD2_LogDebug "Map_Load101 ( "+filename+" )"
     
-    CanSaveMap = 1
+    type fileMapCell
+        tile as ubyte
+        lightBG as ubyte
+        lightFG as ubyte
+    end type
+    
+    type fileItem
+        x as ubyte
+        y as ubyte
+        id as ubyte
+    end type
+    
+    type fileSector
+        x as ubyte
+        y as ubyte
+        w as ubyte
+        h as ubyte
+        tag as string*16
+    end type
+    
+    dim versionTag as string*12
+    dim props as MapMeta
+    dim mapFile as integer
+    dim _byte as ubyte
+    
+    if FileExists(filename) = 0 then
+        LD2_LogDebug !"ERROR!$$ * File not found$$   "+filename
+        return
+    end if
+
+    if open(filename for binary as #mapFile) <> 0 then
+        LD2_LogDebug !"ERROR!$$ * Error Opening File$$   "+filename
+        return
+    end if
+    
+    get #mapFile, , versionTag
+    if versionTag <> "[LD2L-V1.01]" then
+        LD2_LogDebug !"ERROR!$$ * Invalid Version Tag$$   "+filename+"$$   "+versionTag
+        close #mapFile
+        return
+    end if
+    
+    seek #mapFile, 1
+    get #mapFile, , props
+    
+    NumItems = props.numItems
+    NumSectors = props.numSectors
+    
+    dim bytes as string
+    dim lenRLE as ushort
+    dim x as integer
+    dim y as integer
+    dim n as integer
+    dim i as integer
+    dim j as integer
+    
+    x = 0: y = 0
+    get #mapFile, , lenRLE
+    for i = 1 to lenRLE
+        get #mapFile, , _byte: bytes = decodeRLE(_byte,i=1,i=lenRLE)
+        for j = 1 to len(bytes)
+            TileMap(x, y) = asc(mid(bytes, j, 1))
+            x += 1: if x > props.w-1 then x = 0: y += 1
+        next j
+    next i
+    x = 0: y = 0
+    get #mapFile, , lenRLE
+    for i = 1 to lenRLE
+        get #mapFile, , _byte: bytes = decodeRLE(_byte,i=1,i=lenRLE)
+        for j = 1 to len(bytes)
+            LightMapBG(x, y) = asc(mid(bytes, j, 1))
+            x += 1: if x > props.w-1 then x = 0: y += 1
+        next j
+    next i
+    x = 0: y = 0
+    get #mapFile, , lenRLE
+    for i = 1 to lenRLE
+        get #mapFile, , _byte: bytes = decodeRLE(_byte,i=1,i=lenRLE)
+        for j = 1 to len(bytes)
+            LightMapFG(x, y) = asc(mid(bytes, j, 1))
+            x += 1: if x > props.w-1 then x = 0: y += 1
+        next j
+    next i
+    x = 0: y = 0
+    get #mapFile, , lenRLE
+    for i = 1 to lenRLE
+        get #mapFile, , _byte: bytes = decodeRLE(_byte,i=1,i=lenRLE)
+        for j = 1 to len(bytes)
+            AniMap(x, y) = asc(mid(bytes, j, 1))
+            x += 1: if x > props.w-1 then x = 0: y += 1
+        next j
+    next i
+    
+    dim item as FileItem
+    for n = 0 to props.numItems-1
+        get #mapFile, , item
+        Items(n).x = item.x
+        Items(n).y = item.y
+        Items(n).id = item.id
+    next n
+    
+    dim sect as fileSector
+    for n = 0 to props.numSectors-1
+        get #mapFile, , sect
+        Sectors(n).x0 = sect.x
+        Sectors(n).y0 = sect.y
+        Sectors(n).x1 = sect.x+sect.w-1
+        Sectors(n).y1 = sect.y+sect.h-1
+        Sectors(n).tag = sect.tag
+    next n
+    
+    dim mname as string
+    dim author as string
+    dim comments as string
+    dim char as string*1
+    
+    for n = 1 to props.nameLen
+        get #mapFile, , char
+        mname += char
+    next n
+    for n = 1 to props.authorLen
+        get #mapFile, , char
+        author += char
+    next n
+    for n = 1 to props.commentsLen
+        get #mapFile, , char
+        comments += char
+    next n
+    
+    close #mapFile
     
 end sub
+
 
 SUB LoadSprites (Filename as string, BufferNum as integer)
   
@@ -2743,6 +2929,52 @@ function MapItems_isCard(itemId as integer) as integer
     end select
     
 end function
+
+sub MapItems_FindXY(id as integer, byref x as integer, byref y as integer, x0 as integer = -1, y0 as integer = -1, x1 as integer = -1, y1 as integer = -1)
+    
+    dim n as integer
+    for n = 0 to NumItems-1
+        if Items(n).id = id then
+            if (x0 > -1) and x < x0 then continue for
+            if (x1 > -1) and x > x1 then continue for
+            if (y0 > -1) and y < y0 then continue for
+            if (y1 > -1) and y > y1 then continue for
+            x = Items(n).x
+            y = Items(n).y
+            exit for
+        end if
+    next n
+    
+end sub
+
+sub Sectors_Add(tag as string, x0 as integer, y0 as integer, x1 as integer, y1 as integer)
+    
+    dim n as integer
+    n = NumSectors: NumSectors += 1
+    
+    Sectors(n).tag = tag
+    Sectors(n).x0 = x0
+    Sectors(n).y0 = x0
+    Sectors(n).x1 = x1
+    Sectors(n).y1 = x1
+    
+end sub
+
+sub Sectors_GetBounds(tag as string, byref x0 as integer, byref y0 as integer, byref x1 as integer, byref y1 as integer)
+    
+    dim n as integer
+    
+    for n = 0 to NumSectors-1
+        if Sectors(n).tag = tag then
+            x0 = Sectors(n).x0
+            y0 = Sectors(n).y0
+            x1 = Sectors(n).x1
+            y1 = Sectors(n).y1
+            exit for
+        end if
+    next n
+    
+end sub
 
 function Swaps_Api(args as string) as string
     
@@ -4394,6 +4626,54 @@ sub Mobs_Animate_TrapRoom(mob as Mobile)
     
 end sub
 
+sub Mobs_Animate_Larry(mob as Mobile)
+    
+    select case mob.state
+    case MobStates.Spawn
+        mob.setQty MobItems.Hp, 100
+        mob.setState MobStates.Waiting
+    case MobStates.Waiting
+        
+    end select
+    
+end sub
+
+sub Mobs_Animate_Steve(mob as Mobile)
+    
+    select case mob.state
+    case MobStates.Spawn
+        mob.setQty MobItems.Hp, 100
+        mob.setState MobStates.Waiting
+    case MobStates.Waiting
+        
+    end select
+    
+end sub
+
+sub Mobs_Animate_Barney(mob as Mobile)
+    
+    select case mob.state
+    case MobStates.Spawn
+        mob.setQty MobItems.Hp, 100
+        mob.setState MobStates.Waiting
+    case MobStates.Waiting
+        
+    end select
+    
+end sub
+
+sub Mobs_Animate_Janitor(mob as Mobile)
+    
+    select case mob.state
+    case MobStates.Spawn
+        mob.setQty MobItems.Hp, 100
+        mob.setState MobStates.Waiting
+    case MobStates.Waiting
+        
+    end select
+    
+end sub
+
 '* if noise then
 '* foreach mob: mob.event = MobEvents.heardNoise: mob.target = noise.x, noise.y
 '* mob.state = Investigate
@@ -4455,6 +4735,22 @@ sub Mobs_Animate(resetClocks as integer = 0)
         case MobIds.TrapRoom
             
             Mobs_Animate_TrapRoom mob
+        
+        case MobIds.Larry
+            
+            Mobs_Animate_Larry mob
+            
+        case MobIds.Steve
+            
+            Mobs_Animate_Steve mob
+            
+        case MobIds.Barney
+            
+            Mobs_Animate_Barney mob
+            
+        case MobIds.Janitor
+            
+            Mobs_Animate_Janitor mob
             
         end select
         
@@ -6816,6 +7112,14 @@ type ItemFileData
     canPickup as ubyte
 end type
 
+type SectorFileData
+    tag as string*16
+    x0 as ubyte
+    y0 as ubyte
+    x1 as ubyte
+    y1 as ubyte
+end type
+
 type MobFileData
     typeId as ubyte
     x as short
@@ -6827,6 +7131,7 @@ end type
 
 type RoomFileHeader
     numItems as ubyte
+    numSectors as ubyte
     numMobs as ubyte
     scrollX as short
     phase as ubyte
@@ -6839,6 +7144,7 @@ type RoomFileData
     lightfg(MAPW-1, MAPH-1) as ubyte
     animations(MAPW-1, MAPH-1) as ubyte
     items(MAXITEMS-1) as ItemFileData
+    sectors(MAXSECTORS-1) as SectorFileData
     mobs(MAXMOBS-1) as MobFileData
 end type
 
@@ -6873,10 +7179,11 @@ sub Game_Save (filename as string)
     
     roomId = Inventory(ItemIds.CurrentRoom)
     
-    roomdata.header.numItems = NumItems
-    roomdata.header.numMobs  = Mobs.count()
-    roomdata.header.scrollX  = cast(short, int(XShift))
-    roomdata.header.phase    = cast(ubyte, Inventory(ItemIds.Phase))
+    roomdata.header.numItems   = NumItems
+    roomdata.header.numSectors = NumSectors
+    roomdata.header.numMobs    = Mobs.count()
+    roomdata.header.scrollX    = cast(short, int(XShift))
+    roomdata.header.phase      = cast(ubyte, Inventory(ItemIds.Phase))
     for n = 0 to NumDoors-1
         select case Doors(n).accessLevel
         case GREENACCESS  : tile = TileIds.DOORGREEN
@@ -6910,6 +7217,13 @@ sub Game_Save (filename as string)
         roomdata.items(n).qty = cast(ushort, Items(n).qty)
         roomdata.items(n).isVisible = cast(ubyte, Items(n).isVisible)
         roomdata.items(n).canPickup = cast(ubyte, Items(n).canPickup)
+    next n
+    for n = 0 to MAXSECTORS-1
+        roomdata.sectors(n).tag = Sectors(n).tag
+        roomdata.sectors(n).x0 = cast(ubyte, int(Sectors(n).x0/SPRITE_W))
+        roomdata.sectors(n).y0 = cast(ubyte, int(Sectors(n).y0/SPRITE_H))
+        roomdata.sectors(n).x1 = cast(ubyte, int(Sectors(n).x1/SPRITE_W))
+        roomdata.sectors(n).y1 = cast(ubyte, int(Sectors(n).y1/SPRITE_H))
     next n
     i = 0
     Mobs.resetNext
@@ -7063,8 +7377,9 @@ function Game_Load (filename as string, roomId as integer = -1) as integer
     end if
     
     if loadRoomData then
-        NumItems = roomdata.header.numItems
-        numMobs = roomdata.header.numMobs
+        NumItems   = roomdata.header.numItems
+        NumSectors = roomdata.header.numSectors
+        numMobs    = roomdata.header.numMobs
         XShift = roomdata.header.scrollX
         for y = 0 to MAPH-1
             for x = 0 to MAPW-1
@@ -7083,6 +7398,15 @@ function Game_Load (filename as string, roomId as integer = -1) as integer
             Items(n).canPickup = roomdata.items(n).canPickup
             Items(n).x *= SPRITE_W
             Items(n).y *= SPRITE_H
+        next n
+        for n = 0 to MAXSECTORS-1
+            Sectors(n).tag = roomdata.sectors(n).tag
+            Sectors(n).x0  = roomdata.sectors(n).x0
+            Sectors(n).y0  = roomdata.sectors(n).y0
+            Sectors(n).x1  = roomdata.sectors(n).x1
+            Sectors(n).y1  = roomdata.sectors(n).y1
+            Sectors(n).x0 *= SPRITE_W: Sectors(n).y0 *= SPRITE_H
+            Sectors(n).x1 *= SPRITE_W: Sectors(n).y1 *= SPRITE_H
         next n
         Mobs.clear()
         for n = 0 to numMobs-1
@@ -7118,6 +7442,8 @@ sub Game_Reset()
     NumSwaps = 0
     NumSwitches = 0
     NumTeleports = 0
+    NumFlashes = 0
+    NumSectors = 0
     NumInvSlots = 8
     '///////////////////////////////////////////////////////////////////
     CanSaveMap = 0
@@ -7151,3 +7477,80 @@ sub Game_Reset()
     '///////////////////////////////////////////////////////////////////
     
 end sub
+
+function encodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
+    
+    static count as integer = 0
+    static curval as integer = -1
+    dim retval as string
+    
+    if first then
+        count = 0
+        curval = -1
+    end if
+    
+    if (count > 0) or last then
+        if (count < 256) and (newval = curval) then
+            count += 1
+        end if
+        if (count = 256) or (newval <> curval) or last then
+            if curval > -1 then
+                if count = 1 then
+                    retval = chr(cast(ubyte, curval))
+                else
+                    if count = 256 then count -= 1
+                    retval = chr(cast(ubyte, curval))+chr(cast(ubyte, curval))+chr(cast(ubyte, count))
+                end if
+            end if
+            count = 0
+        end if
+        if (newval <> curval) and last then
+            retval += chr(cast(ubyte, newval))
+        end if
+    end if
+    if count = 0 then
+        curval = newval
+        count += 1
+    end if
+    
+    return retval
+    
+end function
+
+function decodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
+    
+    static count as integer = 0
+    static curval as integer = -1
+    dim retval as string
+    dim repeat as integer
+    
+    if first then
+        count = 0
+        curval = -1
+    end if
+    
+    select case count
+    case 0
+        curval = newval
+        count += 1
+        retval = iif(last, chr(curval), "")
+    case 1
+        if curval = newval then
+            count += 1
+        else
+            retval = chr(curval)
+            curval = newval
+            count = 1
+        end if
+        if last then
+            retval += chr(newval)
+        end if
+    case 2
+        repeat = newval
+        retval = string(repeat, chr(curval))
+        count = 0
+    end select
+    
+    return retval
+    
+end function

@@ -107,6 +107,19 @@ enum ItemIds
     SpinningFan     = 64
     SpinningGear    = 65
     '=======================================
+    Larry           = 67
+    Steve           = 68
+    Barney          = 69
+    Janitor         = 70
+    Whale           = 71
+    Stanley         = 72
+    Rockmonster     = 73
+    BarneyElevator  = 74
+    BossRooftop     = 75
+    TrooperMg       = 76
+    StevePassedOut0 = 77
+    StevePassedOut1 = 78
+    '=======================================
     Lives           = 70
     HP              = 71
     '=======================================
@@ -317,6 +330,10 @@ enum MobIds
     Plant
     Rockmonster
     TrapRoom
+    Barney
+    Janitor
+    Larry
+    Steve
 end enum
 
 enum MobHps

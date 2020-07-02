@@ -108,6 +108,30 @@ enum LayerIds
     LightBg = 3
 end enum
 
+type SectorType
+    tag as string
+    x0 as integer
+    y0 as integer
+    x1 as integer
+    y1 as integer
+end type
+
+type MapMeta
+    versionTag as string*12
+    versionMajor as ubyte
+    versionMinor as ubyte
+    w as ubyte
+    h as ubyte
+    numItems as ubyte
+    numAnimated as ubyte
+    numSectors as ubyte
+    created as string*10
+    updated as string*10
+    nameLen as ubyte
+    authorLen as ubyte
+    commentsLen as ubyte
+end type
+
 declare function fontVal(ch as string) as integer
 declare function getArg(argstring as string, numArg as integer) as string
 
@@ -139,6 +163,10 @@ declare function MapItems_Pickup () as integer
 declare function MapItems_GetCount() as integer
 declare function MapItems_GetCardLevel(itemId as integer) as integer
 declare function MapItems_isCard(itemId as integer) as integer
+declare sub MapItems_FindXY(id as integer, byref x as integer, byref y as integer, x0 as integer = -1, y0 as integer = -1, x1 as integer = -1, y1 as integer = -1)
+
+declare sub Sectors_Add(tag as string, x0 as integer, y0 as integer, x1 as integer, y1 as integer)
+declare sub Sectors_GetBounds(tag as string, byref x0 as integer, byref y0 as integer, byref x1 as integer, byref y1 as integer)
 
 declare function Swaps_Api (args as string) as string
 declare function Swaps_Add (x0 as integer, y0 as integer, x1 as integer, y1 as integer, dx as integer, dy as integer) as integer
@@ -155,6 +183,8 @@ declare function Map_InBounds(x as integer, y as integer) as integer
 declare sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
 declare sub Map_BeforeLoad()
 declare sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as integer = 0)
+declare sub Map_Load045 (filename as string)
+declare sub Map_Load101 (filename as string)
 declare sub Map_LockElevators ()
 declare sub Map_UnlockElevators ()
 declare function Map_GetXShift () as integer
@@ -333,6 +363,7 @@ CONST MAXELEVATORS =  12
 CONST MAXSWAPS     =  12
 CONST MAXTELEPORTS =  12
 CONST MAXFLASHES   =  6
+CONST MAXSECTORS   =  12
 CONST MAXFLOORS    =  24
 CONST MAXINVENTORY =  128
 CONST MAXINVSLOTS  =   8

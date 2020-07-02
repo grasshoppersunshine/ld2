@@ -631,14 +631,14 @@ SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGE
             pose.addSprite 34: pose.takeSnapshot
             pose.addSprite 35: pose.takeSnapshot
         case PoseIds.Charging
-            pose.setSpriteSetId idENEMY
+            pose.setSpriteSetId idMOBS
             pose.addSprite 1: pose.takeSnapshot
             pose.addSprite 2: pose.takeSnapshot
             pose.addSprite 3: pose.takeSnapshot
             pose.addSprite 4: pose.takeSnapshot
             pose.addSprite 5: pose.takeSnapshot
         case PoseIds.GettingShot
-            pose.setSpriteSetId idENEMY
+            pose.setSpriteSetId idMOBS
             pose.addSprite 6: pose.takeSnapshot
         case PoseIds.Jumping
             pose.addSprite 119: pose.takeSnapshot
@@ -1430,10 +1430,6 @@ end sub
 
 sub SceneCheck (player as PlayerType)
     
-    if Player_NotItem(ItemIds.SceneIntro) then
-        Scene1
-    end if
-    
     if SceneCallback <> 0 then
         SceneCallback()
         SceneCallback = 0
@@ -1446,24 +1442,43 @@ sub SceneCheck (player as PlayerType)
         TITLE_TheEnd
     end if
     
-    if Player_GetCurrentRoom() = Rooms.LarrysOffice then
+    select case Map_GetSectorId()
+    case "SCENE-1"
+        if Player_NotItem(ItemIds.SceneIntro) then
+            Scene1
+            MapItems_FindXY ItemIds.Janitor, x, y, sector.x0, sector.y0, sector.x1, sector.y1
+            Mobs_Add SPRITE_W*10.125, SPRITE_H*9, MobIds.StevePassedOut
+            Mobs_Add SPRITE_W*74.750, SPRITE_H*9, MobIds.Janitor
+        end if
+    case "SCENE-2"
         if Player_NotItem(ItemIds.SceneJanitor) then
-            LD2_put 1196, 144, POSEJANITOR, idSCENE, 0
-            if player.x >= Guides.SceneJanitor then
-                Scene3 '// larry meets janitor
-                Scene4 '// rockmonster eats janitor
-            end if
+            Scene3 '// larry meets janitor
+            Scene4 '// rockmonster eats janitor
         end if
-        if Player_NotItem(ItemIds.SceneElevator) and player.x >= Guides.SceneElevator then
-            Scene5 '// barney saves larry from rockmonster
+    case "SCENE-4"
+        if Player_NotItem(ItemIds.SceneElevator) then
+            Scene5
         end if
-        if Player_NotItem(ItemIds.SceneWeapons1) then
-            LD2_put 162, 144, 121, idSCENE, 1 '// steve
-            LD2_put 178, 144, 120, idSCENE, 1 '// passed out
-        end if
-        if Player_HasItem(ItemIds.SceneElevator) and Player_NotItem(ItemIds.SceneWeapons1) then
-            '// ??????
-        end if
+    end select
+    
+    if Player_GetCurrentRoom() = Rooms.LarrysOffice then
+        'if Player_NotItem(ItemIds.SceneJanitor) then
+        '    LD2_put 1196, 144, POSEJANITOR, idSCENE, 0
+        '    if player.x >= Guides.SceneJanitor then
+        '        Scene3 '// larry meets janitor
+        '        Scene4 '// rockmonster eats janitor
+        '    end if
+        'end if
+        'if Player_NotItem(ItemIds.SceneElevator) and player.x >= Guides.SceneElevator then
+        '    Scene5 '// barney saves larry from rockmonster
+        'end if
+        'if Player_NotItem(ItemIds.SceneWeapons1) then
+        '    LD2_put 162, 144, 121, idSCENE, 1 '// steve
+        '    LD2_put 178, 144, 120, idSCENE, 1 '// passed out
+        'end if
+        'if Player_HasItem(ItemIds.SceneElevator) and Player_NotItem(ItemIds.SceneWeapons1) then
+        '    '// ??????
+        'end if
     end if
     if Player_GetCurrentRoom() = Rooms.WeaponsLocker then
         if Player_NotItem(ItemIds.SceneWeapons1) then

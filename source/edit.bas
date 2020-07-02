@@ -46,6 +46,14 @@ type BoxType
     h as integer
 end type
 
+type SectorType
+    tag as string*16
+    x as integer
+    y as integer
+    w as integer
+    h as integer
+end type
+
 type PointContained
     _point as PointDouble
     _bounds as BoundsType
@@ -103,17 +111,18 @@ property PointContained.y(ny as double)
 end property
 
 type MapMeta
-    versionMajor as integer
-    versionMinor as integer
-    levelName as string
-    author as string
-    created as string
-    updated as string
-    comments as string
+    versionTag as string*12
+    versionMajor as ubyte
+    versionMinor as ubyte
     w as ubyte
     h as ubyte
     numItems as ubyte
-    numAnimated as ubyte
+    numSectors as ubyte
+    created as string*10
+    updated as string*10
+    nameLen as ubyte
+    authorLen as ubyte
+    commentsLen as ushort
 end type
 
 type MapCell
@@ -165,8 +174,7 @@ end type
     declare sub MapPush()
     declare function MapPop(forward as integer = 0) as integer
     declare function DialogYesNo(message as string) as integer
-    declare function getVersionTag() as string
-    declare function getNumAnimated() as integer
+    declare function getVersionTag(major as integer, minor as integer) as string
     
     declare sub elementsPutFont(x as integer, y as integer, charVal as integer)
     declare sub elementsFill(x as integer, y as integer, w as integer, h as integer, fillColor as integer, fillAlpha as double = 1.0)
@@ -176,6 +184,9 @@ end type
     declare sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, srcLayer as integer, dstLayer as integer = 0)
     declare sub drawSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, srcLayer as integer, dstLayer as integer = 0)
     declare sub fillSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, srcLayer as integer, dstLayer as integer = 0)
+    
+    declare function encodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
+    declare function decodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
     
     dim shared SpritesLarry as VideoSprites
     dim shared SpritesTile as VideoSprites
@@ -210,6 +221,9 @@ end type
     
     dim shared MapStackPointer as integer
     dim shared MapMaxStack as integer
+    
+    dim shared Sectors(7) as SectorType
+    dim tag as string*16
 
   
   DIM XScroll AS INTEGER
@@ -286,16 +300,22 @@ end type
     dim sprite as integer
     
     dim shared MapProps as MapMeta
+    MapProps.versionTag = ""
     MapProps.versionMajor = 1
     MapProps.versionMinor = 1
-    MapProps.levelName = ""
-    MapProps.author = ""
-    MapProps.created = ""
-    MapProps.updated = ""
-    MapProps.comments = ""
     MapProps.w = MAPW
     MapProps.h = MAPH
     MapProps.numItems = 0
+    MapProps.numSectors = 0
+    MapProps.created = date
+    MapProps.updated = date
+    MapProps.nameLen = 0
+    MapProps.authorLen = 0
+    MapProps.commentsLen = 0
+    
+    dim shared MapName as string
+    dim shared MapAuthor as string
+    dim shared MapComments as string
     
     dim selectingBox as integer
     dim selectStart as PointType
@@ -356,6 +376,15 @@ end type
     if pastePreview then
         MapPaste cursor.x, cursor.y, XScroll, 1
     end if
+    
+    for n = 0 to MapProps.numSectors-1
+        x = Sectors(n).x-XScroll: y = Sectors(n).y
+        w = Sectors(n).w: h = Sectors(n).h
+        x *= SPRITE_W: y *= SPRITE_H
+        w *= SPRITE_W: h *= SPRITE_H
+        LD2_fillm x, y, w, h, 70, 1, 100
+        putText trim(Sectors(n).tag), x+(w-len(trim(Sectors(n).tag))*FONT_W)*0.5, y+((h-FONT_H)*0.5)
+    next n
 
     x = FONT_W*0.5
     LD2_SetTargetBuffer 1
@@ -702,6 +731,19 @@ end type
             mapFilename = filename
         end if
     end if
+    if selectingBox and keypress(KEY_T) then
+        LD2_PlaySound EditSounds.inputText
+        tag = trim(inputText("Sector Tag: ", ""))
+        if MapProps.numSectors < 7 then
+            n = MapProps.numSectors
+            MapProps.numSectors += 1
+            Sectors(n).x = selectBox.x
+            Sectors(n).y = selectBox.y
+            Sectors(n).w = selectBox.w+1
+            Sectors(n).h = selectBox.h+1
+            Sectors(n).tag = tag
+        end if
+    end if
     
     if ((keyboard(KEY_LSHIFT) = 0) and keypress(KEY_B)) or (mouseMB() and mouseUp) then
         if selectingBox = 0 then
@@ -872,12 +914,12 @@ sub LoadMap(filename as string)
     dim versionTag as string*12
     
     if FileExists(filename) = 0 then
-        Notice !"ERROR!$$ * File not found"
+        Notice !"ERROR!$$ * File not found$$   "+filename
         return
     end if
 
     if open(filename for binary as #1) <> 0 then
-        Notice !"ERROR!$$ * Error Opening File"
+        Notice !"ERROR!$$ * Error Opening File$$   "+filename
         return
     end if
     
@@ -891,7 +933,7 @@ sub LoadMap(filename as string)
     case "[LD2L-V1.01]"
         LoadMap101 filename
     case else
-        Notice !"ERROR!$$ * Invalid Version Tag$$"+versionTag
+        Notice !"ERROR!$$ * Invalid Version Tag$$   "+filename+"$$   "+versionTag
     end select
     
 end sub
@@ -910,47 +952,146 @@ sub LoadMap101 (filename as string)
         id as ubyte
     end type
     
-    dim versionTag as string
+    type fileSector
+        x as ubyte
+        y as ubyte
+        w as ubyte
+        h as ubyte
+        tag as string*16
+    end type
+    
+    dim versionTag as string*12
     dim props as MapMeta
+    dim _byte as ubyte
     
     if FileExists(filename) = 0 then
-        Notice !"ERROR!$$ * File not found"
+        Notice !"ERROR!$$ * File not found$$   "+filename
         return
     end if
 
     if open(filename for binary as #1) <> 0 then
-        Notice !"ERROR!$$ * Error Opening File"
+        Notice !"ERROR!$$ * Error Opening File$$   "+filename
         return
     end if
     
     get #1, , versionTag
     if versionTag <> "[LD2L-V1.01]" then
-        Notice !"ERROR!$$ * Invalid Version Tag$$"+versionTag
+        Notice !"ERROR!$$ * Invalid Version Tag$$   "+filename+"$$   "+versionTag
         close #1
         return
     end if
     
-    get #1, , props.w
-    get #1, , props.h
-    get #1, , props.numItems
+    seek #1, 1
+    get #1, , props
     
-    get #1, , props.levelName
-    get #1, , props.author
-    get #1, , props.created
-    get #1, , props.updated
-    get #1, , props.comments
-    
-    dim cell as fileMapCell
+    dim bytes as string
+    dim lenRLE as ushort
     dim x as integer
     dim y as integer
-    for y = 0 to props.h-1
-        for x = 0 to props.w-1
-            get #1, , cell
-            EditMap(x, y) = cell.tile
-            LightMapFG(x, y) = cell.lightBG
-            LightMapBG(x, y) = cell.lightFG
-        next x
-    next y
+    dim n as integer
+    dim i as integer
+    dim j as integer
+    
+    x = 0: y = 0
+    get #1, , lenRLE
+    for i = 1 to lenRLE
+        get #1, , _byte: bytes = decodeRLE(_byte,i=1,i=lenRLE)
+        for j = 1 to len(bytes)
+            EditMap(x, y) = asc(mid(bytes, j, 1))
+            x += 1: if x > props.w-1 then x = 0: y += 1
+        next j
+    next i
+    x = 0: y = 0
+    get #1, , lenRLE
+    for i = 1 to lenRLE
+        get #1, , _byte: bytes = decodeRLE(_byte,i=1,i=lenRLE)
+        for j = 1 to len(bytes)
+            LightMapBG(x, y) = asc(mid(bytes, j, 1))
+            x += 1: if x > props.w-1 then x = 0: y += 1
+        next j
+    next i
+    x = 0: y = 0
+    get #1, , lenRLE
+    for i = 1 to lenRLE
+        get #1, , _byte: bytes = decodeRLE(_byte,i=1,i=lenRLE)
+        for j = 1 to len(bytes)
+            LightMapFG(x, y) = asc(mid(bytes, j, 1))
+            x += 1: if x > props.w-1 then x = 0: y += 1
+        next j
+    next i
+    x = 0: y = 0
+    get #1, , lenRLE
+    for i = 1 to lenRLE
+        get #1, , _byte: bytes = decodeRLE(_byte,i=1,i=lenRLE)
+        for j = 1 to len(bytes)
+            AniMap(x, y) = asc(mid(bytes, j, 1))
+            x += 1: if x > props.w-1 then x = 0: y += 1
+        next j
+    next i
+    
+    dim item as FileItem
+    for n = 0 to props.numItems-1
+        get #1, , item
+        Items(n).x = item.x
+        Items(n).y = item.y
+        Items(n).item = item.id
+    next n
+    
+    dim sect as fileSector
+    for n = 0 to props.numSectors-1
+        get #1, , sect
+        Sectors(n).x = sect.x
+        Sectors(n).y = sect.y
+        Sectors(n).w = sect.w
+        Sectors(n).h = sect.h
+        Sectors(n).tag = sect.tag
+    next n
+    
+    dim mname as string
+    dim author as string
+    dim comments as string
+    dim char as string*1
+    
+    for n = 1 to props.nameLen
+        get #1, , char
+        mname += char
+    next n
+    for n = 1 to props.authorLen
+        get #1, , char
+        author += char
+    next n
+    for n = 1 to props.commentsLen
+        get #1, , char
+        comments += char
+    next n
+    
+    close #1
+    
+    MapName = mname
+    MapAuthor = author
+    MapComments = comments
+    
+    MapProps = props
+    
+    LD2_cls 1, 0
+    putText MapProps.versionTag, 2, FONT_H*1
+    putText MapName, 2, FONT_H*3
+    putText MapAuthor, 2, FONT_H*5
+    putText "Created: "+MapProps.created, 2, FONT_H*7
+    putText "Updated: "+MapProps.updated, 2, FONT_H*9
+    putText "Item Count: "+str(MapProps.numItems), 2, FONT_H*11
+    putText "Comments:", 2, FONT_H*14
+    putText MapComments, 2, FONT_H*16
+    
+    putText "Press ENTER to continue", 0, FONT_H*36
+
+    LD2_PlaySound EditSounds.loaded
+    LD2_RefreshScreen
+
+    WaitForKeyup(KEY_ENTER)
+    WaitForKeydown(KEY_ENTER)
+
+    LD2_PlaySound EditSounds.arrows
     
 end sub
 
@@ -974,12 +1115,12 @@ sub LoadMap045 (filename as string)
     dim numItems as ubyte
     
     if FileExists(filename) = 0 then
-        Notice !"ERROR!$$ * File not found"
+        Notice !"ERROR!$$ * File not found$$   "+filename
         return
     end if
 
     if open(filename for binary as #1) <> 0 then
-        Notice !"ERROR!$$ * Error Opening File"
+        Notice !"ERROR!$$ * Error Opening File$$   "+filename
         return
     end if
     
@@ -990,7 +1131,7 @@ sub LoadMap045 (filename as string)
     '-----------------------
     get #1, , versionTag
     if versionTag <> "[LD2L-V0.45]" then
-        Notice !"ERROR!$$ * Invalid Version Tag$$"+versionTag
+        Notice !"ERROR!$$ * Invalid Version Tag$$   "+filename+"$$   "+versionTag
         close #1
         return
     end if
@@ -1078,9 +1219,9 @@ sub LoadMap045 (filename as string)
         Items(i).y = int(Items(i).y / 16)
     next i
     
-  close #1
-  
-  DoMapPostProcessing
+    close #1
+    
+    DoMapPostProcessing
 
     '- Display the map data
     '- and wait for keypress
@@ -1106,22 +1247,22 @@ sub LoadMap045 (filename as string)
         cn = cn + 1
     next n
     
-    select case versionTag
-    case "[LD2L-V0.45]"
-        MapProps.versionMajor = 0
-        MapProps.versionMinor = 45
-    case "[LD2L-V1.01]"
-        MapProps.versionMajor = 1
-        MapProps.versionMinor = 1
-    end select
-    MapProps.levelName = levelName
-    MapProps.author = author
-    MapProps.updated = updated
-    MapProps.created = "n/a"
-    MapProps.comments = comments
+    MapProps.versionTag = versionTag
+    MapProps.versionMajor = 0
+    MapProps.versionMinor = 45
     MapProps.w = 201
     MapProps.h = 13
     MapProps.numItems = numItems
+    MapProps.numSectors = 0
+    MapProps.created = "n/a"
+    MapProps.updated = updated
+    MapProps.nameLen = len(levelName)
+    MapProps.authorLen = len(author)
+    MapProps.commentsLen = len(comments)
+    
+    MapName = levelName
+    MapAuthor = author
+    MapComments = comments
 
     putText "Press ENTER to continue", 0, FONT_H*36
 
@@ -1226,39 +1367,98 @@ sub LoadSprites (filename as string, spriteSetId as integer)
 
 END SUB
 
-function getVersionTag() as string
+function getVersionTag(major as integer, minor as integer) as string
     
     dim versionTag as string
     
     versionTag = "["
         versionTag += "LD2L-V"
-        versionTag += str(MapProps.versionMajor)
+        versionTag += str(major)
         versionTag += "."
-        versionTag += iif(MapProps.versionMinor<10,"0","")+str(MapProps.versionMinor)
+        versionTag += iif(minor<10,"0","")+str(minor)
     versionTag += "]"
     
     return versionTag
     
 end function
 
-function getNumAnimated() as integer
+function encodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
     
-    dim x as integer
-    dim y as integer
-    dim count as integer
+    static count as integer = 0
+    static curval as integer = -1
+    dim retval as string
     
-    count = 0
-    for y = 0 to MapProps.h-1
-        for x = 0 to MapProps.w-1
-            if AniMap(x, y) > 0 then
-                count += 1
+    if first then
+        count = 0
+        curval = -1
+    end if
+    
+    if (count > 0) or last then
+        if (count < 256) and (newval = curval) then
+            count += 1
+        end if
+        if (count = 256) or (newval <> curval) or last then
+            if curval > -1 then
+                if count = 1 then
+                    retval = chr(cast(ubyte, curval))
+                else
+                    if count = 256 then count -= 1
+                    retval = chr(cast(ubyte, curval))+chr(cast(ubyte, curval))+chr(cast(ubyte, count))
+                end if
             end if
-        next x
-    next y
+            count = 0
+        end if
+        if (newval <> curval) and last then
+            retval += chr(cast(ubyte, newval))
+        end if
+    end if
+    if count = 0 then
+        curval = newval
+        count += 1
+    end if
     
-    return count
+    return retval
     
 end function
+
+function decodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
+    
+    static count as integer = 0
+    static curval as integer = -1
+    dim retval as string
+    dim repeat as integer
+    
+    if first then
+        count = 0
+        curval = -1
+    end if
+    
+    select case count
+    case 0
+        curval = newval
+        count += 1
+        retval = iif(last, chr(curval), "")
+    case 1
+        if curval = newval then
+            count += 1
+        else
+            retval = chr(curval)
+            curval = newval
+            count = 1
+        end if
+        if last then
+            retval += chr(newval)
+        end if
+    case 2
+        repeat = newval
+        retval = string(repeat, chr(curval))
+        count = 0
+    end select
+    
+    return retval
+    
+end function
+
 
 sub SaveMap101 (filename as string, showDetails as integer = 0)
     
@@ -1274,46 +1474,96 @@ sub SaveMap101 (filename as string, showDetails as integer = 0)
         id as ubyte
     end type
     
+    type fileSector
+        x as ubyte
+        y as ubyte
+        w as ubyte
+        h as ubyte
+        tag as string*16
+    end type
+    
     dim props as MapMeta
-    props = MapProps
+    dim x as integer
+    dim y as integer
+    dim n as integer
     
-    dim versionTag as string
-    versionTag = getVersionTag()
-    
-    props.numAnimated = getNumAnimated()
-    
-    if open(Filename for binary as #1) <> 0 then
-        Notice !"ERROR!$$ * Error Opening File"
+    if open(Filename for output as #1) <> 0 then
+        Notice !"ERROR!$$ * Error Opening File$$   "+filename+"$$   Version 1.01"
         return
     end if
     
-    put #1, , versionTag
-    put #1, , props.w
-    put #1, , props.h
-    put #1, , props.numItems
-    put #1, , props.numAnimated
-    put #1, , props.levelName
-    put #1, , props.author
-    put #1, , props.created
-    put #1, , props.updated
-    put #1, , props.comments
+    close #1
+    open Filename for binary as #1
+    
+    MapProps.versionTag   = getVersionTag(1, 1)
+    MapProps.versionMajor = 1
+    MapProps.versionMinor = 1
+    MapProps.w            = MAPW
+    MapProps.h            = MAPH
+    MapProps.numItems     = MapProps.numItems
+    MapProps.numSectors   = MapProps.numSectors
+    MapProps.created      = iif(len(MapProps.created)=10,MapProps.created,date)
+    MapProps.updated      = date
+    MapProps.nameLen      = len(MapName)
+    MapProps.authorLen    = len(MapAuthor)
+    MapProps.commentsLen  = len(MapComments)
+    
+    props = MapProps
+    put #1, , props
     
     dim cell as fileMapCell
+    dim bytes as string
+    dim first as integer
+    dim last as integer
+    dim lenRLE as ushort
+    dim posRLE as longint
+    dim posCUR as longint
     
-    dim x as integer
-    dim y as integer
+    lenRLE = 0: posRLE = loc(1)+1: put #1, , lenRLE
     for y = 0 to props.h-1
         for x = 0 to props.w-1
-            cell.tile = EditMap(x, y)
-            cell.lightBG = LightMapBG(x, y)
-            cell.lightFG = LightMapFG(x, y)
-            put #1, , cell
+            first = ((x = 0) and (y = 0)): last = ((x = props.w-1) and (y = props.h-1))
+            bytes = encodeRLE(EditMap(x, y), first, last)
+            for n = 1 to len(bytes): put #1, , mid(bytes, n, 1): next n
+            lenRLE += len(bytes)
         next x
     next y
+    posCUR = loc(1)+1: put #1, posRLE, lenRLE: seek #1, posCUR
+    
+    lenRLE = 0: posRLE = loc(1)+1: put #1, , lenRLE
+    for y = 0 to props.h-1
+        for x = 0 to props.w-1
+            first = ((x = 0) and (y = 0)): last = ((x = props.w-1) and (y = props.h-1))
+            bytes = encodeRLE(LightMapBG(x, y), first, last)
+            for n = 1 to len(bytes): put #1, , mid(bytes, n, 1): next n
+            lenRLE += len(bytes)
+        next x
+    next y
+    posCUR = loc(1)+1: put #1, posRLE, lenRLE: seek #1, posCUR
+    
+    lenRLE = 0: posRLE = loc(1)+1: put #1, , lenRLE
+    for y = 0 to props.h-1
+        for x = 0 to props.w-1
+            first = ((x = 0) and (y = 0)): last = ((x = props.w-1) and (y = props.h-1))
+            bytes = encodeRLE(LightMapFG(x, y), first, last)
+            for n = 1 to len(bytes): put #1, , mid(bytes, n, 1): next n
+            lenRLE += len(bytes)
+        next x
+    next y
+    posCUR = loc(1)+1: put #1, posRLE, lenRLE: seek #1, posCUR
+    
+    lenRLE = 0: posRLE = loc(1)+1: put #1, , lenRLE
+    for y = 0 to props.h-1
+        for x = 0 to props.w-1
+            first = ((x = 0) and (y = 0)): last = ((x = props.w-1) and (y = props.h-1))
+            bytes = encodeRLE(AniMap(x, y), first, last)
+            for n = 1 to len(bytes): put #1, , mid(bytes, n, 1): next n
+            lenRLE += len(bytes)
+        next x
+    next y
+    posCUR = loc(1)+1: put #1, posRLE, lenRLE: seek #1, posCUR
     
     dim fitem as fileItem
-    dim n as integer
-    
     for n = 0 to props.numItems-1
         fitem.x  = Items(n).x
         fitem.y  = Items(n).y
@@ -1321,20 +1571,62 @@ sub SaveMap101 (filename as string, showDetails as integer = 0)
         put #1, , fitem
     next n
     
-    dim animated as ubyte
+    dim sect as fileSector
+    for n = 0 to props.numSectors-1
+        sect.x = Sectors(n).x
+        sect.y = Sectors(n).y
+        sect.w = Sectors(n).w
+        sect.h = Sectors(n).h
+        sect.tag = Sectors(n).tag
+        put #1, , sect
+    next n
     
-    for n = 0 to props.numAnimated-1
-        for y = 0 to props.h-1
-            for x = 0 to props.w-1
-                if AniMap(x, y) > 0 then
-                    animated = AniMap(x, y)
-                    put #1, , animated
-                end if
-            next x
-        next y
+    dim mname as string
+    dim author as string
+    dim comments as string
+    
+    mname = MapName
+    for n = 1 to len(mname)
+        put #1, , mid(mname, n, 1)
+    next n
+    author = MapAuthor
+    for n = 1 to len(author)
+        put #1, , mid(author, n, 1)
+    next n
+    comments = MapComments
+    for n = 1 to len(comments)
+        put #1, , mid(comments, n, 1)
     next n
     
     close #1
+    
+    if showDetails then
+        
+        dim shortFilename as string
+        dim i as integer
+        shortFilename = filename
+        i = instrrev(filename, "/")
+        if i then
+            shortFilename = right(filename, len(filename)-i)
+        end if
+        i = instrrev(filename, "\")
+        if i then
+            shortFilename = right(filename, len(filename)-i)
+        end if
+        
+        LD2_cls 1, 0
+        putText "Saved "+shortFilename, 2, FONT_H*1
+        
+        putText "Press ENTER to continue", 0, FONT_H*36
+
+        LD2_PlaySound EditSounds.saved
+        LD2_RefreshScreen
+
+        WaitForKeyup(KEY_ENTER)
+        WaitForKeydown(KEY_ENTER)
+
+        LD2_PlaySound EditSounds.arrows
+    endif
     
 end sub
 
@@ -1342,7 +1634,9 @@ sub SaveMap (filename as string, showDetails as integer = 0)
     
     dim versionTag as string
     
-    versionTag = getVersionTag()
+    MapProps.versionMajor = 1
+    MapProps.versionMinor = 1
+    versionTag = getVersionTag(MapProps.versionMajor, MapProps.versionMinor)
     
     select case versionTag
     case "[LD2L-V0.45]"
@@ -1364,7 +1658,6 @@ SUB SaveMap045 (filename as string, showDetails as integer = 0)
     dim dt as string
     dim info as string
     
-    dim c as integer
     dim i as integer
     dim n as integer
     dim x as integer
@@ -1387,7 +1680,7 @@ SUB SaveMap045 (filename as string, showDetails as integer = 0)
     end if
 
     if OPEN(Filename FOR BINARY AS #1) <> 0 then
-        Notice !"ERROR!$$ * Error Opening File"
+        Notice !"ERROR!$$ * Error Opening File$$   "+filename+"$$   Version 0.45"
         return
     end if
 
@@ -1396,7 +1689,6 @@ SUB SaveMap045 (filename as string, showDetails as integer = 0)
     cr = "Joe King"
     dt = date
     info = ""
-    c = 1
 
     '- Write the file header
     '-----------------------
@@ -1513,12 +1805,12 @@ SUB SaveMap045 (filename as string, showDetails as integer = 0)
         v = MapProps.numItems
         put #1, , v
         for i = 0 to MapProps.numItems-1
-            _word = Items(i).x*16: put #1, , _word: c = c + 2
-            _word = Items(i).y*16: put #1, , _word: c = c + 2
+            _word = Items(i).x*16: put #1, , _word
+            _word = Items(i).y*16: put #1, , _word
             v = Items(i).item-1: put #1, , v
         next i
-
-  CLOSE #1
+        
+    close #1
     
     if showDetails then
         LD2_cls 1, 0
@@ -2257,12 +2549,6 @@ sub MapPush()
         id as ubyte
     end type
     
-    type fileAnimated
-        x as ubyte
-        y as ubyte
-        frames as ubyte
-    end type
-    
     dim filename as string
     dim x as integer
     dim y as integer
@@ -2275,7 +2561,6 @@ sub MapPush()
     end if
     
     props = MapProps
-    props.numAnimated = getNumAnimated()
     
     filename = DATA_DIR+"editor/stackcopy"+str(MapStackPointer)+".ld2"
     
@@ -2304,23 +2589,6 @@ sub MapPush()
         put #1, , fitem
     next n
     
-    dim animated as fileAnimated
-    dim nAnimated as ubyte
-    nAnimated = props.numAnimated
-    put #1, , nAnimated
-    for n = 0 to props.numAnimated-1
-        for y = 0 to props.h-1
-            for x = 0 to props.w-1
-                if AniMap(x, y) > 0 then
-                    animated.x = x
-                    animated.y = y
-                    animated.frames = AniMap(x, y)
-                    put #1, , animated
-                end if
-            next x
-        next y
-    next n
-    
     close #1
     
     MapStackPointer += 1
@@ -2342,12 +2610,6 @@ function MapPop(forward as integer = 0) as integer
         x as ubyte
         y as ubyte
         id as ubyte
-    end type
-    
-    type fileAnimated
-        x as ubyte
-        y as ubyte
-        frames as ubyte
     end type
     
     dim filename as string
@@ -2394,21 +2656,6 @@ function MapPop(forward as integer = 0) as integer
     for n = 0 to nItems-1
         get #1, , fitem
         PlaceItem fitem.x, fitem.y, fitem.id
-    next n
-    
-    dim animated as fileAnimated
-    dim nAnimated as ubyte
-    
-    for y = 0 to props.h-1
-        for x = 0 to props.w-1
-            AniMap(x, y) = 0
-        next x
-    next y
-    
-    get #1, , nAnimated
-    for n = 0 to nAnimated-1
-        get #1, , animated
-        AniMap(animated.x, animated.y) = animated.frames
     next n
     
     close #1
