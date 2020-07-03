@@ -1445,19 +1445,22 @@ sub SceneCheck (player as PlayerType)
     dim tag as string
     tag = Sectors_GetTagFromXY(int(Player_GetX()), int(Player_GetY()))
     
-    select case tag
-    case "SCENE-1"
+    select case ucase(tag)
+    case "SCENE-CHESS"
         if Player_NotItem(ItemIds.SceneIntro) then
             Scene1
             Mobs_Add SPRITE_W*10.125, SPRITE_H*9, MobIds.Steve, MobStates.PassedOut
-            Mobs_Add SPRITE_W*74.750, SPRITE_H*9, MobIds.Janitor
+            Mobs_Add SPRITE_W*74, SPRITE_H*9, MobIds.Janitor
         end if
-    case "SCENE-2"
+    case "SCENE-JANITOR"
         if Player_NotItem(ItemIds.SceneJanitor) then
-            Scene3 '// larry meets janitor
-            Scene4 '// rockmonster eats janitor
+            Scene3
         end if
-    case "SCENE-4"
+    case "SCENE-JANITOR-DIES"
+        if Player_NotItem(ItemIds.SceneJanitorDies) and Player_HasItem(ItemIds.SceneJanitor) then
+            Scene4
+        end if
+    case "SCENE-ELEVATOR"
         if Player_NotItem(ItemIds.SceneElevator) then
             Scene5
         end if
@@ -2329,15 +2332,14 @@ sub Start
                 TITLE_Menu
             end if
         end if
-        Game_UnsetFlag(SKIPOPENING)
-
+        
         if Game_hasFlag(EXITGAME) then
             exit do
         end if
 
         LD2_LogDebug "Starting intro..."
         
-        if Game_notFlag(LOADGAME) and Game_notFlag(TESTMODE) then
+        if Game_notFlag(LOADGAME) and Game_notFlag(TESTMODE) and Game_notFlag(SKIPOPENING) then
             LD2_FadeOutMusic
             if Game_hasFlag(CLASSICMODE) then
                 TITLE_Intro_Classic
@@ -2345,6 +2347,8 @@ sub Start
                 TITLE_Intro
             end if
         end if
+        
+        Game_UnsetFlag(SKIPOPENING)
         
         LD2_LogDebug "Starting game..."
         

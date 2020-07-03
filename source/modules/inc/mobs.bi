@@ -29,6 +29,7 @@ type Mobile
     frameClock as double
     frameCounter as double
     lastClock as double
+    spawnComplete as integer
     '*******************************************************************
     '* used for collection
     '*******************************************************************
@@ -61,7 +62,7 @@ type Mobile
     declare sub emptyItems()
     declare sub resetFrames()
     declare sub resetStateData()
-    declare sub resetAll()
+    declare sub init()
 end type
 
 type MobileType

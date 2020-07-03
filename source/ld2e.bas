@@ -1475,7 +1475,7 @@ sub Map_Load101 (filename as string)
         y as ubyte
         w as ubyte
         h as ubyte
-        tag as string*16
+        tag as string*24
     end type
     
     dim versionTag as string*12
@@ -3276,7 +3276,7 @@ sub Mobs_Add (x as integer, y as integer, id as integer, nextState as integer = 
         exit sub
     end if
     
-    mob.resetAll()
+    mob.init()
     mob.x     = x
     mob.y     = y
     mob.id    = id
@@ -4602,7 +4602,9 @@ sub Mobs_Animate_Steve(mob as Mobile)
     select case mob.state
     case MobStates.Spawn
         mob.setQty MobItems.Hp, 100
-        mob.setState MobStates.Waiting
+        if mob._nextState = 0 then
+            mob.setState MobStates.Waiting
+        end if
     case MobStates.Waiting
         mob.setAnimation MobSprites.Steve
     case MobStates.PassedOut
@@ -4735,6 +4737,10 @@ sub Mobs_Animate(resetClocks as integer = 0)
                     mob.y = int(mob.y / SPRITE_H) * SPRITE_H
                 end if
             end if
+        end if
+        
+        if mob.state = MobStates.Spawn then
+            mob.spawnComplete = 1
         end if
         
         if mob.getQty(MobItems.Hp) <= 0 then
@@ -7091,7 +7097,7 @@ type ItemFileData
 end type
 
 type SectorFileData
-    tag as string*16
+    tag as string*24
     x0 as ubyte
     y0 as ubyte
     x1 as ubyte

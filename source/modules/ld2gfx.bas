@@ -218,6 +218,44 @@ SUB LD2_fillm (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS IN
     
 END SUB
 
+sub LD2_box (x as integer, y as integer, w as integer, h as integer, col as integer, bufferNum as integer)
+    
+    dim buffer as VideoBuffer ptr
+    
+    if bufferNum = 0 then
+        VideoHandle.fill x    , y    , w, 1, col
+        VideoHandle.fill x    , y+h-1, w, 1, col
+        VideoHandle.fill x    , y    , 1, h, col
+        VideoHandle.fill x+w-1, y    , 1, h, col
+    else
+        buffer = @VideoBuffers(bufferNum-1)
+        buffer->fill x    , y    , w, 1, col
+        buffer->fill x    , y+h-1, w, 1, col
+        buffer->fill x    , y    , 1, h, col
+        buffer->fill x+w-1, y    , 1, h, col
+    end if
+    
+end sub
+
+sub LD2_boxm (x as integer, y as integer, w as integer, h as integer, col as integer, bufferNum as integer, aph as integer = &h7f)
+    
+    dim buffer as VideoBuffer ptr
+    
+    if bufferNum = 0 then
+        VideoHandle.fill x    , y    , w, 1, col, aph
+        VideoHandle.fill x    , y+h-1, w, 1, col, aph
+        VideoHandle.fill x    , y    , 1, h, col, aph
+        VideoHandle.fill x+w-1, y    , 1, h, col, aph
+    else
+        buffer = @VideoBuffers(bufferNum-1)
+        buffer->fill x    , y    , w, 1, col, aph
+        buffer->fill x    , y+h-1, w, 1, col, aph
+        buffer->fill x    , y    , 1, h, col, aph
+        buffer->fill x+w-1, y    , 1, h, col, aph
+    end if
+    
+end sub
+
 sub LD2_CopyBuffer (buffer1 as integer, buffer2 as integer, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = null)
     
     dim texture as SDL_Texture ptr

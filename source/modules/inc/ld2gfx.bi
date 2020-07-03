@@ -14,6 +14,8 @@ declare sub LD2_InitSprites(filename as string, sprites as VideoSprites ptr, w a
 declare sub LD2_InitLayer(filename as string, sprites as VideoSprites ptr, flags as integer = 0)
 DECLARE SUB LD2_fill (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
 DECLARE SUB LD2_fillm (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER, aph as integer = &h7f)
+declare sub LD2_box (x as integer, y as integer, w as integer, h as integer, col as integer, bufferNum as integer)
+declare sub LD2_boxm (x as integer, y as integer, w as integer, h as integer, col as integer, bufferNum as integer, aph as integer = &h7f)
 declare SUB LD2_outline (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
 DECLARE SUB LD2_pset (x AS INTEGER, y AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
 declare sub LD2_CopyBuffer (buffer1 as integer, buffer2 as integer, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = null)

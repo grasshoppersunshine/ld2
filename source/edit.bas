@@ -47,7 +47,7 @@ type BoxType
 end type
 
 type SectorType
-    tag as string*16
+    tag as string
     x as integer
     y as integer
     w as integer
@@ -222,8 +222,8 @@ end type
     dim shared MapStackPointer as integer
     dim shared MapMaxStack as integer
     
-    dim shared Sectors(7) as SectorType
-    dim tag as string*16
+    dim shared Sectors(11) as SectorType
+    dim tag as string
 
   
   DIM XScroll AS INTEGER
@@ -382,7 +382,8 @@ end type
         w = Sectors(n).w: h = Sectors(n).h
         x *= SPRITE_W: y *= SPRITE_H
         w *= SPRITE_W: h *= SPRITE_H
-        LD2_fillm x, y, w, h, 70, 1, 100
+        LD2_boxm x, y, w, h, 77, 1, 100
+        LD2_fillm x+1, y+1, w-2, h-2, 70, 1, 100
         putText trim(Sectors(n).tag), x+(w-len(trim(Sectors(n).tag))*FONT_W)*0.5, y+((h-FONT_H)*0.5)
     next n
 
@@ -734,7 +735,7 @@ end type
     if selectingBox and keypress(KEY_T) then
         LD2_PlaySound EditSounds.inputText
         tag = trim(inputText("Sector Tag: ", ""))
-        if MapProps.numSectors < 7 then
+        if MapProps.numSectors < 11 then
             n = MapProps.numSectors
             MapProps.numSectors += 1
             Sectors(n).x = selectBox.x
@@ -951,7 +952,7 @@ sub LoadMap101 (filename as string)
         y as ubyte
         w as ubyte
         h as ubyte
-        tag as string*16
+        tag as string*24
     end type
     
     dim versionTag as string*12
@@ -1473,7 +1474,7 @@ sub SaveMap101 (filename as string, showDetails as integer = 0)
         y as ubyte
         w as ubyte
         h as ubyte
-        tag as string*16
+        tag as string*24
     end type
     
     dim props as MapMeta
