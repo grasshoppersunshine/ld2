@@ -284,6 +284,21 @@ enum MobSprites
     RoofBossCharge  = 43
     RoofBossHurt    = 45
     RoofBossRoll    = 46
+    '*==================
+    Barney          = 99
+    BarneyLookOut   = 100
+    BarneyLookIn    = 101
+    BarneyBlink     = 102
+    Janitor         = 104
+    JanitorMop0     = 105
+    JanitorMop1     = 106
+    JanitorBlink    = 107
+    Larry           = 90
+    Steve           = 93
+    SteveLookCenter = 94
+    SteveLookOut    = 95
+    SteveLookIn     = 96
+    StevePassedOut  = 97
 end enum
 
 type ActionItem
@@ -334,6 +349,7 @@ enum MobIds
     Janitor
     Larry
     Steve
+    StevePassedOut
 end enum
 
 enum MobHps
@@ -389,6 +405,35 @@ enum MobItems
     TargetX
     TargetY
     Weight
+end enum
+'*******************************************************************
+'* MOB STATES
+'*******************************************************************
+enum MobStates
+    Attack = 1
+    Attacking
+    Charge
+    Charging
+    Chase
+    Go
+    Going
+    Hurt
+    Hurting
+    Investigate
+    Investigating
+    PassedOut
+    Pause
+    Pausing
+    Retreat
+    Retreating
+    Roll
+    Rolling
+    Shoot
+    Shoot0
+    Shoot1
+    Shooting
+    Waiting
+    Spawn
 end enum
 '======================
 '= SPRITE SETS

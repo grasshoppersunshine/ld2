@@ -123,13 +123,12 @@ type MapMeta
     w as ubyte
     h as ubyte
     numItems as ubyte
-    numAnimated as ubyte
     numSectors as ubyte
     created as string*10
     updated as string*10
     nameLen as ubyte
     authorLen as ubyte
-    commentsLen as ubyte
+    commentsLen as ushort
 end type
 
 declare function fontVal(ch as string) as integer
@@ -163,10 +162,9 @@ declare function MapItems_Pickup () as integer
 declare function MapItems_GetCount() as integer
 declare function MapItems_GetCardLevel(itemId as integer) as integer
 declare function MapItems_isCard(itemId as integer) as integer
-declare sub MapItems_FindXY(id as integer, byref x as integer, byref y as integer, x0 as integer = -1, y0 as integer = -1, x1 as integer = -1, y1 as integer = -1)
 
 declare sub Sectors_Add(tag as string, x0 as integer, y0 as integer, x1 as integer, y1 as integer)
-declare sub Sectors_GetBounds(tag as string, byref x0 as integer, byref y0 as integer, byref x1 as integer, byref y1 as integer)
+declare function Sectors_GetTagFromXY(x as integer, y as integer) as string
 
 declare function Swaps_Api (args as string) as string
 declare function Swaps_Add (x0 as integer, y0 as integer, x1 as integer, y1 as integer, dx as integer, dy as integer) as integer
@@ -202,7 +200,7 @@ declare function toPixelsX(unitX as double) as integer
 declare function toPixelsY(unitY as double) as integer
 
 declare function Mobs_Api (args as string) as string
-declare sub Mobs_Add (x as integer, y as integer, id as integer)
+declare sub Mobs_Add (x as integer, y as integer, id as integer, nextState as integer = 0)
 declare sub Mobs_GetFirstOfType (mob as Mobile, id as integer)
 declare sub Mobs_Generate  (forceNumMobs as integer = 0, forceMobType as integer = 0)
 declare sub Mobs_Animate (resetClocks as integer = 0)
@@ -236,9 +234,9 @@ declare function Player_AddAmmo (weaponId as integer, qty as integer) as integer
 declare function Player_AtElevator () as integer
 declare sub Player_Respawn ()
 declare sub Player_SetFlip (flipped as integer)
-declare sub Player_SetXY (x as integer, y as integer)
-declare function Player_GetX() as integer
-declare function Player_GetY() as integer
+declare sub Player_SetXY (x as double, y as double)
+declare function Player_GetX() as double
+declare function Player_GetY() as double
 declare sub Player_Hide ()
 declare sub Player_Unhide ()
 DECLARE SUB Player_Init (p AS PlayerType)

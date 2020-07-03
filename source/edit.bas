@@ -139,7 +139,7 @@ enum LayerIds
     lightFG
     item
     larry
-    enemies
+    mobs
 end enum
 
 type LayerMeta
@@ -193,7 +193,7 @@ end type
     dim shared SpritesOpaqueTile as VideoSprites
     dim shared SpritesLight as VideoSprites
     dim shared SpritesOpaqueLight as VideoSprites
-    dim shared SpritesEnemy as VideoSprites
+    dim shared SpritesMob as VideoSprites
     dim shared SpritesObject as VideoSprites
     dim shared SpritesOpaqueObject as VideoSprites
     dim shared SpritesFont as VideoSprites
@@ -277,7 +277,7 @@ end type
     layers(3).isVisible = 1: layers(3).id = LayerIds.LightFG: layers(3).sid = "Light FG"
     layers(4).isVisible = 1: layers(4).id = LayerIds.Item   : layers(4).sid = "Item"
     layers(5).isVisible = 0: layers(5).id = LayerIds.Larry  : layers(5).sid = "Larry"
-    layers(6).isVisible = 0: layers(6).id = LayerIds.Enemies: layers(6).sid = "Enemies"
+    layers(6).isVisible = 0: layers(6).id = LayerIds.Mobs   : layers(6).sid = "Mobs"
     dim activeLayer as integer
     activeLayer = LayerIds.Tile
     
@@ -447,8 +447,8 @@ end type
                 nextScreen = SpriteSelectScreen(@spritesObject, currentTileO, cursors(2))
             case LayerIds.Larry
                 nextScreen = SpriteSelectScreen(@spritesLarry, 0, cursors(3))
-            case LayerIds.Enemies
-                nextScreen = SpriteSelectScreen(@spritesEnemy, 0, cursors(4))
+            case LayerIds.Mobs
+                nextScreen = SpriteSelectScreen(@spritesMob, 0, cursors(4))
             end select
             if nextScreen = -1 then
                 if activeLayer > 0 then
@@ -855,7 +855,7 @@ SUB Init
 
     LoadSprites DATA_DIR+"gfx/ld2tiles.put", idTILE
     LoadSprites DATA_DIR+"gfx/ld2light.put", idLIGHT
-    LoadSprites DATA_DIR+"gfx/enemies.put", idENEMY
+    LoadSprites DATA_DIR+"gfx/mobs.put", idMOBS
     LoadSprites DATA_DIR+"gfx/larry2.put", idLARRY
     LoadSprites DATA_DIR+"gfx/objects.put", idOBJECT
     LoadSprites DATA_DIR+"gfx/font.put"   , idFONT
@@ -939,12 +939,6 @@ sub LoadMap(filename as string)
 end sub
 
 sub LoadMap101 (filename as string)
-    
-    type fileMapCell
-        tile as ubyte
-        lightBG as ubyte
-        lightFG as ubyte
-    end type
     
     type fileItem
         x as ubyte
@@ -1338,9 +1332,9 @@ sub LoadSprites (filename as string, spriteSetId as integer)
       LD2_InitSprites filename, @SpritesTile, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
       LD2_InitSprites filename, @SpritesOpaqueTile, SPRITE_W, SPRITE_H
 
-    CASE idENEMY
+    CASE idMOBS
 
-      LD2_InitSprites filename, @SpritesEnemy, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
+      LD2_InitSprites filename, @SpritesMob, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
 
     CASE idLARRY
 

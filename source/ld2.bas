@@ -1442,12 +1442,14 @@ sub SceneCheck (player as PlayerType)
         TITLE_TheEnd
     end if
     
-    select case Map_GetSectorId()
+    dim tag as string
+    tag = Sectors_GetTagFromXY(int(Player_GetX()), int(Player_GetY()))
+    
+    select case tag
     case "SCENE-1"
         if Player_NotItem(ItemIds.SceneIntro) then
             Scene1
-            MapItems_FindXY ItemIds.Janitor, x, y, sector.x0, sector.y0, sector.x1, sector.y1
-            Mobs_Add SPRITE_W*10.125, SPRITE_H*9, MobIds.StevePassedOut
+            Mobs_Add SPRITE_W*10.125, SPRITE_H*9, MobIds.Steve, MobStates.PassedOut
             Mobs_Add SPRITE_W*74.750, SPRITE_H*9, MobIds.Janitor
         end if
     case "SCENE-2"
@@ -2374,7 +2376,7 @@ sub NewGame
     dim player as PlayerType
     dim arg as string
     
-    Map_Load "14th.ld2", 1
+    Map_Load "14th.ld2", 1, 1
     
     player.x = 92
     player.y = 144

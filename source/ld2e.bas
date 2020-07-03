@@ -151,34 +151,6 @@
     end enum
     
     '*******************************************************************
-    '* MOB STATES
-    '*******************************************************************
-    enum MobStates
-        Attack = 1
-        Attacking
-        Charge
-        Charging
-        Chase
-        Go
-        Going
-        Hurt
-        Hurting
-        Investigate
-        Investigating
-        Pause
-        Pausing
-        Retreat
-        Retreating
-        Roll
-        Rolling
-        Shoot
-        Shoot0
-        Shoot1
-        Shooting
-        Waiting
-        Spawn
-    end enum
-    '*******************************************************************
     '* OH, BOY! WHAT FLAVOR?
     '* PIE FLAVOR!!!
     '*******************************************************************
@@ -869,7 +841,7 @@ sub Game_Init
     
     randomize timer
     
-    print "Larry the Dinosaur II v1.1.155"
+    print "Larry the Dinosaur II v1.1.170"
     
     if Game_hasFlag(CLASSICMODE) then
         print "STARTING CLASSIC (2002) MODE"
@@ -1381,13 +1353,13 @@ sub Map_Load045 (filename as string)
     comments   = ""
     separator  = "|"
     
-    mapFile = freefile
-    
     if FileExists(filename) = 0 then
         LD2_LogDebug "Map_Load045 ( "+filename+" )   !!! ERROR: FILE NOT FOUND"
         exit sub
     end if
-
+    
+    mapFile = freefile
+    
     if open(filename for binary as mapFile) <> 0 then
         LD2_LogDebug "Map_Load045 ( "+filename+" )   !!! ERROR OPENING FILE"
         exit sub
@@ -1492,12 +1464,6 @@ sub Map_Load101 (filename as string)
     
     LD2_LogDebug "Map_Load101 ( "+filename+" )"
     
-    type fileMapCell
-        tile as ubyte
-        lightBG as ubyte
-        lightFG as ubyte
-    end type
-    
     type fileItem
         x as ubyte
         y as ubyte
@@ -1514,14 +1480,16 @@ sub Map_Load101 (filename as string)
     
     dim versionTag as string*12
     dim props as MapMeta
-    dim mapFile as integer
     dim _byte as ubyte
     
     if FileExists(filename) = 0 then
         LD2_LogDebug !"ERROR!$$ * File not found$$   "+filename
         return
     end if
-
+    
+    dim mapFile as integer
+    mapFile = freefile
+    
     if open(filename for binary as #mapFile) <> 0 then
         LD2_LogDebug !"ERROR!$$ * Error Opening File$$   "+filename
         return
@@ -1588,9 +1556,11 @@ sub Map_Load101 (filename as string)
     dim item as FileItem
     for n = 0 to props.numItems-1
         get #mapFile, , item
-        Items(n).x = item.x
-        Items(n).y = item.y
+        Items(n).x = item.x*SPRITE_W
+        Items(n).y = item.y*SPRITE_H
         Items(n).id = item.id
+        Items(n).isVisible = 1
+        Items(n).canPickup = 1
     next n
     
     dim sect as fileSector
@@ -2930,23 +2900,6 @@ function MapItems_isCard(itemId as integer) as integer
     
 end function
 
-sub MapItems_FindXY(id as integer, byref x as integer, byref y as integer, x0 as integer = -1, y0 as integer = -1, x1 as integer = -1, y1 as integer = -1)
-    
-    dim n as integer
-    for n = 0 to NumItems-1
-        if Items(n).id = id then
-            if (x0 > -1) and x < x0 then continue for
-            if (x1 > -1) and x > x1 then continue for
-            if (y0 > -1) and y < y0 then continue for
-            if (y1 > -1) and y > y1 then continue for
-            x = Items(n).x
-            y = Items(n).y
-            exit for
-        end if
-    next n
-    
-end sub
-
 sub Sectors_Add(tag as string, x0 as integer, y0 as integer, x1 as integer, y1 as integer)
     
     dim n as integer
@@ -2960,21 +2913,25 @@ sub Sectors_Add(tag as string, x0 as integer, y0 as integer, x1 as integer, y1 a
     
 end sub
 
-sub Sectors_GetBounds(tag as string, byref x0 as integer, byref y0 as integer, byref x1 as integer, byref y1 as integer)
+function Sectors_GetTagFromXY(x as integer, y as integer) as string
     
+    dim x0 as integer, y0 as integer
+    dim x1 as integer, y1 as integer
     dim n as integer
     
     for n = 0 to NumSectors-1
-        if Sectors(n).tag = tag then
-            x0 = Sectors(n).x0
-            y0 = Sectors(n).y0
-            x1 = Sectors(n).x1
-            y1 = Sectors(n).y1
-            exit for
+        x0 = Sectors(n).x0: y0 = Sectors(n).y0
+        x1 = Sectors(n).x1: y1 = Sectors(n).y1
+        x0 *= SPRITE_W: y0 *= SPRITE_H
+        x1 *= SPRITE_W: y1 *= SPRITE_H
+        if (x >= x0) and (x <= x1) and (y >= y0) and (y <= y1) then
+            return Sectors(n).tag
         end if
     next n
     
-end sub
+    return ""
+    
+end function
 
 function Swaps_Api(args as string) as string
     
@@ -3311,7 +3268,7 @@ function Mobs_Api(args as string) as string
     
 end function
 
-sub Mobs_Add (x as integer, y as integer, id as integer)
+sub Mobs_Add (x as integer, y as integer, id as integer, nextState as integer = 0)
     
     dim mob as Mobile
     
@@ -3324,6 +3281,7 @@ sub Mobs_Add (x as integer, y as integer, id as integer)
     mob.y     = y
     mob.id    = id
     mob.state = MobStates.Spawn
+    mob._nextState = nextState
     
     Mobs.add mob
     
@@ -4631,6 +4589,7 @@ sub Mobs_Animate_Larry(mob as Mobile)
     select case mob.state
     case MobStates.Spawn
         mob.setQty MobItems.Hp, 100
+        mob.setAnimation MobSprites.Larry
         mob.setState MobStates.Waiting
     case MobStates.Waiting
         
@@ -4645,7 +4604,9 @@ sub Mobs_Animate_Steve(mob as Mobile)
         mob.setQty MobItems.Hp, 100
         mob.setState MobStates.Waiting
     case MobStates.Waiting
-        
+        mob.setAnimation MobSprites.Steve
+    case MobStates.PassedOut
+        mob.setAnimation MobSprites.StevePassedOut
     end select
     
 end sub
@@ -4655,6 +4616,7 @@ sub Mobs_Animate_Barney(mob as Mobile)
     select case mob.state
     case MobStates.Spawn
         mob.setQty MobItems.Hp, 100
+        mob.setAnimation MobSprites.Barney
         mob.setState MobStates.Waiting
     case MobStates.Waiting
         
@@ -4667,6 +4629,7 @@ sub Mobs_Animate_Janitor(mob as Mobile)
     select case mob.state
     case MobStates.Spawn
         mob.setQty MobItems.Hp, 100
+        mob.setAnimation MobSprites.Janitor
         mob.setState MobStates.Waiting
     case MobStates.Waiting
         
@@ -4893,6 +4856,21 @@ sub Mobs_Draw()
                         SpritesLight.putToScreen x*SPRITE_W-int(XShift), (y+slide)*SPRITE_H, LightMapBG(x, y)
                     next x
                 next y
+            end select
+        case MobIds.Steve
+            select case mob.state
+            case MobStates.PassedOut
+                sprite = mob.getCurrentFrame()
+                if mob._flip = 0 then
+                    SpritesMobs.putToScreenEx(x, y, sprite, mob._flip)
+                    SpritesMobs.putToScreenEx(x+SPRITE_W, y, sprite+1, mob._flip)
+                else
+                    SpritesMobs.putToScreenEx(x, y, sprite+1, mob._flip)
+                    SpritesMobs.putToScreenEx(x+SPRITE_W, y, sprite, mob._flip)
+                end if
+            case else
+                sprite = mob.getCurrentFrame()
+            SpritesMobs.putToScreenEx(x, y, sprite, mob._flip)
             end select
         case else
             sprite = mob.getCurrentFrame()
@@ -5750,20 +5728,20 @@ sub Player_SetFlip (flipped as integer)
     
 end sub
 
-sub Player_SetXY (x as integer, y as integer)
+sub Player_SetXY (x as double, y as double)
     
     Player.x = x
     Player.y = y
     
 end sub
 
-function Player_GetX() as integer
+function Player_GetX() as double
     
     return Player.x
     
 end function
 
-function Player_GetY() as integer
+function Player_GetY() as double
     
     return Player.y
     
@@ -7280,7 +7258,7 @@ sub Game_Save (filename as string)
             header.locRooms(roomId) = roomLoc
         end if
     else
-        header.version = "1.01.150"
+        header.version = "1.01.170"
         header.numRooms = 1
         for n = 0 to MAXFLOORS-1
             header.locRooms(n) = 0
