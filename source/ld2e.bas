@@ -26,6 +26,29 @@
         this.facing = (isFacingRight <> 0)
     end property
     
+    sub PlayerType.init
+        
+        this.x = 0
+        this.y = 0
+        this.vx = 0
+        this.vy = 0
+        this.state = 0
+        this.stateTimestamp = 0
+        this.landTime = 0
+        this.actionStartTime = 0
+        this.weapon = 0
+        this.is_shooting = 0
+        this.is_visible = 1
+        this.is_lookingdown = 0
+        this.flags = 0
+        this._flip = 0
+        this.lAni = 0
+        this.uAni = 0
+        this.stillAni = 0
+        this.moved = 0
+        
+    end sub
+    
     function PlayerType.hasFlag (flag as integer) as integer
         
         return ((this.flags and flag) > 0)
@@ -177,6 +200,13 @@
     
     declare function encodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
     declare function decodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
+    
+    declare sub MapTiles_Draw ()
+    declare sub MapLightBG_Draw ()
+    declare sub MapLightFG_Draw ()
+    declare sub SceneCaption_Draw ()
+    declare sub TextReveal_Draw ()
+    declare sub GameNotice_Draw ()
     '*******************************************************************
     '* SPRITES
     '*******************************************************************
@@ -2123,7 +2153,7 @@ sub Elevators_Animate ()
             Elevators_Close n
         else
             nearElevator = (x >= e.x-16) and (x <= e.x+e.w+16) and (y >= e.y) and (y <= e.y+e.h)
-            if nearElevator then
+            if nearElevator and (Elevators(n).isLocked = 0) then
                 Elevators_Open n
             else
                 Elevators_Close n
@@ -2162,6 +2192,10 @@ end sub
 sub Elevators_Open (id as integer)
     
     dim isClosed as integer
+    
+    if Elevators(id).isLocked then
+        exit sub
+    end if
     
     isClosed = (Elevators(id).percentOpen = 0.0)
     
@@ -2375,9 +2409,7 @@ sub LD2_putTextCol (x as integer, y as integer, text as string, col as integer, 
 
 end sub
 
-SUB LD2_RenderFrame
-    
-    LD2_LogDebug "LD2_RenderFrame"
+sub MapTiles_Draw
     
     static fastTimer as double
     static fastClock as double
@@ -2385,9 +2417,15 @@ SUB LD2_RenderFrame
     static slowClock as double
     dim timediff as double
     dim animators(9) as integer
-    dim n as integer
     
-    dim playerIsLit as integer
+    dim mapXstart as integer
+    dim xpStart as integer
+    dim sprite as integer
+    dim mapX as integer, mapY as integer
+    dim xp as integer, yp as integer
+    dim x as integer, y as integer
+    dim a as integer
+    dim n as integer
     
     timediff = (timer - fastTimer)
     if timediff >= 0.0833 then
@@ -2407,106 +2445,89 @@ SUB LD2_RenderFrame
     animators(0) = 0
     animators(9) = 0
     
-    LD2_CopyBuffer 2, 1
-    LD2_RenderBackground int((Inventory(ItemIds.CurrentRoom)+1)/24)
-    
-    dim xp as integer, yp as integer
-    dim x as integer, y as integer
-    dim mapX as integer, mapY as integer
-    dim mapXstart as integer
-    dim xpStart as integer
-    dim skipStaticLighting as integer
-    dim m as integer
-    dim a as integer
-    dim rot as integer
-    dim l as integer
-    
-    dim playerMapX as integer, playerMapY as integer
-    playerMapX = toMapX(Player.x+7)
-    playerMapY = toMapY(Player.y+7)
     mapXstart = toMapX(XShift)
     xpStart = int(0 - (XShift-int(XShift/SPRITE_W)*SPRITE_W))
-    'xpStart = 0 - (int(XShift) and 15)
     
-    LD2_SetTargetBuffer 1
-    if ShowLightBG then
-        LD2_LogDebug "LD2_RenderFrame() - Draw Light BG"
-        yp = 0
-        for y = 0 to 12
-            xp = xpStart
-            mapX = mapXstart
-            mapY = y
-            for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
-                m = TileMap(mapX, mapY)
-                a = animators(AniMap(mapX, mapY))
-                SpritesTile.putToScreen(xp, yp, m+a)
-                l = LightMapBg(mapX, mapY)
-                if l then
-                    SpritesLight.putToScreen(xp, yp, l)
-                end if
-                mapX += 1
-                xp = xp + SPRITE_W
-            next x
-            yp = yp + SPRITE_H
-        next y
-    else
-        LD2_LogDebug "LD2_RenderFrame() - Draw Tiles"
-        yp = 0
-        for y = 0 to 12
-            xp = xpStart
-            mapX = mapXstart
-            mapY = y
-            for x = 0 to 20
-                m = TileMap(mapX, mapY)
-                if m then
-                    a = animators(AniMap(mapX, mapY))
-                    SpritesTile.putToScreen(xp, yp, m+a)
-                end if
-                mapX += 1
-                xp = xp + 16
-            next x
-            yp = yp + 16
-        next y
-    end if
+    for y = 0 to 12
+        xp = xpStart
+        mapX = mapXstart
+        mapY = y
+        for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
+            sprite = TileMap(mapX, mapY)
+            a = animators(AniMap(mapX, mapY))
+            SpritesTile.putToScreen(xp, yp, sprite+a)
+            mapX += 1
+            xp = xp + SPRITE_W
+        next x
+        yp = yp + SPRITE_H
+    next y
     
-    if (Player.state <> PlayerStates.EnteringElevator) and (Player.state <> PlayerStates.ExitingElevator) then
-        Elevators_Draw
-    end if
-    Mobs_Draw
-    Player_Draw
-    if (Player.state = PlayerStates.EnteringElevator) or (Player.state = PlayerStates.ExitingElevator) then
-        Elevators_Draw
-    end if
-    Doors_Draw
-    MapItems_Draw
-    Guts_Draw
-    Flashes_Draw
+end sub
+
+sub MapLightBG_Draw
     
-    if ShowLightFG then
-        LD2_LogDebug "LD2_RenderFrame() - Draw Light FG"
-        playerIsLit = Player.is_shooting and (Player.weapon <> ItemIds.Fist) and ((Player.uAni-Player.stillAni) < 1.5)
-        yp = 0
-        for y = 0 to 12
-            xp = xpStart
-            mapX = mapXstart
-            mapY = y
-            for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
-                l = LightMapFg(mapx, mapY)
-                if (l > 0) and ((l and &h1000) = 0) then
-                    SpritesLight.putToScreen(xp, yp, l)
-                end if
-                mapX += 1
-                xp = xp + 16
-            next x
-            yp = yp + 16
-        next y
-    end if
+    dim mapXstart as integer
+    dim xpStart as integer
+    dim sprite as integer
+    dim mapX as integer, mapY as integer
+    dim xp as integer, yp as integer
+    dim x as integer, y as integer
     
-    Stats_Draw
+    mapXstart = toMapX(XShift)
+    xpStart = int(0 - (XShift-int(XShift/SPRITE_W)*SPRITE_W))
     
-    LD2_LogDebug "LD2_RenderFrame() - LetterBox and Caption"
-    '- Switch to letter box mode if in scene mode
-    if SceneMode = LETTERBOX then
+    for y = 0 to 12
+        xp = xpStart
+        mapX = mapXstart
+        mapY = y
+        for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
+            sprite = LightMapBg(mapX, mapY)
+            if sprite then
+                SpritesLight.putToScreen(xp, yp, sprite)
+            end if
+            mapX += 1
+            xp = xp + SPRITE_W
+        next x
+        yp = yp + SPRITE_H
+    next y
+    
+end sub
+
+sub MapLightFG_Draw
+    
+    dim playerIsLit as integer
+    dim mapXstart as integer
+    dim xpStart as integer
+    dim sprite as integer
+    dim mapX as integer, mapY as integer
+    dim xp as integer, yp as integer
+    dim x as integer, y as integer
+    
+    mapXstart = toMapX(XShift)
+    xpStart = int(0 - (XShift-int(XShift/SPRITE_W)*SPRITE_W))
+    
+    playerIsLit = Player.is_shooting and (Player.weapon <> ItemIds.Fist) and ((Player.uAni-Player.stillAni) < 1.5)
+    yp = 0
+    for y = 0 to 12
+        xp = xpStart
+        mapX = mapXstart
+        mapY = y
+        for x = 0 to 20 '// yes, 21 (+1 for hangover when scrolling)
+            sprite = LightMapFg(mapx, mapY)
+            if (sprite > 0) and ((sprite and &h1000) = 0) then
+                SpritesLight.putToScreen(xp, yp, sprite)
+            end if
+            mapX += 1
+            xp = xp + 16
+        next x
+        yp = yp + 16
+    next y
+    
+end sub
+
+sub SceneCaption_Draw
+    
+    if (SceneMode = LETTERBOX) or (SceneMode = LETTERBOXSHOWPLAYER) then
         LD2_fill 0, 0, SCREEN_W, SPRITE_H*2, 0, 1
         LD2_fill 0, SPRITE_H*11, SCREEN_W, SPRITE_H*2, 0, 1
     end if
@@ -2524,21 +2545,10 @@ SUB LD2_RenderFrame
         LD2_RenderElement @textCaption
     end if
     
-    static labelNotice as ElementType
-    if labelNotice.y = 0 then
-        LD2_InitElement @labelNotice, "", 31, ElementFlags.AlignTextRight
-        labelNotice.y = 170
-        labelNotice.w = SCREEN_W-12
-        labelNotice.padding_x = 6
-        labelNotice.background_alpha = 0
-    end if
+end sub
+
+sub TextReveal_Draw
     
-    if timer < GameNoticeExpire then
-        labelNotice.text = GameNoticeMsg
-        LD2_RenderElement @labelNotice
-    end if
-    
-    LD2_LogDebug "LD2_RenderFrame() - Reveal Text"
     static textReveal as ElementType
     if textReveal.y = 0 then
         LD2_InitElement @textReveal, "", 31, ElementFlags.CenterX
@@ -2572,6 +2582,70 @@ SUB LD2_RenderFrame
         if timer >= waitUntil then
             Game_UnsetFlag REVEALDONE
         end if
+    end if
+    
+end sub
+
+sub GameNotice_Draw
+    
+    static labelNotice as ElementType
+    if labelNotice.y = 0 then
+        LD2_InitElement @labelNotice, "", 31, ElementFlags.AlignTextRight
+        labelNotice.y = 170
+        labelNotice.w = SCREEN_W-12
+        labelNotice.padding_x = 6
+        labelNotice.background_alpha = 0
+    end if
+    
+    if timer < GameNoticeExpire then
+        labelNotice.text = GameNoticeMsg
+        LD2_RenderElement @labelNotice
+    end if
+    
+end sub
+
+sub LD2_RenderForeground
+    
+    if ShowLightFG then
+        MapLightFG_Draw
+    end if
+    
+    Stats_Draw
+    SceneCaption_Draw
+    TextReveal_Draw
+    GameNotice_Draw
+    
+end sub
+
+sub LD2_RenderFrame (renderForeground as integer = 1)
+    
+    LD2_LogDebug "LD2_RenderFrame ("+str(renderForeground)+")"
+    
+    LD2_CopyBuffer 2, 1
+    LD2_RenderBackground int((Inventory(ItemIds.CurrentRoom)+1)/24)
+    LD2_SetTargetBuffer 1
+    
+    MapTiles_Draw
+    
+    if ShowLightBG then
+        MapLightBG_Draw
+    end if
+    
+    if (Player.state <> PlayerStates.EnteringElevator) and (Player.state <> PlayerStates.ExitingElevator) then
+        Elevators_Draw
+    end if
+    Mobs_Draw
+    Player_Draw
+    if (Player.state = PlayerStates.EnteringElevator) or (Player.state = PlayerStates.ExitingElevator) then
+        Elevators_Draw
+    end if
+    Doors_Draw
+    MapItems_Draw
+    Guts_Draw
+    Flashes_Draw
+    
+    if renderForeground then
+        LD2_RenderForeground
     end if
     
 end sub
@@ -3281,11 +3355,22 @@ sub Mobs_Add (x as integer, y as integer, id as integer, nextState as integer = 
     mob.y     = y
     mob.id    = id
     mob.state = MobStates.Spawn
-    mob._nextState = nextState
+    
+    Mobs_DoMob mob '* initialize via "spawn" state
+    
+    if nextState then
+        mob.setState nextState
+    end if
     
     Mobs.add mob
     
-END SUB
+end sub
+
+sub Mobs_Remove (mob as Mobile)
+    
+    Mobs.remove mob
+    
+end sub
 
 sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
     
@@ -4608,6 +4693,7 @@ sub Mobs_Animate_Steve(mob as Mobile)
     case MobStates.Waiting
         mob.setAnimation MobSprites.Steve
     case MobStates.PassedOut
+        mob._flip = 1
         mob.setAnimation MobSprites.StevePassedOut
     end select
     
@@ -4630,10 +4716,94 @@ sub Mobs_Animate_Janitor(mob as Mobile)
     
     select case mob.state
     case MobStates.Spawn
+        
         mob.setQty MobItems.Hp, 100
-        mob.setAnimation MobSprites.Janitor
-        mob.setState MobStates.Waiting
-    case MobStates.Waiting
+        mob.setState MobStates.Go
+        
+    case MobStates.Go
+        
+        if roll(2)=1 then
+            Mob.setAnimation MobSprites.Janitor
+            Mob.setState MobStates.Going, 0.5
+        else
+            if roll(2)=1 then
+                Mob.setAnimation MobSprites.JanitorMop0, MobSprites.JanitorMop1, 0.25
+                Mob.setState MobStates.Going, 2.0
+            else
+                Mob.setAnimation MobSprites.JanitorBlink
+                Mob.setState MobStates.Going, 0.25
+            end if
+        end if
+        
+    case MobStates.Going
+        
+        mob.animate(0)
+        if mob.stateExpired() then
+            mob.setState MobStates.Go
+        end if
+        
+    end select
+    
+end sub
+
+sub Mobs_DoMob(mob as Mobile)
+    
+    if mob.state = MobStates.Spawn then
+        mob.setQty MobItems.SpawnX, mob.x
+        mob.setQty MobItems.SpawnY, mob.y
+        mob.setQty MobItems.Weight, 1
+        mob.moveDelay = 1/60
+    end if
+   
+    select case mob.id
+     
+    case MobIds.Rockmonster
+        
+        Mobs_Animate_Rockmonster mob
+    
+    case MobIds.BlobMine
+        
+        Mobs_Animate_Blobmine mob
+    
+    case MobIds.GruntMg
+        
+        Mobs_Animate_GruntMg mob
+        
+    case MobIds.GruntHg
+        
+        Mobs_Animate_GruntHg mob
+        
+    case MobIds.JellyBlob
+        
+        Mobs_Animate_Jellyblob mob
+        
+    case MobIds.BossRooftop
+        
+        Mobs_Animate_BossRooftop mob
+        
+    case MobIds.BossPortal
+        
+        Mobs_Animate_BossPortal mob
+        
+    case MobIds.TrapRoom
+        
+        Mobs_Animate_TrapRoom mob
+    
+    case MobIds.Larry
+        
+        Mobs_Animate_Larry mob
+        
+    case MobIds.Steve
+        
+        Mobs_Animate_Steve mob
+        
+    case MobIds.Barney
+        
+        Mobs_Animate_Barney mob
+        
+    case MobIds.Janitor
+        
+        Mobs_Animate_Janitor mob
         
     end select
     
@@ -4654,70 +4824,13 @@ sub Mobs_Animate(resetClocks as integer = 0)
         
         Mobs.getNext mob
         
-        if mob.state = MobStates.Spawn then
-            mob.setQty MobItems.SpawnX, mob.x
-            mob.setQty MobItems.SpawnY, mob.y
-            mob.setQty MobItems.Weight, 1
-            mob.moveDelay = 1/60
-        end if
-        
         if resetClocks then
             mob.catchupClocks
         end if
         
         ox = mob.x
        
-        select case mob.id
-         
-        case MobIds.Rockmonster
-            
-            Mobs_Animate_Rockmonster mob
-        
-        case MobIds.BlobMine
-            
-            Mobs_Animate_Blobmine mob
-        
-        case MobIds.GruntMg
-            
-            Mobs_Animate_GruntMg mob
-            
-        case MobIds.GruntHg
-            
-            Mobs_Animate_GruntHg mob
-            
-        case MobIds.JellyBlob
-            
-            Mobs_Animate_Jellyblob mob
-            
-        case MobIds.BossRooftop
-            
-            Mobs_Animate_BossRooftop mob
-            
-        case MobIds.BossPortal
-            
-            Mobs_Animate_BossPortal mob
-            
-        case MobIds.TrapRoom
-            
-            Mobs_Animate_TrapRoom mob
-        
-        case MobIds.Larry
-            
-            Mobs_Animate_Larry mob
-            
-        case MobIds.Steve
-            
-            Mobs_Animate_Steve mob
-            
-        case MobIds.Barney
-            
-            Mobs_Animate_Barney mob
-            
-        case MobIds.Janitor
-            
-            Mobs_Animate_Janitor mob
-            
-        end select
+        Mobs_DoMob mob
         
         if mob.id = MobIds.TrapRoom then
         else
@@ -4737,10 +4850,6 @@ sub Mobs_Animate(resetClocks as integer = 0)
                     mob.y = int(mob.y / SPRITE_H) * SPRITE_H
                 end if
             end if
-        end if
-        
-        if mob.state = MobStates.Spawn then
-            mob.spawnComplete = 1
         end if
         
         if mob.getQty(MobItems.Hp) <= 0 then
@@ -5150,6 +5259,14 @@ sub Player_Animate()
     
 end sub
 
+sub Player_Stop()
+    
+    Player.vx = 0
+    Player.lAni = int(LowerSprites.Stand)
+    Player_SetWeapon Player.weapon '- reset upper-sprites back to normal
+    
+end sub
+
 sub Player_Draw()
     
     LD2_LogDebug "Player_Draw()"
@@ -5159,7 +5276,7 @@ sub Player_Draw()
     dim lan as integer, uan as integer
     dim idx as integer
     
-    if (SceneMode = 1) or (Player.is_visible = 0) then
+    if (SceneMode = LETTERBOX) or (Player.is_visible = 0) then
         exit sub
     end if
     if Game_hasFlag(PLAYERDIED) then
@@ -5753,7 +5870,7 @@ function Player_GetY() as double
     
 end function
 
-sub Player_Init(p as PlayerType)
+sub Player_Update(p as PlayerType)
     
     Player = p
     
@@ -6151,8 +6268,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         
     case ItemIds.Fist
         
-        if (is_repeat = 1 and timeSinceLastShot < 0.30) then return 0
-        if (is_repeat = 0 and timeSinceLastShot < 0.10) then return 0
+        if timeSinceLastShot < 0.30 then return 0
         damage = HpDamage.Fist
         Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.FsCrouchPunch-1, UpperSprites.FsPunch-1))
         Player.stillAni = Player.uAni
@@ -7433,23 +7549,7 @@ sub Game_Reset()
     CanSaveMap = 0
     MobsWereLoaded = 0
     '///////////////////////////////////////////////////////////////////
-    Player.x = 0
-    Player.y = 0
-    Player.vx = 0
-    Player.vy = 0
-    Player.state = 0
-    Player.stateTimestamp = 0
-    Player.landTime = 0
-    Player.actionStartTime = 0
-    Player.weapon = 0
-    Player.is_shooting = 0
-    Player.is_visible = 1
-    Player.is_lookingdown = 0
-    Player._flip = 0
-    Player.lAni = 0
-    Player.uAni = 0
-    Player.stillAni = 0
-    Player.moved = 0
+    Player.init()
     '///////////////////////////////////////////////////////////////////
     for n = 0 to MAXINVENTORY-1
         Inventory(n) = 0

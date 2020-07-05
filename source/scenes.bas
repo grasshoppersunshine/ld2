@@ -47,7 +47,7 @@ function ContinueAfterSlowMo(seconds as double) as integer
     while (timer-pausetime) <= seconds
         PullEvents : RenderScene
         WaitSeconds 0.0333
-        if keypress(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     wend
     return 0
 end function
@@ -67,7 +67,7 @@ function continueWithBlood(seconds as double, x as integer, y as integer, radius
             bloodtime = timer
         end if
         PullEvents : RenderScene
-        if keypress(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     wend
     return 0
 end function
@@ -112,7 +112,7 @@ function PanPose(pose as PoseType ptr, vx as integer, vy as integer, secondsPerM
             y += dy
             timemove = timer
         end if
-        if keyboard(KEY_ENTER) or keyboard(KEY_ESCAPE) then return 1
+        if SceneKeySkip() then return 1
     next i
     
     return 0
@@ -181,7 +181,7 @@ function Scene1Go () as integer
     dim x as integer
     dim i as integer
         
-    if keyboard(KEY_ENTER) then return 1
+    if SceneKeySkip() then return 1
 
     if DoScene("SCENE-1A") then return 1 '// Well Steve, that was a good game of chess
 
@@ -196,7 +196,7 @@ function Scene1Go () as integer
         RenderScene
         ContinueAfterSeconds 0.0333
         PullEvents
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next x
 
     StevePose.x = leftX+70
@@ -217,7 +217,7 @@ function Scene1Go () as integer
         end if
         ContinueAfterSeconds 0.3333
         PullEvents
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next i
     
     ContinueAfterSeconds 0.5
@@ -230,7 +230,7 @@ function Scene1Go () as integer
         StevePose.nextFrame
         ContinueAfterSeconds 0.6667
         PullEvents
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next i
     
     'StevePose.btmMod = 2
@@ -309,6 +309,7 @@ function Scene3Go () as integer
     dim StevePose as PoseType
     dim RockmonsterPose as PoseType
     dim escaped as integer
+    dim mob as Mobile
     
     LD2_SetSceneMode LETTERBOX
 
@@ -322,7 +323,9 @@ function Scene3Go () as integer
     JanitorPose.isFlipped = 1
     
     LarryPose.x = Player_GetX(): LarryPose.y =  144
-    JanitorPose.x = 1196: JanitorPose.y =  144
+    Mobs_GetFirstOfType mob, MobIds.Janitor
+    Mobs_Remove mob
+    JanitorPose.x = mob.x: JanitorPose.y =  144
     
     ClearPoses
     AddPose @LarryPose
@@ -334,7 +337,7 @@ function Scene3Go () as integer
 
     RetraceDelay 40
 
-    FadeOutMusic
+    FadeOutMusic 1.0
     LD2_StopMusic
 
     if DoScene("SCENE-3A") then return 1 '// Hey, you a doctor?
@@ -452,7 +455,7 @@ function Scene4Go() as integer
             LD2_PlayMusic Tracks.Uhoh
             startedMusic = 1
         end if
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next mobY
     
     RockmonsterPose.y =  144
@@ -467,7 +470,7 @@ function Scene4Go() as integer
     for i = 1 to 60 '// keep rendering scene during wait-time so guts are animated
         RenderScene
         RetraceDelay 1
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next i
 
     GetCharacterPose JanitorPose, CharacterIds.Janitor, PoseIds.Tongue
@@ -483,7 +486,7 @@ function Scene4Go() as integer
         JanitorPose.x = int(x)
         RenderScene
         RetraceDelay 1
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next x
 
     LD2_PlaySound Sounds.chew1
@@ -497,7 +500,7 @@ function Scene4Go() as integer
         RenderScene
         RetraceDelay 9
         if i = 6 then LD2_PlaySound Sounds.chew2
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next i
     
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Still
@@ -586,7 +589,7 @@ function Scene5Go() as integer
         
         RenderScene
         
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
         
     NEXT x
     
@@ -603,7 +606,7 @@ function Scene5Go() as integer
         
         IF addy > 0 AND y >= 112 THEN EXIT FOR
         
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
         
     NEXT x
     
@@ -631,7 +634,7 @@ function Scene5Go() as integer
         LD2_put 92 * 16 - i, 112, 14, idTILE, 0
         LD2_put 93 * 16 + i, 112, 15, idTILE, 0
         LD2_RefreshScreen
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     NEXT i
 
     Map_PutTile 91, 7, 14, 1: Map_PutTile 94, 7, 15, 1
@@ -659,7 +662,7 @@ function Scene5Go() as integer
             LD2_PlaySound Sounds.machinegun
         end if
         
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
         
     NEXT n
     
@@ -677,7 +680,7 @@ function Scene5Go() as integer
     '- let guts fall off screen
     FOR n = 1 TO 140
         RenderScene
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     NEXT n
     
     RetraceDelay 40
@@ -712,7 +715,7 @@ function Scene5Go() as integer
         LD2_put 44 * 16 - i, 144, 14, idTILE, 0
         LD2_put 45 * 16 + i, 144, 15, idTILE, 0
         LD2_RefreshScreen
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     NEXT i
     
     Map_PutTile 43, 9, 14, 1: Map_PutTile 46, 9, 15, 1
@@ -739,7 +742,7 @@ function Scene5Go() as integer
             fx = 0
         end if
         RenderScene
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     NEXT x
     
     return 0
@@ -1021,7 +1024,7 @@ function SceneTheEndGo () as integer
         RenderScene
         RetraceDelay 3
         PullEvents
-        if keyboard(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next x
     
 end function
@@ -1430,7 +1433,7 @@ function ScenePortalGo () as integer
         Steve.setFrame (n and 1)
         RenderScene
         if ContinueAfterSeconds(0.13) then return 1
-        if keypress(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next n
     
     GetCharacterPose Larry, CharacterIds.Larry, PoseIds.Surprised
@@ -1453,7 +1456,7 @@ function ScenePortalGo () as integer
         end if
         RenderScene
         if ContinueAfterSeconds(0.0333) then return 1
-        if keypress(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next n
     Grunt.firstFrame
     if ContinueAfterSeconds(1.0) then return 1
@@ -1471,7 +1474,7 @@ function ScenePortalGo () as integer
         end if
         RenderScene
         if ContinueAfterSeconds(0.0333) then return 1
-        if keypress(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     next n
     GetCharacterPose Grunt, CharacterIds.Grunt, PoseIds.Angry
     GetCharacterPose Steve, CharacterIds.Steve, PoseIds.Dying
@@ -1511,7 +1514,7 @@ function ScenePortalGo () as integer
         RenderScene
         if ContinueAfterSlowMo(0.0333) then return 1
         
-        if keypress(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
         
         'if n = 64 then LD2_PlaySound Sounds.noScream
         
@@ -1571,7 +1574,7 @@ function ScenePortalGo () as integer
         RenderScene
         if ContinueAfterSlowMo(0.0333) then return 1
         
-        if keypress(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
         
     next n
     

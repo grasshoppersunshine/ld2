@@ -115,7 +115,7 @@ end sub
 
 sub Mobile._beforeNext()
     
-    if (this._nextState > 0) and (this.spawnComplete > 0) then
+    if this._nextState then
         this.state = this._nextState
         this._nextState    = 0
         this._stateExpireTime = this._nextStateExpireTime
@@ -252,7 +252,6 @@ sub Mobile.init()
     this.vy = 0
     this._flip = 0
     this.state = 0
-    this.spawnComplete = 0
     this.emptyItems()
     this.resetClocks()
     this.resetFrames()

@@ -29,7 +29,6 @@ type Mobile
     frameClock as double
     frameCounter as double
     lastClock as double
-    spawnComplete as integer
     '*******************************************************************
     '* used for collection
     '*******************************************************************

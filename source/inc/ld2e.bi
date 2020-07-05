@@ -23,6 +23,7 @@ type PlayerType
     uAni as double
     stillani as integer
     moved as integer
+    declare sub init()
     declare function hasFlag(flag as integer) as integer
     declare function notFlag(flag as integer) as integer
     declare sub setFlag(flag as integer)
@@ -201,9 +202,11 @@ declare function toPixelsY(unitY as double) as integer
 
 declare function Mobs_Api (args as string) as string
 declare sub Mobs_Add (x as integer, y as integer, id as integer, nextState as integer = 0)
+declare sub Mobs_Remove (mob as Mobile)
 declare sub Mobs_GetFirstOfType (mob as Mobile, id as integer)
 declare sub Mobs_Generate  (forceNumMobs as integer = 0, forceMobType as integer = 0)
 declare sub Mobs_Animate (resetClocks as integer = 0)
+declare sub Mobs_DoMob(mob as Mobile)
 declare sub Mobs_Draw ()
 declare sub Mobs_Kill (mob as Mobile)
 declare sub Mobs_KillAll ()
@@ -235,11 +238,12 @@ declare function Player_AtElevator () as integer
 declare sub Player_Respawn ()
 declare sub Player_SetFlip (flipped as integer)
 declare sub Player_SetXY (x as double, y as double)
+declare sub Player_Stop()
 declare function Player_GetX() as double
 declare function Player_GetY() as double
 declare sub Player_Hide ()
 declare sub Player_Unhide ()
-DECLARE SUB Player_Init (p AS PlayerType)
+declare sub Player_Update (p as PlayerType)
 declare function Player_LookUp () as integer
 declare sub Player_RemoveItem(itemId as integer)
 declare function Player_SetWeapon (itemId as integer) as integer
@@ -292,7 +296,8 @@ DECLARE SUB LD2_ProcessEntities ()
 DECLARE SUB LD2_PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
 DECLARE SUB LD2_PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, BufferNum AS INTEGER)
 declare sub LD2_RenderBackground(height as double)
-DECLARE SUB LD2_RenderFrame ()
+declare sub LD2_RenderFrame (renderForeground as integer = 1)
+declare sub LD2_RenderForeground ()
 
 DECLARE SUB LD2_SetNotice (message AS STRING)
 DECLARE SUB LD2_SetSceneMode (OnOff AS INTEGER)

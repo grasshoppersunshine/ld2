@@ -750,6 +750,7 @@ end enum
 '======================
 CONST MODEOFF = 0
 CONST LETTERBOX = 1
+CONST LETTERBOXSHOWPLAYER = 2
 
 declare sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as integer)
 declare sub LD2_LookItem (id as integer, byref desc as string)
@@ -774,3 +775,6 @@ declare function GetFloorMusicId(roomId as integer) as integer
 declare function ContinueAfterSeconds(seconds as double) as integer
 declare function SceneFadeIn(seconds as double) as integer
 declare function SceneFadeOut(seconds as double) as integer
+
+declare function SceneKeyTextJump() as integer
+declare function SceneKeySkip() as integer

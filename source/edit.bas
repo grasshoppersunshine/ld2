@@ -736,13 +736,26 @@ end type
         LD2_PlaySound EditSounds.inputText
         tag = trim(inputText("Sector Tag: ", ""))
         if MapProps.numSectors < 11 then
-            n = MapProps.numSectors
-            MapProps.numSectors += 1
-            Sectors(n).x = selectBox.x
-            Sectors(n).y = selectBox.y
-            Sectors(n).w = selectBox.w+1
-            Sectors(n).h = selectBox.h+1
-            Sectors(n).tag = tag
+            for n = 0 to MapProps.numSectors-1
+                if ucase(Sectors(n).tag) = ucase(tag) then
+                    Sectors(n).x = selectBox.x
+                    Sectors(n).y = selectBox.y
+                    Sectors(n).w = selectBox.w+1
+                    Sectors(n).h = selectBox.h+1
+                    Sectors(n).tag = tag
+                    tag = ""
+                    exit for
+                end if
+            next n
+            if len(trim(tag)) then
+                n = MapProps.numSectors
+                MapProps.numSectors += 1
+                Sectors(n).x = selectBox.x
+                Sectors(n).y = selectBox.y
+                Sectors(n).w = selectBox.w+1
+                Sectors(n).h = selectBox.h+1
+                Sectors(n).tag = tag
+            end if
         end if
     end if
     

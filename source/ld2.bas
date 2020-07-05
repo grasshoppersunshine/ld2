@@ -85,6 +85,9 @@
     declare sub FlagsCheck (player as PlayerType)
     declare sub ItemsCheck (player as PlayerType)
     
+    declare sub DoAction(actionId as integer, itemId as integer = 0, prime as integer = 0)
+    declare sub PrimeActions()
+    
     '*******************************************************************
     '* SCENE-RELATED
     '*******************************************************************
@@ -175,16 +178,28 @@ sub RemovePose (pose as PoseType ptr)
     
 end sub
 
-FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseId as integer, chatBox as integer) as integer
+function SceneKeyTextJump() as integer
     
-    IF Game_isDebugMode() THEN LD2_Debug "CharacterSpeak% ("+STR(characterId)+", "+caption+" )"
+    return keypress(KEY_SPACE) or keypress(KEY_ENTER) or keypress(KEY_KP_ENTER) or mouseLB()
+    
+end function
+
+function SceneKeySkip() as integer
+    
+    return keypress(KEY_ESCAPE) or keypress(KEY_Q)
+    
+end function
+
+function CharacterSpeak (characterId as integer, caption as string, talkingPoseId as integer, chatBox as integer) as integer
+    
+    LD2_LogDebug "CharacterSpeak ("+str(characterId)+", "+caption+" )"
 	
-	DIM escapeFlag AS INTEGER
-	DIM renderPose AS PoseType
-	DIM poseTalking AS PoseType
-	DIM cursor AS INTEGER
-	DIM words AS INTEGER
-	DIM n AS INTEGER
+	dim escapeFlag as integer
+	dim renderPose as PoseType
+	dim poseTalking as PoseType
+	dim cursor as integer
+	dim words as integer
+	dim n as integer
     
     if caption = "" then return 0
     
@@ -216,7 +231,7 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
         UpdatePose renderPose, poseTalking
     end if
     chattime = timer
-    FOR n = 1 to len(caption)
+    for n = 1 to len(caption)
         
 		if mid(caption, n, 1) = "@" then
             noSpeak = 1
@@ -249,9 +264,21 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
         LD2_PlaySound Sounds.dialog
         
         PullEvents
-        if keypress(KEY_SPACE) or mouseLB() then exit for
-		if keypress(KEY_ENTER) then escapeFlag = 1: exit for
-	NEXT n
+        if SceneKeyTextJump() then exit for
+		if SceneKeySkip() then escapeFlag = 1: exit for
+	next n
+    
+    dim replacement as string
+    dim char as string*1
+    replacement = left(caption, n)
+    for n = len(replacement)+1 to len(caption)
+        char = mid(caption, n, 1)
+        if (char = "@") or (char = "#") then
+            continue for
+        end if
+        replacement += char
+    next n
+    caption = replacement
     
     LD2_WriteText caption
     poseTalking.firstFrame
@@ -262,7 +289,7 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
     end if
     LD2_RefreshScreen
     
-    while keyboard(KEY_SPACE) or keyboard(KEY_ENTER) or mouseLB()
+    while SceneKeyTextJump()
         PullEvents: RenderScene 0
         if chatBox then LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
         LD2_RefreshScreen
@@ -291,10 +318,10 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
             LD2_RefreshScreen
             timestamp = timer
         end if
-		if keypress(KEY_ENTER) then escapeFlag = 1: exit do
-	loop until keypress(KEY_SPACE) or mouseLB()
+		if SceneKeySkip() then escapeFlag = 1: exit do
+	loop until SceneKeyTextJump()
     
-    while keyboard(KEY_SPACE) or keyboard(KEY_ENTER) or mouseLB()
+    while SceneKeyTextJump()
         PullEvents: RenderScene 0
         if chatBox then LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
         LD2_RefreshScreen
@@ -302,18 +329,18 @@ FUNCTION CharacterSpeak (characterId AS INTEGER, caption AS STRING, talkingPoseI
     
     return escapeFlag
     
-END FUNCTION
+end function
 
-SUB ClearPoses
+sub ClearPoses
     
-    IF Game_isDebugMode() THEN LD2_Debug "ClearPoses ()"
+    LD2_LogDebug "ClearPoses ()"
 	
 	NumPoses = 0
-	REDIM Poses(0) AS PoseType
+	redim Poses(0) as PoseType
 	
-END SUB
+end sub
 
-sub CharacterDoCommands(characterId AS INTEGER)
+sub CharacterDoCommands(characterId as integer)
     
     if Game_isDebugMode() then LD2_debug "DoCommands()"
     
@@ -365,27 +392,27 @@ sub CharacterDoCommands(characterId AS INTEGER)
     
 end sub
 
-FUNCTION DoDialogue() as integer
+function DoDialogue() as integer
 	
-	DIM escaped AS INTEGER
-	DIM dialogue AS STRING
-	DIM sid AS STRING
+	dim escaped as integer
+	dim dialogue as string
+	dim sid as string
     dim characterId as integer
     dim poseId as integer
     dim chatBox as integer
 	
-	IF Game_isDebugMode() THEN LD2_Debug "DoDialogue()"
+	LD2_LogDebug "DoDialogue()"
 	
-	sid = UCASE(LTRIM(RTRIM(SCENE_GetSpeakerId())))
-	dialogue = LTRIM(RTRIM(SCENE_GetSpeakerDialogue()))
+	sid = ucase(trim(SCENE_GetSpeakerId()))
+	dialogue = trim(SCENE_GetSpeakerDialogue())
     
     characterId = 0
-    SELECT CASE sid
-    CASE "NARRATOR"
+    select case sid
+    case "NARRATOR"
         LD2_WriteText ""
         CharacterDoCommands( 0 )
         LD2_PopText dialogue
-	CASE "LARRY"
+	case "LARRY"
         characterId = CharacterIds.Larry
         poseId = PoseIds.Talking
         chatBox = ChatBoxes.Larry
@@ -409,39 +436,39 @@ FUNCTION DoDialogue() as integer
         characterId = CharacterIds.Larry
         poseId = PoseIds.Surprised
         chatBox = ChatBoxes.LarrySurprised
-	CASE "STEVE"
+	case "STEVE"
         characterId = CharacterIds.Steve
         poseId = PoseIds.Talking
         chatBox = ChatBoxes.Steve
-    CASE "STEVE_SICK"
+    case "STEVE_SICK"
         characterId = CharacterIds.Steve
         poseId = PoseIds.Sick
         chatBox = ChatBoxes.SteveSick
-    CASE "STEVE_LAUGHING"
+    case "STEVE_LAUGHING"
         characterId = CharacterIds.Steve
         poseId = PoseIds.Laughing
         chatBox = ChatBoxes.SteveLaughing
-    CASE "STEVE_DYING"
+    case "STEVE_DYING"
         characterId = CharacterIds.Steve
         poseId = PoseIds.Dying
         chatBox = ChatBoxes.SteveDying
-	CASE "BARNEY"
+	case "BARNEY"
         characterId = CharacterIds.Barney
         poseId = PoseIds.Talking
         chatBox = ChatBoxes.Barney
-    CASE "BARNEY_RADIO"
+    case "BARNEY_RADIO"
         characterId = CharacterIds.Barney
         poseId = PoseIds.Radio
         chatBox = ChatBoxes.BarneyRadio
-	CASE "JANITOR"
+	case "JANITOR"
         characterId = CharacterIds.Janitor
         poseId = PoseIds.Talking
         chatBox = ChatBoxes.Janitor
-	CASE "GRUNT"
+	case "GRUNT"
         characterId = CharacterIds.Grunt
         poseId = PoseIds.Talking
         chatBox = ChatBoxes.Grunt
-	END SELECT
+	end select
     
     if characterId then
         CharacterDoCommands( characterId )
@@ -450,7 +477,7 @@ FUNCTION DoDialogue() as integer
 	
 	return escaped
 	
-END FUNCTION
+end function
 
 SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGER)
 	
@@ -799,7 +826,13 @@ sub LoadMusic ()
     
 end sub
 
-sub DoAction(actionId as integer, itemId as integer = 0)
+sub PrimeActions()
+    
+    DoAction 0, 0, 1
+    
+end sub
+
+sub DoAction(actionId as integer, itemId as integer = 0, prime as integer = 0)
     
     dim runVal as double
     dim jumpVal as double
@@ -807,6 +840,11 @@ sub DoAction(actionId as integer, itemId as integer = 0)
     dim success as integer
     dim playQuad as integer
     static soundTimer as double
+    static alreadyRan as integer = 0
+    
+    if prime then
+        alreadyRan = 0
+    end if
     
     runVal = 1.12
     jumpVal = 1.5
@@ -844,16 +882,28 @@ sub DoAction(actionId as integer, itemId as integer = 0)
             LD2_PlaySound Sounds.pickup
         end if
     case ActionIds.RunRight
-        if Player_Move(runVal) then
+        if alreadyRan = 0 then
+            alreadyRan = 1
+            if Player_Move(runVal) then
+            end if
         end if
     case ActionIds.RunLeft
-        if Player_Move(-runVal) then
+        if alreadyRan = 0 then
+            alreadyRan = 1
+            if Player_Move(-runVal) then
+            end if
         end if
     case ActionIds.StrafeRight
-        if Player_Move(runVal, 0) then
+        if alreadyRan = 0 then
+            alreadyRan = 1
+            if Player_Move(runVal, 0) then
+            end if
         end if
     case ActionIds.StrafeLeft
-        if Player_Move(-runVal, 0) then
+        if alreadyRan = 0 then
+            alreadyRan = 1
+            if Player_Move(-runVal, 0) then
+            end if
         end if
     case ActionIds.Shoot, ActionIds.ShootRepeat
         if actionId = ActionIds.Shoot then
@@ -925,7 +975,6 @@ end function
 SUB Main
   
     dim deadTimer as double
-    dim PlayerIsRunning as integer
     dim player as PlayerType
     dim newShot as integer
     dim newJump as integer
@@ -982,6 +1031,7 @@ SUB Main
 	END IF
     
     PullEvents
+    PrimeActions
  
     if showConsole = 0 then
         Player_Animate
@@ -1144,13 +1194,12 @@ SUB Main
         continue do
     end if
     
-    PlayerIsRunning = 0
     if keyboard(KEY_LSHIFT) or keyboard(KEY_KP_0) then
-        if keyboard(KEY_RIGHT) or keyboard(KEY_D) then doAction ActionIds.StrafeRight: PlayerIsRunning = 1
-        if keyboard(KEY_LEFT ) or keyboard(KEY_A) then doAction ActionIds.StrafeLeft : PlayerIsRunning = 1
+        if keyboard(KEY_RIGHT) or keyboard(KEY_D) then doAction ActionIds.StrafeRight
+        if keyboard(KEY_LEFT ) or keyboard(KEY_A) then doAction ActionIds.StrafeLeft
     else
-        if keyboard(KEY_RIGHT) or keyboard(KEY_D) then doAction ActionIds.RunRight: PlayerIsRunning = 1
-        if keyboard(KEY_LEFT ) or keyboard(KEY_A) then doAction ActionIds.RunLeft : PlayerIsRunning = 1
+        if keyboard(KEY_RIGHT) or keyboard(KEY_D) then doAction ActionIds.RunRight
+        if keyboard(KEY_LEFT ) or keyboard(KEY_A) then doAction ActionIds.RunLeft
     end if
 	IF keyboard(KEY_UP   ) or keyboard(KEY_W    ) then doAction ActionIds.LookUp
     IF keyboard(KEY_CTRL ) or keyboard(KEY_Q    ) or mouseLB() then
@@ -1256,6 +1305,8 @@ function DoScene (sceneId as string) as integer
     
     dim escaped as integer
     
+    Player_Stop
+    
     if SCENE_Init(sceneId) then
         do while SCENE_ReadLine()
             escaped = DoDialogue(): if escaped then exit do
@@ -1271,8 +1322,9 @@ end function
 sub RenderScene (visible as integer = 1)
     
     Guts_Animate
-    LD2_RenderFrame
+    LD2_RenderFrame 0
     RenderPoses
+    LD2_RenderForeground
     if visible then LD2_RefreshScreen
     
 end sub
@@ -1430,6 +1482,25 @@ end sub
 
 sub SceneCheck (player as PlayerType)
     
+    static moveToX as integer = -1
+    
+    if moveToX > -1 then
+        LD2_SetSceneMode LETTERBOXSHOWPLAYER
+        if Player_GetX() < moveToX then
+            doAction ActionIds.RunRight
+            if Player_GetX() >= moveToX then
+                Player_SetXY moveToX, Player_GetY()
+                moveToX = -1
+            end if
+        elseif Player_GetX() > moveToX then
+            doAction ActionIds.RunLeft
+            if Player_GetX() <= moveToX then
+                Player_SetXY moveToX, Player_GetY()
+                moveToX = -1
+            end if
+        end if
+    end if
+    
     if SceneCallback <> 0 then
         SceneCallback()
         SceneCallback = 0
@@ -1454,7 +1525,11 @@ sub SceneCheck (player as PlayerType)
         end if
     case "SCENE-JANITOR"
         if Player_NotItem(ItemIds.SceneJanitor) then
-            Scene3
+            if Player_GetX() <> Guides.SceneJanitor then
+                moveToX = Guides.SceneJanitor
+            else
+                Scene3
+            end if
         end if
     case "SCENE-JANITOR-DIES"
         if Player_NotItem(ItemIds.SceneJanitorDies) and Player_HasItem(ItemIds.SceneJanitor) then
@@ -1462,7 +1537,11 @@ sub SceneCheck (player as PlayerType)
         end if
     case "SCENE-ELEVATOR"
         if Player_NotItem(ItemIds.SceneElevator) then
-            Scene5
+            if Player_GetX() <> Guides.SceneElevator then
+                moveToX = Guides.SceneElevator
+            else
+                Scene5
+            end if
         end if
     end select
     
@@ -2388,7 +2467,7 @@ sub NewGame
     Player_SetItemQty ItemIds.Lives, StartVals.Lives
     Player_SetItemQty ItemIds.Hp, Maxes.Hp
     
-    Player_Init player
+    Player_Update player
     
     Player_SetItemMaxQty ItemIds.HP, Maxes.Hp
     Player_SetItemMaxQty ItemIds.Shotgun   , Maxes.Shotgun
@@ -2675,7 +2754,7 @@ function ContinueAfterSeconds(seconds as double) as integer
     pausetime = timer
     while (timer-pausetime) <= seconds
         PullEvents : RenderScene
-        if keypress(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     wend
     return 0
 end function
@@ -2688,7 +2767,7 @@ function SceneFadeIn(seconds as double) as integer
     do
         PullEvents
         RenderScene 0
-        if keypress(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     loop while LD2_FadeInStep(delay, 0)
     
     return 0
@@ -2703,7 +2782,7 @@ function SceneFadeOut(seconds as double) as integer
     do
         PullEvents
         RenderScene 0
-        if keypress(KEY_ENTER) then return 1
+        if SceneKeySkip() then return 1
     loop while LD2_FadeOutStep(delay, 0)
     
     return 0
