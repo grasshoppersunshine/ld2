@@ -254,7 +254,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
             end if
         end if
         
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         if chatBox then
             LD2_putFixed 0, 180, chatBox+frame, idScene, renderPose.getFlip()
         end if
@@ -283,14 +283,14 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     LD2_WriteText caption
     poseTalking.firstFrame
     UpdatePose renderPose, poseTalking
-    RenderScene 0
+    RenderScene RenderSceneFlags.NotPutToScreen
     if chatBox then
         LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
     end if
     LD2_RefreshScreen
     
     while SceneKeyTextJump()
-        PullEvents: RenderScene 0
+        PullEvents: RenderScene RenderSceneFlags.NotPutToScreen
         if chatBox then LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
         LD2_RefreshScreen
     wend
@@ -299,7 +299,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     timestamp = timer
 	do
         PullEvents
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         if chatBox then
             LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
         end if
@@ -311,7 +311,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
                 caption = left(caption, len(caption)-1)
             end if
             LD2_WriteText caption
-            RenderScene 0
+            RenderScene RenderSceneFlags.NotPutToScreen
             if chatBox then
                 LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
             end if
@@ -322,7 +322,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
 	loop until SceneKeyTextJump()
     
     while SceneKeyTextJump()
-        PullEvents: RenderScene 0
+        PullEvents: RenderScene RenderSceneFlags.NotPutToScreen
         if chatBox then LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
         LD2_RefreshScreen
     wend
@@ -763,8 +763,9 @@ sub LoadSounds ()
     AddSound Sounds.gruntMgShoot, "shoot-machinegun.wav"
     AddSound Sounds.gruntHgShoot, "shoot-handgun.wav"
     
-    AddSound Sounds.rockHurt, "rock-land.wav"
+    AddSound Sounds.rockHurt, "rock-jump.wav"
     AddSound Sounds.rockJump, "rock-jump.wav"
+    AddSound Sounds.rockLand, "rock-land.wav"
     AddSound Sounds.rockDie , "rock-die.wav"
     
     AddSound Sounds.keypadInput  , "kp-input.wav"
@@ -1295,6 +1296,25 @@ SUB RenderPoses ()
 	
 END SUB
 
+sub RenderOnePose (pose as PoseType ptr)
+    
+    dim frame as PoseFrame ptr
+    dim sprite as PoseAtom ptr
+    dim x as integer, y as integer
+    
+    if pose = 0 then exit sub
+    if pose->isHidden() then exit sub
+    frame = pose->getCurrentFrame()
+    sprite = frame->getFirstSprite()
+    do while sprite <> 0
+        x = pose->getX() + sprite->x
+        y = pose->getY() + sprite->y
+        LD2_put x, y, sprite->idx, pose->getSpriteSetId(), iif(sprite->is_flipped, 1, pose->getFlip())
+        sprite = frame->getNextSprite()
+    loop
+    
+end sub
+
 SUB RetraceDelay (qty AS INTEGER)
 	
 	WaitSeconds qty/60
@@ -1319,13 +1339,67 @@ function DoScene (sceneId as string) as integer
     
 end function
 
-sub RenderScene (visible as integer = 1)
+dim shared global_flags as integer
+
+sub SetFlags(flags as integer)
     
-    Guts_Animate
-    LD2_RenderFrame 0
-    RenderPoses
-    LD2_RenderForeground
-    if visible then LD2_RefreshScreen
+    global_flags = flags
+    
+end sub
+
+function HasFlag(flag as integer) as integer
+    
+    return ((global_flags and flag) <> 0)
+    
+end function
+
+function NotFlag(flag as integer) as integer
+    
+    return ((global_flags and flag) = 0)
+    
+end function
+
+sub RenderScene (flags as integer = 0)
+    
+    dim frameFlags as integer
+    
+    SetFlags flags
+    
+    if HasFlag(RenderSceneFlags.OnlyAnimate) then
+        'Mobs_Animate
+        Guts_Animate
+        Doors_Animate
+        Elevators_Animate
+        Flashes_Animate
+        exit sub
+    end if
+    if NotFlag(RenderSceneFlags.OnlyForeground) then
+        frameFlags = RenderFrameFlags.SkipForeground
+        if HasFlag(RenderSceneFlags.WithElevator) then
+            frameFlags = frameFlags or RenderFrameFlags.WithElevator
+        end if
+        if HasFlag(RenderSceneFlags.WithoutElevator) then
+            frameFlags = frameFlags or RenderFrameFlags.WithoutElevator
+        end if
+        LD2_RenderFrame frameFlags
+        if NotFlag(RenderSceneFlags.OnlyBackground) then
+            RenderPoses
+        end if
+    end if
+    if NotFlag(RenderSceneFlags.OnlyBackground) then
+        LD2_RenderForeground HasFlag(RenderSceneFlags.WithElevator)
+    end if
+    if HasFlag(RenderSceneFlags.OnlyForeground) or HasFlag(RenderSceneFlags.OnlyBackground) then
+        exit sub
+    end if
+    if NotFlag(RenderSceneFlags.NotPutToScreen) then
+        LD2_RefreshScreen
+        'Mobs_Animate
+        Guts_Animate
+        Doors_Animate
+        Elevators_Animate
+        Flashes_Animate
+    end if
     
 end sub
 
@@ -1542,6 +1616,34 @@ sub SceneCheck (player as PlayerType)
             else
                 Scene5
             end if
+        end if
+    case "SCENE-ELEVATOR2"
+        if Player_NotItem(ItemIds.SceneElevator2) then
+            Scene6
+        end if
+    case "SCENE-WEAPONS1"
+        if Player_NotItem(ItemIds.SceneWeapons1) then
+            if Player_GetX() <> Guides.SceneWeapons1 then
+                moveToX = Guides.SceneWeapons1
+            end if
+        else
+            Scene7
+        end if
+    case "SCENE-WEAPONS2"
+        if Player_NotItem(ItemIds.SceneWeapons2) then
+            if Player_GetX() <> Guides.SceneWeapons2 then
+                moveToX = Guides.SceneWeapons2
+            end if
+        else
+            SceneWeapons2
+        end if
+    case "SCENE-WEAPONS3"
+        if Player_NotItem(ItemIds.SceneWeapons3) then
+            if Player_GetX() <> Guides.SceneWeapons3 then
+                moveToX = Guides.SceneWeapons3
+            end if
+        else
+            SceneWeapons3
         end if
     end select
     
@@ -1970,19 +2072,20 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             case "1", "start", "steve1", "chess", "intro", "cola": Scene1
             case "2", "janitor", "janitor1": Scene3
             case "3", "janitor2", "janitordies": Scene4
-            case "4", "elevator": Scene5
-            case "5", "weapons", "weapons1": Scene7
-            case "6", "stevegone", "steve2": SceneSteveGone
-            case "7", "goo", "goo1": SceneGoo
-            case "8", "googone", "removegoo", "goo2": SceneGooGone
-            case "9", "rooftop", "yellowcard": SceneRooftopGotCard
-            case "10", "weapons2": SceneWeapons2
-            case "11", "weapons3": SceneWeapons3
-            case "12", "stevefound", "barneyplan", "truth", "steve3": SceneBarneyPlan
-            case "13", "crawl", "vent", "ventcrawl", "steve4": SceneVentCrawl
-            case "14", "lobby", "notleavingsteve", "steve5": SceneLobby
-            case "15", "portal", "steve6": ScenePortal
-            case "16", "end", "theend": SceneTheEnd
+            case "5", "elevator": Scene5    
+            case "6", "elevator2": Scene6
+            case "7", "weapons", "weapons1": Scene7
+            case "8", "stevegone", "steve2": SceneSteveGone
+            case "9", "goo", "goo1": SceneGoo
+            case "10", "googone", "removegoo", "goo2": SceneGooGone
+            case "10", "rooftop", "yellowcard": SceneRooftopGotCard
+            case "11", "weapons2": SceneWeapons2
+            case "12", "weapons3": SceneWeapons3
+            case "13", "stevefound", "barneyplan", "truth", "steve3": SceneBarneyPlan
+            case "14", "crawl", "vent", "ventcrawl", "steve4": SceneVentCrawl
+            case "15", "lobby", "notleavingsteve", "steve5": SceneLobby
+            case "16", "portal", "steve6": ScenePortal
+            case "17", "end", "theend": SceneTheEnd
             case else
                 response = "!Not a valid scene number "+str(id)
         end select
@@ -2380,7 +2483,7 @@ sub Start
     Game_SetSessionFile SESSION_FILE
     Mobs_SetBeforeKillCallback @BeforeMobKill
     
-    if Inventory_Init(16, 8) then
+    if Inventory_Init(18, 9) then
         STATUS_DialogOk "Error intializing inventory!"
         Game_Shutdown
         end
@@ -2766,7 +2869,7 @@ function SceneFadeIn(seconds as double) as integer
     delay = seconds/60
     do
         PullEvents
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         if SceneKeySkip() then return 1
     loop while LD2_FadeInStep(delay, 0)
     
@@ -2781,7 +2884,7 @@ function SceneFadeOut(seconds as double) as integer
     delay = seconds/60
     do
         PullEvents
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         if SceneKeySkip() then return 1
     loop while LD2_FadeOutStep(delay, 0)
     

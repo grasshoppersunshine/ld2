@@ -11,6 +11,7 @@ declare function Scene1Go () as integer
 declare function Scene3Go () as integer
 declare function Scene4Go () as integer
 declare function Scene5Go () as integer
+declare function Scene6Go () as integer
 declare function Scene7Go () as integer
 declare function SceneBarneyPlanGo () as integer
 declare function SceneVentCrawlGo () as integer
@@ -28,6 +29,7 @@ declare sub Scene1EndConditions ()
 declare sub Scene3EndConditions ()
 declare sub Scene4EndConditions ()
 declare sub Scene5EndConditions ()
+declare sub Scene6EndConditions ()
 declare sub Scene7EndConditions ()
 declare sub SceneBarneyPlanEndConditions ()
 declare sub SceneVentCrawlEndConditions ()
@@ -46,7 +48,7 @@ function ContinueAfterSlowMo(seconds as double) as integer
     pausetime = timer
     while (timer-pausetime) <= seconds
         PullEvents : RenderScene
-        WaitSeconds 0.0333
+        if ContinueAfterSeconds(0.0333) then return 1
         if SceneKeySkip() then return 1
     wend
     return 0
@@ -70,6 +72,22 @@ function continueWithBlood(seconds as double, x as integer, y as integer, radius
         if SceneKeySkip() then return 1
     wend
     return 0
+end function
+
+function SceneWait(seconds as double) as integer
+    
+    static clock as double = 0
+    
+    if (seconds = 0) or (clock = 0) then
+        clock = timer
+    end if
+    
+    if (timer - clock) >= seconds then
+        return 0
+    else
+        return 1
+    end if
+    
 end function
 
 function PanPose(pose as PoseType ptr, vx as integer, vy as integer, secondsPerMapSquare as double=1.0, secondsPerFrame as double=1.0) as integer
@@ -122,6 +140,15 @@ end function
 
 sub Scene1 ()
     
+    if Player_GetCurrentRoom() <> Rooms.LarrysOffice then
+        Map_Load "14th.ld2"
+    end if
+    ClearPoses
+    LD2_SetSceneMode LETTERBOX
+    Player_SetXY int(Guides.SceneIntro), int(Guides.Floor)
+    Player_SetFlip 0
+    Map_UpdateShift
+    
     if Scene1Go() then
         SceneFadeOut 0.5
         Scene1EndConditions
@@ -144,9 +171,7 @@ function Scene1Go () as integer
 
 	IF Game_isDebugMode() THEN LD2_Debug "Scene1Go()"
 
-    LD2_SetSceneMode LETTERBOX
-	Mobs_Clear
-    Map_SetXShift 0
+    Mobs_Clear
     
     AddSound Sounds.kickvending, "kick.wav"
     AddSound Sounds.sodacanopen, "splice/sodacanopen.wav"
@@ -165,7 +190,6 @@ function Scene1Go () as integer
 	LarryPose.x = leftX   : LarryPose.y =  144
 	StevePose.x = leftX+44: StevePose.y =  144
 	
-	ClearPoses
 	AddPose @LarryPose
 	AddPose @StevePose
 
@@ -248,7 +272,7 @@ function Scene1Go () as integer
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Surprised
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Sick
     StevePose.x = leftX+87
-    RenderScene 0
+    RenderScene RenderSceneFlags.NotPutToScreen
     SceneFadeIn 1.0
 
     ContinueAfterSeconds  1.3333
@@ -265,7 +289,7 @@ function Scene1Go () as integer
     if DoScene("SCENE-1E") then return 1 '// Steve! I gotta get help1
     SceneFadeOut 0.20
     if DoScene("SCENE-1F") then return 1 '// The Journey Begins...Again!!
-    RenderScene 0
+    RenderScene RenderSceneFlags.NotPutToScreen
     SceneFadeIn 1.0
 
     WaitForKeyup(KEY_ENTER)
@@ -277,10 +301,19 @@ end function
 
 sub Scene3()
     
+    if Player_GetCurrentRoom() <> Rooms.LarrysOffice then
+        Map_Load "14th.ld2"
+    end if
+    ClearPoses
+    LD2_SetSceneMode LETTERBOX
+    Player_SetXY int(Guides.SceneJanitor), int(Guides.Floor)
+    Player_SetFlip 0
+    Map_UpdateShift
+    
     if Scene3Go() then
         LD2_FadeOut 2
         Scene3EndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         Scene3EndConditions
@@ -311,8 +344,6 @@ function Scene3Go () as integer
     dim escaped as integer
     dim mob as Mobile
     
-    LD2_SetSceneMode LETTERBOX
-
     'AddSound Sounds.scare, "splice/scare0.ogg"
     AddSound Sounds.crack  , "splice/crack.wav"
     AddSound Sounds.glass  , "splice/glass.wav"
@@ -327,7 +358,6 @@ function Scene3Go () as integer
     Mobs_Remove mob
     JanitorPose.x = mob.x: JanitorPose.y =  144
     
-    ClearPoses
     AddPose @LarryPose
     AddPose @JanitorPose
     
@@ -372,10 +402,16 @@ end function
 
 sub Scene4()
     
+    ClearPoses
+    LD2_SetSceneMode LETTERBOX
+    Player_SetXY int(Guides.SceneJanitorDies), int(Guides.Floor)
+    Player_SetFlip 1
+    Map_UpdateShift
+    
     if Scene4Go() then
         LD2_FadeOut 2
         Scene4EndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         Scene4EndConditions
@@ -404,8 +440,6 @@ function Scene4Go() as integer
     dim JanitorPose as PoseType
     dim StevePose as PoseType
     dim RockmonsterPose as PoseType
-    
-    LD2_SetSceneMode LETTERBOX
     
     FadeOutMusic
     LD2_StopMusic
@@ -513,10 +547,20 @@ end function
 
 sub Scene5()
     
+    if Player_GetCurrentRoom() <> Rooms.LarrysOffice then
+        Map_Load "14th.ld2"
+    end if
+    ClearPoses
+    LD2_SetSceneMode LETTERBOX
+    Player_SetXY int(Guides.SceneElevator), 112
+    Player_SetFlip 0
+    Map_UpdateShift
+    Map_LockElevators
+    
     if Scene5Go() then
         LD2_FadeOut 2
         Scene5EndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         Scene5EndConditions
@@ -529,26 +573,12 @@ sub Scene5EndConditions()
     ClearPoses
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneElevator, 1
-    
-    if Player_GetCurrentRoom() <> Rooms.WeaponsLocker then
-        Map_Load "7th.ld2"
-    end if
-    
-    Map_PutTile 44, 9, 16, 1: Map_PutTile 45, 9, 16, 1
-    Map_PutTile 43, 9, 14, 1: Map_PutTile 46, 9, 15, 1
-    
-    Player_SetXY 720, 144
-    Player_SetFlip 1
-    
-    LD2_AddToStatus(BLUECARD, 1)
-    Map_UnlockElevators
+    Map_LockElevators
     
 end sub
 
 function Scene5Go() as integer
 
-    '- Process Scene 5
-    '-----------------
     dim LarryPose as PoseType
     dim BarneyPose as PoseType
     dim RockmonsterPose as PoseType
@@ -558,13 +588,12 @@ function Scene5Go() as integer
     AddSound Sounds.snarl   , "splice/snarl.wav"
 
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.x = 1500: LarryPose.y =  112
+    LarryPose.x = Guides.SceneElevator: LarryPose.y =  112
     
-    ClearPoses
     AddPose @LarryPose
     
     RenderScene
-    RetraceDelay 40
+    if ContinueAfterSeconds(0.5) then return 1
     
     if DoScene("SCENE-5A") then return 1
     
@@ -580,7 +609,7 @@ function Scene5Go() as integer
     dim y as single
     dim addy as single
     y = 144: addy = -2
-    FOR x = 1260 TO 1344
+    FOR x = 1260 TO 1360
         
         RockmonsterPose.x = x
         RockmonsterPose.y =  int(y)
@@ -594,8 +623,9 @@ function Scene5Go() as integer
     NEXT x
     
     '- rockmonster jumps over stairs
+    LD2_PlaySound Sounds.rockJump
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Jumping
-    FOR x = 1344 TO 1440
+    FOR x = 1360 TO 1456
         
         RockmonsterPose.x = x
         RockmonsterPose.y =  int(y)
@@ -616,7 +646,8 @@ function Scene5Go() as integer
     RockmonsterPose.y =  112
     
     RenderScene
-    RetraceDelay 80
+    LD2_PlaySound Sounds.rockLand
+    if ContinueAfterSeconds(1.3333) then return 1
     
     '- Barney comes out and shoots at rockmonster
     '--------------------------------------------
@@ -625,106 +656,190 @@ function Scene5Go() as integer
     BarneyPose.isFlipped = 1
     AddPose @BarneyPose
     
-    Map_PutTile 92, 7, 16, 1: Map_PutTile 93, 7, 16, 1
-    
     '- open elevator doors
-    dim i as integer
-    FOR i = 1 TO 16
-        RenderScene 0
-        LD2_put 92 * 16 - i, 112, 14, idTILE, 0
-        LD2_put 93 * 16 + i, 112, 15, idTILE, 0
+    Map_UnlockElevators
+    SceneWait 0
+    while SceneWait(1.5)
+        RenderScene RenderSceneFlags.OnlyAnimate
+        RenderScene RenderSceneFlags.OnlyBackground or RenderSceneFlags.WithoutElevator
+        RenderOnePose @BarneyPose
+        RenderScene RenderSceneFlags.OnlyForeground or RenderSceneFlags.WithElevator
+        RenderOnePose @RockmonsterPose
+        RenderOnePose @LarryPose
         LD2_RefreshScreen
         if SceneKeySkip() then return 1
-    NEXT i
-
-    Map_PutTile 91, 7, 14, 1: Map_PutTile 94, 7, 15, 1
+    wend
     
     RenderScene
-    RetraceDelay 80
+    if ContinueAfterSeconds(0.75) then return 1
     
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Shooting
+    GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.GettingShot
     
     dim rx as single
     rx = x
     
     '- Barney blasts the rockmonster to hell!!!
     dim n as integer
-    FOR n = 1 TO 40
+    dim i as integer
+    for n = 1 TO 55
         
         BarneyPose.nextFrame
         RockmonsterPose.x = int(rx)
     
-        rx = rx - .4
+        rx = rx - 0.5
         
         RenderScene
         
-        if (n and 3) = 3 then
+        if (n and 1) = 1 then
             LD2_PlaySound Sounds.machinegun
+            Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1, -3
+            Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1,  3
         end if
+        if (n and 15) = 15 then LD2_PlaySound Sounds.blood1
         
         if SceneKeySkip() then return 1
+        if ContinueAfterSeconds(0.03) then return 1
         
-    NEXT n
+        if (n mod 12) = 7 then
+            LD2_PlaySound Sounds.blood2
+            Guts_Add GutsIds.Gibs, rx + 8, 120, 1,  1
+            Guts_Add GutsIds.Gibs, rx + 8, 120, 2, -1
+            for i = 0 to 15
+                Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1, -2
+                Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1, -1
+            next i
+        end if
+        
+    next n
     
+    BarneyPose.nextFrame
     LD2_StopMusic
+    LD2_PlaySound Sounds.blood2
+    rx = rx - 1.0
+    for i = 0 to 15
+        Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1, -2
+        Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1, -1
+    next i
+    BarneyPose.nextFrame
     
-    Guts_Add rx + 8, 120, 8, 1
-    Guts_Add rx + 8, 120, 8, -1
+    LD2_PlaySound Sounds.blood2
+    Guts_Add GutsIds.Gibs, rx + 8, 120, 8, -2
+    Guts_Add GutsIds.Gibs, rx + 8, 120, 8, -1
+    for n = 0 to 15
+        Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1, -6
+        Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1, -2
+        Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1,  1
+        Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1,  2
+    next n
     
     LD2_PlaySound Sounds.snarl
     LD2_PlaySound Sounds.splatter
+    LD2_PlaySound Sounds.rockDie
+    
+    if ContinueAfterSeconds(0.2) then return 1
+    BarneyPose.firstFrame
     
     RemovePose @RockmonsterPose
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Talking
     
     '- let guts fall off screen
-    FOR n = 1 TO 140
+    for n = 1 to 15
         RenderScene
         if SceneKeySkip() then return 1
-    NEXT n
+        if ContinueAfterSlowMo(0.3) then return 1
+    next n
     
-    RetraceDelay 40
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
+    RenderScene
+    if ContinueAfterSeconds(1.0) then return 1
     
     BarneyPose.isFlipped = 0
+    RenderScene
+    if ContinueAfterSeconds(0.5) then return 1
     
     if DoScene("SCENE-5B") then return 1
     
-    '- 45,10
-    LD2_WriteText ""
-    Map_Load "7th.ld2"
+    return 0
+    
+end function
+
+sub Scene6()
+    
+    if Player_GetCurrentRoom() <> Rooms.WeaponsLocker then
+        Map_Load "7th.ld2"
+    end if
+    ClearPoses
+    LD2_SetSceneMode LETTERBOX
+    Player_SetXY 45*SPRITE_W, int(Guides.Floor)
+    Player_SetFlip 1
+    Map_SetXShift 600
+    Map_LockElevators
+    
+    if Scene6Go() then
+        LD2_FadeOut 2
+        Scene6EndConditions
+        RenderScene RenderSceneFlags.NotPutToScreen
+        LD2_FadeIn 2
+    else
+        Scene6EndConditions
+    end if
+    
+end sub
+
+sub Scene6EndConditions()
     
     ClearPoses
+    LD2_SetSceneMode MODEOFF
+    Player_SetItemQty ItemIds.SceneElevator2, 1
     
-    Map_SetXShift 600
+    if Player_GetCurrentRoom() <> Rooms.WeaponsLocker then
+        Map_Load "7th.ld2"
+    end if
+    
+    Player_SetXY 720, 144
+    Player_SetFlip 1
+    
+    LD2_AddToStatus(BLUECARD, 1)
+    Map_LockElevators
+    
+end sub
+
+function Scene6Go() as integer
+    
+    dim LarryPose as PoseType
+    dim BarneyPose as PoseType
+    dim RockmonsterPose as PoseType
+    dim x as integer
+    
     RenderScene
-    RetraceDelay 80
+    if ContinueAfterSeconds(1.0) then return 1
     
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Talking
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.x =  46 * 16 - 16: LarryPose.y =   144
-    BarneyPose.x = 45 * 16 - 16: BarneyPose.y =  144
+    LarryPose.x  = 45*SPRITE_W: LarryPose.y  = 144
+    BarneyPose.x = 44*SPRITE_W: BarneyPose.y = 144
+    
+    LarryPose.isFlipped = 1
     
     AddPose @LarryPose
     AddPose @BarneyPose
     
-    Map_PutTile 44, 9, 16, 1: Map_PutTile 45, 9, 16, 1
-    
     '- open elevator doors
-    FOR i = 1 TO 16
-        RenderScene 0
-        LD2_put 44 * 16 - i, 144, 14, idTILE, 0
-        LD2_put 45 * 16 + i, 144, 15, idTILE, 0
+    Map_UnlockElevators
+    SceneWait 0
+    while SceneWait(1.5)
+        RenderScene RenderSceneFlags.OnlyAnimate
+        RenderScene RenderSceneFlags.OnlyBackground or RenderSceneFlags.WithoutElevator
+        RenderPoses
+        RenderScene RenderSceneFlags.OnlyForeground or RenderSceneFlags.WithElevator
         LD2_RefreshScreen
         if SceneKeySkip() then return 1
-    NEXT i
-    
-    Map_PutTile 43, 9, 14, 1: Map_PutTile 46, 9, 15, 1
+    wend
     
     RenderScene
-    RetraceDelay 80
+    if ContinueAfterSeconds(1.0) then return 1
     
-    
-    Map_SetXShift 600
     if DoScene("SCENE-5C") then return 1
     
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Walking
@@ -754,7 +869,7 @@ sub Scene7()
     if Scene7Go() then
         LD2_FadeOut 2
         Scene7EndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         Scene7EndConditions
@@ -768,6 +883,7 @@ sub Scene7EndConditions()
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneWeapons1, 1
     Player_SetItemQty ItemIds.Phase, 1
+    Map_UnlockElevators
     
 end sub
 
@@ -807,7 +923,7 @@ sub SceneBarneyPlan()
     if SceneBarneyPlanGo() then
         LD2_FadeOut 2
         SceneBarneyPlanEndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         SceneBarneyPlanEndConditions
@@ -886,7 +1002,7 @@ sub SceneVentCrawl()
     if SceneVentCrawlGo() then
         LD2_FadeOut 2
         SceneVentCrawlEndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         SceneVentCrawlEndConditions
@@ -941,7 +1057,7 @@ sub SceneLobby()
     if SceneLobbyGo() then
         LD2_FadeOut 2
         SceneLobbyEndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         SceneLobbyEndConditions
@@ -981,7 +1097,7 @@ sub SceneTheEnd()
     if SceneTheEndGo() then
         LD2_FadeOut 2
         SceneTheEndEndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         SceneTheEndEndConditions
@@ -1034,7 +1150,7 @@ sub SceneGoo
     if SceneGooGo() then
         LD2_FadeOut 2
         SceneGooEndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         SceneGooEndConditions
@@ -1078,7 +1194,7 @@ sub SceneGooGone
     if SceneGooGoneGo() then
         LD2_FadeOut 2
         SceneGooGoneEndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         SceneGooGoneEndConditions
@@ -1144,7 +1260,7 @@ sub SceneSteveGone
     if SceneSteveGoneGo() then
         LD2_FadeOut 2
         SceneSteveGoneEndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         SceneSteveGoneEndConditions
@@ -1183,7 +1299,7 @@ sub SceneRooftopGotCard
     if SceneRooftopGotCardGo() then
         LD2_FadeOut 2
         SceneRooftopGotCardEndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         SceneRooftopGotCardEndConditions
@@ -1236,7 +1352,7 @@ sub SceneWeapons2
     if SceneWeapons2Go() then
         LD2_FadeOut 2
         SceneWeapons2EndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         SceneWeapons2EndConditions
@@ -1293,7 +1409,7 @@ sub SceneWeapons3
     if SceneWeapons3Go() then
         LD2_FadeOut 2
         SceneWeapons3EndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         SceneWeapons3EndConditions
@@ -1348,7 +1464,7 @@ sub ScenePortal
     if ScenePortalGo() then
         LD2_FadeOut 2
         ScenePortalEndConditions
-        RenderScene 0
+        RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
         ScenePortalEndConditions

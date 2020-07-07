@@ -37,7 +37,7 @@ type ElementType
     h as integer
     padding_x as integer
     padding_y as integer
-    border_width as integer
+    border_size as integer
     border_color as integer
     text as string
     text_alpha as double
@@ -47,6 +47,7 @@ type ElementType
     text_is_centered as integer
     text_is_monospace as integer
     text_align_right as integer
+    text_length as integer
     background as integer
     background_alpha as double
     is_auto_width as integer
@@ -55,6 +56,23 @@ type ElementType
     is_centered_y as integer
     parent as ElementType ptr
     is_rendered as integer
+    sprite as integer
+    sprite_set_id as integer
+    render_text as string
+    render_x as integer
+    render_y as integer
+    render_w as integer
+    render_h as integer
+    render_inner_w as integer
+    render_inner_h as integer
+    render_outer_w as integer
+    render_outer_h as integer
+    render_text_w as integer
+    render_text_h as integer
+    render_text_spacing as integer
+    render_num_line_breaks as integer
+    render_line_breaks(32) as integer
+    render_covered_y as integer
 end type
 
 type GutsIncorporated
@@ -132,6 +150,12 @@ type MapMeta
     commentsLen as ushort
 end type
 
+enum RenderFrameFlags
+    SkipForeground  = &h01
+    WithElevator    = &h02
+    WithoutElevator = &h04
+end enum
+
 declare function fontVal(ch as string) as integer
 declare function getArg(argstring as string, numArg as integer) as string
 
@@ -190,6 +214,7 @@ declare function Map_GetXShift () as integer
 declare sub Map_SetXShift (x as integer)
 declare sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer = LayerIds.Tile)
 declare sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
+declare sub Map_UpdateShift ()
 
 declare function toMapX(screenX as double) as integer
 declare function toMapY(screenY as double) as integer
@@ -296,8 +321,8 @@ DECLARE SUB LD2_ProcessEntities ()
 DECLARE SUB LD2_PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
 DECLARE SUB LD2_PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, BufferNum AS INTEGER)
 declare sub LD2_RenderBackground(height as double)
-declare sub LD2_RenderFrame (renderForeground as integer = 1)
-declare sub LD2_RenderForeground ()
+declare sub LD2_RenderFrame (flags as integer = 0)
+declare sub LD2_RenderForeground (renderElevators as integer = 0)
 
 DECLARE SUB LD2_SetNotice (message AS STRING)
 DECLARE SUB LD2_SetSceneMode (OnOff AS INTEGER)
@@ -321,10 +346,11 @@ declare function LD2_TileIsSolid(tileId as integer) as integer
 DECLARE SUB LD2_PopText (Message AS STRING)
 DECLARE SUB LD2_WriteText (Text AS STRING)
 
-DECLARE SUB LD2_put (x AS INTEGER, y AS INTEGER, NumSprite AS INTEGER, id AS INTEGER, _flip AS INTEGER, isFixed as integer = 0)
+declare sub LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0, w as integer = -1, h as integer = -1)
 declare sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
 
 declare sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
+declare sub LD2_PrepareElement(e as ElementType ptr)
 declare sub LD2_RenderElement(e as ElementType ptr)
 declare sub LD2_ClearElements()
 declare sub LD2_AddElement(e as ElementType ptr, parent as ElementType ptr = 0)

@@ -139,20 +139,21 @@ enum ItemIds
     SceneJanitor         = 102
     SceneJanitorDies     = 103
     SceneElevator        = 104
-    SceneWeapons1        = 105
-    SceneWeapons2        = 106
-    SceneWeapons3        = 107
-    SceneSteveGone       = 108
-    SceneGoo             = 109
-    SceneGooGone         = 110
-    SceneRooftopGotCard  = 111
-    SceneFlashlight      = 112
-    SceneBarneyPlan      = 113
-    SceneVentCrawl       = 114
-    SceneVentRemoveSteve = 115
-    ScenePortal          = 116
-    SceneLobby           = 117
-    SceneTheEnd          = 118
+    SceneElevator2       = 105
+    SceneWeapons1        = 106
+    SceneWeapons2        = 107
+    SceneWeapons3        = 108
+    SceneSteveGone       = 109
+    SceneGoo             = 110
+    SceneGooGone         = 111
+    SceneRooftopGotCard  = 112
+    SceneFlashlight      = 113
+    SceneBarneyPlan      = 114
+    SceneVentCrawl       = 115
+    SceneVentRemoveSteve = 116
+    ScenePortal          = 117
+    SceneLobby           = 118
+    SceneTheEnd          = 119
     '=======================================
     SwapSrcA0            = 50
     SwapSrcA1            = 51
@@ -530,6 +531,7 @@ enum Sounds
     gruntDie
     rockJump
     rockHurt
+    rockLand
     rockDie
     larryHurt
     larryDie
@@ -730,27 +732,39 @@ enum ChatBoxes
 end enum
 
 enum Guides
-    Activate410    =  780
-    Floor          =  144
-    SceneElevator  = 1500
-    SceneJanitor   = 1160
-    SceneGoo       =  760
-    SceneLobby     = 1400
-    ScenePortal    =  300
-    SceneTheEnd    = 1600
-    SceneVentCrawl = 1240
-    SceneWeapons1  =  400
-    SceneWeapons2  =  420
-    SceneWeapons3  =   80
-    SceneSteveGone =  300
+    Activate410      =  780
+    Floor            =  144
+    SceneElevator    = 1500
+    SceneJanitor     = 1160
+    SceneJanitorDies = 240
+    SceneGoo         =  760
+    SceneIntro       =   83
+    SceneLobby       = 1400
+    ScenePortal      =  300
+    SceneTheEnd      = 1600
+    SceneVentCrawl   = 1240
+    SceneWeapons1    =  400
+    SceneWeapons2    =  420
+    SceneWeapons3    =   80
+    SceneSteveGone   =  300
 end enum
 
 '======================
 '= SCENE MODES
 '======================
-CONST MODEOFF = 0
-CONST LETTERBOX = 1
-CONST LETTERBOXSHOWPLAYER = 2
+const MODEOFF = 0
+const LETTERBOX = 1
+const LETTERBOXSHOWPLAYER = 2
+
+enum RenderSceneFlags
+    OnlyForeground  = &h01
+    OnlyBackground  = &h02
+    OnlyAnimate     = &h04
+    SkipPoses       = &h08
+    NotPutToScreen  = &h10
+    WithElevator    = &h20
+    WithoutElevator = &h40
+end enum
 
 declare sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as integer)
 declare sub LD2_LookItem (id as integer, byref desc as string)
@@ -758,7 +772,7 @@ declare sub AddMusic (id as integer, filepath as string, loopmusic as integer)
 declare sub AddSound (id as integer, filepath as string, loops as integer = 0)
 declare sub RetraceDelay (qty as integer)
 
-declare sub RenderScene (visible as integer = 1)
+declare sub RenderScene (flags as integer = 0)
 declare function DoScene (sceneId as string) as integer
 
 declare sub AddPose (pose as PoseType ptr)
@@ -766,6 +780,7 @@ declare sub ClearPoses ()
 declare sub GetCharacterPose (pose as PoseType, characterId as integer, poseId as integer)
 declare sub RemovePose (pose as PoseType ptr)
 declare sub RenderPoses ()
+declare sub RenderOnePose (pose as PoseType ptr)
 
 declare function FadeInMusic(id as integer = -1, seconds as double = 3.0) as integer
 declare function FadeOutMusic(seconds as double = 3.0) as integer

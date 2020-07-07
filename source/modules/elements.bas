@@ -515,6 +515,7 @@ sub Elements_LoadFontMetrics(filename as string)
             else
                 charWidth = FONT_W '- assume space
             end if
+            if n = 64 then charWidth = FONT_W: rightMost = -1 '* "|"
             FontCharWidths(n) = charWidth
             FontCharMargins(n) = iif(leftMost <= rightMost, leftMost, 0)
             n += 1

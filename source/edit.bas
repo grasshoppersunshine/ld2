@@ -188,6 +188,8 @@ end type
     declare function encodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
     declare function decodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
     
+    declare function FontVal(ch as string) as integer
+    
     dim shared SpritesLarry as VideoSprites
     dim shared SpritesTile as VideoSprites
     dim shared SpritesOpaqueTile as VideoSprites
@@ -222,7 +224,7 @@ end type
     dim shared MapStackPointer as integer
     dim shared MapMaxStack as integer
     
-    dim shared Sectors(11) as SectorType
+    dim shared Sectors(31) as SectorType
     dim tag as string
 
   
@@ -377,14 +379,25 @@ end type
         MapPaste cursor.x, cursor.y, XScroll, 1
     end if
     
+    dim remainder as integer
+    dim ox as integer
+    dim ow as integer
     for n = 0 to MapProps.numSectors-1
         x = Sectors(n).x-XScroll: y = Sectors(n).y
         w = Sectors(n).w: h = Sectors(n).h
         x *= SPRITE_W: y *= SPRITE_H
         w *= SPRITE_W: h *= SPRITE_H
-        LD2_boxm x, y, w, h, 77, 1, 100
+        tag = trim(Sectors(n).tag)
+        if len(tag)*FONT_W > w then
+            remainder = len(tag)*FONT_W-(w-2)
+            ox = x-int(remainder*0.5+0.5)
+            ow = int(remainder*0.5+0.5)
+            LD2_fillm ox, y, ow, h, 70, 1, 100
+            LD2_fillm x+w, y, ow, h, 70, 1, 100
+        end if
+        LD2_boxm x, y, w, h, 77, 1, 200
         LD2_fillm x+1, y+1, w-2, h-2, 70, 1, 100
-        putText trim(Sectors(n).tag), x+(w-len(trim(Sectors(n).tag))*FONT_W)*0.5, y+((h-FONT_H)*0.5)
+        putText tag, x+int((w-len(tag)*FONT_W)*0.5), y+int(((h-FONT_H)*0.5))
     next n
 
     x = FONT_W*0.5
@@ -735,7 +748,7 @@ end type
     if selectingBox and keypress(KEY_T) then
         LD2_PlaySound EditSounds.inputText
         tag = trim(inputText("Sector Tag: ", ""))
-        if MapProps.numSectors < 11 then
+        if MapProps.numSectors < 31 then
             for n = 0 to MapProps.numSectors-1
                 if ucase(Sectors(n).tag) = ucase(tag) then
                     Sectors(n).x = selectBox.x
@@ -1870,7 +1883,7 @@ sub putText (text as string, x as integer, y  as integer, fontw as integer = FON
             end if
         end if
         if mid(text, n, 1) <> " " then
-            SpritesFont.putToScreen(x, y, asc(mid(text, n, 1)) - 32)
+            SpritesFont.putToScreen(x, y, FontVal(mid(text, n, 1)))
         end if
         x += fontw
     next n
@@ -2934,3 +2947,17 @@ sub fillSpriteBox(x0 as integer, y0 as integer, x1 as integer, y1 as integer, sp
     next y
     
 end sub
+
+function FontVal(ch as string) as integer
+    
+    dim v as integer
+    
+    if ch = "|" then
+        v = 64
+    else
+        v = asc(ch)-32
+    end if
+    
+    return v
+    
+end function

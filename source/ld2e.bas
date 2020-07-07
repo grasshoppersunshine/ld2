@@ -1899,11 +1899,12 @@ sub LD2_PopText (message as string)
     
     do
         PullEvents
-        if keypress(KEY_SPACE) or keypress(KEY_ENTER) or mouseLB() then exit do
+        if keypress(KEY_SPACE) or keypress(KEY_ENTER) or keypress(KEY_KP_ENTER) or mouseLB() then exit do
     loop
     
     WaitForKeyup(KEY_SPACE)
     WaitForKeyup(KEY_ENTER)
+    WaitForKeyup(KEY_KP_ENTER)
     while mouseLB(): PullEvents: wend
     
     LD2_FadeOut 7.5
@@ -2332,46 +2333,52 @@ sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as intege
     
 end sub
 
-SUB LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0)
+SUB LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0, w as integer = -1, h as integer = -1)
   
   LD2_SetTargetBuffer 1
   
+    dim dest as SDL_Rect
   dim px as integer
   px = iif(isFixed, x, int(x - XShift))
+    
+    dest.x = px
+    dest.y = y
+    dest.w = iif(w > -1, w, SPRITE_W)
+    dest.h = iif(h > -1, h, SPRITE_H)
   
   SELECT CASE id
 
     CASE idTILE
-
-      SpritesTile.putToScreenEx(px, y, NumSprite, _flip)
+        
+      SpritesTile.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
 
     CASE idMOBS
 
-      SpritesMobs.putToScreenEx(px, y, NumSprite, _flip)
+      SpritesMobs.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
 
     CASE idLARRY
 
-      SpritesLarry.putToScreenEx(px, y, NumSprite, _flip)
+      SpritesLarry.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
 
     CASE idGUTS
 
-      SpritesGuts.putToScreenEx(px, y, NumSprite, _flip)
+      SpritesGuts.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
 
     CASE idLIGHT
 
-      SpritesLight.putToScreenEx(px, y, NumSprite, _flip)
+      SpritesLight.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
    
     CASE idFONT
 
-      SpritesFont.putToScreenEx(px, y, NumSprite, _flip)
+      SpritesFont.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
 
     CASE idSCENE
 
-      SpritesScene.putToScreenEx(px, y, NumSprite, _flip)
+      SpritesScene.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
 
     CASE idOBJECT
 
-      SpritesObject.putToScreenEx(px, y, NumSprite, _flip)
+      SpritesObject.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
 
   END SELECT
 
@@ -2604,7 +2611,15 @@ sub GameNotice_Draw
     
 end sub
 
-sub LD2_RenderForeground
+sub LD2_RenderForeground (renderElevators as integer = 0)
+    
+    MapItems_Draw
+    Guts_Draw
+    Flashes_Draw
+    
+    if renderElevators then
+        Elevators_Draw
+    end if
     
     if ShowLightFG then
         MapLightFG_Draw
@@ -2617,9 +2632,11 @@ sub LD2_RenderForeground
     
 end sub
 
-sub LD2_RenderFrame (renderForeground as integer = 1)
+sub LD2_RenderFrame (flags as integer = 0)
     
-    LD2_LogDebug "LD2_RenderFrame ("+str(renderForeground)+")"
+    LD2_LogDebug "LD2_RenderFrame ("+str(flags)+")"
+    
+    dim renderElevator as integer
     
     LD2_CopyBuffer 2, 1
     LD2_RenderBackground int((Inventory(ItemIds.CurrentRoom)+1)/24)
@@ -2631,21 +2648,27 @@ sub LD2_RenderFrame (renderForeground as integer = 1)
         MapLightBG_Draw
     end if
     
-    if (Player.state <> PlayerStates.EnteringElevator) and (Player.state <> PlayerStates.ExitingElevator) then
+    if (Player.state = PlayerStates.EnteringElevator) or (Player.state = PlayerStates.ExitingElevator) then
+        renderElevator = 0 '* render foreground elevator
+    else
+        renderElevator = 1
+    end if
+    if (flags and RenderFrameFlags.WithElevator) then
+        renderElevator = 1
+    end if
+    if (flags and RenderFrameFlags.WithoutElevator) then
+        renderElevator = 0
+    end if
+    
+    if renderElevator then
         Elevators_Draw
     end if
     Mobs_Draw
     Player_Draw
-    if (Player.state = PlayerStates.EnteringElevator) or (Player.state = PlayerStates.ExitingElevator) then
-        Elevators_Draw
-    end if
     Doors_Draw
-    MapItems_Draw
-    Guts_Draw
-    Flashes_Draw
     
-    if renderForeground then
-        LD2_RenderForeground
+    if (flags and RenderFrameFlags.SkipForeground) = 0 then
+        LD2_RenderForeground iif(renderElevator=1,0,1)
     end if
     
 end sub
@@ -2760,6 +2783,29 @@ sub Map_UnlockElevators
     for n = 0 to NumElevators-1
         Elevators(n).isLocked = 0
     next n
+    
+end sub
+
+sub Map_UpdateShift
+    
+    dim playerShiftX as double
+    
+    if LockShift = 0 then
+        playerShiftX = int(Player.x - XShift)
+        if playerShiftX > 200 then
+            XShift = (Player.x - 200)
+        end if
+        if playerShiftX < 120 then
+            XShift = (Player.x - 120)
+        end if
+    end if
+    
+    if XShift < 0 then
+        XShift   = 0
+    end if
+    if (XShift > 2896) or (XShift > 2800) then
+        XShift = 2896
+    end if
     
 end sub
 
@@ -5221,41 +5267,7 @@ sub Player_Animate()
             end if
     end select
     
-    dim playerShiftX as double
-    dim diffx as double
-    dim dx as double
-    
-    if LockShift = 0 then
-        dx = Player.vx
-        playerShiftX = int(Player.x - XShift)
-        if dx > 0 then
-            if playerShiftX > 215 then
-                diffx = playerShiftX - 215
-                XShift += diffx
-            elseif playerShiftX > 205 then
-                XShift += dx
-            elseif playerShiftX > 200 then
-                XShift += dx
-            end if
-        end if
-        if dx < 0 then
-            if playerShiftX < 95 then
-                diffx = 95 - playerShiftX
-                XShift -= diffx
-            elseif playerShiftX < 115 then
-                XShift +=  dx
-            elseif playerShiftX < 120 then
-                XShift += dx
-            end if
-        end if
-    end if
-    
-    if XShift < 0 then
-        XShift   = 0
-    end if
-    if (XShift > 2896) or (XShift > 2800) then
-        XShift = 2896
-    end if
+    Map_UpdateShift
     
 end sub
 
@@ -5948,8 +5960,13 @@ sub Player_DoAction ()
             end if
         next j
         if atElevator then
-            Player.state = PlayerStates.EnteringElevator
-            exit sub
+            if e.isLocked then
+                GameRevealText = "I should see Barney first before getting back into the elevator."
+                exit sub
+            else
+                Player.state = PlayerStates.EnteringElevator
+                exit sub
+            end if
         end if
     next i
     
@@ -6709,13 +6726,15 @@ end function
 
 sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
     
+    dim n as integer
+    
     e->x = 0
     e->y = 0
     e->w = -1
     e->h = -1
     e->padding_x = 0
     e->padding_y = 0
-    e->border_width = 0
+    e->border_size = 0
     e->border_color = 15
     e->text = text
     e->text_alpha = 1.0
@@ -6725,7 +6744,8 @@ sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as int
     e->text_is_centered = ((flags and ElementFlags.CenterText) > 0)
     e->text_is_monospace = ((flags and ElementFlags.MonospaceText) > 0)
     e->text_align_right = ((flags and ElementFlags.AlignTextRight) > 0)
-    e->background   = -1
+    e->text_length = 0
+    e->background  = -1
     e->background_alpha = 1.0
     e->is_auto_width = 0
     e->is_auto_height = 0
@@ -6733,65 +6753,67 @@ sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as int
     e->is_centered_y = ((flags and ElementFlags.CenterY) > 0)
     e->parent = 0
     e->is_rendered = 0
+    e->sprite = 0
+    e->sprite_set_id = 0
+    
+    e->render_text = ""
+    e->render_x = 0: e->render_y = 0
+    e->render_w = 0: e->render_h = 0
+    e->render_inner_w = 0: e->render_inner_h = 0
+    e->render_outer_w = 0: e->render_outer_h = 0
+    e->render_text_w = 0: e->render_text_h = 0
+    e->render_text_spacing = 0
+    e->render_num_line_breaks = 0
+    for n = 0 to 31: e->render_line_breaks(n) = 0: next n
+    e->render_covered_y = 0
     
 end sub
 
-sub LD2_RenderElement(e as ElementType ptr)
+sub LD2_PrepareElement(e as ElementType ptr)
     
-    dim x as integer
-    dim y as integer
-    dim w as integer
-    dim h as integer
     dim text as string
     dim char as string * 1
-    dim ch as string * 1
-    dim fx as integer, fy as integer
-    dim n as integer
-    dim i as integer
     
-    dim charMax as integer
-    dim lineBreaks(32) as integer
-    dim numLineBreaks as integer
-    dim newText as string
-    dim lineChars as integer
-    dim maxLineChars as integer
-    dim idx as integer
+    dim d as double
     
-    dim backgroundAlpha as integer
-    
-    dim lft as integer, rgt as integer
-    dim top as integer, btm as integer
-    dim pixels as integer
-    dim maxpixels as integer
     dim parentX as integer
     dim parentY as integer
     dim parentW as integer
     dim parentH as integer
+    dim coveredY as integer
     
-    dim _word as string
-    dim printWord as integer
-    dim newLine as integer
-    dim doLTrim as integer
+    dim newText as string
+    dim numLineBreaks as integer
+    dim numAutoBreaks as integer
+    dim lineChars as integer
+    dim maxLineChars as integer
+    dim maxpixels as integer
+    dim pixels as integer
     
-    dim textSpacing as integer
-    dim textHeight as integer
+    dim lineBreaks(32) as integer
+    
     dim textWidth as integer
+    dim textHeight as integer
+    dim textSpacing as integer
+    
     dim totalWidth as integer
     dim totalHeight as integer
     
-    dim d as double
+    dim x as integer, y as integer
+    dim w as integer, h as integer
+    dim n as integer
+    
+    x = e->x: y = e->y
     
     if e->parent = 0 then
         if e->background = -1 then e->background = 0
     end if
-    parentY = LD2_GetParentY(e)
-    if e->y + parentY < parentY then
-        exit sub
+    parentY = iif(e->parent, e->parent->y, 0)
+    if y < 0 then
+        coveredY = abs(y)
+        y = 0
     end if
-    parentX = LD2_GetParentX(e)
-    if e->x + parentX < parentX then
-        exit sub
-    end if
+    parentX = iif(e->parent, e->parent->x, 0)
     parentW = LD2_GetParentW(e)
     parentH = LD2_GetParentH(e)
     
@@ -6817,7 +6839,9 @@ sub LD2_RenderElement(e as ElementType ptr)
     newText = ""
     numLineBreaks = 0
     maxLineChars = 0
+    numAutoBreaks = 0
     lineChars = 0
+    pixels = 0
     for n = 1 to len(text)
         char = mid(text, n, 1)
         if (char = "\") then
@@ -6830,6 +6854,22 @@ sub LD2_RenderElement(e as ElementType ptr)
                 end if
             end if
         else
+            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
+            if (e->w > -1) and (pixels > e->w) then
+                numAutoBreaks += 1
+                pixels -= e->w
+                if lineChars > maxLineChars then
+                    maxLineChars = lineChars
+                    lineChars = 0
+                end if
+            elseif (parentW > 0) and (pixels > parentW) then
+                numAutoBreaks += 1
+                pixels -= parentW
+                if lineChars > maxLineChars then
+                    maxLineChars = lineChars
+                    lineChars = 0
+                end if
+            end if
             newText += char
             lineChars += 1
         end if
@@ -6839,54 +6879,105 @@ sub LD2_RenderElement(e as ElementType ptr)
         maxLineChars = len(newText)
     end if
     
-    w = e->w
-    h = e->h
+    if e->w = -1 then e->is_auto_width  = 1
+    if e->h = -1 then e->is_auto_height = 1
+    if e->is_auto_width  then e->w = textWidth
+    if e->is_auto_height then e->h = (numLineBreaks+numAutoBreaks+1)*textHeight
+    
+    w = e->w: h = e->h
+    
     if parentW = -1 then parentW = SCREEN_W
     if parentH = -1 then parentH = SCREEN_H
-    if (e->w = -1) and (maxpixels > parentW) then
-        w = parentW
-    elseif e->w = -1 then
-        e->is_auto_width = 1
-    end if
-    if e->h = -1 then e->is_auto_height = 1
-    w = iif(e->is_auto_width, textWidth, w)
-    h = iif(e->is_auto_height, (numLineBreaks+1)*textHeight, h)
+    if w > parentW-(x+e->border_size*2+e->padding_x*2) then w = parentW-(x+e->border_size*2+e->padding_x*2)
+    if h > parentH-(y+e->border_size*2+e->padding_y*2) then h = parentH-(y+e->border_size*2+e->padding_y*2)
     
-    totalWidth  = w+e->padding_x*2+e->border_width*2
-    totalHeight = h+e->padding_y*2+e->border_width*2
+    totalWidth  = w+e->padding_x*2+e->border_size*2
+    totalHeight = h+e->padding_y*2+e->border_size*2
     
-    if e->is_centered_x then e->x = int((parentW-totalWidth)/2)
-    if e->is_centered_y then e->y = int((parentH-totalHeight)/2) '- parentH
+    x += parentX: y += parentY
     
-    if e->border_width > 0 then
+    if e->is_centered_x then x += int((parentW-totalWidth)/2)
+    if e->is_centered_y then y += int((parentH-totalHeight)/2)
+    
+    e->render_text = text
+    e->render_x = x: e->render_y = y
+    e->render_w = w: e->render_h = h
+    e->render_inner_w = w+e->padding_x*2
+    e->render_inner_h = h+e->padding_y*2
+    e->render_outer_w = totalWidth
+    e->render_outer_h = totalHeight
+    e->render_text_w = textWidth
+    e->render_text_h = textHeight
+    e->render_text_spacing = textSpacing
+    for n = 0 to numLineBreaks-1
+        e->render_line_breaks(n) = lineBreaks(n)
+    next n
+    e->render_num_line_breaks = numLineBreaks
+    e->render_covered_y = coveredY
+    
+end sub
 
-        lft = e->x + parentX
-        top = e->y + parentY
-        rgt = lft+w+e->padding_x*2+e->border_width
-        btm = top+h+e->padding_y*2+e->border_width
+sub LD2_RenderElement(e as ElementType ptr)
+    
+    dim x as integer
+    dim y as integer
+    dim text as string
+    dim char as string * 1
+    dim ch as string * 1
+    dim fx as integer, fy as integer
+    dim n as integer
+    dim i as integer
+    
+    dim idx as integer
+    
+    dim backgroundAlpha as integer
+    
+    dim lft as integer, rgt as integer
+    dim top as integer, btm as integer
+    dim pixels as integer
+    
+    dim prevWordBreak as integer
+    dim lookAhead as integer
+    dim textLength as integer
+    dim _word as string
+    dim printWord as integer
+    dim newLine as integer
+    dim doLTrim as integer
+    
+    LD2_PrepareElement e
+    
+    if e->border_size > 0 then
+
+        lft = e->render_x
+        top = e->render_y
+        rgt = lft+e->render_w+e->padding_x*2+e->border_size
+        btm = top+e->render_h+e->padding_y*2+e->border_size
         
-        LD2_fill lft, top, totalWidth, e->border_width, e->border_color, 1
-        LD2_fill lft, top, e->border_width, totalHeight, e->border_color, 1
-        LD2_fill rgt, top, e->border_width, totalHeight, e->border_color, 1
-        LD2_fill lft, btm, totalWidth, e->border_width, e->border_color, 1
+        LD2_fill lft, top, e->render_outer_w, e->border_size, e->border_color, 1
+        LD2_fill lft, top, e->border_size, e->render_outer_h, e->border_color, 1
+        LD2_fill rgt, top, e->border_size, e->render_outer_h, e->border_color, 1
+        LD2_fill lft, btm, e->render_outer_w, e->border_size, e->border_color, 1
 
     end if
 
-    x = e->x+e->border_width+parentX: y = e->y+e->border_width+parentY
-    w += e->padding_x*2: h += e->padding_y*2
-    
     if e->background >= 0 then
+        x = e->render_x+e->border_size
+        y = e->render_y+e->border_size
         backgroundAlpha = int(e->background_alpha * 255)
-        LD2_fillm x, y, w, h, e->background, 1, backgroundAlpha
+        LD2_fillm x, y, e->render_inner_w, e->render_inner_h, e->background, 1, backgroundAlpha
     end if
     SpritesFont.setAlphaMod(int(e->text_alpha * 255))
     
-    w -= e->padding_x*2: h -= e->padding_y*2
-    x = e->x+e->padding_x+e->border_width+parentX: y = e->y+e->padding_y+e->border_width+parentY
-    if e->text_is_centered then x += int((w-textWidth)/2) '- center for each line break -- todo
-    if e->text_align_right then x = (e->x+e->padding_x+e->border_width+w)-textWidth
-    fx = x: fy = y
-
+    x = e->render_x+e->border_size+e->padding_x
+    y = e->render_y+e->border_size+e->padding_y
+    if e->text_is_centered then x += int((e->render_w-e->render_text_w)/2) '- center for each line break -- todo
+    if e->text_align_right then x = (e->render_x+e->padding_x+e->border_size+e->render_w)-e->render_text_w
+    fx = x: fy = y-e->render_covered_y
+    
+    if e->sprite > -1 then
+        LD2_put x, y, e->sprite, e->sprite_set_id, 0, 0, e->render_w, e->render_h
+    end if
+    
     idx = 0
     pixels = 0
     _word = ""
@@ -6894,15 +6985,24 @@ sub LD2_RenderElement(e as ElementType ptr)
     newLine = 0
     doLTrim = 0
     
+    text = e->render_text
+    
     LD2_SetSpritesColor(@SpritesFont, e->text_color)
     
+    if fy+e->render_text_h > e->render_y+e->render_inner_h+e->border_size then
+        e->is_rendered = 1
+        exit sub
+    end if
+    lookAhead = 0
+    prevWordBreak = 0
+    textLength = iif(e->text_length > 0, e->text_length, len(text))
     for n = 1 to len(text)
         char = mid(text, n, 1)
         if char = " " then
             printWord = 1
         end if
-        if numLineBreaks > 0 then
-            if n = lineBreaks(idx) then
+        if e->render_num_line_breaks > 0 then
+            if n = e->render_line_breaks(idx) then
                 idx += 1
                 printWord = 1
                 newLine = 1
@@ -6911,36 +7011,59 @@ sub LD2_RenderElement(e as ElementType ptr)
         if n = len(text) then
             printWord = 1
             _word += char
-            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), textSpacing, 0)
+            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), e->render_text_spacing, 0)
+        end if
+        if (n = textLength) and (printWord = 0) then
+            lookAhead = 1
+        end if
+        if lookAhead and (printWord or newLine) then
+            lookAhead = 0
+            if pixels > e->render_w then
+                printWord = 0
+            else
+                _word = left(_word, textLength-prevWordBreak+1)
+            end if
         end if
         if printWord and (len(_word) > 0) then
             if doLTrim then
                 _word = ltrim(_word)
                 doLtrim = 0
             end if
-            if pixels > w then
-                fy += textHeight
+            if pixels > e->render_w then
+                fy += e->render_text_h
                 fx = x
                 _word = ltrim(_word)
+                if fy+e->render_text_h > e->render_y+e->render_inner_h+e->border_size then
+                    exit for
+                end if
             end if
             for i = 1 to len(_word)
                 ch = mid(_word, i, 1)
-                SpritesFont.putToScreen(int(fx)-FontCharMargins(fontVal(ch)), fy, fontVal(ch))
-                fx += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(ch)))+textSpacing
+                if fy >= y then
+                    SpritesFont.putToScreen(int(fx)-FontCharMargins(fontVal(ch)), fy, fontVal(ch))
+                end if
+                fx += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(ch)))+e->render_text_spacing
             next i
             _word = ""
             pixels = fx - x
+            prevWordBreak = n
         end if
         if newLine then
             pixels = 0
-            fy += textHeight
+            fy += e->render_text_h
             fx = x
-            doLtrim =1
+            doLtrim = 1
+            if fy+e->render_text_h > e->render_y+e->render_inner_h+e->border_size then
+                exit for
+            end if
         end if
         _word += char
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), textSpacing, 0)
+        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), e->render_text_spacing, 0)
         newLine = 0
         printWord = 0
+        if (n >= textLength) and (lookAhead = 0) then
+            exit for
+        end if
     next n
     e->is_rendered = 1
     
@@ -7037,6 +7160,7 @@ function LD2_GetParentY(e as ElementType ptr, y as integer = -999999) as integer
     
 end function
 
+'* replace with only getting first parent width (need function to calc auto-width without rendering)
 function LD2_GetParentW(e as ElementType ptr) as integer
     
     dim parent as ElementType ptr
@@ -7046,7 +7170,7 @@ function LD2_GetParentW(e as ElementType ptr) as integer
         if parent->w = -1 then
             return LD2_GetParentW(parent)
         else
-            return parent->w
+            return parent->w+parent->padding_x*2+parent->border_size*2
         end if
     else
         return -1
@@ -7063,7 +7187,7 @@ function LD2_GetParentH(e as ElementType ptr) as integer
         if parent->h = -1 then
             return LD2_GetParentH(parent)
         else
-            return parent->h
+            return parent->h+parent->padding_y*2+parent->border_size*2
         end if
     else
         return -1
@@ -7157,7 +7281,7 @@ sub LD2_LoadFontMetrics(filename as string)
             if leftMost <= rightMost then
                 charWidth = (rightMost - leftMost) + 1
             else
-                charWidth = FONT_W '- assume space
+                charWidth = int(FONT_W * 0.75) '- assume space
             end if
             if n = 64 then charWidth = FONT_W: rightMost = -1 '* "|"
             FontCharWidths(n) = charWidth
