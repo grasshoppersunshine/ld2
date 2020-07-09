@@ -785,6 +785,8 @@ sub LoadSounds ()
     
     AddSound Sounds.rumble, "rumble.wav", 1
     
+    AddSound Sounds.squishy, "splice/squishy.wav"
+    
 end sub
 
 sub LoadMusic ()
@@ -1041,6 +1043,7 @@ SUB Main
         Doors_Animate
         Elevators_Animate
         Flashes_Animate
+        Shakes_Animate
         resetClocks = 0
     end if
 	LD2_RenderFrame
@@ -1607,7 +1610,7 @@ sub SceneCheck (player as PlayerType)
         end if
     case "SCENE-JANITOR-DIES"
         if Player_NotItem(ItemIds.SceneJanitorDies) and Player_HasItem(ItemIds.SceneJanitor) then
-            Scene4
+            'Scene4
         end if
     case "SCENE-ELEVATOR"
         if Player_NotItem(ItemIds.SceneElevator) then
@@ -2604,7 +2607,9 @@ sub NewGame
             Player_AddAmmo ItemIds.MachineGun, 99
             Player_AddAmmo ItemIds.Shotgun, 99
             Player_AddAmmo ItemIds.Magnum, 99
-            LD2_AddToStatus(ItemIds.Medikit100, 3)
+            LD2_AddToStatus(ItemIds.Medikit100, 1)
+            LD2_AddToStatus(ItemIds.JanitorNote, 1)
+            LD2_AddToStatus(ItemIds.MysteryMeat, 1)
         end if
         Boot_ReadyCommandArgs
         while Boot_HasNextCommandArg()
@@ -2763,9 +2768,16 @@ end sub
 
 sub LD2_LookItem (id as integer, byref desc as string)
     
+    dim n as integer
+    
     select case id
     case ItemIds.JanitorNote
-        desc += " * "+left(RoofCode,1)+" - "+mid(RoofCode,2,1)+" - "+mid(RoofCode,3,1)+" - "+mid(RoofCode,4,1)
+        desc += "| - "
+        for n = 1 to len(RoofCode)
+            desc += mid(RoofCode, n, 1)+" - "
+        next n
+        desc += "|"
+        desc = trim(desc)
     end select
     
 end sub

@@ -3,6 +3,15 @@
 #include once "palette256.bi"
 #include once "video.bi"
 
+type VideoSpritesMetrics
+    
+    top as integer
+    btm as integer
+    lft as integer
+    rgt as integer
+    
+end type
+
 type VideoSprites
 private:
     _w as integer
@@ -14,13 +23,14 @@ private:
     _renderer as SDL_Renderer ptr
     _palette as Palette256 ptr
     _transparentColor as integer
+    redim _metrics(0) as VideoSpritesMetrics
 public:
     declare sub init(v as Video ptr, w as integer = 0, h as integer = 0)
     declare sub setCenter(x as integer, y as integer)
     declare sub resetCenter()
     declare sub setPalette(p as Palette256 ptr)
     declare sub setAsTarget()
-    declare sub load(filename as string)
+    declare sub load(filename as string, crop as integer = 0)
     declare sub loadBmp(filename as string)
     declare sub setTransparentColor(c as integer)
     declare sub putToScreen(x as integer, y as integer, spriteNum as integer = 0)
@@ -28,4 +38,5 @@ public:
     declare sub setColorMod(r as integer, g as integer, b as integer)
     declare sub setAlphaMod(a as integer)
     declare function getCount() as integer
+    declare sub getMetrics(spriteNum as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
 end type

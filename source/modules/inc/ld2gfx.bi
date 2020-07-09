@@ -38,4 +38,5 @@ DECLARE SUB LD2_LoadBitmap (filename AS STRING, BufferNum AS INTEGER, Convert AS
 enum SpriteFlags
     Transparent = &h01
     UseWhitePalette = &h02
+    Crop = &h04
 end enum

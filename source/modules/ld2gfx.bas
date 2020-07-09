@@ -166,7 +166,7 @@ sub LD2_InitSprites(filename as string, sprites as VideoSprites ptr, w as intege
         sprites->setTransparentColor(0)
     end if
     if len(filename) then
-        sprites->load(filename)
+        sprites->load(filename, iif(flags and SpriteFlags.Crop, 1, 0))
     end if
     
 end sub

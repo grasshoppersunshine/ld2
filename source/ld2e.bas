@@ -149,6 +149,12 @@
         timestamp as double
     end type
     
+    type ShakeType
+        duration as double
+        intensity as double
+        screenshake as double
+    end type
+    
     '*******************************************************************
     '* MAP PROPS
     '*******************************************************************
@@ -228,6 +234,7 @@
     dim shared SpritesGuts as VideoSprites
     dim shared SpritesScene as VideoSprites
     dim shared SpritesObject as VideoSprites
+    dim shared SpritesObjectCropped as VideoSprites
     dim shared SpritesFont as VideoSprites
     
     dim shared PaletteFile as string
@@ -258,6 +265,7 @@
     dim shared Switches   (MAXSWAPS) as SwitchType
     dim shared Teleports  (MAXTELEPORTS) as TeleportType
     dim shared Flashes    (MAXFLASHES) as FlashType
+    dim shared Shakes     (MAXSHAKES) as ShakeType
     dim shared Sectors    (MAXSECTORS) as SectorType
     dim shared NumItems as integer
     dim shared NumDoors as integer
@@ -267,6 +275,7 @@
     dim shared NumSwitches as integer
     dim shared NumTeleports as integer
     dim shared NumFlashes as integer
+    dim shared NumShakes as integer
     dim shared NumSectors as integer
     dim shared XShift as double
     dim shared Mobs as MobileCollection
@@ -285,9 +294,11 @@
     '*******************************************************************
     '* GLOBAL VARS
     '*******************************************************************
-    dim shared Gravity as single
+    dim shared Gravity as double
+    dim shared QuakeClock as double
+    dim shared QuakeCounter as double
     
-    dim shared AVGFPS   as single
+    dim shared AVGFPS   as double
     dim shared FPS      as integer
     dim shared FPSCOUNT as integer
     dim shared DELAYMOD as double
@@ -304,7 +315,7 @@
     
     dim shared GameFlags as integer
     dim shared GameNoticeMsg as string
-    dim shared GameNoticeExpire as single
+    dim shared GameNoticeExpire as double
     
     dim shared GameRevealText as string
     
@@ -978,6 +989,7 @@ sub Game_Init
     LoadSprites GutsFile   , idGUTS
     LoadSprites SceneFile  , idSCENE
     LoadSprites ObjectsFile, idOBJECT
+    LoadSprites ObjectsFile, idOBJCRP
     LoadSprites BossFile   , idBOSS
     LoadSprites FontFile   , idFONT
     
@@ -1625,6 +1637,32 @@ sub Map_Load101 (filename as string)
     
 end sub
 
+function LD2_GetVideoSprites(id as integer) as VideoSprites ptr
+    
+    select case id
+    case idTILE  : return @SpritesTile
+    case idMOBS  : return @SpritesMobs
+    case idLARRY : return @SpritesLarry
+    case idGUTS  : return @SpritesGuts
+    case idLIGHT : return @SpritesLight
+    case idFONT  : return @SpritesFont
+    case idSCENE : return @SpritesScene
+    case idOBJECT: return @SpritesObject
+    case idOBJCRP: return @SpritesObjectCropped
+    end select
+    
+end function
+
+sub LD2_GetSpriteMetrics(spriteId as integer, setId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+    
+    dim sprites as VideoSprites ptr
+    
+    sprites = LD2_GetVideoSprites(setId)
+    if sprites then
+        sprites->getMetrics spriteId, x, y, w, h
+    end if
+    
+end sub
 
 SUB LoadSprites (Filename as string, BufferNum as integer)
   
@@ -1675,6 +1713,10 @@ SUB LoadSprites (Filename as string, BufferNum as integer)
     CASE idOBJECT
 
       LD2_InitSprites filename, @SpritesObject, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
+    
+    CASE idOBJCRP
+
+      LD2_InitSprites filename, @SpritesObjectCropped, SPRITE_W, SPRITE_H, SpriteFlags.Transparent or SpriteFlags.Crop
  
   END SELECT
 
@@ -2333,7 +2375,7 @@ sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as intege
     
 end sub
 
-SUB LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0, w as integer = -1, h as integer = -1)
+SUB LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0, w as integer = -1, h as integer = -1, rot as integer = 0)
   
   LD2_SetTargetBuffer 1
   
@@ -2350,35 +2392,39 @@ SUB LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _f
 
     CASE idTILE
         
-      SpritesTile.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
+      SpritesTile.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
 
     CASE idMOBS
 
-      SpritesMobs.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
+      SpritesMobs.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
 
     CASE idLARRY
 
-      SpritesLarry.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
+      SpritesLarry.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
 
     CASE idGUTS
 
-      SpritesGuts.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
+      SpritesGuts.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
 
     CASE idLIGHT
 
-      SpritesLight.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
+      SpritesLight.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
    
     CASE idFONT
 
-      SpritesFont.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
+      SpritesFont.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
 
     CASE idSCENE
 
-      SpritesScene.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
+      SpritesScene.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
 
     CASE idOBJECT
 
-      SpritesObject.putToScreenEx(px, y, NumSprite, _flip, 0, 0, @dest)
+      SpritesObject.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
+    
+    CASE idOBJCRP
+
+      SpritesObjectCropped.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
 
   END SELECT
 
@@ -2637,10 +2683,15 @@ sub LD2_RenderFrame (flags as integer = 0)
     LD2_LogDebug "LD2_RenderFrame ("+str(flags)+")"
     
     dim renderElevator as integer
+    dim pushShift as double
     
     LD2_CopyBuffer 2, 1
     LD2_RenderBackground int((Inventory(ItemIds.CurrentRoom)+1)/24)
     LD2_SetTargetBuffer 1
+    
+    pushShift = XShift
+    
+    XShift += Shakes_GetScreenShake()
     
     MapTiles_Draw
     
@@ -2670,6 +2721,8 @@ sub LD2_RenderFrame (flags as integer = 0)
     if (flags and RenderFrameFlags.SkipForeground) = 0 then
         LD2_RenderForeground iif(renderElevator=1,0,1)
     end if
+    
+    XShift = pushShift
     
 end sub
 
@@ -2704,6 +2757,58 @@ sub Game_UnsetFlag (flag as integer)
     GameFlags = (GameFlags or flag) xor flag
     
 end sub
+
+sub Shakes_Add (duration as double = 1.0, intensity as double = 1.0)
+    
+    dim n as integer
+    
+    if NumShakes < MAXSHAKES then
+        n = NumShakes: NumShakes += 1
+        Shakes(n).duration    = duration
+        Shakes(n).intensity   = intensity
+        Shakes(n).screenshake = getEaseInShake(0.15)*intensity
+    end if
+    
+end sub
+
+sub Shakes_Animate (resetClocks as integer = 0)
+    
+    dim duration as double
+    dim intensity as double
+    dim i as integer
+    dim j as integer
+    
+    for i = 0 to NumShakes-1
+        if Shakes(i).screenshake = 0 then
+            NumShakes -= 1
+            for j = i to NumShakes-1
+                Shakes(j) = Shakes(j+1)
+            next j
+            i -= 1
+            if i >= NumShakes-1 then
+                exit for
+            end if
+        end if
+        duration  = Shakes(i).duration
+        intensity = Shakes(i).intensity
+        Shakes(i).screenshake = getEaseInShake(0, duration)*intensity
+    next i
+    
+end sub
+
+function Shakes_GetScreenShake() as double
+    
+    dim sum as double
+    dim n as integer
+    
+    sum = 0
+    for n = 0 to NumShakes-1
+        sum += Shakes(n).screenshake
+    next n
+    
+    return sum
+    
+end function
 
 sub LD2_SetSceneMode (OnOff as integer)
     
@@ -2788,26 +2893,95 @@ end sub
 
 sub Map_UpdateShift
     
-    dim playerShiftX as double
+    if LockShift then
+        exit sub
+    end if
     
-    if LockShift = 0 then
-        playerShiftX = int(Player.x - XShift)
-        if playerShiftX > 200 then
-            XShift = (Player.x - 200)
+    static direction as integer = -1
+    static anchor as double
+    static target as double
+    static clock as double
+    static e as double
+    
+    dim timediff as double
+    dim movement as double
+    dim dist as double
+    dim easeSpeed as double
+    dim focus as double
+    dim d as double
+    
+    easeSpeed = 0.4
+    
+    select case Player._flip
+        case 0: focus = -140
+        case 1: focus = -160
+    end select
+    
+    if direction <> Player._flip then
+        direction = Player._flip
+        e = 0
+        clock = timer
+    end if
+    
+    if e = 0 then
+        anchor = XShift
+        target = Player.x+focus
+    else
+        movement = (Player.x+focus)-target
+        anchor += movement
+        target += movement
+        if movement <> 0 then
+            easeSpeed *= 0.5
         end if
-        if playerShiftX < 120 then
-            XShift = (Player.x - 120)
+    end if
+    
+    timediff = (timer-clock)
+    if timediff > 0.01 then
+        timediff *= (timediff/0.01)
+        e += timediff*easeSpeed
+        if e > 1 then
+            e = 1
+        end if
+        clock = timer
+        
+        d = (1-e)*(1-e)*(1-e)
+        if anchor < target then
+            XShift = anchor+(target-anchor)*(1-d)
+        else
+            XShift = anchor+(target-anchor)*(1-d)
         end if
     end if
     
     if XShift < 0 then
-        XShift   = 0
+        XShift = 0
     end if
     if (XShift > 2896) or (XShift > 2800) then
         XShift = 2896
     end if
     
 end sub
+
+function getEaseInShake(doReset as double = 0, speed as double = 1.0) as double
+    
+    static clock as double
+    static e as double
+    dim d as double
+    
+    if doReset <> 0 then
+        e = iif(doReset < 1, doReset, 0)
+    else
+        e += (timer-clock)/speed
+        if e > 1 then
+            e = 1
+        end if
+    end if
+    clock = timer
+    
+    d = sin(e*6*PI)*(1-e)
+    
+    return d
+    
+end function
 
 sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer = LayerIds.Tile)
     
@@ -6243,6 +6417,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 8)
         Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.SgCrouchShoot0-1, UpperSprites.SgShoot0-1))
         Player.stillAni = Player.uAni
+        Shakes_Add 0.15, SPRITE_W*0.25
         
     case ItemIds.Handgun
         
@@ -6258,6 +6433,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 5)
         Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.HgCrouchShoot0-1, UpperSprites.HgShoot0-1))
         Player.stillAni = Player.uAni
+        Shakes_Add 0.10, SPRITE_W*0.25
         
     case ItemIds.MachineGun
         
@@ -6267,6 +6443,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 7, 5)
         Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.MgCrouchShoot0-1, UpperSprites.MgShoot0-1))
         Player.stillAni = Player.uAni
+        Shakes_Add 0.10, SPRITE_W*0.25
         
     case ItemIds.Magnum
         
@@ -6277,6 +6454,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 8)
         Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.MaCrouchShoot0-1, UpperSprites.MaShoot0-1))
         Player.stillAni = Player.uAni
+        Shakes_Add 0.2, SPRITE_W*0.5
         
         if Player.state <> PlayerStates.Jumping then
             SetPlayerState( PlayerStates.Blocked )
@@ -6468,6 +6646,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             LD2_RenderFrame
             LD2_RefreshScreen
             WaitSeconds 0.05
+            Shakes_Add 0.15, SPRITE_W*0.25
         end if
     else
         return 0
@@ -6744,7 +6923,7 @@ sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as int
     e->text_is_centered = ((flags and ElementFlags.CenterText) > 0)
     e->text_is_monospace = ((flags and ElementFlags.MonospaceText) > 0)
     e->text_align_right = ((flags and ElementFlags.AlignTextRight) > 0)
-    e->text_length = 0
+    e->text_length = -1
     e->background  = -1
     e->background_alpha = 1.0
     e->is_auto_width = 0
@@ -6753,19 +6932,26 @@ sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as int
     e->is_centered_y = ((flags and ElementFlags.CenterY) > 0)
     e->parent = 0
     e->is_rendered = 0
-    e->sprite = 0
+    e->sprite = -1
     e->sprite_set_id = 0
+    e->sprite_centered_x = ((flags and ElementFlags.SpriteCenterX) > 0)
+    e->sprite_centered_y = ((flags and ElementFlags.SpriteCenterY) > 0)
+    e->sprite_zoom = 1.0
+    e->sprite_flip = 0
+    e->sprite_rot = 0
     
     e->render_text = ""
     e->render_x = 0: e->render_y = 0
-    e->render_w = 0: e->render_h = 0
+    e->render_visible_x = -1
+    e->render_visible_y = -1
+    e->render_visible_w = 0
+    e->render_visible_h = 0
     e->render_inner_w = 0: e->render_inner_h = 0
     e->render_outer_w = 0: e->render_outer_h = 0
     e->render_text_w = 0: e->render_text_h = 0
     e->render_text_spacing = 0
     e->render_num_line_breaks = 0
     for n = 0 to 31: e->render_line_breaks(n) = 0: next n
-    e->render_covered_y = 0
     
 end sub
 
@@ -6780,7 +6966,6 @@ sub LD2_PrepareElement(e as ElementType ptr)
     dim parentY as integer
     dim parentW as integer
     dim parentH as integer
-    dim coveredY as integer
     
     dim newText as string
     dim numLineBreaks as integer
@@ -6799,6 +6984,9 @@ sub LD2_PrepareElement(e as ElementType ptr)
     dim totalWidth as integer
     dim totalHeight as integer
     
+    dim visible_x as integer
+    dim visible_y as integer
+    
     dim x as integer, y as integer
     dim w as integer, h as integer
     dim n as integer
@@ -6809,10 +6997,6 @@ sub LD2_PrepareElement(e as ElementType ptr)
         if e->background = -1 then e->background = 0
     end if
     parentY = iif(e->parent, e->parent->y, 0)
-    if y < 0 then
-        coveredY = abs(y)
-        y = 0
-    end if
     parentX = iif(e->parent, e->parent->x, 0)
     parentW = LD2_GetParentW(e)
     parentH = LD2_GetParentH(e)
@@ -6885,25 +7069,30 @@ sub LD2_PrepareElement(e as ElementType ptr)
     if e->is_auto_height then e->h = (numLineBreaks+numAutoBreaks+1)*textHeight
     
     w = e->w: h = e->h
+    totalWidth  = w+e->padding_x*2+e->border_size*2
+    totalHeight = h+e->padding_y*2+e->border_size*2
     
     if parentW = -1 then parentW = SCREEN_W
     if parentH = -1 then parentH = SCREEN_H
-    if w > parentW-(x+e->border_size*2+e->padding_x*2) then w = parentW-(x+e->border_size*2+e->padding_x*2)
-    if h > parentH-(y+e->border_size*2+e->padding_y*2) then h = parentH-(y+e->border_size*2+e->padding_y*2)
-    
-    totalWidth  = w+e->padding_x*2+e->border_size*2
-    totalHeight = h+e->padding_y*2+e->border_size*2
+    if totalWidth  > parentW then w = parentW-(iif(x>0,x,0)+e->border_size*2+e->padding_x*2)
+    if totalHeight > parentH then h = parentH-(iif(y>0,y,0)+e->border_size*2+e->padding_y*2)
     
     x += parentX: y += parentY
     
     if e->is_centered_x then x += int((parentW-totalWidth)/2)
     if e->is_centered_y then y += int((parentH-totalHeight)/2)
     
+    visible_x = iif(x>0,x,0)
+    visible_y = iif(y>0,y,0)
+    
     e->render_text = text
     e->render_x = x: e->render_y = y
-    e->render_w = w: e->render_h = h
-    e->render_inner_w = w+e->padding_x*2
-    e->render_inner_h = h+e->padding_y*2
+    e->render_visible_x = visible_x
+    e->render_visible_y = visible_y
+    e->render_visible_w = w
+    e->render_visible_h = h
+    e->render_inner_w = e->w+e->padding_x*2
+    e->render_inner_h = e->h+e->padding_y*2
     e->render_outer_w = totalWidth
     e->render_outer_h = totalHeight
     e->render_text_w = textWidth
@@ -6913,7 +7102,6 @@ sub LD2_PrepareElement(e as ElementType ptr)
         e->render_line_breaks(n) = lineBreaks(n)
     next n
     e->render_num_line_breaks = numLineBreaks
-    e->render_covered_y = coveredY
     
 end sub
 
@@ -6950,13 +7138,16 @@ sub LD2_RenderElement(e as ElementType ptr)
 
         lft = e->render_x
         top = e->render_y
-        rgt = lft+e->render_w+e->padding_x*2+e->border_size
-        btm = top+e->render_h+e->padding_y*2+e->border_size
+        rgt = lft+e->w+e->padding_x*2+e->border_size
+        btm = top+e->h+e->padding_y*2+e->border_size
         
         LD2_fill lft, top, e->render_outer_w, e->border_size, e->border_color, 1
         LD2_fill lft, top, e->border_size, e->render_outer_h, e->border_color, 1
         LD2_fill rgt, top, e->border_size, e->render_outer_h, e->border_color, 1
         LD2_fill lft, btm, e->render_outer_w, e->border_size, e->border_color, 1
+        
+        'LD2_fill lft, top+int(e->render_outer_h*0.5), e->render_outer_w, e->border_size, e->border_color, 1
+        'LD2_fill lft+int(e->render_outer_w*0.5), top, e->border_size, e->render_outer_h, e->border_color, 1
 
     end if
 
@@ -6970,12 +7161,26 @@ sub LD2_RenderElement(e as ElementType ptr)
     
     x = e->render_x+e->border_size+e->padding_x
     y = e->render_y+e->border_size+e->padding_y
-    if e->text_is_centered then x += int((e->render_w-e->render_text_w)/2) '- center for each line break -- todo
-    if e->text_align_right then x = (e->render_x+e->padding_x+e->border_size+e->render_w)-e->render_text_w
-    fx = x: fy = y-e->render_covered_y
+    if e->text_is_centered then x += int((e->w-e->render_text_w)/2) '- center for each line break -- todo
+    if e->text_align_right then x = (e->render_x+e->padding_x+e->border_size+e->w)-e->render_text_w
+    if x < e->render_x then
+        x = e->render_x
+    end if
+    fx = x: fy = y
     
     if e->sprite > -1 then
-        LD2_put x, y, e->sprite, e->sprite_set_id, 0, 0, e->render_w, e->render_h
+        if e->sprite_centered_x or e->sprite_centered_y then
+            dim sp_x as integer, sp_y as integer
+            dim sp_w as integer, sp_h as integer
+            LD2_GetSpriteMetrics e->sprite, e->sprite_set_id, sp_x, sp_y, sp_w, sp_h
+            if e->sprite_set_id = idOBJCRP then SpritesObjectCropped.setCenter int(sp_w*0.5*e->w/SPRITE_W), int(sp_h*0.5*e->h/SPRITE_H)
+            sp_x = iif(e->sprite_centered_x, int((SPRITE_W-int(sp_w*e->sprite_zoom))*0.5*e->w/SPRITE_W), 0)
+            sp_y = iif(e->sprite_centered_y, int((SPRITE_H-int(sp_h*e->sprite_zoom))*0.5*e->h/SPRITE_H), 0)
+            LD2_put x+sp_x, y+sp_y, e->sprite, e->sprite_set_id, e->sprite_flip, 1, int(e->w*e->sprite_zoom), int(e->h*e->sprite_zoom), e->sprite_rot
+            SpritesObjectCropped.resetCenter
+        else
+            LD2_put x, y, e->sprite, e->sprite_set_id, e->sprite_flip, 1, int(e->w*e->sprite_zoom), int(e->h*e->sprite_zoom), e->sprite_rot
+        end if
     end if
     
     idx = 0
@@ -6989,13 +7194,13 @@ sub LD2_RenderElement(e as ElementType ptr)
     
     LD2_SetSpritesColor(@SpritesFont, e->text_color)
     
-    if fy+e->render_text_h > e->render_y+e->render_inner_h+e->border_size then
+    if fy+e->render_text_h > e->render_visible_y+e->render_visible_h then
         e->is_rendered = 1
         exit sub
     end if
     lookAhead = 0
     prevWordBreak = 0
-    textLength = iif(e->text_length > 0, e->text_length, len(text))
+    textLength = iif(e->text_length > -1, e->text_length, len(text))
     for n = 1 to len(text)
         char = mid(text, n, 1)
         if char = " " then
@@ -7018,7 +7223,7 @@ sub LD2_RenderElement(e as ElementType ptr)
         end if
         if lookAhead and (printWord or newLine) then
             lookAhead = 0
-            if pixels > e->render_w then
+            if pixels > e->w then
                 printWord = 0
             else
                 _word = left(_word, textLength-prevWordBreak+1)
@@ -7029,17 +7234,17 @@ sub LD2_RenderElement(e as ElementType ptr)
                 _word = ltrim(_word)
                 doLtrim = 0
             end if
-            if pixels > e->render_w then
+            if pixels > e->w then
                 fy += e->render_text_h
                 fx = x
                 _word = ltrim(_word)
-                if fy+e->render_text_h > e->render_y+e->render_inner_h+e->border_size then
+                if fy+e->render_text_h > e->render_visible_y+e->render_visible_h then
                     exit for
                 end if
             end if
             for i = 1 to len(_word)
                 ch = mid(_word, i, 1)
-                if fy >= y then
+                if fy >= e->render_visible_y then
                     SpritesFont.putToScreen(int(fx)-FontCharMargins(fontVal(ch)), fy, fontVal(ch))
                 end if
                 fx += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(ch)))+e->render_text_spacing
@@ -7053,7 +7258,7 @@ sub LD2_RenderElement(e as ElementType ptr)
             fy += e->render_text_h
             fx = x
             doLtrim = 1
-            if fy+e->render_text_h > e->render_y+e->render_inner_h+e->border_size then
+            if fy+e->render_text_h > e->render_visible_y+e->render_visible_h then
                 exit for
             end if
         end if
@@ -7170,7 +7375,7 @@ function LD2_GetParentW(e as ElementType ptr) as integer
         if parent->w = -1 then
             return LD2_GetParentW(parent)
         else
-            return parent->w+parent->padding_x*2+parent->border_size*2
+            return parent->w
         end if
     else
         return -1
@@ -7187,7 +7392,7 @@ function LD2_GetParentH(e as ElementType ptr) as integer
         if parent->h = -1 then
             return LD2_GetParentH(parent)
         else
-            return parent->h+parent->padding_y*2+parent->border_size*2
+            return parent->h
         end if
     else
         return -1

@@ -58,11 +58,18 @@ type ElementType
     is_rendered as integer
     sprite as integer
     sprite_set_id as integer
+    sprite_centered_x as integer
+    sprite_centered_y as integer
+    sprite_zoom as double
+    sprite_flip as integer
+    sprite_rot as integer
     render_text as string
     render_x as integer
     render_y as integer
-    render_w as integer
-    render_h as integer
+    render_visible_x as integer
+    render_visible_y as integer
+    render_visible_w as integer
+    render_visible_h as integer
     render_inner_w as integer
     render_inner_h as integer
     render_outer_w as integer
@@ -72,7 +79,6 @@ type ElementType
     render_text_spacing as integer
     render_num_line_breaks as integer
     render_line_breaks(32) as integer
-    render_covered_y as integer
 end type
 
 type GutsIncorporated
@@ -305,6 +311,11 @@ declare sub Boot_ReadyCommandArgs()
 declare function Boot_HasNextCommandArg() as integer
 declare function Boot_GetNextCommandArg() as string
 
+declare sub Shakes_Add (duration as double = 1.0, intensity as double = 1.0)
+declare sub Shakes_Animate (resetClocks as integer = 0)
+declare function Shakes_GetScreenShake() as double
+declare function getEaseInShake(doReset as double = 0, speed as double = 1.0) as double
+
 declare function LD2_AddToStatus (item as integer, qty as integer) as integer
 declare sub LD2_ClearInventorySlot (slot as integer)
 declare sub LD2_ClearStatus ()
@@ -316,6 +327,9 @@ DECLARE SUB LD2_Drop (item as integer)
 DECLARE SUB LD2_GenerateSky ()
 DECLARE FUNCTION LD2_GetStatusAmount (slot AS INTEGER) as integer
 DECLARE FUNCTION LD2_GetStatusItem (slot AS INTEGER) as integer
+
+declare function LD2_GetVideoSprites(id as integer) as VideoSprites ptr
+declare sub LD2_GetSpriteMetrics(spriteId as integer, setId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
 
 DECLARE SUB LD2_ProcessEntities ()
 DECLARE SUB LD2_PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
@@ -346,7 +360,7 @@ declare function LD2_TileIsSolid(tileId as integer) as integer
 DECLARE SUB LD2_PopText (Message AS STRING)
 DECLARE SUB LD2_WriteText (Text AS STRING)
 
-declare sub LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0, w as integer = -1, h as integer = -1)
+declare sub LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0, w as integer = -1, h as integer = -1, rot as integer = 0)
 declare sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
 
 declare sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
@@ -367,11 +381,13 @@ declare function LD2_GetParentY(e as ElementType ptr, y as integer = -999999) as
 declare function LD2_GetParentW(e as ElementType ptr) as integer
 declare function LD2_GetParentH(e as ElementType ptr) as integer
 enum ElementFlags
-    CenterX = &h01
-    CenterY = &h02
-    CenterText = &h04
-    MonospaceText = &h08
-    AlignTextRight = &h10
+    CenterX         = &h01
+    CenterY         = &h02
+    CenterText      = &h04
+    MonospaceText   = &h08
+    AlignTextRight  = &h10
+    SpriteCenterX   = &h20
+    SpriteCenterY   = &h40
 end enum
 
 declare sub LD2_LoadFontMetrics(filename as string)
@@ -391,6 +407,7 @@ CONST MAXMOBS      = 100 '- per room
 CONST MAXELEVATORS =  12
 CONST MAXSWAPS     =  12
 CONST MAXTELEPORTS =  12
+CONST MAXSHAKES    =  6
 CONST MAXFLASHES   =  6
 CONST MAXSECTORS   =  12
 CONST MAXFLOORS    =  24

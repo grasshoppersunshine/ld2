@@ -38,7 +38,7 @@ sub VideoSprites.setAsTarget()
     
 end sub
 
-sub VideoSprites.load(filename as string)
+sub VideoSprites.load(filename as string, crop as integer = 0)
     
     type HeaderType
         a as ubyte
@@ -73,6 +73,15 @@ sub VideoSprites.load(filename as string)
     ox = 0
     oy = 0
     n = 0
+    
+    dim cropTop as integer
+    dim pixels(this._w, this._h) as integer
+    dim top as integer
+    dim btm as integer
+    dim lft as integer
+    dim rgt as integer
+    top = -1
+    btm = -1
     open filename for binary as #1
         filesize = lof(1)
         numSprites = int((filesize-7)/(this._w*this._h+4))
@@ -83,9 +92,21 @@ sub VideoSprites.load(filename as string)
         while not eof(1)
             get #1, , uw
             get #1, , uh
+            top = -1: btm = -1
+            lft = -1: rgt = -1
             for y = 0 to this._h-1
                 for x = 0 to this._w-1
                     get #1, , c
+                    pixels(x, y) = c
+                    if c > 0 then
+                        if (lft = -1) or (x < lft) then lft = x
+                        if (rgt = -1) or ((rgt > -1) and (x > rgt)) then rgt = x
+                        if top = -1 then top = y
+                        btm = y
+                    end if
+                    if crop then
+                        c = 0
+                    end if
                     r = this._palette->red(c)
                     g = this._palette->grn(c)
                     b = this._palette->blu(c)
@@ -94,6 +115,26 @@ sub VideoSprites.load(filename as string)
                     SDL_RenderDrawPoint( this._renderer, ox+x, oy+y )
                 next x
             next y
+            if crop then
+                for y = top to btm
+                    for x = lft to rgt
+                        c = pixels(x, y)
+                        r = this._palette->red(c)
+                        g = this._palette->grn(c)
+                        b = this._palette->blu(c)
+                        a = iif(c = this._transparentColor, 0, this._palette->getAlpha(c))
+                        SDL_SetRenderDrawColor( this._renderer, r, g, b, a )
+                        SDL_RenderDrawPoint( this._renderer, ox+x-lft, oy+y-top )
+                    next x
+                next y
+                btm -= top: rgt -= lft
+                top = 0: lft = 0
+            end if
+            redim preserve this._metrics(n) as VideoSpritesMetrics
+            this._metrics(n).top = iif(top > -1, top, 0)
+            this._metrics(n).btm = iif(btm > -1, btm, this._h-1)
+            this._metrics(n).lft = iif(lft > -1, lft, 0)
+            this._metrics(n).rgt = iif(rgt > -1, rgt, this._w-1)
             n += 1
             ox += this._w
         wend
@@ -199,3 +240,14 @@ function VideoSprites.getCount() as integer
     return this._count
     
 end function
+
+sub VideoSprites.getMetrics(spriteNum as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+    
+    if (spriteNum >= 0) and (spriteNum < this._count) then
+        x = this._metrics(spriteNum).lft
+        y = this._metrics(spriteNum).top
+        w = this._metrics(spriteNum).rgt - x + 1
+        h = this._metrics(spriteNum).btm - y + 1
+    end if
+    
+end sub

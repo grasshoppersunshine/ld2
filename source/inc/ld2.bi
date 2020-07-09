@@ -448,6 +448,7 @@ CONST idFONT   = 405
 CONST idSCENE  = 406
 CONST idOBJECT = 407
 CONST idBOSS   = 408
+CONST idOBJCRP = 409
 
 '======================
 '= MUSIC
@@ -578,6 +579,8 @@ enum Sounds
     '// editor
     editorPlace
     editorCopy
+    '//
+    squishy
 end enum
 
 enum EditSounds
