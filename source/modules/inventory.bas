@@ -25,21 +25,33 @@ dim shared UseItemDiscard as integer
 
 const DATA_DIR = "data/"
 
-function Inventory_Add (id as integer, qty as integer, max as integer = -1) as integer
+function Inventory_Add (id as integer, qty as integer, max as integer = -1, slot as integer = -1) as integer
     
     dim i as integer
     dim added as integer
 
     added = 0
-    for i = 0 to VisibleSize - 1
-        if InventoryItems(i).id = 0 then
-            InventoryItems(i).id = id
-            InventoryItems(i).qty = qty
-            InventoryItems(i).max = max
+    
+    if slot > -1 then
+        if (slot >= 0) and (slot < InventorySize) then
+            InventoryItems(slot).id = id
+            InventoryItems(slot).qty = qty
+            InventoryItems(slot).max = max
             added = 1
-            exit for
+        else
+            return InventoryErr_OUTOFBOUNDS
         end if
-    next i
+    else
+        for i = 0 to VisibleSize - 1
+            if InventoryItems(i).id = 0 then
+                InventoryItems(i).id = id
+                InventoryItems(i).qty = qty
+                InventoryItems(i).max = max
+                added = 1
+                exit for
+            end if
+        next i
+    end if
     
     if added then
         return 0

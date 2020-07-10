@@ -11,7 +11,7 @@ type InventoryType
     visible as integer
 end type
 
-declare function Inventory_Add (id as integer, qty as integer, max as integer = -1) as integer
+declare function Inventory_Add (id as integer, qty as integer, max as integer = -1, slot as integer = -1) as integer
 declare function Inventory_AddHidden (id as integer, qty as integer, max as integer = -1) as integer
 declare function Inventory_AddQty (slot as integer, qty as integer) as integer
 DECLARE SUB Inventory_Clear ()

@@ -787,6 +787,8 @@ sub LoadSounds ()
     
     AddSound Sounds.squishy, "splice/squishy.wav"
     
+    AddSound Sounds.lookMetal, "look-metal.wav"
+    
 end sub
 
 sub LoadMusic ()
@@ -1610,7 +1612,7 @@ sub SceneCheck (player as PlayerType)
         end if
     case "SCENE-JANITOR-DIES"
         if Player_NotItem(ItemIds.SceneJanitorDies) and Player_HasItem(ItemIds.SceneJanitor) then
-            'Scene4
+            Scene4
         end if
     case "SCENE-ELEVATOR"
         if Player_NotItem(ItemIds.SceneElevator) then
@@ -1619,18 +1621,16 @@ sub SceneCheck (player as PlayerType)
             else
                 Scene5
             end if
-        end if
-    case "SCENE-ELEVATOR2"
-        if Player_NotItem(ItemIds.SceneElevator2) then
+        elseif Player_NotItem(ItemIds.SceneElevator2) then
             Scene6
         end if
     case "SCENE-WEAPONS1"
         if Player_NotItem(ItemIds.SceneWeapons1) then
             if Player_GetX() <> Guides.SceneWeapons1 then
                 moveToX = Guides.SceneWeapons1
+            else
+                Scene7
             end if
-        else
-            Scene7
         end if
     case "SCENE-WEAPONS2"
         if Player_NotItem(ItemIds.SceneWeapons2) then
@@ -1644,11 +1644,15 @@ sub SceneCheck (player as PlayerType)
         if Player_NotItem(ItemIds.SceneWeapons3) then
             if Player_GetX() <> Guides.SceneWeapons3 then
                 moveToX = Guides.SceneWeapons3
+            else
+                SceneWeapons3
             end if
-        else
-            SceneWeapons3
         end if
     end select
+    
+    if Player_HasItem(ItemIds.YellowCard) and Player_NotItem(ItemIds.SceneRooftopGotCard) then
+        SceneRooftopGotCard
+    end if
     
     if Player_GetCurrentRoom() = Rooms.LarrysOffice then
         'if Player_NotItem(ItemIds.SceneJanitor) then
@@ -1704,9 +1708,9 @@ sub SceneCheck (player as PlayerType)
         Player_SetItemQty ItemIds.SceneGoo, 0
     end if
     
-    if Player_HasItem(ItemIds.YellowCard) and Player_NotItem(ItemIds.SceneRooftopGotCard) and Player_HasItem(ItemIds.BossRooftopEnd) and (Player_GetCurrentRoom() = Rooms.Rooftop) then
-        SceneRooftopGotCard
-    end if
+    'if Player_HasItem(ItemIds.YellowCard) and Player_NotItem(ItemIds.SceneRooftopGotCard) and Player_HasItem(ItemIds.BossRooftopEnd) and (Player_GetCurrentRoom() = Rooms.Rooftop) then
+    '    SceneRooftopGotCard
+    'end if
     
     if Player_NotItem(ItemIds.ScenePortal) and (Player_GetCurrentRoom() = Rooms.PortalRoom) then
         if player.x <= Guides.ScenePortal then
@@ -1738,22 +1742,22 @@ sub SceneCheck (player as PlayerType)
         end if
     end if
     
-    if (Player_GetCurrentRoom() = Rooms.WeaponsLocker) then
-        if Player_NotItem(ItemIds.SceneWeapons2) and Player_HasItem(ItemIds.SceneRooftopGotCard) then
-            LD2_put 388, 144, 50, idSCENE, 0
-            LD2_put 388, 144, 45, idSCENE, 0
-            if player.x <= Guides.SceneWeapons2 then
-                SceneWeapons2
-            end if
-        end if
-        if Player_NotItem(ItemIds.SceneWeapons3) and Player_HasItem(ItemIds.SceneWeapons2) then
-            LD2_put 48, 144, 50, idSCENE, 0
-            LD2_put 48, 144, 45, idSCENE, 0
-            if player.x <= Guides.SceneWeapons3 then
-                SceneWeapons3
-            end if
-        end if
-    end if
+    'if (Player_GetCurrentRoom() = Rooms.WeaponsLocker) then
+    '    if Player_NotItem(ItemIds.SceneWeapons2) and Player_HasItem(ItemIds.SceneRooftopGotCard) then
+    '        LD2_put 388, 144, 50, idSCENE, 0
+    '        LD2_put 388, 144, 45, idSCENE, 0
+    '        if player.x <= Guides.SceneWeapons2 then
+    '            SceneWeapons2
+    '        end if
+    '    end if
+    '    if Player_NotItem(ItemIds.SceneWeapons3) and Player_HasItem(ItemIds.SceneWeapons2) then
+    '        LD2_put 48, 144, 50, idSCENE, 0
+    '        LD2_put 48, 144, 45, idSCENE, 0
+    '        if player.x <= Guides.SceneWeapons3 then
+    '            SceneWeapons3
+    '        end if
+    '    end if
+    'end if
     
     if Player_NotItem(ItemIds.SceneSteveGone) and Player_HasItem(ItemIds.SceneWeapons1) then
         if (Player_GetCurrentRoom() = Rooms.LarrysOffice) and (player.x <= Guides.SceneSteveGone) then
@@ -2294,6 +2298,7 @@ sub FlagsCheck (player as PlayerType)
         Game_unsetFlag GOTITEM
         itemId = Player_GetGotItem()
         LD2_SetNotice "Found "+Inventory_GetShortName(itemId)
+        'else "Inventory Full"
 	end if
     if Game_hasFlag(ELEVATORMENU) then
         Game_unsetFlag ELEVATORMENU
@@ -2486,7 +2491,7 @@ sub Start
     Game_SetSessionFile SESSION_FILE
     Mobs_SetBeforeKillCallback @BeforeMobKill
     
-    if Inventory_Init(18, 9) then
+    if Inventory_Init(16, 8) then
         STATUS_DialogOk "Error intializing inventory!"
         Game_Shutdown
         end
@@ -2564,6 +2569,21 @@ sub NewGame
     
     dim player as PlayerType
     dim arg as string
+    dim n as integer
+    
+    for n = 0 to 127
+        Player_SetItemMaxQty n, 1
+    next n
+    
+    Player_SetItemMaxQty ItemIds.Hp, Maxes.Hp
+    Player_SetItemMaxQty ItemIds.Shotgun   , Maxes.Shotgun
+    Player_SetItemMaxQty ItemIds.Handgun   , Maxes.Handgun
+    Player_SetItemMaxQty ItemIds.MachineGun, Maxes.MachineGun
+    Player_SetItemMaxQty ItemIds.Magnum    , Maxes.Magnum    
+    Player_SetItemMaxQty ItemIds.SgAmmo    , Maxes.SgAmmo
+    Player_SetItemMaxQty ItemIds.HgAmmo    , Maxes.HgAmmo
+    Player_SetItemMaxQty ItemIds.MaAmmo    , Maxes.MaAmmo
+    Player_SetItemMaxQty ItemIds.MgAmmo    , Maxes.MgAmmo    
     
     Map_Load "14th.ld2", 1, 1
     
@@ -2575,11 +2595,6 @@ sub NewGame
     
     Player_Update player
     
-    Player_SetItemMaxQty ItemIds.HP, Maxes.Hp
-    Player_SetItemMaxQty ItemIds.Shotgun   , Maxes.Shotgun
-    Player_SetItemMaxQty ItemIds.Handgun   , Maxes.Handgun
-    Player_SetItemMaxQty ItemIds.MachineGun, Maxes.MachineGun
-    Player_SetItemMaxQty ItemIds.Magnum    , Maxes.Magnum
     Player_SetWeapon ItemIds.Fist '// must be called after Player_Init()
     
     if Game_isTestMode() then
@@ -2600,14 +2615,15 @@ sub NewGame
         end if
         if (Boot_HasCommandArg("noguns") = 0) and (Boot_HasCommandArg("shotgun,handgun,machinegun,magnum,allguns") = 0) then
             LD2_AddToStatus(ItemIds.Handgun, 0)
-            LD2_AddToStatus(ItemIds.MachineGun, 0)
             LD2_AddToStatus(ItemIds.Shotgun, 0)
+            LD2_AddToStatus(ItemIds.MachineGun, 0)
             LD2_AddToStatus(ItemIds.Magnum, 0)
             Player_AddAmmo ItemIds.Handgun, 99
             Player_AddAmmo ItemIds.MachineGun, 99
             Player_AddAmmo ItemIds.Shotgun, 99
             Player_AddAmmo ItemIds.Magnum, 99
-            LD2_AddToStatus(ItemIds.Medikit100, 1)
+            'LD2_AddToStatus(ItemIds.Medikit100, 1)
+            LD2_AddToStatus(ItemIds.Flashlight, 1)
             LD2_AddToStatus(ItemIds.JanitorNote, 1)
             LD2_AddToStatus(ItemIds.MysteryMeat, 1)
         end if
@@ -2669,7 +2685,7 @@ sub NewGame
             end select
         wend
     else
-        LD2_AddToStatus(GREENCARD, 1)
+        LD2_AddToStatus(ItemIds.GreenCard, 1)
     end if
     
     GenerateRoofCode
@@ -2772,11 +2788,10 @@ sub LD2_LookItem (id as integer, byref desc as string)
     
     select case id
     case ItemIds.JanitorNote
-        desc += "| - "
+        desc += " - "
         for n = 1 to len(RoofCode)
             desc += mid(RoofCode, n, 1)+" - "
         next n
-        desc += "|"
         desc = trim(desc)
     end select
     

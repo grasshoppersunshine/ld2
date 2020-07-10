@@ -191,6 +191,7 @@ declare sub MapItems_Add (x as integer, y as integer, id as integer, qty as inte
 declare sub MapItems_Draw ()
 declare function MapItems_Pickup () as integer
 declare function MapItems_GetCount() as integer
+declare function MapItems_GetCardSprite(accessLevel as integer) as integer
 declare function MapItems_GetCardLevel(itemId as integer) as integer
 declare function MapItems_isCard(itemId as integer) as integer
 
@@ -314,7 +315,7 @@ declare function Boot_GetNextCommandArg() as string
 declare sub Shakes_Add (duration as double = 1.0, intensity as double = 1.0)
 declare sub Shakes_Animate (resetClocks as integer = 0)
 declare function Shakes_GetScreenShake() as double
-declare function getEaseInShake(doReset as double = 0, speed as double = 1.0) as double
+declare function getEaseInShake(doReset as double = 0, speed as double = 1.0, byref percent as double = 0) as double
 
 declare function LD2_AddToStatus (item as integer, qty as integer) as integer
 declare sub LD2_ClearInventorySlot (slot as integer)
@@ -375,11 +376,14 @@ declare sub LD2_RestoreElements()
 declare function LD2_GetRootParent() as ElementType ptr
 declare function LD2_GetFontWidthWithSpacing(spacing as double = 1.2) as integer
 declare function LD2_GetFontHeightWithSpacing (spacing as double = 1.4) as integer
-declare function LD2_GetElementTextWidth (e as ElementType ptr) as integer
-declare function LD2_GetParentX(e as ElementType ptr, x as integer = -999999) as integer
-declare function LD2_GetParentY(e as ElementType ptr, y as integer = -999999) as integer
+declare function LD2_GetElementTextWidth (e as ElementType ptr, text as string = "") as integer
+declare function LD2_GetParentX(e as ElementType ptr, x as integer = 0) as integer
+declare function LD2_GetParentY(e as ElementType ptr, y as integer = 0) as integer
 declare function LD2_GetParentW(e as ElementType ptr) as integer
 declare function LD2_GetParentH(e as ElementType ptr) as integer
+declare function LD2_GetParentPadX(e as ElementType ptr, y as integer = 0) as integer
+declare function LD2_GetParentPadY(e as ElementType ptr, y as integer = 0) as integer
+declare function LD2_GetParentBorderSize(e as ElementType ptr, x as integer = 0) as integer
 enum ElementFlags
     CenterX         = &h01
     CenterY         = &h02

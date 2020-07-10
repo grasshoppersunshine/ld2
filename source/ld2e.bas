@@ -422,8 +422,8 @@ function LD2_AddToStatus (item as integer, qty as integer) as integer
     
     LD2_LogDebug "LD2_AddToStatus ("+str(item)+","+str(qty)+" )"
     
-    DIM i as integer
-    DIM added as integer
+    dim added as integer
+    dim i as integer
     
     if qty = 1 then '// assuming pick-up item
         select case item
@@ -436,6 +436,12 @@ function LD2_AddToStatus (item as integer, qty as integer) as integer
         case ItemIds.MaAmmo
             qty = AmmoBoxQtys.Magnum
         end select
+    end if
+    
+    if MapItems_isCard(item) then
+        Inventory(item) += qty
+        Player_RefreshAccess
+        return 1
     end if
     
     for i = 0 to NumInvSlots-1
@@ -461,12 +467,6 @@ function LD2_AddToStatus (item as integer, qty as integer) as integer
         next i
     end if
     
-    if added then
-        if MapItems_isCard(item) then
-            Player_RefreshAccess
-        end if
-    end if
-
     if added then
         return 0
     else
@@ -2961,7 +2961,7 @@ sub Map_UpdateShift
     
 end sub
 
-function getEaseInShake(doReset as double = 0, speed as double = 1.0) as double
+function getEaseInShake(doReset as double = 0, speed as double = 1.0, byref percent as double = 0) as double
     
     static clock as double
     static e as double
@@ -2976,6 +2976,7 @@ function getEaseInShake(doReset as double = 0, speed as double = 1.0) as double
         end if
     end if
     clock = timer
+    percent = e
     
     d = sin(e*6*PI)*(1-e)
     
@@ -3009,20 +3010,30 @@ function MapItems_Api(args as string) as string
     dim arg0 as string
     dim arg1 as string
     dim item as ItemType
+    dim numInteractive as integer
+    dim count as integer
     dim id as integer
+    dim n as integer
     
     arg0 = getArg(args, 0)
     arg1 = getArg(args, 1)
     
     optlist = "count|id [id]"
     
+    numInteractive = 0
+    for n = 0 to NumItems-1
+        if Items(n).isVisible and Items(n).canPickup then
+            numInteractive += 1
+        end if
+    next n
+    
     select case arg0
     case "list"
         response = "Valid items options are\ \"+optlist
     case "count"
-        return "Item count is "+str(NumItems)
+        return "Item count is "+str(numInteractive)
     case "id"
-        if NumItems = 0 then
+        if numInteractive = 0 then
             return "No items available to check"
         end if
         if arg1 = "" then
@@ -3030,11 +3041,20 @@ function MapItems_Api(args as string) as string
         end if
         if (arg1 = "0") or (val(arg1) > 0) then
             id = val(arg1)
-            if id >= NumItems then
+            if id >= numInteractive then
                 return "!Item id is out-of-bounds"
             end if
-            item = Items(id)
-            response = "Item ID 0\x: "+str(item.x)+"\y: "+str(item.y)+"\item_id: "+str(item.id)
+            count = 0
+            for n = 0 to NumItems-1
+                if Items(n).isVisible and Items(n).canPickup then
+                    if id = count then
+                        item = Items(n)
+                        exit for
+                    end if
+                    count += 1
+                end if
+            next n
+            response = "Item ID "+str(id)+"\x: "+str(item.x)+"\y: "+str(item.y)+"\item_id: "+str(item.id)
         else
             response = "!Invalid item id"
         end if
@@ -3116,7 +3136,7 @@ function MapItems_Pickup () as integer
     success = 0
 
     for i = 0 TO NumItems-1
-        if (Items(n).canPickup = 0) or (Items(n).isVisible = 0) then
+        if (Items(i).canPickup = 0) or (Items(i).isVisible = 0) then
             continue for
         end if
         if int(Player.x + 8) >= Items(i).x and int(Player.x + 8) <= Items(i).x + 16 then
@@ -3167,6 +3187,19 @@ end function
 function MapItems_GetCount() as integer
     
     return NumItems
+    
+end function
+
+function MapItems_GetCardSprite(accessLevel as integer) as integer
+    
+    select case accessLevel
+        case GREENACCESS : return GREENCARD
+        case BLUEACCESS  : return BLUECARD
+        case YELLOWACCESS: return YELLOWCARD
+        case WHITEACCESS : return WHITECARD
+        case REDACCESS   : return REDCARD
+        case else        : return 0
+    end select
     
 end function
 
@@ -6350,21 +6383,19 @@ end sub
 
 sub Player_RefreshAccess
     
-    dim i as integer
-    dim item as integer
     dim maxLevel as integer
-    dim cardLevel as integer
+    dim item as integer
+    dim n as integer
     
     Inventory(ItemIds.Auth) = 0
     
     maxLevel = NOACCESS
-    for i = 0 to NumInvSlots-1
-        item = InvSlots(i)
-        cardLevel = MapItems_GetCardLevel(item)
-        if cardLevel > maxLevel then
-            maxLevel = cardLevel
+    for n = GREENACCESS to REDACCESS
+        item = MapItems_GetCardSprite(n)
+        if Inventory(item) > 0 then
+            maxLevel = n
         end if
-    next i
+    next n
     
     Inventory(ItemIds.Auth) = maxLevel
     
@@ -6879,16 +6910,19 @@ function LD2_GetFontHeightWithSpacing (spacing as double = 1.4) as integer
     
 end function
 
-function LD2_GetElementTextWidth (e as ElementType ptr) as integer
+function LD2_GetElementTextWidth (e as ElementType ptr, text as string = "") as integer
     
-    dim text as string
     dim char as string * 1
     dim pixels as integer
     dim n as integer
     dim d as double
     dim textSpacing as integer
     
-    text = ucase(e->text)
+    if len(text) = 0 then
+        text = e->text
+    end if
+    
+    text = ucase(text)
     
     d = (FONT_W*e->text_spacing)-FONT_W
     textSpacing = int(d)
@@ -6996,8 +7030,8 @@ sub LD2_PrepareElement(e as ElementType ptr)
     if e->parent = 0 then
         if e->background = -1 then e->background = 0
     end if
-    parentY = iif(e->parent, e->parent->y, 0)
-    parentX = iif(e->parent, e->parent->x, 0)
+    parentX = LD2_GetParentX(e)+LD2_GetParentPadX(e)+LD2_GetParentBorderSize(e)
+    parentY = LD2_GetParentY(e)+LD2_GetParentPadY(e)+LD2_GetParentBorderSize(e)
     parentW = LD2_GetParentW(e)
     parentH = LD2_GetParentH(e)
     
@@ -7036,6 +7070,7 @@ sub LD2_PrepareElement(e as ElementType ptr)
                     maxLineChars = lineChars
                     lineChars = 0
                 end if
+                pixels = 0
             end if
         else
             pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
@@ -7074,16 +7109,18 @@ sub LD2_PrepareElement(e as ElementType ptr)
     
     if parentW = -1 then parentW = SCREEN_W
     if parentH = -1 then parentH = SCREEN_H
-    if totalWidth  > parentW then w = parentW-(iif(x>0,x,0)+e->border_size*2+e->padding_x*2)
-    if totalHeight > parentH then h = parentH-(iif(y>0,y,0)+e->border_size*2+e->padding_y*2)
+    if y < 0 then h += y
+    if x < 0 then w += x
+    if totalWidth  > parentW then w = parentW-(e->border_size*2+e->padding_x*2)
+    if totalHeight > parentH then h = parentH-(e->border_size*2+e->padding_y*2)
     
     x += parentX: y += parentY
     
-    if e->is_centered_x then x += int((parentW-totalWidth)/2)
-    if e->is_centered_y then y += int((parentH-totalHeight)/2)
+    if e->is_centered_x then x += int((parentW-w)/2)
+    if e->is_centered_y then y += int((parentH-h)/2)
     
-    visible_x = iif(x>0,x,0)
-    visible_y = iif(y>0,y,0)
+    visible_x = iif(x>parentX,x,parentX)
+    visible_y = iif(y>parentY,y,parentY)
     
     e->render_text = text
     e->render_x = x: e->render_y = y
@@ -7136,6 +7173,16 @@ sub LD2_RenderElement(e as ElementType ptr)
     
     if e->border_size > 0 then
 
+        lft = e->render_visible_x
+        top = e->render_visible_y
+        rgt = lft+e->render_visible_w+e->padding_x*2+e->border_size
+        btm = top+e->render_visible_h+e->padding_y*2+e->border_size
+        
+        LD2_fill lft, top, e->render_outer_w, e->border_size, e->border_color, 1
+        LD2_fill lft, top, e->border_size, e->render_outer_h, e->border_color, 1
+        LD2_fill rgt, top, e->border_size, e->render_outer_h, e->border_color, 1
+        LD2_fill lft, btm, e->render_outer_w, e->border_size, e->border_color, 1
+        
         lft = e->render_x
         top = e->render_y
         rgt = lft+e->w+e->padding_x*2+e->border_size
@@ -7335,36 +7382,70 @@ function LD2_GetParentBackround(e as ElementType ptr) as integer
     
 end function
 
-function LD2_GetParentX(e as ElementType ptr, x as integer = -999999) as integer
+function LD2_GetParentX(e as ElementType ptr, x as integer = 0) as integer
     
     dim parent as ElementType ptr
     
     parent = e->parent
     if parent <> 0 then
-        if x = -999999 then x = 0
-        x += LD2_GetParentX(parent, x)
-        return x
-    else
-        return iif(x = -999999, 0, e->x)
+        x += parent->x
+        return LD2_GetParentX(parent, x)
     end if
+    return x
     
 end function
 
-function LD2_GetParentY(e as ElementType ptr, y as integer = -999999) as integer
+function LD2_GetParentY(e as ElementType ptr, y as integer = 0) as integer
     
     dim parent as ElementType ptr
     
     parent = e->parent
     if parent <> 0 then
-        if y = -999999 then y = 0
-        y += LD2_GetParentY(parent, y)
-        return y
-    else
-        return iif(y = -999999, 0, e->y)
+        y += parent->y
+        return LD2_GetParentY(parent, y)
     end if
+    return y
     
 end function
 
+function LD2_GetParentPadX(e as ElementType ptr, x as integer = 0) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        x += parent->padding_x
+        return LD2_GetParentPadX(parent, x)
+    end if
+    return x
+    
+end function
+
+function LD2_GetParentPadY(e as ElementType ptr, y as integer = 0) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        y += parent->padding_y
+        return LD2_GetParentPadY(parent, y)
+    end if
+    return y
+    
+end function
+
+function LD2_GetParentBorderSize(e as ElementType ptr, x as integer = 0) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        x += parent->border_size
+        return LD2_GetParentBorderSize(parent, x)
+    end if
+    return x
+    
+end function
 '* replace with only getting first parent width (need function to calc auto-width without rendering)
 function LD2_GetParentW(e as ElementType ptr) as integer
     

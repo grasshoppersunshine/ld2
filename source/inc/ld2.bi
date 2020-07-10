@@ -78,13 +78,13 @@ enum ItemIds
     WhiteCard       = 7
     WhiteCard1      = 8
     WhiteCard2      = 9
-    FlashlightNoBat = 10
+    Flashlight      = 10
     MysteryMeat     = 11
     Chemical409     = 12
     Chemical410     = 13
     JanitorNote     = 14
     Batteries       = 15
-    Flashlight      = 16
+    FlashlightNoBat = 16
     GreenCard       = 17
     BlueCard        = 18
     YellowCard      = 19
@@ -185,11 +185,15 @@ enum AmmoBoxQtys
 end enum
 
 enum Maxes
-    Handgun    = 15
-    Hp         = 100
-    MachineGun = 30
-    Magnum     = 6
-    Shotgun    = 8
+    Hp              = 100
+    Shotgun         = 8
+    MachineGun      = 30
+    Handgun         = 15
+    Magnum          = 6
+    SgAmmo          = 80
+    HgAmmo          = 150
+    MaAmmo          = 60
+    MgAmmo          = 300
 end enum
 
 enum StartVals
@@ -581,6 +585,7 @@ enum Sounds
     editorCopy
     '//
     squishy
+    lookMetal
 end enum
 
 enum EditSounds

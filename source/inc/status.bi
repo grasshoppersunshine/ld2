@@ -14,8 +14,10 @@ enum WobbleTypes
     RevealSpin
     RevealBackSpin
     Reveal540Spin
+    Reveal540BackSpin
     Elastic
     Squishy
+    Metal
 end enum
 
 enum WobbleActions

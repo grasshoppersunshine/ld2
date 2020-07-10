@@ -29,6 +29,19 @@ const STATUS_EASE_SPEED = 0.3333
 const STATUS_COLOR_SUCCESS = 56
 const STATUS_COLOR_DENIED = 232
 
+const ITEM_BORDER_COLOR = 77
+const ITEM_SELECTED_BG = 70
+const ITEM_NOT_SELECTED_BG = 77
+
+const ACTION_SELECTED_BG = 70
+const ACTION_NOT_SELECTED_BG = -1
+
+const MIX_TEXT_COLOR = 216
+const MIX_SUBJECT_BG = 31 '88
+const MIX_SUBJECT_FG = 22
+const MIX_OBJECT_BG = 184 '184
+const MIX_OBJECT_FG = 22
+
 const PI = 3.141592
 
 sub STATUS_SetUseItemCallback(callback as sub(byval id as integer, byval qty as integer, byref exitMenu as integer))
@@ -54,19 +67,18 @@ SUB BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elem
     LD2_InitElement elementWindow
     elementWindow->background = STATUS_DIALOG_COLOR
     elementWindow->background_alpha = STATUS_DIALOG_ALPHA_UNIT
-    elementWindow->w = SCREEN_W
-    elementWindow->h = 96
+    elementWindow->padding_x = fontW
+    elementWindow->padding_y = fontH
+    elementWindow->w = SCREEN_W-elementWindow->padding_x*2
+    elementWindow->h = 96-elementWindow->padding_y*2
     
     LD2_InitElement elementHeading, heading, 31, ElementFlags.CenterText '+"\"+string(45, "-"), 31
     elementHeading->parent = elementWindow
-    elementHeading->padding_x = 0
-    elementHeading->y = fontH * 1
-    elementHeading->x = 0
     elementHeading->w = SPRITE_W*5
     
     LD2_InitElement elementBorder, STRING(53, "*"), 31
-    elementBorder->parent = elementWindow
-    elementBorder->y = elementWindow->h - fontH
+    elementBorder->y = elementWindow->y+elementWindow->padding_y+elementWindow->h
+    elementBorder->padding_x = 1
     
     LD2_ClearElements
     LD2_AddElement elementWindow
@@ -75,7 +87,7 @@ SUB BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elem
 	
 END SUB
 
-sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0)
+sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0, mixItemWith as InventoryType ptr = 0)
     
     static dialog as ElementType
     static labelBottomBorder as ElementType
@@ -83,6 +95,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     static labelStatus as ElementType: static valueStatus as ElementType
     static labelHealth as ElementType: static valueHealth as ElementType
     static labelWeapon as ElementType: static valueWeapon as ElementType
+    static labelCards  as ElementType: static valueCards as ElementType
     static labelInventory as ElementType
     static labelItems(7) as ElementType
     static labelItemsQty(7) as ElementType
@@ -101,12 +114,12 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     dim lft as integer
     dim top as integer
     dim x as integer, y as integer
+    dim n as integer
     dim i as integer
-    dim mixingText as string
     DIM actions(3) AS STRING
-	actions(0) = "USE "
+	actions(0) = "USE"
 	actions(1) = "LOOK"
-	actions(2) = "MIX "
+	actions(2) = "MIX"
 	actions(3) = "DROP"
     
     fontW = LD2_GetFontWidthWithSpacing()
@@ -115,75 +128,82 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     LD2_InitElement @dialog
     dialog.background = STATUS_DIALOG_COLOR
     dialog.background_alpha = STATUS_DIALOG_ALPHA_UNIT
-    dialog.w = SCREEN_W
-    dialog.h = 96
+    dialog.padding_x = fontW
+    dialog.padding_y = fontH
+    dialog.w = SCREEN_W-dialog.padding_x*2
+    dialog.h = 96-dialog.padding_y*2
     
     LD2_InitElement @labelBottomBorder, STRING(53, "*"), 31
-    labelBottomBorder.parent = @dialog
-    labelBottomBorder.y = dialog.h - fontH
+    labelBottomBorder.y = dialog.y+dialog.padding_y+dialog.h
+    labelBottomBorder.padding_x = 1
     
     '*******************************************************************
     '* HEADING
     '*******************************************************************
     LD2_InitElement @labelName, "LARRY  [ THE DINOSAUR ]\--------------------------", 31
     labelName.parent = @dialog
-    labelName.padding_x = fontW
-    labelName.y = fontH * 1
     
     '*******************************************************************
     '* STATUS
     '*******************************************************************
     LD2_InitElement @labelStatus, "STATUS", 31
     labelStatus.parent = @dialog
-    labelStatus.x = fontW
-    labelStatus.y = fontH * 3.5
+    labelStatus.y = fontH * 2.5
     labelStatus.w = FONT_W * 20
     
     LD2_InitElement @valueStatus, "", 31
     valueStatus.parent = @labelStatus
-    valueStatus.x = FONT_W * 8
+    valueStatus.x = FONT_W * 7
     
     '*******************************************************************
     '* HEALTH
     '*******************************************************************
     LD2_InitElement @labelHealth, "HEALTH", 31
     labelHealth.parent = @dialog
-    labelHealth.x = fontW
-    labelHealth.y = fontH * 5.0
+    labelHealth.y = fontH * 4.0
     labelHealth.w = FONT_W * 20
     
     LD2_InitElement @valueHealth, "", 31
     valueHealth.parent = @labelHealth
-    valueHealth.x = FONT_W * 8
+    valueHealth.x = FONT_W * 7
     
     '*******************************************************************
     '* WEAPON
     '*******************************************************************
     LD2_InitElement @labelWeapon, "WEAPON", 31
     labelWeapon.parent = @dialog
-    labelWeapon.x = fontW
-    labelWeapon.y = fontH * 6.5
+    labelWeapon.y = fontH * 5.5
     labelWeapon.w = FONT_W * 20
     
     LD2_InitElement @valueWeapon, "", 31
     valueWeapon.parent = @labelWeapon
-    valueWeapon.x = FONT_W * 8
+    valueWeapon.x = FONT_W * 7
+    
+    '*******************************************************************
+    '* CARDS
+    '*******************************************************************
+    LD2_InitElement @labelCards, "CARDS", 31
+    labelCards.parent = @dialog
+    labelCards.y = fontH * 8.0
+    labelCards.w = FONT_W * 20
+    
+    LD2_InitElement @valueCards, "", 31
+    valueCards.parent = @labelCards
+    valueCards.x = FONT_W * 7
     
     '*******************************************************************
     '* INVENTORY
     '*******************************************************************
-    LD2_InitElement @labelInventory, "INVENTORY", 31
+    LD2_InitElement @labelInventory, "INVENTORY\----------------------------", 31
     labelInventory.parent = @dialog
-    labelInventory.x = SCREEN_W - 15 * fontW - fontW
-    labelInventory.y = fontH * 1
     
     '*******************************************************************
     '* ACTIONS MENU
     '*******************************************************************
-    LD2_InitElement @menuActions, "  USE     LOOK    MIX     DROP  ", 31, ElementFlags.MonospaceText
+    LD2_InitElement @menuActions, "USE  LOOK  MIX  DROP", 31, ElementFlags.AlignTextRight
     menuActions.parent = @dialog
-    menuActions.x = SCREEN_W - len(menuActions.text) * fontW
-    menuActions.y = (labelInventory.y + fontH*2.5) + (8*fontH) + 2
+    menuActions.y = menuActions.parent->h - fontH
+    menuActions.x = menuActions.parent->w - LD2_GetElementTextWidth(@menuActions)
     
     LD2_ClearElements
     LD2_AddElement @dialog
@@ -195,43 +215,70 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     LD2_AddElement @valueHealth
     LD2_AddElement @labelWeapon
     LD2_AddElement @valueWeapon
+    LD2_AddElement @labelCards
+    LD2_AddElement @valueCards
     LD2_AddElement @labelInventory
     for i = 0 to 8
         LD2_AddElement @labelItems(i)
-        'LD2_AddElement @labelItemsQty(i)
-        'LD2_AddElement @labelItemsDecor(i)
     next i
     if (action <> -1) and (mixItem = 0) then
         LD2_AddElement @menuActions
-        for i = 0 to 3
-            LD2_AddElement @labelActions(i)
-        next i
+        for n = 0 to 3
+            LD2_InitElement @labelActions(n), actions(n), 31
+            labelActions(n).parent = @dialog
+            labelActions(n).h = FONT_H
+            labelActions(n).text_height = 1
+            labelActions(n).padding_x = fontW
+            labelActions(n).x = menuActions.x - labelActions(n).padding_x
+            labelActions(n).y = menuActions.y
+            i = instr(menuActions.text, actions(n))
+            if i > len(actions(0)) then
+                labelActions(n).x += LD2_GetElementTextWidth(@menuActions, left(menuActions.text, i-1))+1
+            end if
+            LD2_AddElement @labelActions(n)
+        next n
     end if
+    static labelMix as ElementType
+    static labelWith as ElementType
+    static mixSubject as ElementType
+    static mixObject as ElementType
     if mixItem <> 0 then
+        dim subname as string
+        dim objname as string
         Inventory_GetItemBySlot(item, selectedInventorySlot)
-        LD2_InitElement @labelMixName0, trim(mixItem->shortName), 88
-        labelMixName0.parent = @dialog
-        labelMixName0.y = menuActions.y
-        LD2_InitElement @labelMixName1, iif(mixItem->id <> item.id, trim(item.shortName), "_____"), 184
-        labelMixName1.parent = @dialog
-        labelMixName1.y = menuActions.y
-        mixingText = "Mix "+labelMixName0.text+" with "+labelMixName1.text+" "
-        LD2_InitElement @labelMixing, mixingText, 216
-        labelMixing.parent = @dialog
-        labelMixing.x = SCREEN_W - LD2_GetElementTextWidth(@labelMixing) - fontW*1.5
-        labelMixing.y = menuActions.y
-        labelMixing.text = "Mix "
-        labelMixName0.x = labelMixing.x + LD2_GetElementTextWidth(@labelMixing)+1 '+1 is font spacing
-        labelMixing.text += labelMixName0.text+" with "
-        labelMixName1.x = labelMixing.x + LD2_GetElementTextWidth(@labelMixing)+1
-        labelMixing.text += labelMixName1.text+" "
-        labelMixing.text += iif(int(timer*3) and 1, "?", " ")
-        LD2_AddElement @labelMixing
-        LD2_AddElement @labelMixName0
-        LD2_AddElement @labelMixName1
+        subname = trim(mixItem->shortName)
+        if mixItemWith <> 0 then
+            objname = trim(mixItemWith->shortName)
+        else
+            objname = iif(mixItem->id <> item.id, trim(item.shortName)+" ", "")
+            if (int(timer*3) and 1) then objname += "?"
+            LD2_InitElement @labelMix, "MIX", MIX_TEXT_COLOR
+        end if
+        LD2_InitElement @labelWith, iif(mixItemWith = 0, "WITH", "/"), MIX_TEXT_COLOR
+        LD2_InitElement @mixSubject, subname, MIX_SUBJECT_BG
+        LD2_InitElement @mixObject, objname, MIX_OBJECT_BG
+        LD2_AddElement @labelMix  , @dialog
+        LD2_AddElement @labelWith , @dialog
+        LD2_AddElement @mixSubject, @dialog
+        LD2_AddElement @mixObject , @dialog
     end if
 
     Player_Get player
+    
+    static cards(5) as ElementType
+    for n = GREENACCESS to Player_GetAccessLevel()
+        LD2_InitElement @cards(n), "", 31, ElementFlags.SpriteCenterX or ElementFlags.SpriteCenterY
+        cards(n).parent = @dialog
+        cards(n).w = SPRITE_W*1.0
+        cards(n).h = SPRITE_H*1.0
+        cards(n).parent = @dialog
+        cards(n).x = (n-1) * 16 - 3
+        cards(n).y = fontH * 8.5
+        cards(n).sprite = MapItems_GetCardSprite(n)
+        cards(n).sprite_set_id = idOBJCRP
+        cards(n).sprite_zoom = 1.5
+        LD2_AddElement @cards(n)
+    next n
     
     '- show item that was picked up (lower-right corner of screen: "Picked Up Shotgun")
     '- copy steve scene sprites over
@@ -270,101 +317,103 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     valueHealth.text = ltrim(str(Player_GetItemQty(ItemIds.Hp)))+"%"
     
     dim qty as integer
+    dim colW as integer
+    dim cspc as integer
+    dim rowH as integer
+    dim rspc as integer
+    dim numCols as integer
+    dim numRows as integer
     
-    lft = SCREEN_W - 15 * fontW - fontW
-    top = int(labelInventory.y + fontH*1.5)
+    colW = SPRITE_W*2.00: cspc = SPRITE_W*0.25: numCols = 4
+    rowH = SPRITE_H*1.25: rspc = SPRITE_H*0.25: numRows = 2
+    lft = dialog.w - (colW+cspc)*numCols + cspc
+    top = 0
+    
+    labelInventory.x = lft
+    labelInventory.y = top: top += fontH*2.5
     
     static labelItemName as ElementType
-    LD2_InitElement @labelItemName, "", 31
-    labelItemName.parent = @dialog
-    labelItemName.x = lft
-    labelItemName.y = menuActions.y
-    
-    i = -1
-    for y = 0 to 2
-        for x = 0 to 2
-        
-        i += 1
-        Inventory_GetItemBySlot(item, i)
-        
-        'LD2_initElement @labelItemsDecor(i), "[ " + space(15) + " ]", 31, ElementFlags.MonospaceText
-        'labelItemsDecor(i).parent = @dialog
-        'labelItemsDecor(i).h = FONT_H
-        'labelItemsDecor(i).x = SCREEN_W - len(labelItemsDecor(i).text) * fontW - fontW
-        'labelItemsDecor(i).y = int(labelInventory.y + fontH*2.5) + (i*fontH)
-        'LD2_initElement @labelItems(i), item.shortName, 31
-        'labelItems(i).h = FONT_H
-        'labelItems(i).parent = @dialog
-        'labelItems(i).padding_x = 3
-        'labelItems(i).padding_y = 1
-        'labelItems(i).w = (FONT_W+1)*15 - labelItems(i).padding_x
-        'labelItems(i).x = labelItemsDecor(i).x + fontW * 2 - labelItems(i).padding_x
-        'labelItems(i).y = labelItemsDecor(i).y - labelItems(i).padding_y
-        '
-        'LD2_initElement @labelItemsQty(i), str(item.qty), 31, ElementFlags.AlignTextRight
-        'labelItemsQty(i).h = FONT_H
-        'labelItemsQty(i).parent = @dialog
-        'labelItemsQty(i).padding_x = 3
-        'labelItemsQty(i).padding_y = 1
-        'labelItemsQty(i).y = labelItems(i).y
-        'labelItemsQty(i).x = labelItems(i).x+labelItems(i).w+labelItems(i).padding_x-LD2_GetElementTextWidth(@labelItemsQty(i))
-        
-        LD2_initElement @labelItems(i), "", 31, ElementFlags.SpriteCenterX or ElementFlags.SpriteCenterY
-        labelItems(i).w = SPRITE_W
-        labelItems(i).h = SPRITE_H
-        labelItems(i).border_size = 1
-        labelItems(i).border_color = 77
-        labelItems(i).parent = @dialog
-        labelItems(i).padding_x = 3
-        labelItems(i).padding_y = 1
-        labelItems(i).x = lft + x * 32
-        labelItems(i).y = top + y * (SPRITE_H+labelItems(i).padding_y*2+labelItems(i).border_size*2+1)
-        labelItems(i).sprite = item.id
-        labelItems(i).sprite_set_id = idOBJCRP
-        
-        IF i = selectedInventorySlot THEN
-            selected = item
-            labelItemName.text = item.shortName
-            labelItems(i).background = 70
-            if mixItem <> 0 then
-                labelItems(i).background = 184
-                labelItems(i).text_color = 22
-            end if
-        ELSE
-            labelItems(i).background = 77 '-1
-            labelItems(i).background_alpha = 0.5
-        END IF
-        
-        if (mixItem <> 0) then
-            if (item.id = mixItem->id) then
-                labelItems(i).text_color = 22
-                labelItems(i).background = 88
+    if mixItem = 0 then
+        LD2_InitElement @labelItemName, "", 31
+        labelItemName.parent = @dialog
+        labelItemName.x = lft
+        labelItemName.y = top+(rowH+rspc)*numRows
+        LD2_AddElement @labelItemName
+    else
+        labelMix.x   = lft-LD2_GetElementTextWidth(@labelMix, labelMix.text+" ")-1
+        labelMix.y   = top+(rowH+rspc)*numRows
+        mixSubject.x = lft
+        mixSubject.y = labelMix.y
+        if mixItemWith = 0 then
+            labelWith.x  = lft-LD2_GetElementTextWidth(@labelWith, labelWith.text+" ")-1
+            labelWith.y  = top+(rowH+rspc)*numRows+fontH
+            mixObject.x  = lft
+            mixObject.y  = labelWith.y
+        else
+            labelWith.x  = labelMix.x+LD2_GetElementTextWidth(@labelMix, labelMix.text+" "+mixSubject.text+" ")-1
+            labelWith.y  = labelMix.y
+            mixObject.x  = labelWith.x+LD2_GetElementTextWidth(@labelMix, labelWith.text+" ")-1
+            mixObject.y  = labelWith.y
+            if mixObject.x + LD2_GetElementTextWidth(@mixObject) > mixObject.parent->w then
+                for n = len(mixObject.text)-1 to 1 step -1
+                    if mixObject.x + LD2_GetElementTextWidth(@mixObject, left(mixObject.text, n)) <= mixObject.parent->w then
+                        mixObject.text = left(mixObject.text, n-1)+"..."
+                        exit for
+                    end if
+                next n
             end if
         end if
-        
+    end if
+    
+    i = -1
+    for y = 0 to numRows-1
+        for x = 0 to numCols-1
+            
+            i += 1
+            Inventory_GetItemBySlot(item, i)
+            
+            LD2_initElement @labelItems(i), iif(item.max = 1, "", str(item.qty)), 31, ElementFlags.SpriteCenterX or ElementFlags.SpriteCenterY
+            labelItems(i).parent = @dialog
+            labelItems(i).padding_x = 3
+            labelItems(i).padding_y = 1
+            labelItems(i).border_size = 1
+            labelItems(i).w = colW - labelItems(i).padding_x*2 - labelItems(i).border_size*2
+            labelItems(i).h = rowH - labelItems(i).padding_y*2 - labelItems(i).border_size*2
+            labelItems(i).border_color = ITEM_BORDER_COLOR
+            labelItems(i).x = lft + x * (colW+cspc)
+            labelItems(i).y = top + y * (rowH+rspc)
+            labelItems(i).sprite = item.id
+            labelItems(i).sprite_set_id = idOBJCRP
+            
+            if i = selectedInventorySlot then
+                selected = item
+                labelItemName.text = trim(item.shortName)
+                labelItems(i).background = ITEM_SELECTED_BG
+                if mixItem <> 0 then
+                    labelItems(i).background = MIX_OBJECT_BG
+                    labelItems(i).text_color = MIX_OBJECT_FG
+                end if
+            else
+                labelItems(i).background = ITEM_NOT_SELECTED_BG
+                labelItems(i).background_alpha = 0.5
+            end if
+            
+            if (mixItem <> 0) then
+                if (item.id = mixItem->id) then
+                    labelItems(i).background = MIX_SUBJECT_BG
+                    labelItems(i).text_color = MIX_SUBJECT_FG
+                    labelItems(i).background_alpha = 1.0
+                end if
+            end if
+            
         next x
     next y
     
     if action >= 0 then
-        FOR i = 0 TO 3
-            LD2_InitElement @labelActions(i), "", 31, ElementFlags.MonospaceText
-            labelActions(i).parent = @menuActions
-            'labelActions(i).h = FONT_H
-            IF i = action THEN
-                labelActions(i).text = "< " + actions(i) + " >"
-                labelActions(i).x = i * 8 * fontW
-                labelActions(i).y = 0
-                labelActions(i).background = 70
-            ELSE
-                labelActions(i).text = "  " + actions(i) + "  "
-                labelActions(i).x = i * 8 * fontW
-                labelActions(i).y = 0
-                labelActions(i).background = -1
-            END IF
-        NEXT i
-    else
-        LD2_AddElement @labelItemName
-    END IF
+        for i = 0 to 3
+            labelActions(i).background = iif(i = action, ACTION_SELECTED_BG, ACTION_NOT_SELECTED_BG)
+        next i
+    end if
     
 end sub
 
@@ -804,25 +853,25 @@ SUB Look (item AS InventoryType)
         imgSprite.parent = @dialog
         imgSprite.w = img_w
         imgSprite.h = img_h
-        imgSprite.padding_x = SPRITE_W*0.5
-        imgSprite.padding_y = SPRITE_H*0.75
+        imgSprite.padding_x = int((heading.w-img_w)*0.5)
+        imgSprite.padding_y = imgSprite.padding_x
         imgSprite.sprite = item.id
         imgSprite.sprite_set_id = idOBJCRP
     LD2_AddElement @imgSprite
     
     LD2_InitElement @container, "", 31
         container.parent = @dialog
-        container.w = SCREEN_W-SPRITE_W*5
-        container.h = dialog.h - fontH * 1.0
-        container.x = SPRITE_W*5
-        container.y = fontH * 1.0
+        container.w = container.parent->w-heading.w
+        container.h = container.parent->h
+        container.x = container.parent->w-container.w
     LD2_AddElement @container
 
-    LD2_InitElement @textDescription, "", 31 ', ElementFlags.CenterY
+    LD2_InitElement @textDescription, "", 31, ElementFlags.CenterY
         textDescription.parent = @container
         textDescription.text_height = 1.8
-        textDescription.w = container.w-fontW*3
         textDescription.padding_x = fontW*1.5
+        textDescription.w = textDescription.parent->w-textDescription.padding_x*2
+
     LD2_AddElement @textDescription
     
     textDescription.text = desc
@@ -833,9 +882,18 @@ SUB Look (item AS InventoryType)
     dim scrollRows as integer
     
     fontH = LD2_GetFontHeightWithSpacing(textDescription.text_height)
-    LD2_PrepareElement @container
+    
+    LD2_InitElement @divider, "", 31
+        divider.parent = @container
+        divider.text_height = textDescription.text_height
+        divider.w = fontW
+        for n = 0 to int(container.h/fontH)-1: divider.text += "| ": next n
+    LD2_AddElement @divider
+    textDescription.w -= divider.w
+    textDescription.x += divider.w
+    
     LD2_PrepareElement @textDescription
-    if textDescription.h > textDescription.render_visible_h then
+    if textDescription.h > container.h then
         LD2_InitElement @scrollbar, "", 31
             scrollbar.parent = @container
             scrollbar.text_height = textDescription.text_height
@@ -843,19 +901,14 @@ SUB Look (item AS InventoryType)
             scrollbar.x = container.w-scrollbar.w
         LD2_AddElement @scrollbar
         textDescription.w -= scrollbar.w
-        scrollRows = (textDescription.h-textDescription.render_visible_h)/fontH
+        LD2_PrepareElement @textDescription
+        scrollRows = int((textDescription.h-container.h)/fontH)
+        if (textDescription.h-container.h)/fontH - scrollRows > 0 then scrollRows += 1
+        scrollHeight = int(container.h/fontH)
+        if scrollRows < scrollHeight then
+            scrollRows = scrollHeight
+        end if
     end if
-    scrollHeight = int(textDescription.render_visible_h/fontH)
-    
-    LD2_InitElement @divider, "", 31
-        divider.parent = @container
-        divider.text_height = textDescription.text_height
-        divider.w = fontW
-        divider.x = 0
-        for n = 0 to int((container.render_visible_h-container.render_visible_y)/fontH)-1: divider.text += "| ": next n
-    LD2_AddElement @divider
-    textDescription.w -= divider.w
-    textDescription.x += divider.w
     
     dim wobbleClock as double
     dim textClock as double
@@ -884,6 +937,8 @@ SUB Look (item AS InventoryType)
         wobbleType = WobbleTypes.Reveal540Spin
     case ItemIds.Magnum
         wobbleType = WobbleTypes.RevealBackSpin
+    case ItemIds.Flashlight, ItemIds.FlashlightNoBat
+        wobbleType = WobbleTypes.Reveal540BackSpin
     case else
         wobbleType = WobbleTypes.RevealNoSpin
     end select
@@ -925,6 +980,8 @@ SUB Look (item AS InventoryType)
             select case imgSprite.sprite
             case ItemIds.MysteryMeat
                 wobbleType = WobbleTypes.Squishy
+            case ItemIds.Flashlight, ItemIds.FlashlightNoBat, ItemIds.Wrench, ItemIds.Magnum, ItemIds.Handgun, ItemIds.Shotgun
+                wobbleType = WobbleTypes.Metal
             case else
                 wobbleType = WobbleTypes.Elastic
             end select
@@ -1000,6 +1057,7 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
     
     static stretching as integer
     static e as double
+    dim percent as double
     dim stretchStart as integer
     dim img_w as integer
     dim img_h as integer
@@ -1044,6 +1102,14 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
         wobble->w = int(img_w*(1.0+(1-e))+0.5)
         wobble->h = int(img_h*(1.0+(1-e))+0.5)
         wobble->sprite_rot = int(e*540+180)
+        is_reveal = 1
+    
+    case WobbleTypes.Reveal540BackSpin
+        
+        e = iif(e=0 or e=1, getEaseInOutInterval(0.15), getEaseInOutInterval(0, 0.45))
+        wobble->w = int(img_w*(1.0+(1-e))+0.5)
+        wobble->h = int(img_h*(1.0+(1-e))+0.5)
+        wobble->sprite_rot = int(e*-630-90)
         is_reveal = 1
         
     '*******************************************************************
@@ -1140,6 +1206,81 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
             wobble->h = int(img_h*(1+e*1.5)+0.5)
             
         end select
+    '*******************************************************************
+    '* METAL
+    '*******************************************************************
+    case WobbleTypes.Metal
+        
+        select case wobbleAction
+        case WobbleActions.SlapLeft, WobbleActions.SlapRight
+            
+            if e=0 or e=1 then
+                e = getEaseInShake(0.01)
+                percent = 0
+                wobble->sprite_rot = 0
+                LD2_PlaySound Sounds.lookMetal
+            else
+                e = getEaseInShake(0, 0.45, percent)
+            end if
+            e = abs(e)
+            select case wobbleAction
+            case WobbleActions.SlapLeft
+                wobble->x = int((img_w*(1-e*0.7)-wobble->w)*0.5)
+                if percent > 0.15 then wobble->sprite_rot = 10
+            case WobbleActions.SlapRight
+                wobble->x = int((img_w*(1+e*0.7)-wobble->w)*0.5)
+                if percent > 0.15 then wobble->sprite_rot = -45
+            end select
+            wobble->y = int((img_h-wobble->h)*0.5)
+            if e=0 or e=1 then
+                wobble->sprite_rot = 0
+            end if
+        
+        case WobbleActions.SlapUp, WobbleActions.SlapDown
+            
+            if e=0 or e=1 then
+                e = getEaseInShake(0.01)
+                percent = 0
+                wobble->sprite_rot = 0
+                LD2_PlaySound Sounds.lookMetal
+            else
+                e = getEaseInShake(0, 0.45, percent)
+            end if
+            select case wobbleAction
+            case WobbleActions.SlapUp
+                wobble->y = int((img_h*(1-abs(e)*0.5)-wobble->h)*0.5)
+                if percent > 0.15 then wobble->sprite_rot = 3
+            case WobbleActions.SlapDown
+                wobble->y = int((img_h*(1+abs(e)*0.5)-wobble->h)*0.5)
+                if percent > 0.15 then wobble->sprite_rot = -6
+            end select
+            wobble->x = int((img_w-wobble->w)*0.5)
+            if e=0 or e=1 then
+                wobble->sprite_rot = 0
+            end if
+        
+        case WobbleActions.Punch
+            
+            if e=0 or e=1 then
+                e = getEaseInShake(0.15)
+                percent = 0
+                LD2_PlaySound Sounds.punch
+                LD2_PlaySound Sounds.lookMetal
+                
+            else
+                e = getEaseInShake(0, 0.35, percent)
+            end if
+            e = abs(e)
+            wobble->w = int(img_w*(1.0+e*0.7)+0.5)
+            wobble->h = int(img_h*(1.0+e*0.7)+0.5)
+            wobble->sprite_rot = 30
+            
+            if e=0 or e=1 then
+                wobble->sprite_rot = 0
+            end if
+            
+        end select
+        
     end select
     
     if (wobble->w and 1) = 0 then wobble->w -= 1
@@ -1171,7 +1312,7 @@ SUB RefreshStatusScreen
         id = LD2_GetStatusItem(i)
         qty = LD2_GetStatusAmount(i)
         qtyMax = Player_GetItemMaxQty(id)
-        IF Inventory_Add(id, qty, qtyMax) THEN
+        IF Inventory_Add(id, qty, qtyMax, i) THEN
             EXIT FOR
         END IF
     NEXT i
@@ -1222,9 +1363,11 @@ SUB StatusScreen
     
     dim row as integer
     dim col as integer
+    dim numCols as integer: numCols = 4
+    dim numRows as integer: numRows = 2
     
-    row = int(selectedInventorySlot / 3)
-    col = selectedInventorySlot-row*3
+    row = int(selectedInventorySlot / numCols)
+    col = selectedInventorySlot-row*numCols
 
 	do
 		LD2_CopyBuffer 2, 1
@@ -1234,7 +1377,7 @@ SUB StatusScreen
         LD2_RefreshScreen
         PullEvents
         
-        selectedInventorySlot = row*3+col
+        selectedInventorySlot = row*numCols+col
         Inventory_GetItemBySlot(selected, selectedInventorySlot)
         
         IF keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseRB() or mouseMB() THEN
@@ -1269,8 +1412,8 @@ SUB StatusScreen
                 action = -1
             else
                 row += 1
-                IF row > 2 THEN
-                    row = 2
+                IF row > numRows-1 THEN
+                    row = numRows-1
                     LD2_PlaySound Sounds.uiInvalid
                 ELSE
                     LD2_PlaySound Sounds.uiArrows
@@ -1307,8 +1450,8 @@ SUB StatusScreen
                 END IF
             else
                 col += 1
-                if col > 2 then
-                    col = 2
+                if col > numCols-1 then
+                    col = numCols-1
                     LD2_PlaySound Sounds.uiInvalid
                 else
                     LD2_PlaySound Sounds.uiArrows
@@ -1446,7 +1589,7 @@ SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
     END IF
     
     LD2_CopyBuffer 2, 1
-    RenderStatusScreen
+    RenderStatusScreen -1, @item0, @item1
     
     ShowResponse msg, textColor
     
@@ -1454,12 +1597,12 @@ END SUB
 
 SUB ShowResponse (response AS STRING, textColor as integer = -1)
     
-    dim i as integer
+    dim revealStep as double
+    dim d as double
     dim labelResponse as ElementType
     dim fontW as integer
     dim fontH as integer
     dim textW as integer
-    dim revealStep as integer
     
     fontW = LD2_GetFontWidthWithSpacing()
     fontH = LD2_GetFontHeightWithSpacing()
@@ -1467,23 +1610,23 @@ SUB ShowResponse (response AS STRING, textColor as integer = -1)
     LD2_InitElement @labelResponse, response, 31
     textW = LD2_GetElementTextWidth(@labelResponse)
     labelResponse.parent = LD2_GetRootParent()
-    labelResponse.x = SCREEN_W - textW - fontW*1.5
-    labelResponse.y = fontH * 11.5 + 2
+    labelResponse.x = labelResponse.parent->w - textW - 1
+    labelResponse.y = labelResponse.parent->h+labelResponse.parent->padding_y-fontH*2
     
     if textColor >= 0 then
         labelResponse.text_color = textColor
     end if
     
-    revealStep = 2'int(len(response) / 20)
-    if revealStep < 1 then revealStep = 1
-    FOR i = 1 TO LEN(response) step revealStep
-        labelResponse.text = left(response, i)
+    revealStep = int(len(response)*0.065)
+    if revealStep < 2 then revealStep = 2
+    FOR d = 1 TO LEN(response) step revealStep
+        labelResponse.text = left(response, int(d))
         LD2_CopyBuffer 2, 1
         LD2_RenderElements
         LD2_RenderElement @labelResponse
         LD2_RefreshScreen
         PullEvents
-    NEXT i
+    NEXT d
 
     DO
         IF (INT(TIMER*3) AND 1) THEN
