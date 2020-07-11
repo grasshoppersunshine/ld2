@@ -5,6 +5,8 @@
 # EQ  - show message if TEST qty = QTY
 # NEQ - show message if TEST qty != QTY
 # no further checks are done once a match is made (action/response of first match is used)
+NOTHING          , EQ  , NOTHING        ,   0, keep   , "Not usable."
+NOTHING          , NEQ , NOTHING        ,   0, keep   , "Not usable."
 MEDIKIT50        , EQ  , HP             , MAX, keep   , "Not needed. Health at max."
 MEDIKIT50        , ADD , HP             , P50, discard, "Used Medikit +50"
 MEDIKIT100       , EQ  , HP             , MAX, keep   , "Not needed. Health at max."
@@ -32,7 +34,7 @@ WHITECARD        , HAS , WHITECARD      ,   1, keep   , "Cards are scanned autom
 REDCARD          , HAS , REDCARD        ,   1, keep   , "Cards are scanned automatically near doors."
 MYSTERYMEAT      , HAS , MYSTERYMEAT    ,   1, keep   , "Larry declines to eat the mystery meat."
 CHEMICAL409      , HAS , CHEMICAL409    ,   1, keep   , "Larry doesn't feel like cleaning today."
-CHEMICAL410      , HAS , ACTIVE410      ,   0, keep   , "I can't use this here."
+CHEMICAL410      , EQ  , CALLBACK       ,   0, keep   , "I can't use this here."
 CHEMICAL410      , USE , CHEMICAL410    ,   1, discard, "Used Chemical 410"
 JANITORNOTE      , HAS , JANITORNOTE    ,   1, keep   , "Not usable."
 ELEVATORMENU     , USE , ELEVATORMENU   ,   1, keep   , ""

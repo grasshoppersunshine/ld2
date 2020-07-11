@@ -100,7 +100,7 @@ enum ItemIds
     Auth            = 50
     TempAuth        = 51
     '=======================================
-    Active410       = 60
+    CallbackValue   = 60
     ElevatorMenu    = 61
     DoorTop         = 60
     DoorBottom      = 61
@@ -148,8 +148,8 @@ enum ItemIds
     SceneGooGone         = 111
     SceneRooftopGotCard  = 112
     SceneFlashlight      = 113
-    SceneBarneyPlan      = 114
-    SceneVentCrawl       = 115
+    SceneCaptured        = 114
+    SceneVentEscape      = 115
     SceneVentRemoveSteve = 116
     ScenePortal          = 117
     SceneLobby           = 118
@@ -750,7 +750,7 @@ enum Guides
     SceneLobby       = 1400
     ScenePortal      =  300
     SceneTheEnd      = 1600
-    SceneVentCrawl   = 1240
+    SceneVentEscape  = 1240
     SceneWeapons1    =  400
     SceneWeapons2    =  420
     SceneWeapons3    =   80
@@ -774,6 +774,7 @@ enum RenderSceneFlags
     WithoutElevator = &h40
 end enum
 
+declare sub LD2_BeforeUseItem (byval id as integer)
 declare sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as integer)
 declare sub LD2_LookItem (id as integer, byref desc as string)
 declare sub AddMusic (id as integer, filepath as string, loopmusic as integer)

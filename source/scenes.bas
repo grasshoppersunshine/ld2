@@ -13,8 +13,8 @@ declare function Scene4Go () as integer
 declare function Scene5Go () as integer
 declare function Scene6Go () as integer
 declare function Scene7Go () as integer
-declare function SceneBarneyPlanGo () as integer
-declare function SceneVentCrawlGo () as integer
+declare function SceneCapturedGo () as integer
+declare function SceneVentEscapeGo () as integer
 declare function SceneLobbyGo () as integer
 declare function SceneTheEndGo () as integer
 declare function SceneGooGo () as integer
@@ -31,8 +31,8 @@ declare sub Scene4EndConditions ()
 declare sub Scene5EndConditions ()
 declare sub Scene6EndConditions ()
 declare sub Scene7EndConditions ()
-declare sub SceneBarneyPlanEndConditions ()
-declare sub SceneVentCrawlEndConditions ()
+declare sub SceneCapturedEndConditions ()
+declare sub SceneVentEscapeEndConditions ()
 declare sub SceneLobbyEndConditions ()
 declare sub SceneTheEndEndConditions ()
 declare sub SceneGooEndConditions ()  
@@ -918,28 +918,31 @@ function Scene7Go() as integer
 
 end function
 
-sub SceneBarneyPlan()
+sub SceneCaptured()
     
-    if SceneBarneyPlanGo() then
+    if SceneCapturedGo() then
         LD2_FadeOut 2
-        SceneBarneyPlanEndConditions
+        SceneCapturedEndConditions
         RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
-        SceneBarneyPlanEndConditions
+        SceneCapturedEndConditions
     end if
     
 end sub
 
-sub SceneBarneyPlanEndConditions()
+sub SceneCapturedEndConditions()
     
     ClearPoses
     LD2_SetSceneMode MODEOFF
-    Player_SetItemQty ItemIds.SceneBarneyPlan, 1
+    Player_SetItemQty ItemIds.SceneCaptured, 1
+    
+    'LD2_put 400, 144, 12, idSCENE, 1
+    'LD2_put 400, 144, 14, idSCENE, 1
     
 end sub
 
-function SceneBarneyPlanGo() as integer
+function SceneCapturedGo() as integer
     
     '- Scene after used flashlight
     dim LarryPose as PoseType
@@ -997,24 +1000,24 @@ function SceneBarneyPlanGo() as integer
     
 end function
 
-sub SceneVentCrawl()
+sub SceneVentEscape()
     
-    if SceneVentCrawlGo() then
+    if SceneVentEscapeGo() then
         LD2_FadeOut 2
-        SceneVentCrawlEndConditions
+        SceneVentEscapeEndConditions
         RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
-        SceneVentCrawlEndConditions
+        SceneVentEscapeEndConditions
     end if
     
 end sub
 
-sub SceneVentCrawlEndConditions()
+sub SceneVentEscapeEndConditions()
     
     ClearPoses
     LD2_SetSceneMode MODEOFF
-    Player_SetItemQty ItemIds.SceneVentCrawl, 1
+    Player_SetItemQty ItemIds.SceneVentEscape, 1
     Player_SetItemQty ItemIds.Phase, 3
     
     Map_SetXShift 1400
@@ -1022,9 +1025,12 @@ sub SceneVentCrawlEndConditions()
     Player_SetFlip 0
     LD2_Drop WhiteCard2
     
+    'LD2_put 1450, 144, 12, idSCENE, 1
+    'LD2_put 1450, 144, 14, idSCENE, 1
+    
 end sub
 
-function SceneVentCrawlGo() as integer
+function SceneVentEscapeGo() as integer
     
     dim LarryPose as PoseType
     dim StevePose as PoseType

@@ -986,6 +986,7 @@ SUB Main
     dim newReload as integer
     dim atKeypad as integer
     dim hasAccess as integer
+    dim showStatusScreen as integer
     dim showConsole as integer
     dim inputText as string
     dim response as string
@@ -1073,8 +1074,16 @@ SUB Main
             Rooms_DoBasement player
     end select
     
+    if showStatusScreen then
+        showStatusScreen = iif(StatusScreen(showConsole)=0,1,0)
+    end if
+    
 	LD2_RefreshScreen
 	LD2_CountFrame
+    
+    if keyboard(KEY_E) or keypress(KEY_TAB) or mouseMB() then
+        showStatusScreen = 1
+    end if
     
     if showConsole then
         if keypress(KEY_ESCAPE) or keypress(KEY_SLASH) then
@@ -1135,6 +1144,9 @@ SUB Main
                 LD2_SetNotice response
             end if
         end if
+        if showConsole = 0 then
+            resetClocks = 1
+        end if
         continue do
     end if
     if keypress(KEY_SLASH) then
@@ -1145,6 +1157,9 @@ SUB Main
             consoleStart = timer
             LD2_PlaySound Sounds.uiSubmenu
         end if
+    end if
+    if showStatusScreen then
+        continue do
     end if
     
     if keypress(KEY_ESCAPE) then
@@ -1247,12 +1262,7 @@ SUB Main
         newReload = 1
     end if
     
-	if keyboard(KEY_E) or (keyboard(KEY_TAB) or mouseMB()) then
-        StatusScreen
-        resetClocks = 1
-    end if
-	
-    atKeypad  = (Player_GetCurrentRoom() = Rooms.Rooftop) and (player.x >= 1376 and player.x <= 1408)
+	atKeypad  = (Player_GetCurrentRoom() = Rooms.Rooftop) and (player.x >= 1376 and player.x <= 1408)
     hasAccess = (Player_GetAccessLevel() >= YELLOWACCESS)
     if (atKeypad = 0) or (atKeypad and hasAccess) then
         if keypress(KEY_1) then doAction CustomActions(0).actionId, CustomActions(0).itemId
@@ -1632,14 +1642,33 @@ sub SceneCheck (player as PlayerType)
                 Scene7
             end if
         end if
+    case "SCENE-STEVE-GONE"
+        if Player_NotItem(ItemIds.SceneSteveGone) and Player_HasItem(ItemIds.SceneWeapons1) then
+            if Player_GetX() <> Guides.SceneSteveGone then
+                moveToX = Guides.SceneSteveGone
+            else
+                SceneSteveGone
+            end if
+        end if
+    case "SCENE-GOO"
+        if Player_NotItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.Chemical410) then
+            if Player_GetX() <> Guides.SceneGoo then
+                moveToX = Guides.SceneGoo
+            else
+                SceneGoo
+            end if
+        end if
     case "SCENE-WEAPONS2"
-        if Player_NotItem(ItemIds.SceneWeapons2) then
+        if Player_HasItem(ItemIds.SceneRooftopGotCard) and Player_NotItem(ItemIds.SceneWeapons2) then
             if Player_GetX() <> Guides.SceneWeapons2 then
                 moveToX = Guides.SceneWeapons2
+            else
+                SceneWeapons2
             end if
-        else
-            SceneWeapons2
         end if
+        'until
+        'LD2_put 388, 144, 50, idSCENE, 0
+        'LD2_put 388, 144, 45, idSCENE, 0
     case "SCENE-WEAPONS3"
         if Player_NotItem(ItemIds.SceneWeapons3) then
             if Player_GetX() <> Guides.SceneWeapons3 then
@@ -1648,121 +1677,56 @@ sub SceneCheck (player as PlayerType)
                 SceneWeapons3
             end if
         end if
+        'until
+        'LD2_put 48, 144, 50, idSCENE, 0
+        'LD2_put 48, 144, 45, idSCENE, 0
+    case "SCENE-CAPTURED"
+        if Player_NotItem(ItemIds.SceneCaptured) then
+            SceneCaptured
+        end if
+    case "SCENE-VENT-ESCAPE"
+        if Player_NotItem(ItemIds.SceneVentEscape) then
+            if Player_GetX() <> Guides.SceneVentEscape then
+                moveToX = Guides.SceneVentEscape
+            else
+                SceneVentEscape
+            end if
+        end if
+    case "SCENE-LOBBY"
+        if Player_NotItem(ItemIds.ScenePortal) then
+            if Player_GetX() <> Guides.SceneLobby then
+                moveToX = Guides.SceneLobby
+            else
+                SceneLobby
+            end if
+        end if
+    case "SCENE-PORTAL"
+        if Player_NotItem(ItemIds.ScenePortal) then
+            if Player_GetX() <> Guides.ScenePortal then
+                moveToX = Guides.ScenePortal
+            else
+                ScenePortal
+            end if
+        end if
+        'until
+        'LD2_put 260, 144, 12, idSCENE, 0
+        'LD2_put 260, 144, 14, idSCENE, 0
+        'LD2_put 240, 144, 50, idSCENE, 0
+        'LD2_put 240, 144, 45, idSCENE, 0
+        'LD2_put 200, 144, 72, idSCENE, 0
+    case "THE-END"
+        if Player_NotItem(ItemIds.SceneTheEnd) then
+            if Player_GetX() <> Guides.SceneTheEnd then
+                moveToX = Guides.SceneTheEnd
+            else
+                SceneTheEnd
+            end if
+        end if
+    
     end select
     
     if Player_HasItem(ItemIds.YellowCard) and Player_NotItem(ItemIds.SceneRooftopGotCard) then
         SceneRooftopGotCard
-    end if
-    
-    if Player_GetCurrentRoom() = Rooms.LarrysOffice then
-        'if Player_NotItem(ItemIds.SceneJanitor) then
-        '    LD2_put 1196, 144, POSEJANITOR, idSCENE, 0
-        '    if player.x >= Guides.SceneJanitor then
-        '        Scene3 '// larry meets janitor
-        '        Scene4 '// rockmonster eats janitor
-        '    end if
-        'end if
-        'if Player_NotItem(ItemIds.SceneElevator) and player.x >= Guides.SceneElevator then
-        '    Scene5 '// barney saves larry from rockmonster
-        'end if
-        'if Player_NotItem(ItemIds.SceneWeapons1) then
-        '    LD2_put 162, 144, 121, idSCENE, 1 '// steve
-        '    LD2_put 178, 144, 120, idSCENE, 1 '// passed out
-        'end if
-        'if Player_HasItem(ItemIds.SceneElevator) and Player_NotItem(ItemIds.SceneWeapons1) then
-        '    '// ??????
-        'end if
-    end if
-    if Player_GetCurrentRoom() = Rooms.WeaponsLocker then
-        if Player_NotItem(ItemIds.SceneWeapons1) then
-            LD2_put 368, 144, BARNEYEXITELEVATOR, idSCENE, 0
-            if player.x <= Guides.SceneWeapons1 then
-                Scene7 '// barney explaining the situation to larry
-            end if
-        end if
-    end if
-	
-    if Player_GetCurrentRoom() = Rooms.Lobby then
-        if Player_NotItem(ItemIds.ScenePortal) and (player.x <= Guides.SceneLobby) then
-            'SceneLobby
-        end if
-        if Player_NotItem(ItemIds.SceneTheEnd) and (player.x >= Guides.SceneTheEnd) then
-            'SceneTheEnd '- the end
-        end if
-	end if
-
-    if Player_NotItem(ItemIds.SceneGooGone) and (Player_GetCurrentRoom() = Rooms.VentControl) then
-        if player.x <= Guides.Activate410 then
-            if Player_HasItem(ItemIds.Chemical410) then
-                Player_SetItemQty ItemIds.Active410, 1
-            end if
-        end if
-        if player.x <= Guides.SceneGoo then
-            if Player_NotItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.Chemical410) then
-                SceneGoo
-            end if
-        else
-            Player_SetItemQty ItemIds.Active410, 0
-        end if
-    elseif Player_HasItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.Chemical410) and (Player_GetCurrentRoom() <> Rooms.VentControl) then
-        Player_SetItemQty ItemIds.SceneGoo, 0
-    end if
-    
-    'if Player_HasItem(ItemIds.YellowCard) and Player_NotItem(ItemIds.SceneRooftopGotCard) and Player_HasItem(ItemIds.BossRooftopEnd) and (Player_GetCurrentRoom() = Rooms.Rooftop) then
-    '    SceneRooftopGotCard
-    'end if
-    
-    if Player_NotItem(ItemIds.ScenePortal) and (Player_GetCurrentRoom() = Rooms.PortalRoom) then
-        if player.x <= Guides.ScenePortal then
-            ScenePortal
-        else
-            LD2_put 260, 144, 12, idSCENE, 0
-            LD2_put 260, 144, 14, idSCENE, 0
-            LD2_put 240, 144, 50, idSCENE, 0
-            LD2_put 240, 144, 45, idSCENE, 0
-            LD2_put 200, 144, 72, idSCENE, 0
-        end if
-    end if
-
-    if Player_NotItem(ItemIds.SceneVentCrawl) and Player_HasItem(ItemIds.SceneBarneyPlan) then
-        if player.x >= Guides.SceneVentCrawl then
-            SceneVentCrawl
-        else
-            LD2_put 400, 144, 12, idSCENE, 1
-            LD2_put 400, 144, 14, idSCENE, 1
-        end if
-    end if
-
-    if Player_HasItem(ItemIds.SceneVentCrawl)and Player_NotItem(ItemIds.SceneVentRemoveSteve) then
-        if Player_GetCurrentRoom() = Rooms.Unknown then
-            LD2_put 1450, 144, 12, idSCENE, 1
-            LD2_put 1450, 144, 14, idSCENE, 1
-        else
-            Player_SetItemQty ItemIds.SceneVentRemoveSteve, 1
-        end if
-    end if
-    
-    'if (Player_GetCurrentRoom() = Rooms.WeaponsLocker) then
-    '    if Player_NotItem(ItemIds.SceneWeapons2) and Player_HasItem(ItemIds.SceneRooftopGotCard) then
-    '        LD2_put 388, 144, 50, idSCENE, 0
-    '        LD2_put 388, 144, 45, idSCENE, 0
-    '        if player.x <= Guides.SceneWeapons2 then
-    '            SceneWeapons2
-    '        end if
-    '    end if
-    '    if Player_NotItem(ItemIds.SceneWeapons3) and Player_HasItem(ItemIds.SceneWeapons2) then
-    '        LD2_put 48, 144, 50, idSCENE, 0
-    '        LD2_put 48, 144, 45, idSCENE, 0
-    '        if player.x <= Guides.SceneWeapons3 then
-    '            SceneWeapons3
-    '        end if
-    '    end if
-    'end if
-    
-    if Player_NotItem(ItemIds.SceneSteveGone) and Player_HasItem(ItemIds.SceneWeapons1) then
-        if (Player_GetCurrentRoom() = Rooms.LarrysOffice) and (player.x <= Guides.SceneSteveGone) then
-            SceneSteveGone
-        end if
     end if
     
 end sub
@@ -1944,6 +1908,12 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             end if
         case "add"
             select case args(1)
+            case "note": args(1) = "janitornote"
+            case "meat": args(1) = "mysterymeat"
+            case "chem409", "409": args(1) = "chemical409"
+            case "chem410", "410": args(1) = "chemical410"
+            end select
+            select case args(1)
             case "shotgun"
                 LD2_AddToStatus(ItemIds.Shotgun, 1)
                 Player_AddAmmo ItemIds.Shotgun, 99
@@ -2003,6 +1973,7 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
         case else
             response = !"!Invalid option\\ \\Use \"list\" to see options"
         end select
+        STATUS_RefreshInventory
     case "rooms"
         optlist = "status|reload|id [room-id]|goto [room-id]"
         select case args(0)
@@ -2088,8 +2059,8 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             case "10", "rooftop", "yellowcard": SceneRooftopGotCard
             case "11", "weapons2": SceneWeapons2
             case "12", "weapons3": SceneWeapons3
-            case "13", "stevefound", "barneyplan", "truth", "steve3": SceneBarneyPlan
-            case "14", "crawl", "vent", "ventcrawl", "steve4": SceneVentCrawl
+            case "13", "catpured", "barneyplan", "truth", "steve3": SceneCaptured
+            case "14", "escape", "ventescape", "vent", "ventcrawl", "steve4": SceneVentEscape
             case "15", "lobby", "notleavingsteve", "steve5": SceneLobby
             case "16", "portal", "steve6": ScenePortal
             case "17", "end", "theend": SceneTheEnd
@@ -2478,6 +2449,7 @@ sub Start
     dim firstLoop as integer
     firstLoop = 1
     
+    STATUS_SetBeforeUseItemCallback @LD2_BeforeUseItem
     STATUS_SetUseItemCallback @LD2_UseItem
     STATUS_SetLookItemCallback @LD2_LookItem
     
@@ -2491,7 +2463,7 @@ sub Start
     Game_SetSessionFile SESSION_FILE
     Mobs_SetBeforeKillCallback @BeforeMobKill
     
-    if Inventory_Init(16, 8) then
+    if STATUS_InitInventory() then
         STATUS_DialogOk "Error intializing inventory!"
         Game_Shutdown
         end
@@ -2670,9 +2642,9 @@ sub NewGame
                 LD2_AddToStatus(ItemIds.QuadDamage, 1)
             case "armor", "speed", "highjump"
                 LD2_AddToStatus(ItemIds.PoweredArmor, 1)
-            case "chemical410", "410"
+            case "chemical410", "chem410", "410"
                 LD2_AddToStatus(ItemIds.Chemical410, 1)
-            case "chemical409", "409"
+            case "chemical409", "chem409", "409"
                 LD2_AddToStatus(ItemIds.Chemical409, 1)
             case "mysterymeat", "meat"
                 LD2_AddToStatus(ItemIds.MysteryMeat, 1)
@@ -2682,6 +2654,10 @@ sub NewGame
                 LD2_AddToStatus(ItemIds.FlashLightNoBat, 1)
             case "batteries"
                 LD2_AddToStatus(ItemIds.Batteries, 1)
+            case "medikit50", "med50"
+                LD2_AddToStatus(ItemIds.Medikit50, 1)
+            case "medikit100", "med100"
+                LD2_AddToStatus(ItemIds.Medikit50, 1)
             end select
         wend
     else
@@ -2737,11 +2713,30 @@ SUB UpdatePose (target AS PoseType, pose AS PoseType)
 	
 END SUB
 
+sub LD2_BeforeUseItem (byval id as integer)
+    
+    dim tag as string
+    dim callbackValue as integer
+    
+    select case id
+    case ItemIds.Chemical410
+        tag = Sectors_GetTagFromXY(int(Player_GetX()), int(Player_GetY()))
+        callbackValue = iif(ucase(tag) = "USE-410", 1, 0)
+    end select
+    
+    Inventory_AddHidden(ItemIds.CallbackValue, callbackValue)
+    Inventory_AddHidden(ItemIds.Hp, Player_GetItemQty(ItemIds.Hp), Maxes.Hp)
+    
+end sub
+
 sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as integer)
     
     dim leftover as integer
     dim carrying as integer
     dim ammoId as integer
+    dim success as integer
+    
+    success = 1
     
     select case id
     case ItemIds.Shotgun, ItemIds.Handgun, ItemIds.MachineGun, ItemIds.Magnum '// need to separate use from add

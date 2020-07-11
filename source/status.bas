@@ -7,16 +7,17 @@
 #include once "inc/ld2.bi"
 #include once "inc/status.bi"
 
-DECLARE SUB Drop (item AS InventoryType)
-DECLARE SUB BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elementHeading as ElementType ptr, elementBorder as ElementType ptr)
-DECLARE SUB Look (item AS InventoryType)
-DECLARE SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
-declare function canMix (itemId as integer) as integer
-DECLARE SUB RefreshStatusScreen ()
-DECLARE SUB ShowResponse (response AS STRING, textColor as integer = -1)
+declare sub Drop (item AS InventoryType)
+declare sub BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elementHeading as ElementType ptr, elementBorder as ElementType ptr)
+declare function Look (item AS InventoryType, skipInput as integer = 0) as integer
+declare sub Mix (item0 AS InventoryType, item1 AS InventoryType)
+declare function CanMix (itemId as integer) as integer
+declare function ShowResponse (response as string = "", textColor as integer = -1, skipInput as integer = 0) as integer
 declare function UseItem (item AS InventoryType) as integer
 
-DIM SHARED selectedInventorySlot AS INTEGER
+dim shared selectedInventorySlot as integer
+
+dim shared BeforeUseItemCallback as sub(byval id as integer)
 dim shared UseItemCallback as sub(byval id as integer, byval qty as integer, byref exitMenu as integer)
 dim shared LookItemCallback as sub(id as integer, byref description as string)
 
@@ -44,6 +45,12 @@ const MIX_OBJECT_FG = 22
 
 const PI = 3.141592
 
+sub STATUS_SetBeforeUseItemCallback(callback as sub(byval id as integer))
+    
+    BeforeUseItemCallback = callback
+    
+end sub
+
 sub STATUS_SetUseItemCallback(callback as sub(byval id as integer, byval qty as integer, byref exitMenu as integer))
     
     UseItemCallback = callback
@@ -55,6 +62,12 @@ sub STATUS_SetLookItemCallback(callback as sub(id as integer, byref description 
     LookItemCallback = callback
     
 end sub
+
+function STATUS_InitInventory() as integer
+    
+    return Inventory_Init(16, 8)
+    
+end function
 
 SUB BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elementHeading as ElementType ptr, elementBorder as ElementType ptr)
 	
@@ -417,7 +430,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     
 end sub
 
-function canMix (itemId as integer) as integer
+function CanMix (itemId as integer) as integer
     
     dim message as string
     
@@ -430,8 +443,6 @@ function canMix (itemId as integer) as integer
         return 1
     end select
     
-    LD2_CopyBuffer 2, 1
-    RenderStatusScreen
     LD2_PlaySound Sounds.uiDenied
     ShowResponse message, STATUS_COLOR_DENIED
 
@@ -452,17 +463,13 @@ SUB Drop (item AS InventoryType)
         LD2_PlaySound Sounds.drop
         LD2_Drop item.id
         LD2_ClearInventorySlot item.slot
-        RefreshStatusScreen
-        LD2_CopyBuffer 2, 1
-        RenderStatusScreen
+        STATUS_RefreshInventory
         ShowResponse "Dropped " + trim(item.shortName), STATUS_COLOR_SUCCESS
         exit sub
     end select
     
     LD2_PlaySound Sounds.uiDenied
-    RefreshStatusScreen
-    LD2_CopyBuffer 2, 1
-    RenderStatusScreen
+    STATUS_RefreshInventory
     ShowResponse message, STATUS_COLOR_DENIED
     
 END SUB
@@ -800,258 +807,289 @@ SUB EStatusScreen (currentRoomId AS INTEGER)
 	
 END SUB
 
-SUB Look (item AS InventoryType)
+function Look (item AS InventoryType, skipInput as integer = 0) as integer
 	
-    LD2_BackupElements
+    static container as ElementType
+    static dialog as ElementType
+    static heading as ElementType
+    static border as ElementType
+    static imgSprite as ElementType
+    static textDescription as ElementType
+    static scrollbar as ElementType
+    static divider as ElementType
     
-    dim desc as string
-    dim i as integer
+    static wobbleType as integer
+    static wobbleAction as integer
+    static nextAction as integer
     
-    dim container as ElementType
-    dim dialog as ElementType
-    dim heading as ElementType
-    dim border as ElementType
-    dim imgSprite as ElementType
-    dim textDescription as ElementType
-    dim scrollbar as ElementType
-    dim divider as ElementType
-    dim scroll as integer
-    dim scrollHeight as integer
-    dim n as integer
+    static scrollHeight as integer
+    static scrollRows as integer
+    static scroll as integer
+    
+    static text_length as integer
+    static wobbleClock as double
+    static textClock as double
+    static holdClock as double
+    static state as integer = 0
+    
+    static desc as string
+    
+    dim img_w as integer, img_h as integer
+    img_w = SPRITE_W*4
+    img_h = SPRITE_H*4
     
     dim filtered as string
-    
+    dim wobbleStatus as integer
+    dim timediff as double
     dim fontW as integer
     dim fontH as integer
+    dim i as integer
+    dim n as integer
     
-    fontW = LD2_GetFontWidthWithSpacing()
-    fontH = LD2_GetFontHeightWithSpacing()
-	
-	desc = trim(Inventory_LoadDescription(item.id))
-    if LookItemCallback <> 0 then
-        LookItemCallback(item.id, desc)
+    if state = DialogStates.closed then
+        state = DialogStates.init
+        LD2_PlaySound Sounds.uiSelect
     end if
-	if len(desc) = 0 then
-		desc = "No description found for item id: " + str(item.id)
-	end if
-    filtered = ""
-    for i = 1 to len(desc)
-        if mid(desc, i, 1) = "`" then
-            filtered += !"\""
-        else
-            filtered += mid(desc, i, 1)
+    
+    select case state
+    case DialogStates.closing
+        state = DialogStates.closed
+        while mouseLB(): PullEvents: wend
+        while mouseRB(): PullEvents: wend
+        while mouseMB(): PullEVents: wend
+        LD2_RestoreElements
+        LD2_PlaySound Sounds.uiSubmenu
+        return 1
+    case DialogStates.init
+        state = DialogStates.ready
+        
+        LD2_BackupElements
+        wobbleClock = timer
+        textClock = timer
+        scrollHeight = 0
+        scrollRows = 0
+        scroll = 0
+        text_length = 10
+        
+        fontW = LD2_GetFontWidthWithSpacing()
+        fontH = LD2_GetFontHeightWithSpacing()
+        
+        '***************************************************************
+        '* FILTER DESCRIPTION
+        '***************************************************************
+        desc = trim(Inventory_LoadDescription(item.id))
+        if LookItemCallback <> 0 then
+            LookItemCallback(item.id, desc)
         end if
-    next i
-    desc = filtered
-	
-	BuildStatusWindow item.longName, @dialog, @heading, @border
-    
-    LD2_initElement @imgSprite, "", 31, ElementFlags.SpriteCenterX or ElementFlags.SpriteCenterY
-        dim img_w as integer, img_h as integer
-        img_w = SPRITE_W*4
-        img_h = SPRITE_H*4
-        imgSprite.parent = @dialog
-        imgSprite.w = img_w
-        imgSprite.h = img_h
-        imgSprite.padding_x = int((heading.w-img_w)*0.5)
-        imgSprite.padding_y = imgSprite.padding_x
-        imgSprite.sprite = item.id
-        imgSprite.sprite_set_id = idOBJCRP
-    LD2_AddElement @imgSprite
-    
-    LD2_InitElement @container, "", 31
-        container.parent = @dialog
-        container.w = container.parent->w-heading.w
-        container.h = container.parent->h
-        container.x = container.parent->w-container.w
-    LD2_AddElement @container
+        if len(desc) = 0 then
+            desc = "No description found for item id: " + str(item.id)
+        end if
+        filtered = ""
+        for i = 1 to len(desc)
+            if mid(desc, i, 1) = "`" then
+                filtered += !"\""
+            else
+                filtered += mid(desc, i, 1)
+            end if
+        next i
+        desc = filtered
+        
+        '***************************************************************
+        '* BUILD ELEMENTS
+        '***************************************************************
+        BuildStatusWindow item.longName, @dialog, @heading, @border
+        
+        LD2_initElement @imgSprite, "", 31, ElementFlags.SpriteCenterX or ElementFlags.SpriteCenterY
+            imgSprite.parent = @dialog
+            imgSprite.w = img_w
+            imgSprite.h = img_h
+            imgSprite.padding_x = int((heading.w-img_w)*0.5)
+            imgSprite.padding_y = imgSprite.padding_x
+            imgSprite.sprite = item.id
+            imgSprite.sprite_set_id = idOBJCRP
+        LD2_AddElement @imgSprite
+        
+        LD2_InitElement @container, "", 31
+            container.parent = @dialog
+            container.w = container.parent->w-heading.w
+            container.h = container.parent->h
+            container.x = container.parent->w-container.w
+        LD2_AddElement @container
 
-    LD2_InitElement @textDescription, "", 31, ElementFlags.CenterY
-        textDescription.parent = @container
-        textDescription.text_height = 1.8
-        textDescription.padding_x = fontW*1.5
-        textDescription.w = textDescription.parent->w-textDescription.padding_x*2
+        LD2_InitElement @textDescription, "", 31, ElementFlags.CenterY
+            textDescription.parent = @container
+            textDescription.text_height = 1.8
+            textDescription.padding_x = fontW*1.5
+            textDescription.w = textDescription.parent->w-textDescription.padding_x*2
+            textDescription.text_length = 0
 
-    LD2_AddElement @textDescription
-    
-    textDescription.text = desc
-    
-    '*******************************************************************
-    '* add scrollbar (if necessary)
-    '*******************************************************************
-    dim scrollRows as integer
-    
-    fontH = LD2_GetFontHeightWithSpacing(textDescription.text_height)
-    
-    LD2_InitElement @divider, "", 31
-        divider.parent = @container
-        divider.text_height = textDescription.text_height
-        divider.w = fontW
-        for n = 0 to int(container.h/fontH)-1: divider.text += "| ": next n
-    LD2_AddElement @divider
-    textDescription.w -= divider.w
-    textDescription.x += divider.w
-    
-    LD2_PrepareElement @textDescription
-    if textDescription.h > container.h then
-        LD2_InitElement @scrollbar, "", 31
-            scrollbar.parent = @container
-            scrollbar.text_height = textDescription.text_height
-            scrollbar.w = fontW
-            scrollbar.x = container.w-scrollbar.w
-        LD2_AddElement @scrollbar
-        textDescription.w -= scrollbar.w
+        LD2_AddElement @textDescription
+        
+        textDescription.text = desc
+        
+        '*******************************************************************
+        '* add scrollbar (if necessary)
+        '*******************************************************************
+        
+        fontH = LD2_GetFontHeightWithSpacing(textDescription.text_height)
+        
+        LD2_InitElement @divider, "", 31
+            divider.parent = @container
+            divider.text_height = textDescription.text_height
+            divider.w = fontW
+            for n = 0 to int(container.h/fontH)-1: divider.text += "| ": next n
+        LD2_AddElement @divider
+        textDescription.w -= divider.w
+        textDescription.x += divider.w
+        
         LD2_PrepareElement @textDescription
-        scrollRows = int((textDescription.h-container.h)/fontH)
-        if (textDescription.h-container.h)/fontH - scrollRows > 0 then scrollRows += 1
-        scrollHeight = int(container.h/fontH)
-        if scrollRows < scrollHeight then
-            scrollRows = scrollHeight
+        if textDescription.h > container.h then
+            LD2_InitElement @scrollbar, "", 31
+                scrollbar.parent = @container
+                scrollbar.text_height = textDescription.text_height
+                scrollbar.w = fontW
+                scrollbar.x = container.w-scrollbar.w
+            LD2_AddElement @scrollbar
+            textDescription.w -= scrollbar.w
+            LD2_PrepareElement @textDescription
+            scrollRows = int((textDescription.h-container.h)/fontH)
+            if (textDescription.h-container.h)/fontH - scrollRows > 0 then scrollRows += 1
+            scrollHeight = int(container.h/fontH)
+            if scrollRows < scrollHeight then
+                scrollRows = scrollHeight
+            end if
+        end if
+        
+        '***************************************************************
+        '* SET INITIAL WOBBLE STATES
+        '***************************************************************
+        select case imgSprite.sprite
+            case ItemIds.Shotgun
+                wobbleType = WobbleTypes.RevealSpin
+            case ItemIds.Handgun
+                wobbleType = WobbleTypes.Reveal540Spin
+            case ItemIds.Magnum
+                wobbleType = WobbleTypes.RevealBackSpin
+            case ItemIds.Flashlight, ItemIds.FlashlightNoBat
+                wobbleType = WobbleTypes.Reveal540BackSpin
+            case else
+                wobbleType = WobbleTypes.RevealNoSpin
+        end select
+        wobbleAction = WobbleActions.ResetAnimations
+    
+    case DialogStates.ready
+        
+        fontH = LD2_GetFontHeightWithSpacing(textDescription.text_height)
+        
+    end select
+
+    '*******************************************************************
+    '* START
+    '*******************************************************************
+    if ((timer - textClock) > 0.45) then
+        if text_length < len(desc) then
+            text_length += 10
+            textDescription.text_length = text_length
+            if text_length = len(desc) then
+                textDescription.text_length = -1 '* resets to auto
+            end if
         end if
     end if
     
-    dim wobbleClock as double
-    dim textClock as double
-    dim holdClock as double
-    dim timediff as double
-    dim swipe as integer
-    dim e as double
-    dim f as double
+    LD2_RenderElements
     
-    wobbleClock = timer
-    textClock = timer
+    timediff = (timer - wobbleClock)
+    if timediff > 0.01 then
+        wobbleStatus = DoWobble(@imgSprite, wobbleType, wobbleAction)
+        if wobbleAction = WobbleActions.ResetAnimations then
+            wobbleAction = wobbleActions.NoAction
+        end if
+        select case wobbleStatus
+        case WobbleStatuses.RevealComplete
+            wobbleType = WobbleTypes.AssignType
+        case WobbleStatuses.ActionComplete
+            wobbleAction = WobbleActions.NoAction
+            wobbleStatus = WobbleStatuses.Ready
+        end select
+        wobbleClock = timer
+    end if
     
-    dim text_length as integer
-    text_length = 10
-    textDescription.text_length = 0
+    if wobbleType = WobbleTypes.AssignType then
+        select case imgSprite.sprite
+        case ItemIds.MysteryMeat
+            wobbleType = WobbleTypes.Squishy
+        case ItemIds.Flashlight, ItemIds.FlashlightNoBat, ItemIds.Wrench, ItemIds.Magnum, ItemIds.Handgun, ItemIds.Shotgun
+            wobbleType = WobbleTypes.Metal
+        case else
+            wobbleType = WobbleTypes.Elastic
+        end select
+    end if
     
-    dim wobbleType as integer
-    dim wobbleAction as integer
-    dim wobbleStatus as integer
-    dim nextAction as integer
+    if scrollRows > 0 then
+        textDescription.y = int(-scroll*fontH)
+        scrollbar.text = ""
+        for n = 0 to scrollHeight-1
+            scrollbar.text += iif(n = int(scrollHeight*(scroll/scrollRows)), "= ", "| ")
+        next n
+    end if
     
-    select case imgSprite.sprite
-    case ItemIds.Shotgun
-        wobbleType = WobbleTypes.RevealSpin
-    case ItemIds.Handgun
-        wobbleType = WobbleTypes.Reveal540Spin
-    case ItemIds.Magnum
-        wobbleType = WobbleTypes.RevealBackSpin
-    case ItemIds.Flashlight, ItemIds.FlashlightNoBat
-        wobbleType = WobbleTypes.Reveal540BackSpin
-    case else
-        wobbleType = WobbleTypes.RevealNoSpin
-    end select
-    wobbleAction = WobbleActions.NoAction
+    if skipInput then
+        return 0
+    end if
     
-    do
-        '*******************************************************************
-        '* add reveal text
-        '*******************************************************************
-        if ((timer - textClock) > 0.45) then
-            if text_length < len(desc) then
-                text_length += 10
-                textDescription.text_length = text_length
-                if text_length = len(desc) then
-                    textDescription.text_length = -1 '* resets to auto
-                end if
-            end if
-        end if
-        
-        LD2_CopyBuffer 2, 1
-        LD2_RenderElements
-        LD2_RefreshScreen
-        PullEvents
-        
-        timediff = (timer - wobbleClock)
-        if timediff > 0.01 then
-            wobbleStatus = DoWobble(@imgSprite, wobbleType, wobbleAction)
-            select case wobbleStatus
-            case WobbleStatuses.RevealComplete
-                wobbleType = WobbleTypes.AssignType
-            case WobbleStatuses.ActionComplete
-                wobbleAction = WobbleActions.NoAction
-                wobbleStatus = WobbleStatuses.Ready
-            end select
-            wobbleClock = timer
-        end if
-        
-        if wobbleType = WobbleTypes.AssignType then
-            select case imgSprite.sprite
-            case ItemIds.MysteryMeat
-                wobbleType = WobbleTypes.Squishy
-            case ItemIds.Flashlight, ItemIds.FlashlightNoBat, ItemIds.Wrench, ItemIds.Magnum, ItemIds.Handgun, ItemIds.Shotgun
-                wobbleType = WobbleTypes.Metal
-            case else
-                wobbleType = WobbleTypes.Elastic
-            end select
-        end if
-        
-        if scrollRows > 0 then
-            textDescription.y = int(-scroll*fontH)
-            scrollbar.text = ""
-            for n = 0 to scrollHeight-1
-                scrollbar.text += iif(n = int(scrollHeight*(scroll/scrollRows)), "= ", "| ")
-            next n
-        end if
-        
-        if keypress(KEY_DOWN) or keypress(KEY_S) or keypress(KEY_KP_2) or (mouseWheelY() > 0) then
-            if scroll < scrollRows-1 then
-                scroll += 1
-                LD2_PlaySound Sounds.dialog
-            else
-                nextAction = WobbleActions.SlapDown
-            end if
-        end if
-        if keypress(KEY_UP) or keypress(KEY_W) or keypress(KEY_KP_8) or (mouseWheelY() < 0) then
-            if scroll > 0 then
-                scroll -= 1
-                LD2_PlaySound Sounds.dialog
-            else
-                nextAction = WobbleActions.SlapUp
-            end if
-        end if
-        if keyboard(KEY_UP) or keyboard(KEY_DOWN) then
-            if holdClock = 0 then holdClock = timer
-            if (timer - holdClock) > 0.5 then
-                if keyboard(KEY_UP)   then nextAction = WobbleActions.HoldUp
-                if keyboard(KEY_DOWN) then nextAction = WobbleActions.HoldDown
-            end if
+    if keypress(KEY_DOWN) or keypress(KEY_S) or keypress(KEY_KP_2) or (mouseWheelY() > 0) then
+        if scroll < scrollRows-1 then
+            scroll += 1
+            LD2_PlaySound Sounds.dialog
         else
-            if (nextAction = WobbleActions.HoldUp) or (nextAction = WobbleActions.HoldDown) then
-                nextAction = 0
-            end if
-            if holdClock <> 0 then
-                holdClock = 0
-            end if
+            nextAction = WobbleActions.SlapDown
         end if
-        if keypress(KEY_LEFT) or keypress(KEY_A) or keypress(KEY_KP_4) then
-            nextAction = WobbleActions.SlapLeft
+    end if
+    if keypress(KEY_UP) or keypress(KEY_W) or keypress(KEY_KP_8) or (mouseWheelY() < 0) then
+        if scroll > 0 then
+            scroll -= 1
+            LD2_PlaySound Sounds.dialog
+        else
+            nextAction = WobbleActions.SlapUp
         end if
-        if keypress(KEY_RIGHT) or keypress(KEY_D) or keypress(KEY_KP_6) then
-            nextAction = WobbleActions.SlapRight
+    end if
+    if keyboard(KEY_UP) or keyboard(KEY_DOWN) then
+        if holdClock = 0 then holdClock = timer
+        if (timer - holdClock) > 0.5 then
+            if keyboard(KEY_UP)   then nextAction = WobbleActions.HoldUp
+            if keyboard(KEY_DOWN) then nextAction = WobbleActions.HoldDown
         end if
-        if keypress(KEY_CTRL) then
-            nextAction = WobbleActions.Punch
-        end if
-		if keypress(KEY_ENTER) or keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseLB() or mouseRB() or mouseMB() then
-			exit do
-        end if
-        
-        if (wobbleStatus = WobbleStatuses.Ready) and (nextAction > 0) then
-            wobbleAction = nextAction
+    else
+        if (nextAction = WobbleActions.HoldUp) or (nextAction = WobbleActions.HoldDown) then
             nextAction = 0
         end if
-        
-	loop
+        if holdClock <> 0 then
+            holdClock = 0
+        end if
+    end if
+    if keypress(KEY_LEFT) or keypress(KEY_A) or keypress(KEY_KP_4) then
+        nextAction = WobbleActions.SlapLeft
+    end if
+    if keypress(KEY_RIGHT) or keypress(KEY_D) or keypress(KEY_KP_6) then
+        nextAction = WobbleActions.SlapRight
+    end if
+    if keypress(KEY_CTRL) then
+        nextAction = WobbleActions.Punch
+    end if
+    if keypress(KEY_ENTER) or keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseLB() or mouseRB() or mouseMB() then
+        state = DialogStates.closing
+    end if
     
-    while mouseLB(): PullEvents: wend
-    while mouseRB(): PullEvents: wend
-    while mouseMB(): PullEVents: wend
+    if (wobbleStatus = WobbleStatuses.Ready) and (nextAction > 0) then
+        wobbleAction = nextAction
+        nextAction = 0
+    end if
     
-    LD2_RestoreElements
-	
-END SUB
+    '*******************************************************************
+    '* END
+    '*******************************************************************
+    
+end function
 
 function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes.RevealNoSpin, wobbleAction as integer = WobbleActions.NoAction) as integer
     
@@ -1068,6 +1106,13 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
     
     wobble->x = 9999
     wobble->y = 9999
+    
+    if wobbleAction = WobbleActions.ResetAnimations then
+        wobbleAction = WobbleActions.NoAction
+        stretching = 0
+        e = 0
+    end if
+    
     select case wobbleType
     '*******************************************************************
     '* REVEALS
@@ -1300,7 +1345,7 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
     
 end function
 
-SUB RefreshStatusScreen
+sub STATUS_RefreshInventory
     
     DIM i AS INTEGER
     DIM id AS INTEGER
@@ -1316,211 +1361,223 @@ SUB RefreshStatusScreen
             EXIT FOR
         END IF
     NEXT i
-    Inventory_AddHidden(ItemIds.Hp, Player_GetItemQty(ItemIds.Hp), Maxes.Hp)
-    Inventory_AddHidden(ItemIds.Active410, Player_GetItemQty(ItemIds.Active410))
     Inventory_RefreshNames
     
-END SUB
+end sub
 
-SUB StatusScreen
+function StatusScreen(skipInput as integer = 0) as integer
 	
 	LD2_LogDebug "StatusScreen ()"
 	
-	dim dialog as ElementType
-    dim selected as InventoryType
-    dim mixMode as integer
-    dim mixSlot as integer
-    dim mixItem as InventoryType
-	dim action as integer
-    dim e as double
-	
-    LD2_PlaySound Sounds.uiMenu
+	static dialog as ElementType
+    static lookItem as InventoryType
+    static mixItem as InventoryType
+    static mixMode as integer = 0
+	static action as integer
+    static state as integer = 0
+    static row as integer
+    static col as integer
+    static e as double = -1
     
-    LD2_SaveBuffer 2
-	LD2_CopyBuffer 1, 2
-    
-    LD2_InitElement @dialog
-    dialog.background = STATUS_DIALOG_COLOR
-    dialog.background_alpha = STATUS_DIALOG_ALPHA_UNIT
-    dialog.w = SCREEN_W
-	
-	e = getEaseInOutInterval(1)
-	do
-        e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
-		LD2_CopyBuffer 2, 1
-        dialog.h = e * 96
-        LD2_RenderElement @dialog
-		LD2_RefreshScreen
-        PullEvents
-	loop while e < 1
-    
-    dialog.h = 96
-    LD2_RenderElement @dialog
-    LD2_RefreshScreen
-    
-    RefreshStatusScreen
-	action = -1
-    
-    dim row as integer
-    dim col as integer
     dim numCols as integer: numCols = 4
     dim numRows as integer: numRows = 2
+    dim selected as InventoryType
+	
     
-    row = int(selectedInventorySlot / numCols)
-    col = selectedInventorySlot-row*numCols
-
-	do
-		LD2_CopyBuffer 2, 1
-        RenderStatusScreen action, iif(mixMode, @mixItem, 0)
-
-        LD2_RenderElements
-        LD2_RefreshScreen
-        PullEvents
-        
-        selectedInventorySlot = row*numCols+col
-        Inventory_GetItemBySlot(selected, selectedInventorySlot)
-        
-        IF keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseRB() or mouseMB() THEN
-            IF action > -1 THEN
-                while mouseRB(): PullEvents: wend
-                while mouseMB(): PullEvents: wend
-                LD2_PlaySound Sounds.uiCancel
-                action = -1
-            ELSE
-                EXIT DO
-            END IF
-        END IF
-            
-        '- TODO: hold down for one second, then scroll down with delay
-        IF keypress(KEY_UP) or keypress(KEY_W) or (action = -1 and mouseWheelUp()) THEN
-            if action >= 0 then
-                LD2_PlaySound Sounds.uiCancel
-                action = -1
-            else
-                row -= 1
-                IF row < 0 THEN
-                    row = 0
-                    LD2_PlaySound Sounds.uiInvalid
-                ELSE
-                    LD2_PlaySound Sounds.uiArrows
-                END IF
-            end if
-        END IF
-        IF keypress(KEY_DOWN) or keypress(KEY_S) or (action =-1 and mouseWheelDown()) THEN
-            if action >= 0 then
-                LD2_PlaySound Sounds.uiCancel
-                action = -1
-            else
-                row += 1
-                IF row > numRows-1 THEN
-                    row = numRows-1
-                    LD2_PlaySound Sounds.uiInvalid
-                ELSE
-                    LD2_PlaySound Sounds.uiArrows
-                END IF
-            end if
-        END IF
-        IF keypress(KEY_LEFT) or (action >= 0 and mouseWheelDown()) THEN
-            if action >= 0 then
-                action = action - 1
-                IF action < 0 THEN
-                    action = 0
-                    LD2_PlaySound Sounds.uiInvalid
-                ELSE
-                    LD2_PlaySound Sounds.uiArrows
-                END IF
-            else
-                col -= 1
-                if col < 0 then
-                    col = 0
-                    LD2_PlaySound Sounds.uiInvalid
-                else
-                    LD2_PlaySound Sounds.uiArrows
-                end if
-            end if
-        END IF
-        IF keypress(KEY_RIGHT) or (action >= 0 and mouseWheelUp()) THEN
-            if action >= 0 then
-                action = action + 1
-                IF action > 3 THEN
-                    action = 3
-                    LD2_PlaySound Sounds.uiInvalid
-                ELSE
-                    LD2_PlaySound Sounds.uiArrows
-                END IF
-            else
-                col += 1
-                if col > numCols-1 then
-                    col = numCols-1
-                    LD2_PlaySound Sounds.uiInvalid
-                else
-                    LD2_PlaySound Sounds.uiArrows
-                end if
-            end if
-        END IF
-        if keypress(KEY_ENTER) or keypress(KEY_SPACE) or mouseLB() then
-            while mouseLB(): PullEvents: wend
-            if mixMode then
-                Mix mixItem, selected
-                mixMode = 0
-                action = -1
-            elseif action > -1 then
-                select case action
-                case 0  '- USE
-                    if UseItem(selected) then
-                        exit do
-                    end if
-                    action = -1
-                case 1  '- LOOK
-                    LD2_PlaySound Sounds.uiSelect
-                    Look selected
-                    action = -1
-                    LD2_PlaySound Sounds.uiSubmenu
-                case 2  '- MIX
-                    if canMix(selected.id) then
-                        mixMode = 1
-                        mixItem = selected
-                        mixSlot = selectedInventorySlot
-                        action = -1
-                        LD2_PlaySound Sounds.uiSubmenu
-                    end if
-                case 3  '- Drop
-                    Drop selected
-                    action = -1
-                end select
-            else
-                'if selected.id > 0 then
-                    action = 0
-                    LD2_PlaySound Sounds.uiSubmenu
-                'else
-                '    LD2_PlaySound Sounds.uiInvalid
-                'end if
-            end if
+    if state = DialogStates.closed then
+        state = DialogStates.opening
+    end if
+    
+    if dialog.w = 0 then
+        LD2_InitElement @dialog
+        dialog.background = STATUS_DIALOG_COLOR
+        dialog.background_alpha = STATUS_DIALOG_ALPHA_UNIT
+        dialog.w = SCREEN_W
+    end if
+    
+    select case state
+    case DialogStates.opening
+        if e = -1 then
+            e = getEaseInOutInterval(1)
+            LD2_PlaySound Sounds.uiMenu
+        else
+            e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
         end if
-	loop
-	
-	WaitForKeyup(KEY_TAB)
-    WaitForKeyup(KEY_ESCAPE)
-    WaitForKeyup(KEY_E)
-    WaitForKeyup(KEY_ENTER)
-    while mouseLB(): PullEvents: wend
-    while mouseRB(): PullEvents: wend
-    while mouseMB(): PullEvents: wend
-    
-    LD2_PlaySound Sounds.uiMenu
-	
-	e = getEaseInOutInterval(1)
-	do
-		e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
-		LD2_CopyBuffer 2, 1
+        dialog.h = e * 96
+        LD2_RenderElement @dialog
+        if e = 1 then
+            state = DialogStates.init
+            e = -1
+        end if
+        return 0
+    case DialogStates.closing
+        if e = -1 then
+            e = getEaseInOutInterval(1)
+            LD2_PlaySound Sounds.uiMenu
+        else
+            e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
+        end if
         dialog.h = (1-e) * 96
         LD2_RenderElement @dialog
-		LD2_RefreshScreen
-        PullEvents
-	loop while e < 1
-	LD2_RestoreBuffer 2
+        if e = 1 then
+            state = DialogStates.closed
+            e = -1
+            return 1
+        else
+            return 0
+        end if
+    case DialogStates.init
+        state = DialogStates.ready
+        STATUS_RefreshInventory
+        row = int(selectedInventorySlot / numCols)
+        col = selectedInventorySlot-row*numCols
+        LookItem.id = -1
+        action = -1
+    end select
+    
+    
+    '*******************************************************************
+    '* START
+    '*******************************************************************
+    if LookItem.id > -1 then
+        if Look(LookItem, skipInput) then
+            LookItem.id = -1
+        else
+            return 0
+        end if
+    end if
+    
+    RenderStatusScreen action, iif(mixMode, @mixItem, 0)
+    LD2_RenderElements
+    
+    if ShowResponse("", -1, skipInput) then
+        return 0
+    end if
+    
+    if skipInput then
+        return 0
+    end if
+    
+    selectedInventorySlot = row*numCols+col
+    Inventory_GetItemBySlot(selected, selectedInventorySlot)
+    
+    IF keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseRB() or mouseMB() THEN
+        IF action > -1 THEN
+            while mouseRB(): PullEvents: wend
+            while mouseMB(): PullEvents: wend
+            LD2_PlaySound Sounds.uiCancel
+            action = -1
+        ELSE
+            state = DialogStates.closing
+        END IF
+    END IF
+        
+    '- TODO: hold down for one second, then scroll down with delay
+    IF keypress(KEY_UP) or keypress(KEY_W) or (action = -1 and mouseWheelUp()) THEN
+        if action >= 0 then
+            LD2_PlaySound Sounds.uiCancel
+            action = -1
+        else
+            row -= 1
+            IF row < 0 THEN
+                row = 0
+                LD2_PlaySound Sounds.uiInvalid
+            ELSE
+                LD2_PlaySound Sounds.uiArrows
+            END IF
+        end if
+    END IF
+    IF keypress(KEY_DOWN) or keypress(KEY_S) or (action =-1 and mouseWheelDown()) THEN
+        if action >= 0 then
+            LD2_PlaySound Sounds.uiCancel
+            action = -1
+        else
+            row += 1
+            IF row > numRows-1 THEN
+                row = numRows-1
+                LD2_PlaySound Sounds.uiInvalid
+            ELSE
+                LD2_PlaySound Sounds.uiArrows
+            END IF
+        end if
+    END IF
+    IF keypress(KEY_LEFT) or (action >= 0 and mouseWheelDown()) THEN
+        if action >= 0 then
+            action = action - 1
+            IF action < 0 THEN
+                action = 0
+                LD2_PlaySound Sounds.uiInvalid
+            ELSE
+                LD2_PlaySound Sounds.uiArrows
+            END IF
+        else
+            col -= 1
+            if col < 0 then
+                col = 0
+                LD2_PlaySound Sounds.uiInvalid
+            else
+                LD2_PlaySound Sounds.uiArrows
+            end if
+        end if
+    END IF
+    IF keypress(KEY_RIGHT) or (action >= 0 and mouseWheelUp()) THEN
+        if action >= 0 then
+            action = action + 1
+            IF action > 3 THEN
+                action = 3
+                LD2_PlaySound Sounds.uiInvalid
+            ELSE
+                LD2_PlaySound Sounds.uiArrows
+            END IF
+        else
+            col += 1
+            if col > numCols-1 then
+                col = numCols-1
+                LD2_PlaySound Sounds.uiInvalid
+            else
+                LD2_PlaySound Sounds.uiArrows
+            end if
+        end if
+    END IF
+    if keypress(KEY_ENTER) or keypress(KEY_SPACE) or mouseLB() then
+        while mouseLB(): PullEvents: wend
+        if mixMode then
+            Mix mixItem, selected
+            mixMode = 0
+            action = -1
+        elseif action > -1 then
+            select case action
+            case 0  '- USE
+                if UseItem(selected) then
+                    state = DialogStates.closing
+                end if
+                action = -1
+            case 1  '- LOOK
+                LookItem = selected
+                action = -1
+            case 2  '- MIX
+                if canMix(selected.id) then
+                    mixMode = 1
+                    mixItem = selected
+                    action = -1
+                    LD2_PlaySound Sounds.uiSubmenu
+                end if
+            case 3  '- Drop
+                Drop selected
+                action = -1
+            end select
+        else
+            action = 0
+            LD2_PlaySound Sounds.uiSubmenu
+        end if
+    end if
+	'*******************************************************************
+    '* END
+    '*******************************************************************
 	
-end sub
+	return 0
+	
+end function
 
 function UseItem (item AS InventoryType) as integer
 
@@ -1531,27 +1588,29 @@ function UseItem (item AS InventoryType) as integer
     dim discard as integer
     dim textColor as integer
     dim exitMenu as integer
+    dim callbackValue as integer
     
-    exitMenu = 0
-    if item.id = ItemIds.NOTHING then
-        message = "Not usable."
-    else
-        success = Inventory_Use(item.id)
-        message = Inventory_GetUseMessage()
+    if BeforeUseItemCallback <> 0 then
+        STATUS_RefreshInventory
+        BeforeUseItemCallback(item.id)
     end if
+    
+    success = Inventory_Use(item.id)
+    message = Inventory_GetUseMessage()
+    
     if success then
         id  = Inventory_GetUseItem()
         qty = Inventory_GetUseQty()
         discard = Inventory_GetUseItemDiscard()
-        if UseItemCallback <> 0 then
-            UseItemCallback(id, qty, exitMenu)
-        else
-            message = "ERROR - No callback for UseItem"
-        end if
         if discard then
             LD2_AddToStatus item.id, -qty
         end if
-        RefreshStatusScreen
+        if (UseItemCallback <> 0) then
+            UseItemCallback(id, qty, exitMenu)
+        else
+            LD2_AddToStatus id, qty
+        end if
+        STATUS_RefreshInventory
         textColor = STATUS_COLOR_SUCCESS
     else
         LD2_PlaySound Sounds.uiDenied
@@ -1559,8 +1618,6 @@ function UseItem (item AS InventoryType) as integer
     end if
     
     if exitMenu = 0 then
-        LD2_CopyBuffer 2, 1
-        RenderStatusScreen
         ShowResponse message, textColor
     end if
     
@@ -1580,7 +1637,7 @@ SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
         LD2_ClearInventorySlot item0.slot
         LD2_ClearInventorySlot item1.slot
         LD2_AddToStatus(resultId, 1)
-        RefreshStatusScreen
+        STATUS_RefreshInventory
         LD2_PlaySound Sounds.uiMix
         textColor = STATUS_COLOR_SUCCESS
     else
@@ -1588,68 +1645,75 @@ SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
         textColor = STATUS_COLOR_DENIED
     END IF
     
-    LD2_CopyBuffer 2, 1
-    RenderStatusScreen -1, @item0, @item1
-    
     ShowResponse msg, textColor
     
 END SUB
 
-SUB ShowResponse (response AS STRING, textColor as integer = -1)
+function ShowResponse (response as string = "", textColor as integer = -1, skipInput as integer = 0) as integer
     
+    static labelResponse as ElementType
+    static responseMessage as string
+    static responseColor as integer = -1
+    static d as double = 0
     dim revealStep as double
-    dim d as double
-    dim labelResponse as ElementType
-    dim fontW as integer
     dim fontH as integer
     dim textW as integer
     
-    fontW = LD2_GetFontWidthWithSpacing()
-    fontH = LD2_GetFontHeightWithSpacing()
+    if len(response) then
+        responseMessage = response
+        responseColor = textColor
+        d = 0
+    elseif len(responseMessage) = 0 then
+        return 0
+    end if
     
-    LD2_InitElement @labelResponse, response, 31
-    textW = LD2_GetElementTextWidth(@labelResponse)
-    labelResponse.parent = LD2_GetRootParent()
-    labelResponse.x = labelResponse.parent->w - textW - 1
-    labelResponse.y = labelResponse.parent->h+labelResponse.parent->padding_y-fontH*2
+    response = responseMessage
+    textColor = responseColor
+    
+    if d = 0 then
+        LD2_InitElement @labelResponse, response, 31
+        fontH = LD2_GetFontHeightWithSpacing()
+        textW = LD2_GetElementTextWidth(@labelResponse)
+        labelResponse.parent = LD2_GetRootParent()
+        labelResponse.x = labelResponse.parent->w - textW - 1
+        labelResponse.y = labelResponse.parent->h+labelResponse.parent->padding_y-fontH*2
+    end if
     
     if textColor >= 0 then
         labelResponse.text_color = textColor
     end if
     
-    revealStep = int(len(response)*0.065)
-    if revealStep < 2 then revealStep = 2
-    FOR d = 1 TO LEN(response) step revealStep
+    if int(d) < len(response) then
+        revealStep = int(len(response)*0.065)
+        if revealStep < 2 then revealStep = 2
+        d += revealStep
         labelResponse.text = left(response, int(d))
-        LD2_CopyBuffer 2, 1
-        LD2_RenderElements
         LD2_RenderElement @labelResponse
-        LD2_RefreshScreen
-        PullEvents
-    NEXT d
+        return 1
+    end if
 
-    DO
-        IF (INT(TIMER*3) AND 1) THEN
-            labelResponse.text = response
-        ELSE
-            labelResponse.text = response + "_"
-        END IF
-        LD2_CopyBuffer 2, 1
-        LD2_RenderElements
-        LD2_RenderElement @labelResponse
-        LD2_RefreshScreen
-        PullEvents
-        IF keypress(KEY_ENTER) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseLB() or mouseRB() or mouseMB() THEN
-            LD2_PlaySound Sounds.uiArrows
-            EXIT DO
-        END IF
-    LOOP
+    if (int(timer*3) and 1) then
+        labelResponse.text = response
+    else
+        labelResponse.text = response + "_"
+    end if
     
-    while mouseLB(): PullEvents: wend
-    while mouseRB(): PullEvents: wend
-    while mouseMB(): PullEvents: wend
-
-END SUB
+    LD2_RenderElement @labelResponse
+    
+    if skipInput then
+        return 1
+    end if
+    
+    if keypress(KEY_ENTER) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseLB() or mouseRB() or mouseMB() then
+        LD2_PlaySound Sounds.uiArrows
+        responseMessage = ""
+        textColor = -1
+        return 0
+    end if
+    
+    return 1
+    
+end function
 
 function getEaseInInterval(doReset as double = 0, speed as double = 1.0) as double
     
