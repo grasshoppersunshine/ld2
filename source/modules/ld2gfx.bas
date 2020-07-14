@@ -7,11 +7,17 @@
 #include once "inc/videosprites.bi"
 #include once "inc/ld2gfx.bi"
 
+declare function fontVal(ch as string) as integer
+
 dim shared VideoHandle as Video
 dim shared VideoBuffers(1) as VideoBuffer
 dim shared RGBpal as Palette256
 dim shared WhitePalette as Palette256
 dim shared VideoErrorMessage as string
+dim shared SpritesFont as VideoSprites
+
+dim shared FONT_W as integer
+dim shared FONT_H as integer
 
 const DATA_DIR = "data/"
 
@@ -411,3 +417,79 @@ SUB LD2_RestoreBuffer (bufferNum AS INTEGER)
     end if
     
 END SUB
+
+sub Font_Init(fontw as integer, fonth as integer)
+    
+    FONT_W = fontw
+    FONT_H = fonth
+    
+end sub
+
+sub Font_Load(filename as string, useWhitePalette as integer = 1)
+    
+    if useWhitePalette then
+        LD2_InitSprites filename, @SpritesFont, 6, 5, SpriteFlags.Transparent or SpriteFlags.UseWhitePalette
+    else
+        LD2_InitSprites filename, @SpritesFont, 6, 5, SpriteFlags.Transparent
+    end if
+    
+end sub
+
+sub Font_SetColor(fontColor as integer)
+    LD2_SetSpritesColor @SpritesFont, fontColor
+end sub
+
+sub Font_SetAlpha(a as double)
+    SpritesFont.setAlphaMod(int(a * 255))
+end sub
+
+sub Font_put(x as integer, y as integer, sprite as integer, bufferNum as integer)
+    LD2_SetTargetBuffer bufferNum
+    SpritesFont.putToScreen(x, y, sprite)
+end sub
+
+sub Font_putText (x as integer, y as integer, text as string, bufferNum as integer)
+    
+    dim n as integer
+    
+    LD2_SetTargetBuffer bufferNum
+    
+    text = ucase(text)
+    
+    for n = 1 to len(text)
+        if mid(text, n, 1) <> " " then
+            SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, fontVal(mid(Text, n, 1)))
+        end if
+    next n
+    
+end sub
+
+sub Font_putTextCol (x as integer, y as integer, text as string, col as integer, bufferNum as integer)
+    
+    dim n as integer
+    
+    LD2_SetTargetBuffer bufferNum
+    
+    text = ucase(text)
+    
+    for n = 1 to len(text)
+        if mid(text, n, 1) <> " " then
+            SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, fontVal(mid(text, n, 1)))
+        end if
+    next n
+    
+end sub
+
+private function fontVal(ch as string) as integer
+    
+    dim v as integer
+    
+    if ch = "|" then
+        v = 64
+    else
+        v = asc(ch)-32
+    end if
+    
+    return v
+    
+end function

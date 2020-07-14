@@ -26,6 +26,7 @@ declare sub SOUND_PauseMusic ()
 declare sub SOUND_ResumeMusic ()
 
 declare function SOUND_AddSound (id as integer, filename as string, maxChannels as integer=4, loops as integer=0, volume as double=1.0) as integer
+declare sub SOUND_FreeSound (id as integer)
 declare sub SOUND_PlaySound (id as integer)
 declare sub SOUND_StopSound (id as integer)
 

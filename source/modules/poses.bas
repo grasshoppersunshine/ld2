@@ -174,6 +174,12 @@ sub PoseType.setFrame(index as integer)
     
 end sub
 
+function PoseType.getNumFrames() as integer
+    
+    return this._numFrames
+    
+end function
+
 sub PoseType.truncateFrames()
     
     redim this._frames(0) as PoseFrame

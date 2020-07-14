@@ -209,6 +209,24 @@ function SOUND_AddSound (id as integer, filename as string, maxChannels as integ
 
 end function
 
+sub SOUND_FreeSound (id as integer)
+    
+    if GLOBAL_SoundInitialized = 0 then return
+    
+    dim idx as integer
+    dim n as integer
+    idx = SOUND_FindSound(id)
+    
+    if idx > -1 then
+        Mix_FreeChunk(GLOBAL_Sounds(idx).sfxId)
+        GLOBAL_NumSounds -= 1
+        for n = idx to GLOBAL_NumSounds-1
+            GLOBAL_Sounds(n) = GLOBAL_Sounds(n+1)
+        next n
+    end if
+    
+end sub
+
 sub SOUND_PlaySound (id as integer)
 
 	if GLOBAL_SoundInitialized = 0 then return

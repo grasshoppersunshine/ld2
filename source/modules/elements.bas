@@ -1,21 +1,54 @@
 #include once "inc/elements.bi"
 
+'***********************************************************************
+'* PRIVATE METHODS
+'***********************************************************************
+declare sub fill(x as integer, y as integer, w as integer, h as integer, fillColor as integer, a as double = 1.0)
+declare sub setAlphaMod(a as double)
+declare sub setFontColor(fontColor as integer)
+declare sub putToScreen(x as integer, y as integer, charVal as integer)
+declare sub putSprite(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
+declare sub getSpriteMetrics(spriteId as integer, spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+declare function FontVal(ch as string) as integer
+'***********************************************************************
+'* END PRIVATE METHODS
+'***********************************************************************
+
+'***********************************************************************
+'* PRIVATE VARS
+'***********************************************************************
 dim shared SCREEN_W as integer
 dim shared SCREEN_H as integer
 dim shared FONT_W as integer
 dim shared FONT_H as integer
+dim shared SPRITE_W as integer
+dim shared SPRITE_H as integer
 dim shared FontCharWidths(128) as integer
 dim shared FontCharMargins(128) as integer
-dim shared RenderElements(64) as ElementType ptr
 dim shared ElementsCount as integer
 dim shared BackupElementsCount as integer
+dim shared RenderElements(64) as ElementType ptr
 dim shared BackupElements(64) as ElementType ptr
+'***********************************************************************
+'* END PRIVATE VARS
+'***********************************************************************
 
+'***********************************************************************
+'* PRIVATE CALLBACK VARS
+'***********************************************************************
 dim shared CallbackFontPut as sub(x as integer, y as integer, charVal as integer)
 dim shared CallbackFill as sub(x as integer, y as integer, w as integer, h as integer, fillColor as integer, a as double = 1.0)
 dim shared CallbackSetFontColor as sub(fontColor as integer)
 dim shared CallbackSetAlphaMod as sub(a as double)
+dim shared CallbackSpritePut as sub(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
+dim shared CallbackSpriteMetrics as sub(byval spriteId as integer, byval spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+'***********************************************************************
+'* END PRIVATE CALLBACK VARS
+'***********************************************************************
 
+'***********************************************************************
+'* CALLBACK SETTERS
+'***********************************************************************
 sub Elements_SetFontPutCallback(callback as sub(x as integer, y as integer, charVal as integer))
     CallbackFontPut = callback
 end sub
@@ -28,7 +61,19 @@ end sub
 sub Elements_SetAlphaModCallback(callback as sub(a as double))
     CallbackSetAlphaMod = callback
 end sub
+sub Elements_SetSpritePutCallback(callback as sub(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0))
+    CallbackSpritePut = callback
+end sub
+sub Elements_SetSpriteMetricsCallback(callback as sub(byval spriteId as integer, byval spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer))
+    CallbackSpriteMetrics = callback
+end sub
+'***********************************************************************
+'* END CALLBACK SETTERS
+'***********************************************************************
 
+'***********************************************************************
+'* CALLBACK CALLERS
+'***********************************************************************
 sub fill(x as integer, y as integer, w as integer, h as integer, fillColor as integer, a as double = 1.0)
     if CallbackFill <> 0 then
         CallbackFill(x, y, w, h, fillColor, a)
@@ -53,6 +98,27 @@ sub putToScreen(x as integer, y as integer, charVal as integer)
     end if
 end sub
 
+sub putSprite(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
+    if CallbackSpritePut <> 0 then
+        CallbackSpritePut(x, y, spriteId, spriteSetId, doFlip, w, h, angle)
+    end if
+end sub
+
+sub getSpriteMetrics(byval spriteId as integer, byval spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+    if CallbackSpriteMetrics <> 0 then
+        CallbackSpriteMetrics(spriteId, spriteSetId, x, y, w, h)
+    else
+        x = 0
+        y = 0
+        w = SPRITE_W
+        h = SPRITE_H
+    end if
+end sub
+
+'***********************************************************************
+'* END CALLBACK CALLERS
+'***********************************************************************
+
 sub Elements_Init( _
     scrnw as integer, _
     scrnh as integer, _
@@ -75,6 +141,20 @@ sub Elements_Init( _
     
 end sub
 
+sub Elements_InitSprites( _
+    spw as integer, _
+    sph as integer, _
+    cbPutSprite as sub(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0), _
+    cbSpriteMetrics as sub(spriteId as integer, spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer) = 0 _
+)
+    
+    SPRITE_W = spw
+    SPRITE_H = sph
+    CallbackSpritePut = cbPutSprite
+    CallbackSpriteMetrics = cbSpriteMetrics
+    
+end sub
+
 sub Elements_SetScreenWidth(w as integer)
     SCREEN_W = w
 end sub
@@ -91,7 +171,15 @@ sub Elements_SetFontHeight(h as integer)
     FONT_H = h
 end sub
 
-function Elements_CalcCharWidth (spacing as double = 1.2) as integer
+sub Elements_SetSpriteWidth(w as integer)
+    SPRITE_W = w
+end sub
+
+sub Elements_SetSpriteHeight(h as integer)
+    SPRITE_H = h
+end sub
+
+function Elements_GetFontWidthWithSpacing (spacing as double = 1.2) as integer
         
     dim d as double
     
@@ -100,7 +188,7 @@ function Elements_CalcCharWidth (spacing as double = 1.2) as integer
     
 end function
 
-function Elements_CalcLineHeight (spacing as double = 1.4) as integer
+function Elements_GetFontHeightWithSpacing (spacing as double = 1.4) as integer
     
     dim d as double
     
@@ -109,16 +197,19 @@ function Elements_CalcLineHeight (spacing as double = 1.4) as integer
     
 end function
 
-function Element_GetTextWidth (e as ElementType ptr) as integer
+function Element_GetTextWidth (e as ElementType ptr, text as string = "") as integer
     
-    dim text as string
     dim char as string * 1
     dim pixels as integer
     dim n as integer
     dim d as double
     dim textSpacing as integer
     
-    text = ucase(e->text)
+    if len(text) = 0 then
+        text = e->text
+    end if
+    
+    text = ucase(text)
     
     d = (FONT_W*e->text_spacing)-FONT_W
     textSpacing = int(d)
@@ -126,7 +217,7 @@ function Element_GetTextWidth (e as ElementType ptr) as integer
     pixels = 0
     for n = 1 to len(text)
         char = mid(text, n, 1)
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32)) + iif(n < len(text), textSpacing, 0)
+        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
     next n
     
     return pixels
@@ -135,13 +226,15 @@ end function
 
 sub Element_Init(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
     
+    dim n as integer
+    
     e->x = 0
     e->y = 0
     e->w = -1
     e->h = -1
     e->padding_x = 0
     e->padding_y = 0
-    e->border_width = 0
+    e->border_size = 0
     e->border_color = 15
     e->text = text
     e->text_alpha = 1.0
@@ -151,7 +244,8 @@ sub Element_Init(e as ElementType ptr, text as string = "", text_color as intege
     e->text_is_centered = ((flags and ElementFlags.CenterText) > 0)
     e->text_is_monospace = ((flags and ElementFlags.MonospaceText) > 0)
     e->text_align_right = ((flags and ElementFlags.AlignTextRight) > 0)
-    e->background   = -1
+    e->text_length = -1
+    e->background  = -1
     e->background_alpha = 1.0
     e->is_auto_width = 0
     e->is_auto_height = 0
@@ -159,6 +253,187 @@ sub Element_Init(e as ElementType ptr, text as string = "", text_color as intege
     e->is_centered_y = ((flags and ElementFlags.CenterY) > 0)
     e->parent = 0
     e->is_rendered = 0
+    e->sprite = -1
+    e->sprite_set_id = 0
+    e->sprite_centered_x = ((flags and ElementFlags.SpriteCenterX) > 0)
+    e->sprite_centered_y = ((flags and ElementFlags.SpriteCenterY) > 0)
+    e->sprite_zoom = 1.0
+    e->sprite_flip = 0
+    e->sprite_rot = 0
+    
+    e->render_text = ""
+    e->render_x = 0: e->render_y = 0
+    e->render_visible_x = -1
+    e->render_visible_y = -1
+    e->render_visible_w = 0
+    e->render_visible_h = 0
+    e->render_inner_w = 0: e->render_inner_h = 0
+    e->render_outer_w = 0: e->render_outer_h = 0
+    e->render_text_w = 0: e->render_text_h = 0
+    e->render_text_spacing = 0
+    e->render_num_line_breaks = 0
+    for n = 0 to 31: e->render_line_breaks(n) = 0: next n
+    
+end sub
+
+sub Element_RenderPrepare(e as ElementType ptr)
+    
+    dim text as string
+    dim char as string * 1
+    
+    dim d as double
+    
+    dim parentX as integer
+    dim parentY as integer
+    dim parentW as integer
+    dim parentH as integer
+    
+    dim newText as string
+    dim numLineBreaks as integer
+    dim numAutoBreaks as integer
+    dim lineChars as integer
+    dim maxLineChars as integer
+    dim maxpixels as integer
+    dim pixels as integer
+    
+    dim lineBreaks(32) as integer
+    
+    dim textWidth as integer
+    dim textHeight as integer
+    dim textSpacing as integer
+    
+    dim totalWidth as integer
+    dim totalHeight as integer
+    
+    dim visible_x as integer
+    dim visible_y as integer
+    
+    dim x as integer, y as integer
+    dim w as integer, h as integer
+    dim n as integer
+    
+    x = e->x: y = e->y
+    
+    if e->parent = 0 then
+        if e->background = -1 then e->background = 0
+    end if
+    parentX = Element_GetParentX(e)+Element_GetParentPadX(e)+Element_GetParentBorderSize(e)
+    parentY = Element_GetParentY(e)+Element_GetParentPadY(e)+Element_GetParentBorderSize(e)
+    parentW = Element_GetParentW(e)
+    parentH = Element_GetParentH(e)
+    
+    d = (FONT_H*e->text_height): textHeight = int(d)
+    d = (FONT_W*e->text_spacing)-FONT_W: textSpacing = int(d)
+    
+    text = ucase(e->text)
+    
+    pixels = 0
+    maxpixels = 0
+    for n = 1 to len(text)
+        char = mid(text, n, 1)
+        if char = "\" then
+            if pixels > maxpixels then maxpixels = pixels
+            pixels = 0
+            continue for
+        end if
+        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
+    next n
+    if pixels > maxpixels then maxpixels = pixels
+    textWidth = maxpixels
+    
+    newText = ""
+    numLineBreaks = 0
+    maxLineChars = 0
+    numAutoBreaks = 0
+    lineChars = 0
+    pixels = 0
+    for n = 1 to len(text)
+        char = mid(text, n, 1)
+        if (char = "\") then
+            if numLineBreaks < 32 then
+                lineBreaks(numLineBreaks) = n-numLineBreaks
+                numLineBreaks += 1
+                if lineChars > maxLineChars then
+                    maxLineChars = lineChars
+                    lineChars = 0
+                end if
+                pixels = 0
+            end if
+        else
+            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
+            if (e->w > -1) and (pixels > e->w) then
+                numAutoBreaks += 1
+                pixels -= e->w
+                if lineChars > maxLineChars then
+                    maxLineChars = lineChars
+                    lineChars = 0
+                end if
+            elseif (parentW > 0) and (pixels > parentW) then
+                numAutoBreaks += 1
+                pixels -= parentW
+                if lineChars > maxLineChars then
+                    maxLineChars = lineChars
+                    lineChars = 0
+                end if
+            end if
+            newText += char
+            lineChars += 1
+        end if
+    next n
+    text = newText
+    if numLineBreaks = 0 then
+        maxLineChars = len(newText)
+    end if
+    
+    if e->w = -1 then e->is_auto_width  = 1
+    if e->h = -1 then e->is_auto_height = 1
+    if e->is_auto_width  then e->w = textWidth
+    if e->is_auto_height then e->h = (numLineBreaks+numAutoBreaks+1)*textHeight
+    
+    w = e->w: h = e->h
+    totalWidth  = w+e->padding_x*2+e->border_size*2
+    totalHeight = h+e->padding_y*2+e->border_size*2
+    
+    dim clipTop as integer
+    clipTop = Element_GetClipTop(e)
+    
+    if parentW = -1 then parentW = SCREEN_W
+    if parentH = -1 then parentH = SCREEN_H
+    if y < 0 then h += y
+    if x < 0 then w += x
+    if totalWidth  > parentW then w = parentW-(e->border_size*2+e->padding_x*2)
+    if totalHeight > parentH then h = parentH-(e->border_size*2+e->padding_y*2)
+    
+    x += parentX: y += parentY
+    
+    if e->is_centered_x and (parentW > totalWidth) then x += int((parentW-totalWidth)/2)
+    if e->is_centered_y and (parentH > totalHeight) then y += int((parentH-totalHeight)/2)
+    
+    visible_x = iif(x>parentX,x,parentX)
+    visible_y = iif(y>parentY,y,parentY)
+    
+    if visible_y < clipTop then
+        h += (visible_y - clipTop)
+        visible_y = clipTop
+    end if
+    
+    e->render_text = text
+    e->render_x = x: e->render_y = y
+    e->render_visible_x = visible_x
+    e->render_visible_y = visible_y
+    e->render_visible_w = w
+    e->render_visible_h = h
+    e->render_inner_w = e->w+e->padding_x*2
+    e->render_inner_h = e->h+e->padding_y*2
+    e->render_outer_w = totalWidth
+    e->render_outer_h = totalHeight
+    e->render_text_w = textWidth
+    e->render_text_h = textHeight
+    e->render_text_spacing = textSpacing
+    for n = 0 to numLineBreaks-1
+        e->render_line_breaks(n) = lineBreaks(n)
+    next n
+    e->render_num_line_breaks = numLineBreaks
     
 end sub
 
@@ -175,123 +450,93 @@ sub Element_Render(e as ElementType ptr)
     dim n as integer
     dim i as integer
     
-    dim charMax as integer
-    dim lineBreaks(32) as integer
-    dim numLineBreaks as integer
-    dim newText as string
-    dim lineChars as integer
-    dim maxLineChars as integer
     dim idx as integer
     
     dim lft as integer, rgt as integer
     dim top as integer, btm as integer
     dim pixels as integer
-    dim maxpixels as integer
-    dim relY as integer
     
+    dim prevWordBreak as integer
+    dim lookAhead as integer
+    dim textLength as integer
     dim _word as string
     dim printWord as integer
     dim newLine as integer
     dim doLTrim as integer
     
-    dim textSpacing as integer
-    dim textHeight as integer
-    dim textWidth as integer
-    dim totalWidth as integer
-    dim totalHeight as integer
+    Element_RenderPrepare e
     
-    dim d as double
+    'if e->render_x + e->render_outer_w < 0 then exit sub
+    'if e->render_y + e->render_outer_h < 0 then exit sub
     
-    if e->parent = 0 then
-        if e->background = -1 then e->background = 0
-    end if
-    relY = Element_GetParentY(e)
-    if e->y + relY < relY then
-        exit sub
-    end if
-    
-    d = (FONT_H*e->text_height): textHeight = int(d)
-    d = (FONT_W*e->text_spacing)-FONT_W: textSpacing = int(d)
-    
-    text = ucase(e->text)
-    
-    pixels = 0
-    maxpixels = 0
-    for n = 1 to len(text)
-        char = mid(text, n, 1)
-        if char = "\" then
-            if pixels > maxpixels then maxpixels = pixels
-            pixels = 0
-            continue for
-        end if
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32)) + iif(n < len(text), textSpacing, 0)
-    next n
-    if pixels > maxpixels then maxpixels = pixels
-    textWidth = maxpixels
-    
-    newText = ""
-    numLineBreaks = 0
-    maxLineChars = 0
-    lineChars = 0
-    for n = 1 to len(text)
-        char = mid(text, n, 1)
-        if (char = "\") then
-            if numLineBreaks < 32 then
-                lineBreaks(numLineBreaks) = n-numLineBreaks
-                numLineBreaks += 1
-                if lineChars > maxLineChars then
-                    maxLineChars = lineChars
-                    lineChars = 0
-                end if
-            end if
-        else
-            newText += char
-            lineChars += 1
-        end if
-    next n
-    text = newText
-    if numLineBreaks = 0 then
-        maxLineChars = len(newText)
-    end if
-    
-    if e->w = -1 then e->is_auto_width = 1
-    if e->h = -1 then e->is_auto_height = 1
-    if e->is_auto_width  then e->w = textWidth
-    if e->is_auto_height then e->h = (numLineBreaks+1)*textHeight
-    
-    totalWidth  = e->w+e->padding_x+e->border_width
-    totalHeight = e->h+e->padding_y+e->border_width
-    
-    if e->is_centered_x then e->x = int((SCREEN_W-totalWidth)/2)
-    if e->is_centered_y then e->y = int((SCREEN_H-totalHeight)/2) '- parentH
-    
-    if e->border_width > 0 then
+    if e->border_size > 0 then
 
-        lft = e->x
-        top = e->y + relY
-        rgt = lft+e->w+e->padding_x*2+e->border_width
-        btm = top+e->h+e->padding_y*2+e->border_width
+        lft = e->render_visible_x
+        top = e->render_visible_y
+        rgt = lft+e->render_visible_w+e->padding_x*2+e->border_size
+        btm = top+e->render_visible_h+e->padding_y*2+e->border_size
         
-        fill lft, top, totalWidth, e->border_width, e->border_color
-        fill lft, top, e->border_width, totalHeight, e->border_color
-        fill rgt, top, e->border_width, totalHeight, e->border_color
-        fill lft, btm, totalWidth, e->border_width, e->border_color
+        fill lft, top, e->render_outer_w, e->border_size, e->border_color
+        fill lft, top, e->border_size, e->render_outer_h, e->border_color
+        fill rgt, top, e->border_size, e->render_outer_h, e->border_color
+        fill lft, btm, e->render_outer_w, e->border_size, e->border_color
+        
+        lft = e->render_x
+        top = e->render_y
+        rgt = lft+e->w+e->padding_x*2+e->border_size
+        btm = top+e->h+e->padding_y*2+e->border_size
+        
+        fill lft, top, e->render_outer_w, e->border_size, e->border_color
+        fill lft, top, e->border_size, e->render_outer_h, e->border_color
+        fill rgt, top, e->border_size, e->render_outer_h, e->border_color
+        fill lft, btm, e->render_outer_w, e->border_size, e->border_color
+        
+        'fill lft, top+int(e->render_outer_h*0.5), e->render_outer_w, e->border_size, e->border_color
+        'fill lft+int(e->render_outer_w*0.5), top, e->border_size, e->render_outer_h, e->border_color
 
     end if
 
-    x = e->x+e->border_width: y = e->y+e->border_width+relY
-    w = e->w+e->padding_x*2: h = e->h+e->padding_y*2
-    
     if e->background >= 0 then
-        fill x, y, w, h, e->background, e->background_alpha
+        x = e->render_x+e->border_size
+        y = e->render_y+e->border_size
+        w = e->render_inner_w
+        h = e->render_inner_h
+        if x < e->render_visible_x then
+            w += (x-e->render_visible_x)
+            x = e->render_visible_x
+        end if
+        if y < e->render_visible_y then
+            h += (y-e->render_visible_y)
+            y = e->render_visible_y
+        end if
+        if (w > 0) and (h > 0) then
+            fill x, y, w, h, e->background, e->background_alpha
+        end if
     end if
     setAlphaMod(e->text_alpha)
     
-    x = e->x+e->padding_x+e->border_width: y = e->y+e->padding_y+e->border_width+relY
-    if e->text_is_centered then x += int((e->w-textWidth)/2) '- center for each line break -- todo
-    if e->text_align_right then x = (e->x+e->padding_x+e->border_width+e->w)-textWidth
+    x = e->render_x+e->border_size+e->padding_x
+    y = e->render_y+e->border_size+e->padding_y
+    if e->text_is_centered then x += int((e->w-e->render_text_w)/2) '- center for each line break -- todo
+    if e->text_align_right then x = (e->render_x+e->padding_x+e->border_size+e->w)-e->render_text_w
+    if x < e->render_x then
+        x = e->render_x
+    end if
     fx = x: fy = y
-
+    
+    if e->sprite > -1 then
+        if e->sprite_centered_x or e->sprite_centered_y then
+            dim sp_x as integer, sp_y as integer
+            dim sp_w as integer, sp_h as integer
+            getSpriteMetrics e->sprite, e->sprite_set_id, sp_x, sp_y, sp_w, sp_h
+            sp_x = iif(e->sprite_centered_x, int((SPRITE_W-int(sp_w*e->sprite_zoom))*0.5*e->w/SPRITE_W), 0)
+            sp_y = iif(e->sprite_centered_y, int((SPRITE_H-int(sp_h*e->sprite_zoom))*0.5*e->h/SPRITE_H), 0)
+            putSprite x+sp_x, y+sp_y, e->sprite, e->sprite_set_id, e->sprite_flip, int(e->w*e->sprite_zoom), int(e->h*e->sprite_zoom), e->sprite_rot
+        else
+            putSprite x, y, e->sprite, e->sprite_set_id, e->sprite_flip, int(e->w*e->sprite_zoom), int(e->h*e->sprite_zoom), e->sprite_rot
+        end if
+    end if
+    
     idx = 0
     pixels = 0
     _word = ""
@@ -299,15 +544,24 @@ sub Element_Render(e as ElementType ptr)
     newLine = 0
     doLTrim = 0
     
+    text = e->render_text
+    
     setFontColor(e->text_color)
     
+    if fy+FONT_H > e->render_visible_y+e->border_size+e->padding_y+e->render_visible_h then
+        e->is_rendered = 1
+        exit sub
+    end if
+    lookAhead = 0
+    prevWordBreak = 0
+    textLength = iif(e->text_length > -1, e->text_length, len(text))
     for n = 1 to len(text)
         char = mid(text, n, 1)
         if char = " " then
             printWord = 1
         end if
-        if numLineBreaks > 0 then
-            if n = lineBreaks(idx) then
+        if e->render_num_line_breaks > 0 then
+            if n = e->render_line_breaks(idx) then
                 idx += 1
                 printWord = 1
                 newLine = 1
@@ -316,7 +570,18 @@ sub Element_Render(e as ElementType ptr)
         if n = len(text) then
             printWord = 1
             _word += char
-            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32))+iif(n < len(text), textSpacing, 0)
+            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), e->render_text_spacing, 0)
+        end if
+        if (n = textLength) and (printWord = 0) then
+            lookAhead = 1
+        end if
+        if lookAhead and (printWord or newLine) then
+            lookAhead = 0
+            if pixels > e->w then
+                printWord = 0
+            else
+                _word = left(_word, textLength-prevWordBreak+1)
+            end if
         end if
         if printWord and (len(_word) > 0) then
             if doLTrim then
@@ -324,28 +589,40 @@ sub Element_Render(e as ElementType ptr)
                 doLtrim = 0
             end if
             if pixels > e->w then
-                fy += textHeight
+                fy += e->render_text_h
                 fx = x
                 _word = ltrim(_word)
+                if fy+FONT_H > e->render_visible_y+e->border_size+e->padding_y+e->render_visible_h then
+                    exit for
+                end if
             end if
             for i = 1 to len(_word)
                 ch = mid(_word, i, 1)
-                putToScreen(int(fx)-FontCharMargins(asc(ch)-32), fy, asc(ch) - 32)
-                fx += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(ch)-32))+textSpacing
+                if fy >= e->render_visible_y then
+                    putToScreen(int(fx)-FontCharMargins(fontVal(ch)), fy, fontVal(ch))
+                end if
+                fx += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(ch)))+e->render_text_spacing
             next i
             _word = ""
             pixels = fx - x
+            prevWordBreak = n
         end if
         if newLine then
             pixels = 0
-            fy += textHeight
+            fy += e->render_text_h
             fx = x
-            doLtrim =1
+            doLtrim = 1
+            if fy+FONT_H > e->render_visible_y+e->border_size+e->padding_y+e->render_visible_h then
+                exit for
+            end if
         end if
         _word += char
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(asc(char)-32))+iif(n < len(text), textSpacing, 0)
+        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), e->render_text_spacing, 0)
         newLine = 0
         printWord = 0
+        if (n >= textLength) and (lookAhead = 0) then
+            exit for
+        end if
     next n
     e->is_rendered = 1
     
@@ -363,20 +640,6 @@ sub Elements_Add(e as ElementType ptr, parent as ElementType ptr = 0)
         RenderElements(ElementsCount) = e
         if (parent <> 0) then e->parent = parent
         ElementsCount += 1
-    end if
-    
-end sub
-
-sub Element_RenderParent(e as ElementType ptr)
-    
-    dim parent as ElementType ptr
-    
-    parent = e->parent
-    if parent <> 0 then
-        if parent->is_rendered = 0 then
-            Element_RenderParent parent
-            Element_Render parent
-        end if
     end if
     
 end sub
@@ -412,20 +675,133 @@ function Element_GetParentBackground(e as ElementType ptr) as integer
     
 end function
 
-function Element_GetParentY(e as ElementType ptr, y as integer = -999999) as integer
+function Element_GetParentX(e as ElementType ptr, x as integer = 0) as integer
     
     dim parent as ElementType ptr
     
     parent = e->parent
     if parent <> 0 then
-        if y = -999999 then y = 0
-        y += Element_GetParentY(parent, y)
-        return y
+        x += parent->x
+        return Element_GetParentX(parent, x)
+    end if
+    return x
+    
+end function
+
+function Element_GetParentY(e as ElementType ptr, y as integer = 0) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        y += parent->y
+        return Element_GetParentY(parent, y)
+    end if
+    return y
+    
+end function
+
+function Element_GetParentPadX(e as ElementType ptr, x as integer = 0) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        x += parent->padding_x
+        return Element_GetParentPadX(parent, x)
+    end if
+    return x
+    
+end function
+
+function Element_GetParentPadY(e as ElementType ptr, y as integer = 0) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        y += parent->padding_y
+        return Element_GetParentPadY(parent, y)
+    end if
+    return y
+    
+end function
+
+function Element_GetParentBorderSize(e as ElementType ptr, x as integer = 0) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        x += parent->border_size
+        return Element_GetParentBorderSize(parent, x)
+    end if
+    return x
+    
+end function
+
+'* replace with only getting first parent width (need function to calc auto-width without rendering)
+function Element_GetParentW(e as ElementType ptr) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        if parent->w = -1 then
+            return Element_GetParentW(parent)
+        else
+            return parent->w
+        end if
     else
-        return iif(y = -999999, 0, e->y)
+        return -1
     end if
     
 end function
+
+function Element_GetParentH(e as ElementType ptr) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        if parent->h = -1 then
+            return Element_GetParentH(parent)
+        else
+            return parent->h
+        end if
+    else
+        return -1
+    end if
+    
+end function
+
+function Element_GetClipTop(e as ElementType ptr, y as integer = 0, clip as integer = 0) as integer
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        y += parent->y+parent->padding_y+parent->border_size
+        if y > clip then clip = y
+        return Element_GetClipTop(parent, y, clip)
+    end if
+    return clip
+    
+end function
+
+sub Element_RenderParent(e as ElementType ptr)
+    
+    dim parent as ElementType ptr
+    
+    parent = e->parent
+    if parent <> 0 then
+        if parent->is_rendered = 0 then
+            Element_RenderParent parent
+            Element_Render parent
+        end if
+    end if
+    
+end sub
 
 sub Elements_Render()
     
@@ -513,7 +889,7 @@ sub Elements_LoadFontMetrics(filename as string)
             if leftMost <= rightMost then
                 charWidth = (rightMost - leftMost) + 1
             else
-                charWidth = FONT_W '- assume space
+                charWidth = int(FONT_W * 0.75) '- assume space
             end if
             if n = 64 then charWidth = FONT_W: rightMost = -1 '* "|"
             FontCharWidths(n) = charWidth
@@ -523,3 +899,17 @@ sub Elements_LoadFontMetrics(filename as string)
     close #1
     
 end sub
+
+private function FontVal(ch as string) as integer
+    
+    dim v as integer
+    
+    if ch = "|" then
+        v = 64
+    else
+        v = asc(ch)-32
+    end if
+    
+    return v
+    
+end function

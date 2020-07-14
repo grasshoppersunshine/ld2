@@ -5,6 +5,7 @@
 #include once "modules/inc/keys.bi"
 #include once "modules/inc/ld2gfx.bi"
 #include once "modules/inc/ld2snd.bi"
+#include once "modules/inc/elements.bi"
 #include once "inc/ld2e.bi"
 #include once "inc/ld2.bi"
 #include once "inc/title.bi"
@@ -89,13 +90,13 @@ SUB TITLE_Opening
     
     LD2_CLS 1, 0
     
-    LD2_InitElement(@e)
+    Element_Init(@e)
     e.y = 60
     e.is_centered_x = 1
     e.text = "DELTA CODE PRESENTS"
     e.text_spacing = 1.9
     e.text_color = 31
-    LD2_RenderElement @e
+    Element_Render @e
     
     LD2_FadeIn 1
     IF WaitSecondsUntilKey(1.5) THEN
@@ -159,11 +160,11 @@ SUB TITLE_Menu
     dim selected as integer
     dim n as integer
     
-    LD2_InitElement @menu, "", 31
-    LD2_InitElement @menuNew    , "New Game", 31
-    LD2_InitElement @menuLoad   , "Continue Game", 31
-    LD2_InitElement @menuCredits, "Credits", 31
-    LD2_InitElement @menuExit   , "Exit Game", 31
+    Element_Init @menu, "", 31
+    Element_Init @menuNew    , "New Game", 31
+    Element_Init @menuLoad   , "Continue Game", 31
+    Element_Init @menuCredits, "Credits", 31
+    Element_Init @menuExit   , "Exit Game", 31
     menuItems(0) = @menuNew
     menuItems(1) = @menuLoad
     menuItems(2) = @menuCredits
@@ -176,11 +177,12 @@ SUB TITLE_Menu
         menuLoad.text_color = 8
     end if
     
-    LD2_AddElement @menu
+    Elements_Clear
+    Elements_Add @menu
     for n = 0 to 3
         menuItems(n)->parent = @menu
         menuitems(n)->y = FONT_H*3*n
-        LD2_AddElement menuItems(n)
+        Elements_Add menuItems(n)
     next n
     
     menu.x = 208
@@ -198,7 +200,7 @@ SUB TITLE_Menu
             end if
         next n
         LD2_CopyBuffer 2, 1
-        LD2_RenderElements
+        Elements_Render
         LD2_RefreshScreen
         PullEvents
         if keypress(KEY_UP) then
@@ -300,7 +302,7 @@ sub TITLE_Intro_Classic
     
   LD2_RefreshScreen
   
-  LD2_InitElement @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
+  Element_Init @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
   e.y = 60
   
   File = FREEFILE
@@ -318,7 +320,7 @@ sub TITLE_Intro_Classic
     
     FOR y = 0 TO 7
  
-      LD2_RenderElement @e
+      Element_Render @e
       a = (8-y)*54-1
       LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
       LD2_RefreshScreen
@@ -326,13 +328,13 @@ sub TITLE_Intro_Classic
 
     NEXT y
     
-    LD2_RenderElement @e
+    Element_Render @e
     LD2_RefreshScreen
     IF WaitSecondsUntilKey(3.3333) THEN EXIT DO
 
     FOR y = 0 TO 7
       
-      LD2_RenderElement @e
+      Element_Render @e
       a = (y+1)*54-1
       LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
       LD2_RefreshScreen
@@ -382,7 +384,7 @@ SUB TITLE_Intro
     dim state as integer
     state = 0
 
-    LD2_InitElement @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    Element_Init @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = 60
     e.background_alpha = 0.0
     
@@ -410,7 +412,7 @@ SUB TITLE_Intro
         e.text_alpha = a
         LD2_CopyBuffer 2, 1
         'LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
-        LD2_RenderElement @e
+        Element_Render @e
         
         'LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
         
@@ -419,7 +421,7 @@ SUB TITLE_Intro
         
     NEXT y
     
-    LD2_RenderElement @e
+    Element_Render @e
     LD2_RefreshScreen
     IF WaitSecondsUntilKey(3.3333) THEN EXIT DO
     
@@ -437,10 +439,10 @@ SUB TITLE_Intro
     FOR y = 0 TO 7
         
         if (state = 0) and instr(lcase(text), "all thanks") then
-            LD2_RenderElement @e
+            Element_Render @e
             a = (y+1)*54-1
             LD2_fillm 0, 0, SCREEN_W, SCREEN_H, 0, 1, iif(a > 255, 255, a)
-            LD2_RenderElement @e
+            Element_Render @e
             if y = 7 then
                 state = 1
                 y = 0
@@ -452,7 +454,7 @@ SUB TITLE_Intro
             if a < 0.0 then a = 0.0
             e.text_alpha = iif(a > 1.0, 1.0, a)
             LD2_CopyBuffer 2, 1
-            LD2_RenderElement @e
+            Element_Render @e
         end if
         
         LD2_RefreshScreen
@@ -479,22 +481,22 @@ SUB TITLE_Intro
     dim heading as ElementType
     dim fontH as integer
     
-    fontH = LD2_GetFontHeightWithSpacing()
+    fontH = Elements_GetFontHeightWithSpacing()
     
     LD2_cls 1, 0
 	
     'WaitSecondsUntilKey(1.0)
-    LD2_InitElement @title, "One Year Later", 31
+    Element_Init @title, "One Year Later", 31
     title.y = 60
     title.is_centered_x = 1
     title.text_spacing = 1.9
     title.text_color = 31
-    LD2_InitElement @subtitle, "Corporate Headquarters", 31
+    Element_Init @subtitle, "Corporate Headquarters", 31
     subtitle.y = 60 + fontH * 2.5
     subtitle.is_centered_x = 1
     subtitle.text_spacing = 1.9
     subtitle.text_color = 31
-    LD2_InitElement @heading, "Larry's Office", 31
+    Element_Init @heading, "Larry's Office", 31
     heading.y = 60 + fontH * 5.5
     heading.is_centered_x = 1
     heading.text_spacing = 1.9
@@ -503,7 +505,7 @@ SUB TITLE_Intro
     LD2_SetMusicVolume 1.0
     LD2_PlayMusic Tracks.Elevator
     
-    LD2_RenderElement @title
+    Element_Render @title
     LD2_FadeIn 2
     
     'WaitSeconds 1.0
@@ -536,11 +538,11 @@ sub TITLE_ShowCredits_Classic
     LD2_cls
     LD2_cls 1, 0
     
-    LD2_InitElement @e, "Larry The Dinosaur II - October, 2002 - Delta Code", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    Element_Init @e, "Larry The Dinosaur II - October, 2002 - Delta Code", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = 4
-    LD2_RenderElement @e
+    Element_Render @e
     
-    LD2_InitElement @e, "", 31
+    Element_Init @e, "", 31
     open DATA_DIR+"tables/credits.txt" for input as #1
         do while not eof(1)
             line input #1, text
@@ -551,11 +553,11 @@ sub TITLE_ShowCredits_Classic
     e.x = 40: e.y = 30
     e.text_is_monospace = 1
     'e.text_height = 2.4
-    LD2_RenderELement @e
+    Element_Render @e
     
-    LD2_InitElement @e, "Press Space To Continue", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    Element_Init @e, "Press Space To Continue", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = 144
-    LD2_RenderElement @e
+    Element_Render @e
     
     LD2_RefreshScreen
     
@@ -574,12 +576,12 @@ sub TITLE_ShowCredits
     LD2_cls
     LD2_CLS 1, 0
 
-    LD2_InitElement @e, "Larry The Dinosaur II - October, 2002 - Delta Code", 31, ElementFlags.CenterX or ElementFlags.CenterText
-    e.y = LD2_GetFontHeightWithSpacing()
+    Element_Init @e, "Larry The Dinosaur II - October, 2002 - Delta Code", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.y = Elements_GetFontHeightWithSpacing()
     e.text_spacing = 1.25
-    LD2_RenderElement @e
+    Element_Render @e
     
-    LD2_InitElement @e, "", 31
+    Element_Init @e, "", 31
     open DATA_DIR+"tables/credits.txt" for input as #1
         do while not eof(1)
             line input #1, text
@@ -589,11 +591,11 @@ sub TITLE_ShowCredits
     e.x = 40: e.y = SCREEN_H*0.2
     e.text_is_monospace = 1
     e.text_height = 2.4
-    LD2_RenderELement @e
+    Element_Render @e
 
-    LD2_InitElement @e, "Press Enter To Continue", 31, ElementFlags.CenterX or ElementFlags.CenterText
-    e.y = SCREEN_H - LD2_GetFontHeightWithSpacing() * 2.5
-    LD2_RenderElement @e
+    Element_Init @e, "Press Enter To Continue", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    e.y = SCREEN_H - Elements_GetFontHeightWithSpacing() * 2.5
+    Element_Render @e
 
     LD2_FadeIn 3
 
@@ -610,22 +612,22 @@ sub TITLE_ShowCreditsNew
     dim e as ElementType
     dim fontH as integer
     
-    fontH = LD2_GetFontHeightWithSpacing()
+    fontH = Elements_GetFontHeightWithSpacing()
     
     LD2_CLS 1, 0
-    LD2_InitElement @e, "Larry The Dinosaur II\Copyright (C) 2002, 2020 Delta Code\All Rights Reserved\Created By Joe King", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    Element_Init @e, "Larry The Dinosaur II\Copyright (C) 2002, 2020 Delta Code\All Rights Reserved\Created By Joe King", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = fontH
     e.text_spacing = 1.25
-    LD2_RenderElement @e
+    Element_Render @e
     
-    LD2_InitElement @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    Element_Init @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.text = "SPECIAL THANKS\ChipTone (SFB Games)\PIXELplus 256 (C.Chadwick)\FreeBASIC (freebasic.net)\Simple Direct Media Layer (libsdl.org)"
     e.y = 100
     '"TESTING"
     '"Dean Janjic"
     '"Eric Lope"
     
-    LD2_RenderElement @e
+    Element_Render @e
 
     LD2_FadeIn 3
 
@@ -669,15 +671,15 @@ SUB TITLE_Ad
         LD2_cls 1, backColor
         
         IF (i < 6) OR (i > 7) THEN
-          LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
         END IF
         IF i = 6 THEN
-          LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
         END IF
         IF i = 7 THEN
-          LD2_PutTextCol ((SCREEN_W - LEN(Message(i-1)) * FONT_W) / 2), 60, Message(i-1), textColor, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i-1)) * FONT_W) / 2), 60, Message(i-1), textColor, 1
           FOR n = 32 TO 40
-            LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 76, Message(i), n, 1
+            Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 76, Message(i), n, 1
             LD2_RefreshScreen
             WaitSeconds 0.10
           NEXT n
@@ -740,7 +742,7 @@ sub TITLE_TheEnd
     dim state as integer
     state = 0
 
-    LD2_InitElement @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    Element_Init @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = 60
     e.background_alpha = 0.0
     
@@ -768,7 +770,7 @@ sub TITLE_TheEnd
         e.text_alpha = a
         LD2_CopyBuffer 2, 1
         'LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
-        LD2_RenderElement @e
+        Element_Render @e
         
         'LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
         
@@ -777,7 +779,7 @@ sub TITLE_TheEnd
         
     NEXT y
     
-    LD2_RenderElement @e
+    Element_Render @e
     LD2_RefreshScreen
     IF WaitSecondsUntilKey(3.3333) THEN EXIT DO
     
@@ -795,10 +797,10 @@ sub TITLE_TheEnd
     FOR y = 0 TO 7
         
         if (state = 0) and instr(lcase(text), "all thanks") then
-            LD2_RenderElement @e
+            Element_Render @e
             a = (y+1)*54-1
             LD2_fillm 0, 0, SCREEN_W, SCREEN_H, 0, 1, iif(a > 255, 255, a)
-            LD2_RenderElement @e
+            Element_Render @e
             if y = 7 then
                 state = 1
                 y = 0
@@ -810,7 +812,7 @@ sub TITLE_TheEnd
             if a < 0.0 then a = 0.0
             e.text_alpha = iif(a > 1.0, 1.0, a)
             LD2_CopyBuffer 2, 1
-            LD2_RenderElement @e
+            Element_Render @e
         end if
         
         LD2_RefreshScreen
@@ -873,13 +875,13 @@ SUB TITLE_Goodbye
     
     LD2_CLS 1, 0
     
-    LD2_InitElement(@e)
+    Element_Init @e
     e.y = 60
     e.is_centered_x = 1
     e.text = goodbyes(n)
     e.text_spacing = 1.9
     e.text_color = 31
-    LD2_RenderElement @e
+    Element_Render @e
     
     LD2_FadeIn 4
     'IF WaitSecondsUntilKey(0.2) THEN
@@ -981,15 +983,15 @@ SUB TITLE_AdTwo
         LD2_cls 1, backColor
         
         IF (i < 2) OR (i > 3) THEN
-          LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
         END IF
         IF i = 2 THEN
-          LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), 57, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), 57, 1
         END IF
         IF i = 3 THEN
-          LD2_PutTextCol ((SCREEN_W - LEN(Message(i-1)) * FONT_W) / 2), 60, Message(i-1), 57, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i-1)) * FONT_W) / 2), 60, Message(i-1), 57, 1
           FOR n = 32 TO 40
-            LD2_PutTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 76, Message(i), n, 1
+            Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 76, Message(i), n, 1
             LD2_RefreshScreen
             WaitSeconds 0.10
           NEXT n

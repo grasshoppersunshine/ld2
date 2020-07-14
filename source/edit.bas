@@ -188,8 +188,6 @@ end type
     declare function encodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
     declare function decodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) as string
     
-    declare function FontVal(ch as string) as integer
-    
     dim shared SpritesLarry as VideoSprites
     dim shared SpritesTile as VideoSprites
     dim shared SpritesOpaqueTile as VideoSprites
@@ -198,7 +196,6 @@ end type
     dim shared SpritesMob as VideoSprites
     dim shared SpritesObject as VideoSprites
     dim shared SpritesOpaqueObject as VideoSprites
-    dim shared SpritesFont as VideoSprites
 
     const MAPW = 201
     const MAPH = 13
@@ -405,9 +402,9 @@ end type
     for n = 1 to 4
         layerString = iif(activeLayer = n, "["+layers(n).sid+"]", " "+layers(n).sid+" ")
         if layers(n).isVisible then
-            SpritesFont.setColorMod(255, 255, 255)
+            Font_setColor 15
         else
-            SpritesFont.setColorMod(127, 127, 127)
+            Font_setColor 7
         end if
         putText layerString, x, FONT_H*36.5
         x += (len(layerString)+1)*FONT_W
@@ -879,13 +876,17 @@ SUB Init
     for i = 0 to 11
         LightPalette.setRGBA(i, 0, 0, 0, iif(i*36 < 255, i*36, 255))
     next i
+    
+    Font_Init FONT_W, FONT_H
+    Font_Load DATA_DIR+"gfx/font.put"
+    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
+    Elements_LoadFontMetrics DATA_DIR+"gfx/font.put"
 
     LoadSprites DATA_DIR+"gfx/ld2tiles.put", idTILE
     LoadSprites DATA_DIR+"gfx/ld2light.put", idLIGHT
     LoadSprites DATA_DIR+"gfx/mobs.put", idMOBS
     LoadSprites DATA_DIR+"gfx/larry2.put", idLARRY
     LoadSprites DATA_DIR+"gfx/objects.put", idOBJECT
-    LoadSprites DATA_DIR+"gfx/font.put"   , idFONT
     
     LD2_AddSound EditSounds.quiet   , DATA_DIR+"sound/scenechar.wav"
     
@@ -918,9 +919,6 @@ SUB Init
     
     LD2_AddSound EditSounds.showHelp, DATA_DIR+"sound/ui-mix.wav"
     LD2_AddSound EditSounds.turnPage, DATA_DIR+"sound/editor/turnpage.wav"
-    
-    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
-    Elements_LoadFontMetrics DATA_DIR+"gfx/font.put"
     
     GenerateSky
 
@@ -1373,11 +1371,6 @@ sub LoadSprites (filename as string, spriteSetId as integer)
       SpritesLight.setPalette(@LightPalette)
       SpritesLight.load(filename)
       LD2_InitSprites filename, @SpritesOpaqueLight, SPRITE_W, SPRITE_H
-   
-    CASE idFONT
-
-      'LD2_InitSprites filename, @SpritesFont, FONT_W, FONT_H, SpriteFlags.Transparent or SpriteFlags.UseWhitePalette
-      LD2_InitSprites filename, @SpritesFont, 6, 5, SpriteFlags.Transparent or SpriteFlags.UseWhitePalette
    
     CASE idOBJECT
 
@@ -1877,18 +1870,18 @@ sub putText (text as string, x as integer, y  as integer, fontw as integer = FON
     for n = 1 to len(text)
         if fontw < FONT_W then
             if (n and 1) = 0 then
-                SpritesFont.setColorMod(255, 255, 255)
+                Font_setColor 31
             else
-                SpritesFont.setColorMod(208, 208, 208)
+                Font_setColor 30
             end if
         end if
         if mid(text, n, 1) <> " " then
-            SpritesFont.putToScreen(x, y, FontVal(mid(text, n, 1)))
+            Font_putText x, y, mid(text, n, 1), 1
         end if
         x += fontw
     next n
     
-    SpritesFont.setColorMod(255, 255, 255)
+    Font_setColor 15
     
 end sub
 
@@ -2708,8 +2701,8 @@ function DialogYesNo(message as string) as integer
     dim fontW as integer
     dim fontH as integer
     
-    fontW = Elements_CalcCharWidth()
-    fontH = Elements_CalcLineHeight()
+    fontW = Elements_GetFontWidthWithSpacing()
+    fontH = Elements_GetFontHeightWithSpacing()
     
     Element_Init @dialog
     Element_Init @title, message, DIALOG_COLOR
@@ -2718,7 +2711,7 @@ function DialogYesNo(message as string) as integer
     
     dialog.background = DIALOG_BACKGROUND
     dialog.background_alpha = DIALOG_ALPHA
-    dialog.border_width = 1
+    dialog.border_size = 1
     dialog.border_color = DIALOG_BORDER_COLOR
     
     halfX = 160
@@ -2810,7 +2803,7 @@ function DialogYesNo(message as string) as integer
 end function
 
 sub elementsPutFont(x as integer, y as integer, charVal as integer)
-    SpritesFont.putToScreen(x, y, charVal)
+    Font_put x, y, charVal, 1
 end sub
 
 sub elementsFill(x as integer, y as integer, w as integer, h as integer, fillColor as integer, fillAlpha as double = 1.0)
@@ -2822,11 +2815,11 @@ sub elementsFill(x as integer, y as integer, w as integer, h as integer, fillCol
 end sub
 
 sub elementsSetFontColor(fontColor as integer)
-    LD2_SetSpritesColor(@SpritesFont, fontColor)
+    Font_SetColor fontColor
 end sub
 
 sub elementsSetAlphaMod(a as double)
-    SpritesFont.setAlphaMod(int(a * 255))
+    Font_SetAlpha a
 end sub
 
 sub drawSpriteLine(size as integer, x0 as integer, y0 as integer, x1 as integer, y1 as integer, sprite as integer, srcLayer as integer, dstLayer as integer = 0)

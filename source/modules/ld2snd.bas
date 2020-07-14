@@ -74,7 +74,15 @@ SUB LD2_AddSound (id as integer, filename as string, loops as integer=0, volume 
         print SoundErrorMsg
     end if
     
-END SUB 
+END SUB
+
+sub LD2_FreeSound (id as integer)
+    
+    if LD2soundEnabled = 0 then return
+    
+    SOUND_FreeSound id
+    
+end sub
 
 function LD2_FadeInMusic (speed as double = 1.0) as integer
 

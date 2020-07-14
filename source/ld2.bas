@@ -50,6 +50,7 @@
     #include once "modules/inc/ld2snd.bi"
     #include once "modules/inc/inventory.bi"
     #include once "modules/inc/poses.bi"
+    #include once "modules/inc/elements.bi"
     #include once "inc/ld2e.bi"
     #include once "inc/title.bi"
     #include once "inc/ld2.bi"
@@ -115,6 +116,9 @@
     dim shared SceneCallback as sub()
     dim shared NextMusicId as integer
     dim shared RecentDeathTime as double
+    
+    redim shared TempSoundIds(0) as integer
+    dim shared NumTempSounds as integer
     
     Start
     END
@@ -194,6 +198,8 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     
     LD2_LogDebug "CharacterSpeak ("+str(characterId)+", "+caption+" )"
 	
+    dim chatBoxTop as integer
+    dim chatBoxLft as integer
 	dim escapeFlag as integer
 	dim renderPose as PoseType
 	dim poseTalking as PoseType
@@ -202,6 +208,9 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
 	dim n as integer
     
     if caption = "" then return 0
+    
+    chatBoxTop = SCREEN_H-int(SPRITE_H*1.25)
+    chatBoxLft = 2
     
     GetPose renderPose, characterId
     poseTalking = renderPose
@@ -256,7 +265,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
         
         RenderScene RenderSceneFlags.NotPutToScreen
         if chatBox then
-            LD2_putFixed 0, 180, chatBox+frame, idScene, renderPose.getFlip()
+            LD2_putFixed chatBoxLft, chatBoxTop, chatBox+frame, idScene, renderPose.getFlip()
         end if
         LD2_RefreshScreen
         
@@ -285,13 +294,13 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     UpdatePose renderPose, poseTalking
     RenderScene RenderSceneFlags.NotPutToScreen
     if chatBox then
-        LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+        LD2_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
     end if
     LD2_RefreshScreen
     
     while SceneKeyTextJump()
         PullEvents: RenderScene RenderSceneFlags.NotPutToScreen
-        if chatBox then LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+        if chatBox then LD2_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
         LD2_RefreshScreen
     wend
 
@@ -301,7 +310,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
         PullEvents
         RenderScene RenderSceneFlags.NotPutToScreen
         if chatBox then
-            LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+            LD2_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
         end if
         LD2_RefreshScreen
         if (timer - timestamp) >= 0.15 then
@@ -313,7 +322,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
             LD2_WriteText caption
             RenderScene RenderSceneFlags.NotPutToScreen
             if chatBox then
-                LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+                LD2_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
             end if
             LD2_RefreshScreen
             timestamp = timer
@@ -698,6 +707,28 @@ SUB GetPose (pose AS PoseType, poseId AS INTEGER)
 	
 END SUB
 
+sub AddTempSound (id as integer, filepath as string, loops as integer = 0)
+    
+    NumTempSounds += 1
+    redim preserve TempSoundIds(NumTempSounds-1) as integer
+    
+    TempSoundIds(NumTempSounds-1) = id
+    
+    AddSound id, filepath, loops
+    
+end sub
+
+sub FreeTempSounds ()
+    
+    dim n as integer
+    for n = 0 to NumTempSounds-1
+        LD2_FreeSound TempSoundIds(n)
+    next n
+    
+    NumTempSounds = 0
+    
+end sub
+
 sub AddSound (id as integer, filepath as string, loops as integer = 0)
     
     LD2_LogDebug "AddSound ("+str(id)+", "+filepath+","+str(loops)+" )"
@@ -1018,7 +1049,7 @@ SUB Main
     dim consoleDialog as ElementType
     dim e as ElementType
     
-    LD2_InitElement @consoleDialog, "", 31
+    Element_Init @consoleDialog, "", 31
     consoleDialog.y = SCREEN_H-FONT_H*4
     consoleDialog.background = 0
     consoleDialog.background_alpha = 160
@@ -1026,20 +1057,21 @@ SUB Main
     consoleDialog.padding_y = 3
     consoleDialog.w = SCREEN_W-6
     consoleDialog.h = SCREEN_H-consoleDialog.y-6
-    LD2_InitElement @e, "", 31
+    Element_Init @e, "", 31
     
     SceneCheck player '* check for first scene
   DO
     
     IF Game_hasFlag(MAPISLOADED) THEN
 		'// play music here
+        SceneRefreshMobs
         Game_unsetFlag MAPISLOADED
 	END IF
     
     PullEvents
     PrimeActions
  
-    if showConsole = 0 then
+    if (showConsole = 0) and (showStatusScreen = 0) then
         Player_Animate
         Mobs_Animate resetClocks
         Guts_Animate
@@ -1053,10 +1085,10 @@ SUB Main
     
     if showConsole then
         consoleDialog.text =  "/"+GetTextInput()
-        LD2_RenderElement @consoleDialog
+        Element_Render @consoleDialog
         if (int((timer-consoleStart)*2) and 1) then
             e.text = left(consoleDialog.text, GetTextInputCursor()+1)
-            LD2_putTextCol consoleDialog.x+consoleDialog.padding_x+LD2_GetElementTextWidth(@e)+1, consoleDialog.y+consoleDialog.padding_y, "_", 15, 1
+            Font_putTextCol consoleDialog.x+consoleDialog.padding_x+Element_GetTextWidth(@e)+1, consoleDialog.y+consoleDialog.padding_y, "_", 15, 1
         end if
     end if
     
@@ -1076,14 +1108,13 @@ SUB Main
     
     if showStatusScreen then
         showStatusScreen = iif(StatusScreen(showConsole)=0,1,0)
+        if showStatusScreen = 0 then
+            resetClocks = 1
+        end if
     end if
     
 	LD2_RefreshScreen
 	LD2_CountFrame
-    
-    if keyboard(KEY_E) or keypress(KEY_TAB) or mouseMB() then
-        showStatusScreen = 1
-    end if
     
     if showConsole then
         if keypress(KEY_ESCAPE) or keypress(KEY_SLASH) then
@@ -1157,6 +1188,9 @@ SUB Main
             consoleStart = timer
             LD2_PlaySound Sounds.uiSubmenu
         end if
+    end if
+    if keyboard(KEY_E) or keypress(KEY_TAB) or mouseMB() then
+        showStatusScreen = 1
     end if
     if showStatusScreen then
         continue do
@@ -1330,12 +1364,6 @@ sub RenderOnePose (pose as PoseType ptr)
     
 end sub
 
-SUB RetraceDelay (qty AS INTEGER)
-	
-	WaitSeconds qty/60
-	
-END SUB
-
 function DoScene (sceneId as string) as integer
     
     dim escaped as integer
@@ -1377,15 +1405,17 @@ end function
 sub RenderScene (flags as integer = 0)
     
     dim frameFlags as integer
+    dim shift as double
     
     SetFlags flags
     
     if HasFlag(RenderSceneFlags.OnlyAnimate) then
-        'Mobs_Animate
         Guts_Animate
         Doors_Animate
         Elevators_Animate
         Flashes_Animate
+        Shakes_Animate
+        Map_UpdateShift
         exit sub
     end if
     if NotFlag(RenderSceneFlags.OnlyForeground) then
@@ -1398,22 +1428,29 @@ sub RenderScene (flags as integer = 0)
         end if
         LD2_RenderFrame frameFlags
         if NotFlag(RenderSceneFlags.OnlyBackground) then
+            shift = Map_GetXShift()
+            Map_SetXShift shift+Shakes_GetScreenShake()
             RenderPoses
+            Map_SetXShift shift
         end if
     end if
     if NotFlag(RenderSceneFlags.OnlyBackground) then
+        shift = Map_GetXShift()
+        Map_SetXShift shift+Shakes_GetScreenShake()
         LD2_RenderForeground HasFlag(RenderSceneFlags.WithElevator)
+        Map_SetXShift shift
     end if
     if HasFlag(RenderSceneFlags.OnlyForeground) or HasFlag(RenderSceneFlags.OnlyBackground) then
         exit sub
     end if
     if NotFlag(RenderSceneFlags.NotPutToScreen) then
         LD2_RefreshScreen
-        'Mobs_Animate
         Guts_Animate
         Doors_Animate
         Elevators_Animate
         Flashes_Animate
+        Shakes_Animate
+        Map_UpdateShift
     end if
     
 end sub
@@ -1431,12 +1468,12 @@ sub Rooms_DoBasement (player as PlayerType)
         
         first = 0
         
-        LD2_InitElement @inputPin, KEYPAD_ENTRY_TEXT, 31, ElementFlags.CenterX
-        inputPin.y = 170
+        Element_Init @inputPin, KEYPAD_ENTRY_TEXT, 31, ElementFlags.CenterX
+        inputPin.y = int(SCREEN_H*0.85)
         inputPin.background_alpha = 0
         
-        LD2_InitElement @inputPinResponse, "", 31, ElementFlags.CenterText
-        inputPinResponse.y = 180
+        Element_Init @inputPinResponse, "", 31, ElementFlags.CenterText
+        inputPinResponse.y = int(SCREEN_H*0.9)
         inputPinResponse.background_alpha = 0
         
     end if
@@ -1457,8 +1494,8 @@ sub Rooms_DoBasement (player as PlayerType)
     end if
     
     if (timer - messageTimer < 5.0) then
-        LD2_RenderElement @inputPin
-        LD2_RenderElement @inputPinResponse
+        Element_Render @inputPin
+        Element_Render @inputPinResponse
     end if
     
 end sub
@@ -1483,12 +1520,12 @@ sub Rooms_DoRooftop (player as PlayerType)
         
         first = 0
         
-        LD2_InitElement @inputPin, KEYPAD_ENTRY_TEXT, 31, ElementFlags.CenterX
-        inputPin.y = 170
+        Element_Init @inputPin, KEYPAD_ENTRY_TEXT, 31, ElementFlags.CenterX
+        inputPin.y = int(SCREEN_H*0.85)
         inputPin.background_alpha = 0
         
-        LD2_InitElement @inputPinResponse, "", 31, ElementFlags.CenterX
-        inputPinResponse.y = 180
+        Element_Init @inputPinResponse, "", 31, ElementFlags.CenterX
+        inputPinResponse.y = int(SCREEN_H*0.9)
         inputPinResponse.background_alpha = 0
         
     end if
@@ -1523,8 +1560,8 @@ sub Rooms_DoRooftop (player as PlayerType)
             end if
             inputPinResponse.text = "Access Granted"
             inputPinResponse.text_color = 56
-            LD2_RenderElement @inputPin
-            LD2_RenderElement @inputPinResponse
+            Element_Render @inputPin
+            Element_Render @inputPinResponse
             if keypadAccessCheck = 0 then
                 keypadAccessCheck = 1
                 LD2_PlaySound Sounds.keypadGranted
@@ -1547,10 +1584,10 @@ sub Rooms_DoRooftop (player as PlayerType)
                 end if
                 messageTimer = timer
             end if
-            LD2_RenderElement @inputPin
+            Element_Render @inputPin
         end if
         if (messageTimer > 0) then
-            LD2_RenderElement @inputPinResponse
+            Element_Render @inputPinResponse
             if (timer - messageTimer > 2.0) then
                 messageTimer = 0
                 keyCount = 0
@@ -1603,131 +1640,189 @@ sub SceneCheck (player as PlayerType)
     end if
     
     dim tag as string
-    tag = Sectors_GetTagFromXY(int(Player_GetX()), int(Player_GetY()))
+    dim idx as integer
     
-    select case ucase(tag)
-    case "SCENE-CHESS"
-        if Player_NotItem(ItemIds.SceneIntro) then
-            Scene1
-            Mobs_Add SPRITE_W*10.125, SPRITE_H*9, MobIds.Steve, MobStates.PassedOut
-            Mobs_Add SPRITE_W*74, SPRITE_H*9, MobIds.Janitor
+    idx = 0
+    do
+        tag = Sectors_GetTagFromXY(int(Player_GetX()), int(Player_GetY()), idx)
+        
+        if tag = "" then
+            exit do
+        else
+            idx += 1
         end if
-    case "SCENE-JANITOR"
-        if Player_NotItem(ItemIds.SceneJanitor) then
-            if Player_GetX() <> Guides.SceneJanitor then
-                moveToX = Guides.SceneJanitor
-            else
-                Scene3
+        
+        select case ucase(tag)
+        case "SCENE-CHESS"
+            if Player_NotItem(ItemIds.SceneIntro) then
+                Scene1
             end if
-        end if
-    case "SCENE-JANITOR-DIES"
-        if Player_NotItem(ItemIds.SceneJanitorDies) and Player_HasItem(ItemIds.SceneJanitor) then
-            Scene4
-        end if
-    case "SCENE-ELEVATOR"
-        if Player_NotItem(ItemIds.SceneElevator) then
-            if Player_GetX() <> Guides.SceneElevator then
-                moveToX = Guides.SceneElevator
-            else
-                Scene5
+        case "SCENE-JANITOR"
+            if Player_NotItem(ItemIds.SceneJanitor) then
+                if Player_GetX() <> Guides.SceneJanitor then
+                    moveToX = Guides.SceneJanitor
+                else
+                    Scene3
+                end if
             end if
-        elseif Player_NotItem(ItemIds.SceneElevator2) then
-            Scene6
-        end if
-    case "SCENE-WEAPONS1"
-        if Player_NotItem(ItemIds.SceneWeapons1) then
-            if Player_GetX() <> Guides.SceneWeapons1 then
-                moveToX = Guides.SceneWeapons1
-            else
-                Scene7
+        case "SCENE-JANITOR-DIES"
+            if Player_NotItem(ItemIds.SceneJanitorDies) and Player_HasItem(ItemIds.SceneJanitor) then
+                Scene4
             end if
-        end if
-    case "SCENE-STEVE-GONE"
-        if Player_NotItem(ItemIds.SceneSteveGone) and Player_HasItem(ItemIds.SceneWeapons1) then
-            if Player_GetX() <> Guides.SceneSteveGone then
-                moveToX = Guides.SceneSteveGone
-            else
-                SceneSteveGone
+        case "SCENE-ELEVATOR"
+            if Player_NotItem(ItemIds.SceneElevator) then
+                if Player_GetX() <> Guides.SceneElevator then
+                    moveToX = Guides.SceneElevator
+                else
+                    Scene5
+                end if
+            elseif Player_NotItem(ItemIds.SceneElevator2) then
+                LoadMapWithElevatorIntermission 7, "Weapons Locker"
+                Scene6
             end if
-        end if
-    case "SCENE-GOO"
-        if Player_NotItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.Chemical410) then
-            if Player_GetX() <> Guides.SceneGoo then
-                moveToX = Guides.SceneGoo
-            else
-                SceneGoo
+        case "SCENE-WEAPONS1"
+            if Player_NotItem(ItemIds.SceneWeapons1) then
+                if Player_GetX() <> Guides.SceneWeapons1 then
+                    moveToX = Guides.SceneWeapons1
+                else
+                    Scene7
+                end if
             end if
-        end if
-    case "SCENE-WEAPONS2"
-        if Player_HasItem(ItemIds.SceneRooftopGotCard) and Player_NotItem(ItemIds.SceneWeapons2) then
-            if Player_GetX() <> Guides.SceneWeapons2 then
-                moveToX = Guides.SceneWeapons2
-            else
-                SceneWeapons2
+        case "SCENE-STEVE-GONE"
+            if Player_NotItem(ItemIds.SceneSteveGone) and Player_HasItem(ItemIds.SceneWeapons1) then
+                if Player_GetX() <> Guides.SceneSteveGone then
+                    moveToX = Guides.SceneSteveGone
+                else
+                    SceneSteveGone
+                end if
             end if
-        end if
-        'until
-        'LD2_put 388, 144, 50, idSCENE, 0
-        'LD2_put 388, 144, 45, idSCENE, 0
-    case "SCENE-WEAPONS3"
-        if Player_NotItem(ItemIds.SceneWeapons3) then
-            if Player_GetX() <> Guides.SceneWeapons3 then
-                moveToX = Guides.SceneWeapons3
-            else
-                SceneWeapons3
+        case "SCENE-GOO"
+            if Player_NotItem(ItemIds.SceneGoo) and Player_NotItem(ItemIds.Chemical410) then
+                if Player_GetX() <> Guides.SceneGoo then
+                    moveToX = Guides.SceneGoo
+                else
+                    SceneGoo
+                end if
             end if
-        end if
-        'until
-        'LD2_put 48, 144, 50, idSCENE, 0
-        'LD2_put 48, 144, 45, idSCENE, 0
-    case "SCENE-CAPTURED"
-        if Player_NotItem(ItemIds.SceneCaptured) then
-            SceneCaptured
-        end if
-    case "SCENE-VENT-ESCAPE"
-        if Player_NotItem(ItemIds.SceneVentEscape) then
-            if Player_GetX() <> Guides.SceneVentEscape then
-                moveToX = Guides.SceneVentEscape
-            else
-                SceneVentEscape
+        case "SCENE-WEAPONS2"
+            if Player_HasItem(ItemIds.SceneGotYellowCard) and Player_NotItem(ItemIds.SceneWeapons2) then
+                if Player_GetX() <> Guides.SceneWeapons2 then
+                    moveToX = Guides.SceneWeapons2
+                else
+                    SceneWeapons2
+                    Mobs_Add SPRITE_W*3, SPRITE_H*9, MobIds.Barney
+                end if
             end if
-        end if
-    case "SCENE-LOBBY"
-        if Player_NotItem(ItemIds.ScenePortal) then
-            if Player_GetX() <> Guides.SceneLobby then
-                moveToX = Guides.SceneLobby
-            else
-                SceneLobby
+        case "SCENE-WEAPONS3"
+            if Player_NotItem(ItemIds.SceneWeapons3) then
+                if Player_GetX() <> Guides.SceneWeapons3 then
+                    moveToX = Guides.SceneWeapons3
+                else
+                    SceneWeapons3
+                end if
             end if
-        end if
-    case "SCENE-PORTAL"
-        if Player_NotItem(ItemIds.ScenePortal) then
-            if Player_GetX() <> Guides.ScenePortal then
-                moveToX = Guides.ScenePortal
-            else
-                ScenePortal
+        case "SCENE-CAPTURED"
+            if Player_NotItem(ItemIds.SceneCaptured) then
+                SceneCaptured
             end if
-        end if
-        'until
-        'LD2_put 260, 144, 12, idSCENE, 0
-        'LD2_put 260, 144, 14, idSCENE, 0
-        'LD2_put 240, 144, 50, idSCENE, 0
-        'LD2_put 240, 144, 45, idSCENE, 0
-        'LD2_put 200, 144, 72, idSCENE, 0
-    case "THE-END"
-        if Player_NotItem(ItemIds.SceneTheEnd) then
-            if Player_GetX() <> Guides.SceneTheEnd then
-                moveToX = Guides.SceneTheEnd
-            else
-                SceneTheEnd
+        case "SCENE-VENT-ESCAPE"
+            if Player_NotItem(ItemIds.SceneVentEscape) then
+                if Player_GetX() <> Guides.SceneVentEscape then
+                    moveToX = Guides.SceneVentEscape
+                else
+                    SceneVentEscape
+                end if
             end if
-        end if
+        case "SCENE-LOBBY"
+            if Player_NotItem(ItemIds.ScenePortal) then
+                if Player_GetX() <> Guides.SceneLobby then
+                    moveToX = Guides.SceneLobby
+                else
+                    SceneLobby
+                end if
+            end if
+        case "SCENE-PORTAL"
+            if Player_NotItem(ItemIds.ScenePortal) then
+                if Player_GetX() <> Guides.ScenePortal then
+                    moveToX = Guides.ScenePortal
+                else
+                    ScenePortal
+                end if
+            end if
+            'until
+            'LD2_put 260, 144, 12, idSCENE, 0
+            'LD2_put 260, 144, 14, idSCENE, 0
+            'LD2_put 240, 144, 50, idSCENE, 0
+            'LD2_put 240, 144, 45, idSCENE, 0
+            'LD2_put 200, 144, 72, idSCENE, 0
+        case "THE-END"
+            if Player_NotItem(ItemIds.SceneTheEnd) then
+                if Player_GetX() <> Guides.SceneTheEnd then
+                    moveToX = Guides.SceneTheEnd
+                else
+                    SceneTheEnd
+                end if
+            end if
+        
+        end select
+    loop
     
-    end select
-    
-    if Player_HasItem(ItemIds.YellowCard) and Player_NotItem(ItemIds.SceneRooftopGotCard) then
-        SceneRooftopGotCard
+    if Player_HasItem(ItemIds.YellowCard) and Player_NotItem(ItemIds.SceneGotYellowCard) then
+        SceneGotYellowCard
     end if
+    
+    'if didScene then
+    '    '- check for new mob locations
+    'end if
+    
+end sub
+
+sub SceneRefreshMobs()
+    
+    type MobRefType
+        mobId as integer
+        itemDataId as integer
+    end type
+    dim mobs(2) as MobRefType
+    
+    dim roomId as integer
+    dim x as integer
+    dim y as integer
+    dim state as integer
+    dim _flip as integer
+    
+    dim mob as Mobile
+    dim n as integer
+    
+    mobs(0).mobId = MobIds.Barney : mobs(0).itemDataId = ItemIds.BarneyData
+    mobs(1).mobId = MobIds.Steve  : mobs(1).itemDataId = ItemIds.SteveData
+    mobs(2).mobId = MobIds.Janitor: mobs(2).itemDataId = ItemIds.JanitorData
+    
+    for n = 0 to ubound(mobs)
+        decodeMobData Player_GetItemQty(mobs(n).itemDataId), roomId, x, y, state, _flip
+        if (state = 0) or (state = MobStates.Hidden) then
+            continue for
+        end if
+        if roomId = Player_GetCurrentRoom() then
+            mob.id = 0
+            Mobs_GetFirstOfType mob, mobs(n).mobId
+            if state = MobStates.Dead then
+                if mob.id > 0 then
+                    Mobs_Remove mob
+                end if
+                continue for
+            end if
+            if mob.id = 0 then
+                Mobs_Add x, y, mobs(n).mobId, state
+            end if
+            Mobs_GetFirstOfType mob, mobs(n).mobId
+            mob.x = x
+            mob.y = y
+            mob.state = state
+            mob._flip = _flip
+            Mobs_Update mob
+        end if
+    next n
     
 end sub
 
@@ -1757,7 +1852,7 @@ sub BossCheck (player as PlayerType)
     
     static bossMusicStarted as integer
     
-    if Player_NotItem(ItemIds.SceneRooftopGotCard) and (Player_GetCurrentRoom() = Rooms.Rooftop) then
+    if Player_NotItem(ItemIds.SceneGotYellowCard) and (Player_GetCurrentRoom() = Rooms.Rooftop) then
         if (player.x <= 888) and Player_NotItem(ItemIds.BossRooftopBegin) then
             Mobs_Add 500, 144, MobIds.BossRooftop
             Game_setBossBar MobIds.BossRooftop
@@ -1811,11 +1906,19 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
     args(8) = getArg(argstring, 8)
     args(9) = getArg(argstring, 9)
     
-    if comm = "room" then
+    '* shortcuts
+    select case comm
+    case "e"
+        comm = "elevator"
+    case "room"
         comm = "rooms": args(1) = args(0)
         args(0) = "goto"
-    end if
+    case "mob"
+        comm = "mobs"
+        argstring = "id "+args(0)
+    end select
     
+    '* non-shortcuts
     select case comm
     case "fps"
     case "list"
@@ -2056,7 +2159,7 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             case "8", "stevegone", "steve2": SceneSteveGone
             case "9", "goo", "goo1": SceneGoo
             case "10", "googone", "removegoo", "goo2": SceneGooGone
-            case "10", "rooftop", "yellowcard": SceneRooftopGotCard
+            case "10", "rooftop", "yellowcard": SceneGotYellowCard
             case "11", "weapons2": SceneWeapons2
             case "12", "weapons3": SceneWeapons3
             case "13", "catpured", "barneyplan", "truth", "steve3": SceneCaptured
@@ -2454,8 +2557,8 @@ sub Start
     STATUS_SetLookItemCallback @LD2_LookItem
     
     Game_Init
-    LD2_SetMusicMaxVolume 0.75
-    LD2_SetSoundMaxVolume 0.35
+    LD2_SetMusicMaxVolume 1.0
+    LD2_SetSoundMaxVolume 0.5
     LD2_SetMusicVolume 1.0
     LD2_SetSoundVolume 1.0
     LoadSounds
@@ -2543,7 +2646,7 @@ sub NewGame
     dim arg as string
     dim n as integer
     
-    for n = 0 to 127
+    for n = 0 to 51
         Player_SetItemMaxQty n, 1
     next n
     
@@ -2574,9 +2677,9 @@ sub NewGame
         
         Player_SetItemQty ItemIds.SceneIntro, 1
         Player_SetItemQty ItemIds.SceneJanitor, 1
-        Player_SetItemQty ItemIds.SceneElevator, 1
-        Player_SetItemQty ItemIds.SceneWeapons1, 1
-        Player_SetItemQty ItemIds.SceneSteveGone, 1
+        'Player_SetItemQty ItemIds.SceneElevator, 1
+        'Player_SetItemQty ItemIds.SceneWeapons1, 1
+        'Player_SetItemQty ItemIds.SceneSteveGone, 1
         'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
         'LD2_PlayMusic mscWANDERING
         if Boot_HasCommandArg("noelevator") = 0 then
@@ -2673,12 +2776,12 @@ function ContinueGame () as integer
     
     dim e as ElementType
     
-    LD2_InitElement @e, "Loading...", 31, ElementFlags.CenterX or ElementFlags.CenterText
+    Element_Init @e, "Loading...", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = 60
     e.background_alpha = 0.0
     
     LD2_cls 1, 0
-    LD2_RenderElement @e
+    Element_Render @e
     LD2_FadeIn 3
     
     WaitSeconds 1.5
@@ -2884,6 +2987,24 @@ function ContinueAfterSeconds(seconds as double) as integer
     return 0
 end function
 
+function ContinueAfterInterval(seconds as double) as integer
+    static lastTime as double
+    dim interval as double
+    dim skip as integer
+    if seconds = 0 then
+        lastTime = timer
+        return 0
+    end if
+    interval = (timer-lastTime)
+    if interval < seconds then
+        skip = ContinueAfterSeconds(seconds-interval)
+    else
+        skip = 0
+    end if
+    lastTime = timer
+    return skip
+end function
+
 function SceneFadeIn(seconds as double) as integer
     
     dim delay as double
@@ -2932,22 +3053,22 @@ sub YouDied ()
     src.w = SCREEN_W: src.h = SCREEN_H
     dst.x = 0: dst.y = 0
     dst.w = SCREEN_W: dst.h = SCREEN_H
-    fontH = LD2_GetFontHeightWithSpacing()
+    fontH = Elements_GetFontHeightWithSpacing()
     spacing = 1.9
     
     LD2_cls 1, 0
 	
-    LD2_InitElement @title, "You Died", 31
-    title.y = 60
+    Element_Init @title, "You Died", 31
+    title.y = SCREEN_H*0.3
     title.is_centered_x = 1
     title.text_spacing = spacing
     
-    LD2_InitElement @subtitle, str(Player_GetItemQty(ItemIds.Lives)), 31
-    subtitle.y = 60 + fontH * 2.5
+    Element_Init @subtitle, str(Player_GetItemQty(ItemIds.Lives)), 31
+    subtitle.y = SCREEN_H*0.3 + fontH * 2.5
     subtitle.is_centered_x = 1
     subtitle.text_spacing = 1.9
     
-    LD2_RenderElement @title
+    Element_Render @title
     LD2_RefreshScreen
     
     LD2_PlayMusic Tracks.YouDied
@@ -2962,18 +3083,18 @@ sub YouDied ()
     dim w as double, h as double
     x = 0: y = 0
     w = SCREEN_W: h = SCREEN_H
-    while (timer-startTime) < 6.0
+    while (timer-startTime) < 6.0*200/SCREEN_H
         PullEvents
         if (((timer-startTime) <= 4.15) and ((timer-delay) > 0.07)) or _
            (((timer-startTime)  > 4.15) and ((timer-delay) > 0.05)) then
             spacing += 0.1
-            LD2_RenderElement @title
+            Element_Render @title
             x += 1: w -= 2
-            if (timer-startTime) > 4.15 then
+            if (timer-startTime) > 4.15*200/SCREEN_H then
                 x += 2: w -= 4
-                y += 1: h -= 200/62.5
+                y += 1: h -= 3.2
                 if ((y and 1) = 1) and (h > 20) then
-                    y += 1: h -= 200/62.5
+                    y += 1: h -= 3.2
                 end if
             end if
             src.x = int(x): src.y = int(y)
@@ -2993,5 +3114,27 @@ sub YouDied ()
     
     Game_Reset
     ContinueGame
+    
+end sub
+
+function encodeMobData(byval roomId as integer, byval x as integer, byval y as integer, byval state as integer, byval _flip as integer) as integer
+    
+    x = (x and &hfff) shl 20
+    y = (y and &hff ) shl 12
+    state  = (state  and &h3f) shl 6
+    roomId = (roomId and &h1f) shl 1
+    _flip  = (_flip  and &h1)
+    
+    return (x or y or state or roomId or _flip)
+    
+end function
+
+sub decodeMobData(byval encoded as integer, byref roomId as integer, byref x as integer, byref y as integer, byref state as integer, byref _flip as integer)
+    
+    _flip  = (encoded and &h1 ): encoded = encoded shr 1
+    roomId = (encoded and &h1f): encoded = encoded shr 5
+    state  = (encoded and &h3f): encoded = encoded shr 6
+    y      = (encoded and &hff): encoded = encoded shr 8
+    x      = (encoded and &hfff)
     
 end sub

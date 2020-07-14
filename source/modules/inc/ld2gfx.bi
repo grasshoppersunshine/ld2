@@ -35,6 +35,14 @@ declare sub LD2_UpdateScreen ()
 
 DECLARE SUB LD2_LoadBitmap (filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER)
 
+declare sub Font_Init(fontw as integer, fonth as integer)
+declare sub Font_Load(filename as string, useWhitePalette as integer = 1)
+declare sub Font_SetColor(fontColor as integer)
+declare sub Font_SetAlpha(a as double)
+declare sub Font_put(x as integer, y as integer, sprite as integer, bufferNum as integer)
+declare sub Font_putText (x as integer, y as integer, text as string, bufferNum as integer)
+declare sub Font_putTextCol (x as integer, y as integer, text as string, col as integer, bufferNum as integer)
+
 enum SpriteFlags
     Transparent = &h01
     UseWhitePalette = &h02

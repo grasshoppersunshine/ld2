@@ -65,3 +65,4 @@ declare function getEaseInAndReverseInterval(doReset as double = 0, speed as dou
 declare function getEaseInWobble(doReset as double = 0, speed as double = 1.0) as double
 declare function STATUS_DialogYesNo(message as string) as integer
 declare sub STATUS_DialogOk(message as string)
+declare sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)

@@ -61,5 +61,6 @@ type PoseType
         declare sub nextFrame()
         declare sub lastFrame()
         declare sub setFrame(index as integer)
+        declare function getNumFrames() as integer
         declare sub truncateFrames()
 end type

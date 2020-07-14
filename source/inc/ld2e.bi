@@ -30,57 +30,6 @@ type PlayerType
     declare sub unsetFlag(flag as integer)
 end type
 
-type ElementType
-    x as integer
-    y as integer
-    w as integer
-    h as integer
-    padding_x as integer
-    padding_y as integer
-    border_size as integer
-    border_color as integer
-    text as string
-    text_alpha as double
-    text_color as integer
-    text_spacing as double
-    text_height as double
-    text_is_centered as integer
-    text_is_monospace as integer
-    text_align_right as integer
-    text_length as integer
-    background as integer
-    background_alpha as double
-    is_auto_width as integer
-    is_auto_height as integer
-    is_centered_x as integer
-    is_centered_y as integer
-    parent as ElementType ptr
-    is_rendered as integer
-    sprite as integer
-    sprite_set_id as integer
-    sprite_centered_x as integer
-    sprite_centered_y as integer
-    sprite_zoom as double
-    sprite_flip as integer
-    sprite_rot as integer
-    render_text as string
-    render_x as integer
-    render_y as integer
-    render_visible_x as integer
-    render_visible_y as integer
-    render_visible_w as integer
-    render_visible_h as integer
-    render_inner_w as integer
-    render_inner_h as integer
-    render_outer_w as integer
-    render_outer_h as integer
-    render_text_w as integer
-    render_text_h as integer
-    render_text_spacing as integer
-    render_num_line_breaks as integer
-    render_line_breaks(32) as integer
-end type
-
 type GutsIncorporated
     id as integer
     x as double
@@ -162,7 +111,6 @@ enum RenderFrameFlags
     WithoutElevator = &h04
 end enum
 
-declare function fontVal(ch as string) as integer
 declare function getArg(argstring as string, numArg as integer) as string
 
 declare function Doors_Api (args as string) as string
@@ -196,7 +144,7 @@ declare function MapItems_GetCardLevel(itemId as integer) as integer
 declare function MapItems_isCard(itemId as integer) as integer
 
 declare sub Sectors_Add(tag as string, x0 as integer, y0 as integer, x1 as integer, y1 as integer)
-declare function Sectors_GetTagFromXY(x as integer, y as integer) as string
+declare function Sectors_GetTagFromXY(x as integer, y as integer, idx as integer = 0) as string
 
 declare function Swaps_Api (args as string) as string
 declare function Swaps_Add (x0 as integer, y0 as integer, x1 as integer, y1 as integer, dx as integer, dy as integer) as integer
@@ -246,6 +194,7 @@ declare sub Mobs_Clear ()
 declare sub Mobs_SetBeforeKillCallback(callback as sub(mob as Mobile ptr))
 declare function Mobs_GetCount() as integer
 declare function Mobs_GetTypeName(typeId as integer) as string
+declare sub Mobs_Update (mob as Mobile)
 
 declare sub Stats_Draw ()
 
@@ -333,8 +282,6 @@ declare function LD2_GetVideoSprites(id as integer) as VideoSprites ptr
 declare sub LD2_GetSpriteMetrics(spriteId as integer, setId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
 
 DECLARE SUB LD2_ProcessEntities ()
-DECLARE SUB LD2_PutText (x AS INTEGER, y AS INTEGER, Text AS STRING, BufferNum AS INTEGER)
-DECLARE SUB LD2_PutTextCol (x AS INTEGER, y AS INTEGER, Text AS STRING, col AS INTEGER, BufferNum AS INTEGER)
 declare sub LD2_RenderBackground(height as double)
 declare sub LD2_RenderFrame (flags as integer = 0)
 declare sub LD2_RenderForeground (renderElevators as integer = 0)
@@ -364,45 +311,35 @@ DECLARE SUB LD2_WriteText (Text AS STRING)
 declare sub LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0, w as integer = -1, h as integer = -1, rot as integer = 0)
 declare sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
 
-declare sub LD2_InitElement(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
-declare sub LD2_PrepareElement(e as ElementType ptr)
-declare sub LD2_RenderElement(e as ElementType ptr)
-declare sub LD2_ClearElements()
-declare sub LD2_AddElement(e as ElementType ptr, parent as ElementType ptr = 0)
-declare sub LD2_RenderParent(e as ElementType ptr)
-declare sub LD2_RenderElements()
-declare sub LD2_BackupElements()
-declare sub LD2_RestoreElements()
-declare function LD2_GetRootParent() as ElementType ptr
-declare function LD2_GetFontWidthWithSpacing(spacing as double = 1.2) as integer
-declare function LD2_GetFontHeightWithSpacing (spacing as double = 1.4) as integer
-declare function LD2_GetElementTextWidth (e as ElementType ptr, text as string = "") as integer
-declare function LD2_GetParentX(e as ElementType ptr, x as integer = 0) as integer
-declare function LD2_GetParentY(e as ElementType ptr, y as integer = 0) as integer
-declare function LD2_GetParentW(e as ElementType ptr) as integer
-declare function LD2_GetParentH(e as ElementType ptr) as integer
-declare function LD2_GetParentPadX(e as ElementType ptr, y as integer = 0) as integer
-declare function LD2_GetParentPadY(e as ElementType ptr, y as integer = 0) as integer
-declare function LD2_GetParentBorderSize(e as ElementType ptr, x as integer = 0) as integer
-enum ElementFlags
-    CenterX         = &h01
-    CenterY         = &h02
-    CenterText      = &h04
-    MonospaceText   = &h08
-    AlignTextRight  = &h10
-    SpriteCenterX   = &h20
-    SpriteCenterY   = &h40
-end enum
-
-declare sub LD2_LoadFontMetrics(filename as string)
-
 const SCREEN_FULL = 1
-const SCREEN_W = 320
-const SCREEN_H = 200
-const SPRITE_W = 16
-const SPRITE_H = 16
-const FONT_W = 6
-const FONT_h = 5
+#define widezoom 1
+'* CLASSIC
+#ifdef screen13
+    const SCREEN_W = 320
+    const SCREEN_H = 200
+    const SPRITE_W = 16
+    const SPRITE_H = 16
+    const FONT_W = 6
+    const FONT_h = 5
+#endif
+'* WIDESCREEN
+#ifdef widescreen
+    const SCREEN_W = 352
+    const SCREEN_H = 198
+    const SPRITE_W = 16
+    const SPRITE_H = 16
+    const FONT_W = 6
+    const FONT_h = 5
+#endif
+'* WIDEZOOM
+#ifdef widezoom
+    const SCREEN_W = 320
+    const SCREEN_H = 180
+    const SPRITE_W = 16
+    const SPRITE_H = 16
+    const FONT_W = 6
+    const FONT_h = 5
+#endif
 
 CONST MAXGUTS      = 100
 CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)

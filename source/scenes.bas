@@ -9,7 +9,7 @@
 
 declare function Scene1Go () as integer
 declare function Scene3Go () as integer
-declare function Scene4Go () as integer
+declare function Scene4Go (fadeIn as integer=0) as integer
 declare function Scene5Go () as integer
 declare function Scene6Go () as integer
 declare function Scene7Go () as integer
@@ -20,7 +20,7 @@ declare function SceneTheEndGo () as integer
 declare function SceneGooGo () as integer
 declare function SceneGooGoneGo() as integer
 declare function SceneSteveGoneGo () as integer
-declare function SceneRooftopGotCardGo() as integer
+declare function SceneGotYellowCardGo() as integer
 declare function SceneWeapons2Go() as integer
 declare function SceneWeapons3Go() as integer
 declare function ScenePortalGo() as integer
@@ -38,7 +38,7 @@ declare sub SceneTheEndEndConditions ()
 declare sub SceneGooEndConditions ()  
 declare sub SceneGooGoneEndConditions ()
 declare sub SceneSteveGoneEndConditions ()
-declare sub SceneRooftopGotCardEndConditions ()
+declare sub SceneGotYellowCardEndConditions ()
 declare sub SceneWeapons2EndConditions ()
 declare sub SceneWeapons3EndConditions ()
 declare sub ScenePortalEndConditions ()
@@ -48,7 +48,7 @@ function ContinueAfterSlowMo(seconds as double) as integer
     pausetime = timer
     while (timer-pausetime) <= seconds
         PullEvents : RenderScene
-        if ContinueAfterSeconds(0.0333) then return 1
+        WaitSeconds(0.05)
         if SceneKeySkip() then return 1
     wend
     return 0
@@ -90,13 +90,19 @@ function SceneWait(seconds as double) as integer
     
 end function
 
-function PanPose(pose as PoseType ptr, vx as integer, vy as integer, secondsPerMapSquare as double=1.0, secondsPerFrame as double=1.0) as integer
+function PanPose(pose as PoseType ptr, vx as integer, vy as integer, mapSquaresPerSecond as double=1.0, framesPerSecond as double=1.0) as integer
     
-    dim timestamp as double
-    dim timemove as double
+    dim moveInterval as double
+    dim frameInterval as double
+    dim moveClock as double
+    dim frameClock as double
+    dim frame as double
+    dim numFrames as integer
+    dim seconds as double
     dim length as integer
     dim dx as double
     dim dy as double
+    dim d as double
     dim m as double
     dim x as double
     dim y as double
@@ -109,26 +115,32 @@ function PanPose(pose as PoseType ptr, vx as integer, vy as integer, secondsPerM
     dx /= m
     dy /= m
     
-    secondsPerMapSquare *= 0.2667 '- 16/60
-    'dx *= secondsPerMapSquare
-    'dy *= secondsPerMapSquare
+    moveInterval = 1/(mapSquaresPerSecond*16)
+    frameInterval = 1/framesPerSecond
     
-    timestamp = timer
-    timemove = timer
+    frame = 0
+    numFrames = pose->getNumFrames()
+    
+    moveClock = timer
+    frameClock = timer
     x = pose->getX()+0.5
     y = pose->getY()+0.5
     for i = 0 to length
         pose->setX int(x)
         pose->setY int(y)
         RenderScene
-        if (timer - timestamp) >= secondsPerFrame then
-            pose->nextFrame()
-            timestamp = timer
+        seconds = (timer - frameClock)
+        if seconds >= frameInterval then
+            frame += seconds/frameInterval
+            pose->setFrame(int(frame) mod numFrames)
+            frameClock = timer
         end if
-        if (timer - timemove) >= secondsPerMapSquare then
-            x += dx
-            y += dy
-            timemove = timer
+        seconds = (timer - moveClock)
+        if seconds >= moveInterval then
+            d = seconds/moveInterval
+            x += dx * d
+            y += dy * d
+            moveClock = timer
         end if
         if SceneKeySkip() then return 1
     next i
@@ -165,6 +177,12 @@ sub Scene1EndConditions()
     LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneIntro, 1
     
+    Player_SetItemQty ItemIds.SteveData, encodeMobData(14, SPRITE_W*10.125, Guides.Floor, MobStates.PassedOut, 1)
+    Player_SetItemQty ItemIds.JanitorData, encodeMobData(14, SPRITE_W*74, Guides.Floor, MobStates.Go, 1)
+    SceneRefreshMobs
+    
+    FreeTempSounds
+    
 end sub
 
 function Scene1Go () as integer
@@ -173,12 +191,12 @@ function Scene1Go () as integer
 
     Mobs_Clear
     
-    AddSound Sounds.kickvending, "kick.wav"
-    AddSound Sounds.sodacanopen, "splice/sodacanopen.wav"
-    AddSound Sounds.sodacandrop, "splice/sodacandrop.wav"
-	
-	static LarryPose as PoseType
-	static StevePose as PoseType
+    AddTempSound Sounds.kickvending, "kick.wav"
+    AddTempSound Sounds.sodacanopen, "splice/sodacanopen.wav"
+    AddTempSound Sounds.sodacandrop, "splice/sodacandrop.wav"
+    
+	dim LarryPose as PoseType
+	dim StevePose as PoseType
     dim leftX as integer
     leftX = 83
 
@@ -365,7 +383,7 @@ function Scene3Go () as integer
     
     RenderScene
 
-    RetraceDelay 40
+    if ContinueAfterSeconds(0.5) then return 1
 
     FadeOutMusic 1.0
     LD2_StopMusic
@@ -402,13 +420,21 @@ end function
 
 sub Scene4()
     
+    dim fadeIn as integer
+    
+    if Player_GetCurrentRoom() <> Rooms.LarrysOffice then
+        Map_Load "14th.ld2"
+    end if
+    if int(Player_GetX()) <> Guides.SceneJanitorDies then
+        fadeIn = 1
+    end if
     ClearPoses
     LD2_SetSceneMode LETTERBOX
     Player_SetXY int(Guides.SceneJanitorDies), int(Guides.Floor)
     Player_SetFlip 1
     Map_UpdateShift
     
-    if Scene4Go() then
+    if Scene4Go(fadeIn) then
         LD2_FadeOut 2
         Scene4EndConditions
         RenderScene RenderSceneFlags.NotPutToScreen
@@ -432,19 +458,19 @@ sub Scene4EndConditions()
     LD2_SetMusicVolume 1.0
     LD2_PlayMusic Tracks.Chase
     
+    Player_SetItemQty ItemIds.SteveData, encodeMobData(14, SPRITE_W*10.125, Guides.Floor, MobStates.PassedOut, 1)
+    Player_SetItemQty ItemIds.JanitorData, encodeMobData(14, 0, 0, MobStates.Dead, 0)
+    SceneRefreshMobs
+    
 end sub
 
-function Scene4Go() as integer
+function Scene4Go(fadeIn as integer = 0) as integer
     
     dim LarryPose as PoseType
     dim JanitorPose as PoseType
     dim StevePose as PoseType
     dim RockmonsterPose as PoseType
     
-    FadeOutMusic
-    LD2_StopMusic
-    LD2_SetMusicVolume 1.0
-
     AddSound Sounds.shatter, "splice/glassbreak.wav"
     AddSound Sounds.slurp  , "rock-slurp.wav"
     AddSound Sounds.scream , "scream.wav"
@@ -464,9 +490,20 @@ function Scene4Go() as integer
     AddPose @JanitorPose
     AddPose @StevePose
     
+    if fadeIn then
+        LD2_FadeOut 2
+        FadeOutMusic 0.5
+        LD2_StopMusic
+        RenderScene RenderSceneFlags.NotPutToScreen
+        LD2_FadeIn 2
+    endif
+    
+    LD2_StopMusic
+    LD2_SetMusicVolume 1.0
     RenderScene
     
     LD2_PlaySound Sounds.shatter
+    Shakes_Add 0.4, SPRITE_W*0.4
     Guts_Add GutsIds.Glass, 208, 136, 2, -1
     Guts_Add GutsIds.Glass, 224, 136, 2, 1
 
@@ -474,52 +511,45 @@ function Scene4Go() as integer
     '--------------------------------------------------------------
     Map_PutTile 13, 8, 131, LayerIds.Tile
     
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Surprised
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Crashing
     RockmonsterPose.x = 208
     AddPose @RockmonsterPose
+    
+    if ContinueAfterSlowMo(2.0) then return 1
+    LD2_PlayMusic Tracks.Uhoh
 
-    dim mobY as single
-    dim startedMusic as integer
-    startedMusic = 0
-    for mobY = 128 to 144 step .37
-        RockmonsterPose.y =  int(mobY)
+    dim clock as double
+    dim d as double
+    clock = timer
+    do
+        d = (timer-clock)*0.9
+        if d > 1 then d = 1
+        RockmonsterPose.y = 128+int(d*d*16)
         RenderScene
-        RetraceDelay 1
-        if (startedMusic = 0) and (mobY >= 133) then
-            LD2_PlayMusic Tracks.Uhoh
-            startedMusic = 1
-        end if
         if SceneKeySkip() then return 1
-    next mobY
+    loop while d < 1
     
     RockmonsterPose.y =  144
-    WaitSeconds 0.1
+    Shakes_Add 0.2, SPRITE_W*0.4
+    if ContinueAfterSeconds(0.75) then return 1
     
-    dim i as integer
-    for i = 1 to 20
-        RenderScene
-        RetraceDelay 1
-    next i
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Still
-    for i = 1 to 60 '// keep rendering scene during wait-time so guts are animated
-        RenderScene
-        RetraceDelay 1
-        if SceneKeySkip() then return 1
-    next i
+    if ContinueAfterSeconds(1.25) then return 1
 
     GetCharacterPose JanitorPose, CharacterIds.Janitor, PoseIds.Tongue
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Tongue
     JanitorPose.isFlipped = 0
     RenderScene
     LD2_PlaySound Sounds.slurp
-    RetraceDelay 85
+    if ContinueAfterSeconds(1.4) then return 1
     LD2_PlaySound Sounds.scream
 
     dim x as integer
     for x = JanitorPose.x to 210 step -1
+        if ContinueAfterInterval(0.0167) then return 1
         JanitorPose.x = int(x)
         RenderScene
-        RetraceDelay 1
         if SceneKeySkip() then return 1
     next x
 
@@ -529,19 +559,20 @@ function Scene4Go() as integer
     '-----------------------------------------------
     RemovePose @JanitorPose
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Chewing
+    dim i as integer
     for i = 1 to 20
+        if ContinueAfterInterval(0.15) then return 1
         RockmonsterPose.nextFrame
         RenderScene
-        RetraceDelay 9
         if i = 6 then LD2_PlaySound Sounds.chew2
         if SceneKeySkip() then return 1
     next i
     
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Still
     RenderScene
-    WaitSeconds 0.4
+    if ContinueAfterSeconds(0.4) then return 1
     LD2_PlaySound Sounds.growl
-    WaitSeconds 2.0
+    if ContinueAfterSeconds(2.0) then return 1
 
 end function
 
@@ -572,7 +603,9 @@ sub Scene5EndConditions()
     
     ClearPoses
     LD2_SetSceneMode MODEOFF
+    Player_SetXY Guides.SceneElevator-8, 112
     Player_SetItemQty ItemIds.SceneElevator, 1
+    Player_Hide
     Map_LockElevators
     
 end sub
@@ -603,6 +636,7 @@ function Scene5Go() as integer
     AddPose @RockmonsterPose
     
     LarryPose.isFlipped = 1
+    Player_SetFlip 1
     
     '- rockmonster runs towards Larry
     dim x as integer
@@ -647,6 +681,7 @@ function Scene5Go() as integer
     
     RenderScene
     LD2_PlaySound Sounds.rockLand
+    Shakes_Add 0.25, SPRITE_W*0.25
     if ContinueAfterSeconds(1.3333) then return 1
     
     '- Barney comes out and shoots at rockmonster
@@ -671,7 +706,8 @@ function Scene5Go() as integer
     wend
     
     RenderScene
-    if ContinueAfterSeconds(0.75) then return 1
+    FadeOutMusic 0.5
+    LD2_StopMusic
     
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Shooting
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.GettingShot
@@ -693,8 +729,12 @@ function Scene5Go() as integer
         
         if (n and 1) = 1 then
             LD2_PlaySound Sounds.machinegun
+            Shakes_Add 0.15, SPRITE_W*0.1
             Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1, -3
             Guts_Add GutsIds.Blood, int(rx+(32*rnd(1)-8)), 120,  1,  3
+        end if
+        if (n and 3) = 1 then
+            Flashes_Add toUnitX(BarneyPose.x), toUnitY(BarneyPose.y+SPRITE_H*0.5)
         end if
         if (n and 15) = 15 then LD2_PlaySound Sounds.blood1
         
@@ -702,6 +742,7 @@ function Scene5Go() as integer
         if ContinueAfterSeconds(0.03) then return 1
         
         if (n mod 12) = 7 then
+            Shakes_Add 0.15, SPRITE_W*0.4
             LD2_PlaySound Sounds.blood2
             Guts_Add GutsIds.Gibs, rx + 8, 120, 1,  1
             Guts_Add GutsIds.Gibs, rx + 8, 120, 2, -1
@@ -714,7 +755,6 @@ function Scene5Go() as integer
     next n
     
     BarneyPose.nextFrame
-    LD2_StopMusic
     LD2_PlaySound Sounds.blood2
     rx = rx - 1.0
     for i = 0 to 15
@@ -736,6 +776,8 @@ function Scene5Go() as integer
     LD2_PlaySound Sounds.snarl
     LD2_PlaySound Sounds.splatter
     LD2_PlaySound Sounds.rockDie
+    
+    Shakes_Add 0.2, SPRITE_W*1.0
     
     if ContinueAfterSeconds(0.2) then return 1
     BarneyPose.firstFrame
@@ -759,6 +801,28 @@ function Scene5Go() as integer
     if ContinueAfterSeconds(0.5) then return 1
     
     if DoScene("SCENE-5B") then return 1
+    
+    GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Walking
+    PanPose @BarneyPose, -6, 0, 3.3, 10
+    GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Talking
+    if ContinueAfterSeconds(0.5) then return 1
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Walking
+    PanPose @LarryPose, -14, 0, 3.3, 10
+    Player_SetXY LarryPose.x, LarryPose.y
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
+    if ContinueAfterSeconds(0.5) then return 1
+    Map_LockElevators
+    SceneWait 0
+    while SceneWait(2.0)
+        RenderScene RenderSceneFlags.OnlyAnimate
+        RenderScene RenderSceneFlags.OnlyBackground or RenderSceneFlags.WithoutElevator
+        RenderOnePose @BarneyPose
+        RenderOnePose @LarryPose
+        RenderScene RenderSceneFlags.OnlyForeground or RenderSceneFlags.WithElevator
+        LD2_RefreshScreen
+        if SceneKeySkip() then return 1
+    wend
+    Player_Hide
     
     return 0
     
@@ -803,6 +867,9 @@ sub Scene6EndConditions()
     LD2_AddToStatus(BLUECARD, 1)
     Map_LockElevators
     
+    Player_SetItemQty ItemIds.BarneyData, encodeMobData(Rooms.WeaponsLocker, SPRITE_W*23, SPRITE_H*9, MobStates.Go, 0)
+    SceneRefreshMobs
+    
 end sub
 
 function Scene6Go() as integer
@@ -837,6 +904,7 @@ function Scene6Go() as integer
         if SceneKeySkip() then return 1
     wend
     
+    Player_Unhide
     RenderScene
     if ContinueAfterSeconds(1.0) then return 1
     
@@ -847,24 +915,17 @@ function Scene6Go() as integer
 
     '- Barney runs to the left off the screen
     '----------------------------------------
-    dim fx as single
-    fx = 0
-    FOR x = BarneyPose.x TO BarneyPose.x - 180 STEP -1
-        BarneyPose.x = x
-        fx = fx + .1
-        if fx = 1 then
-            BarneyPose.nextFrame
-            fx = 0
-        end if
-        RenderScene
-        if SceneKeySkip() then return 1
-    NEXT x
+    PanPose @BarneyPose, -200, 0, 3.3, 10
     
     return 0
     
 end function
 
 sub Scene7()
+    
+    if Player_GetCurrentRoom() <> Rooms.WeaponsLocker then
+        Map_Load "7th.ld2"
+    end if
     
     if Scene7Go() then
         LD2_FadeOut 2
@@ -884,6 +945,9 @@ sub Scene7EndConditions()
     Player_SetItemQty ItemIds.SceneWeapons1, 1
     Player_SetItemQty ItemIds.Phase, 1
     Map_UnlockElevators
+    
+    Player_SetItemQty ItemIds.SteveData, encodeMobData(20, 400, 144, MobStates.Go, 1)
+    SceneRefreshMobs
     
 end sub
 
@@ -905,9 +969,8 @@ function Scene7Go() as integer
     AddPose @BarneyPose
     
     RenderScene
-    RetraceDelay 40
     
-    FadeInMusic GetFloorMusicId(Rooms.WeaponsLocker)
+    FadeInMusic GetFloorMusicId(Rooms.WeaponsLocker), 1.0
     
     if DoScene("SCENE-7A") then return 1
     
@@ -1141,10 +1204,10 @@ function SceneTheEndGo () as integer
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Walking
     px = Player_GetX()
     for x = px to px + 200
+        if ContinueAfterInterval(0.05) then return 1
         LarryPose.x = x
         LarryPose.nextFrame
         RenderScene
-        RetraceDelay 3
         PullEvents
         if SceneKeySkip() then return 1
     next x
@@ -1263,6 +1326,15 @@ end function
 
 sub SceneSteveGone
     
+    if Player_GetCurrentRoom() <> Rooms.LarrysOffice then
+        Map_Load "14th.ld2"
+    end if
+    ClearPoses
+    LD2_SetSceneMode LETTERBOX
+    Player_SetXY int(Guides.SceneSteveGone), int(Guides.Floor)
+    Player_SetFlip 0
+    Map_UpdateShift
+    
     if SceneSteveGoneGo() then
         LD2_FadeOut 2
         SceneSteveGoneEndConditions
@@ -1300,31 +1372,33 @@ function SceneSteveGoneGo() as integer
     
 end function
 
-sub SceneRooftopGotCard
+sub SceneGotYellowCard
     
-    if SceneRooftopGotCardGo() then
+    if SceneGotYellowCardGo() then
         LD2_FadeOut 2
-        SceneRooftopGotCardEndConditions
+        SceneGotYellowCardEndConditions
         RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
     else
-        SceneRooftopGotCardEndConditions
+        SceneGotYellowCardEndConditions
     end if
     
 end sub
 
-sub SceneRooftopGotCardEndConditions
+sub SceneGotYellowCardEndConditions
     
     ClearPoses
     LD2_SetSceneMode MODEOFF
-    Player_SetItemQty ItemIds.SceneRooftopGotCard, 1
+    Player_SetItemQty ItemIds.SceneGotYellowCard, 1
     
     Player_SetAccessLevel YELLOWACCESS
     Player_SetFlip 0
     
+    Player_SetItemQty ItemIds.BarneyData, encodeMobData(7, 388, 144, MobStates.Go, 0)
+    
 end sub
 
-function SceneRooftopGotCardGo() as integer
+function SceneGotYellowCardGo() as integer
     
     dim LarryPose as PoseType
     dim BarneyPose as PoseType
@@ -1334,7 +1408,7 @@ function SceneRooftopGotCardGo() as integer
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Radio
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
     
-    LarryPose.x = Player_GetX: LarryPose.y =  144
+    LarryPose.x = Player_GetX: LarryPose.y = 144
     LarryPose.isFlipped = 0
     BarneyPose.setHidden 1
     
@@ -1374,6 +1448,9 @@ sub SceneWeapons2EndConditions
     Player_SetXY Player_GetX(), 144
     Player_SetFlip 1
     
+    Player_SetItemQty ItemIds.BarneyData, encodeMobData(7, 48, 144, MobStates.Go, 0)
+    SceneRefreshMobs
+    
 end sub
 
 function SceneWeapons2Go() as integer
@@ -1392,9 +1469,9 @@ function SceneWeapons2Go() as integer
     AddPose @Larry
     AddPose @Barney
 
-    Larry.x = Player_GetX(): Larry.y =  144
+    Larry.x = Player_GetX(): Larry.y = 144
     Larry.isFlipped = 1
-    Barney.x = 388: Barney.y =  144
+    Barney.x = 388: Barney.y = 144
     Barney.isFlipped = 0
     
     RenderScene
@@ -1431,6 +1508,9 @@ sub SceneWeapons3EndConditions
     Player_SetItemQty ItemIds.Phase, 2
     Player_SetXY Player_GetX(), 144
     Player_SetFlip 0
+    
+    Player_SetItemQty ItemIds.BarneyData, encodeMobData(7, 48, 144, MobStates.Hidden, 0)
+    SceneRefreshMobs
     
 end sub
 
@@ -1720,7 +1800,7 @@ function ScenePortalGo () as integer
     LD2_PlayMusic Tracks.Uhoh
     
     RenderScene
-    RetraceDelay 80
+    if ContinueAfterSeconds(1.3333) then return 1
     for n = 0 to 2
         PullEvents
         Barney.nextFrame

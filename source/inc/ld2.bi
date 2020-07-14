@@ -146,7 +146,7 @@ enum ItemIds
     SceneSteveGone       = 109
     SceneGoo             = 110
     SceneGooGone         = 111
-    SceneRooftopGotCard  = 112
+    SceneGotYellowCard   = 112
     SceneFlashlight      = 113
     SceneCaptured        = 114
     SceneVentEscape      = 115
@@ -154,6 +154,10 @@ enum ItemIds
     ScenePortal          = 117
     SceneLobby           = 118
     SceneTheEnd          = 119
+    '=======================================
+    BarneyData           = 120
+    SteveData            = 121
+    JanitorData          = 122
     '=======================================
     SwapSrcA0            = 50
     SwapSrcA1            = 51
@@ -420,8 +424,10 @@ enum MobStates
     Charge
     Charging
     Chase
+    Dead
     Go
     Going
+    Hidden
     Hurt
     Hurting
     Investigate
@@ -779,7 +785,8 @@ declare sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMe
 declare sub LD2_LookItem (id as integer, byref desc as string)
 declare sub AddMusic (id as integer, filepath as string, loopmusic as integer)
 declare sub AddSound (id as integer, filepath as string, loops as integer = 0)
-declare sub RetraceDelay (qty as integer)
+declare sub AddTempSound (id as integer, filepath as string, loops as integer = 0)
+declare sub FreeTempSounds ()
 
 declare sub RenderScene (flags as integer = 0)
 declare function DoScene (sceneId as string) as integer
@@ -797,8 +804,13 @@ declare function FadeOutMusic(seconds as double = 3.0) as integer
 declare function GetFloorMusicId(roomId as integer) as integer
 
 declare function ContinueAfterSeconds(seconds as double) as integer
+declare function ContinueAfterInterval(seconds as double) as integer
 declare function SceneFadeIn(seconds as double) as integer
 declare function SceneFadeOut(seconds as double) as integer
 
 declare function SceneKeyTextJump() as integer
 declare function SceneKeySkip() as integer
+
+declare function encodeMobData(byval roomId as integer, byval x as integer, byval y as integer, byval state as integer, byval _flip as integer) as integer
+declare sub decodeMobData(byval encoded as integer, byref roomId as integer, byref x as integer, byref y as integer, byref state as integer, byref _flip as integer)
+declare sub SceneRefreshMobs ()

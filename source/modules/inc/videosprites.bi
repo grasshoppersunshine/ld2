@@ -38,5 +38,5 @@ public:
     declare sub setColorMod(r as integer, g as integer, b as integer)
     declare sub setAlphaMod(a as integer)
     declare function getCount() as integer
-    declare sub getMetrics(spriteNum as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+    declare sub getMetrics(byval spriteNum as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
 end type

@@ -241,7 +241,7 @@ function VideoSprites.getCount() as integer
     
 end function
 
-sub VideoSprites.getMetrics(spriteNum as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+sub VideoSprites.getMetrics(byval spriteNum as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
     
     if (spriteNum >= 0) and (spriteNum < this._count) then
         x = this._metrics(spriteNum).lft
