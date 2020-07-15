@@ -427,19 +427,6 @@ function LD2_AddToStatus (item as integer, qty as integer) as integer
     dim added as integer
     dim i as integer
     
-    if qty = 1 then '// assuming pick-up item
-        select case item
-        case ItemIds.SgAmmo
-            qty = AmmoBoxQtys.Shotgun
-        case ItemIds.HgAmmo
-            qty = AmmoBoxQtys.Handgun
-        case ItemIds.MgAmmo
-            qty = AmmoBoxQtys.MachineGun
-        case ItemIds.MaAmmo
-            qty = AmmoBoxQtys.Magnum
-        end select
-    end if
-    
     if MapItems_isCard(item) then
         Inventory(item) += qty
         Player_RefreshAccess
@@ -1234,6 +1221,22 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
     MobsWereLoaded = 0
     BossBarId = 0
     
+    for i = 0 to NumItems-1
+        Items(i).isVisible = 1
+        Items(i).canPickup = 1
+        Items(i).qty = 1
+        select case Items(i).id
+        case ItemIds.SgAmmo, ItemIds.Shotgun
+            Items(i).qty = AmmoBoxQtys.Shotgun
+        case ItemIds.HgAmmo, ItemIds.Handgun
+            Items(i).qty = AmmoBoxQtys.Handgun
+        case ItemIds.MgAmmo, ItemIds.MachineGun
+            Items(i).qty = AmmoBoxQtys.MachineGun
+        case ItemIds.MaAmmo, ItemIds.Magnum
+            Items(i).qty = AmmoBoxQtys.Magnum
+        end select
+    next i
+    
     if skipSessionLoad = 0 then
         Game_Load "session.ld2", Inventory(ItemIds.CurrentRoom)
     end if
@@ -1613,8 +1616,6 @@ sub Map_Load101 (filename as string)
         Items(n).x = item.x*SPRITE_W
         Items(n).y = item.y*SPRITE_H
         Items(n).id = item.id
-        Items(n).isVisible = 1
-        Items(n).canPickup = 1
     next n
     
     dim sect as fileSector
@@ -2366,66 +2367,42 @@ sub Flashes_Draw ()
     
 end sub
 
-sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
+sub LD2_putFixed (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0)
     
-    LD2_put x, y, numSprite, id, _flip, 1
+    LD2_put x, y, spriteId, spriteSetId, isFlipped, 1
     
 end sub
 
-SUB LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0, w as integer = -1, h as integer = -1, rot as integer = 0)
-    
-    'e->sprites->setCenter int(sp_w*0.5*e->w/SPRITE_W), int(sp_h*0.5*e->h/SPRITE_H)
-    'SpritesObjectCropped.resetCenter
+sub LD2_put (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0, isFixed as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
 
-    LD2_SetTargetBuffer 1
-    
+    dim sprites as VideoSprites ptr
     dim dest as SDL_Rect
-    dim px as integer, py as integer
-    px = iif(isFixed, x, int(x - XShift))
-    py = iif(isFixed, y, int(y - YShift))
+    dim putX as integer
+    dim putY as integer
     
-    dest.x = px
-    dest.y = py
+    sprites = LD2_GetVideoSprites(spriteSetId)
+    if sprites = 0 then exit sub
+
+    putX = iif(isFixed, x, int(x - XShift))
+    putY = iif(isFixed, y, int(y - YShift))
+
+    dest.x = putX
+    dest.y = putY
     dest.w = iif(w > -1, w, SPRITE_W)
     dest.h = iif(h > -1, h, SPRITE_H)
-  
-  SELECT CASE id
-
-    CASE idTILE
-        
-      SpritesTile.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
-
-    CASE idMOBS
-
-      SpritesMobs.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
-
-    CASE idLARRY
-
-      SpritesLarry.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
-
-    CASE idGUTS
-
-      SpritesGuts.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
-
-    CASE idLIGHT
-
-      SpritesLight.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
-   
-    CASE idSCENE
-
-      SpritesScene.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
-
-    CASE idOBJECT
-
-      SpritesObject.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
     
-    CASE idOBJCRP
-
-      SpritesObjectCropped.putToScreenEx(px, y, NumSprite, _flip, rot, 0, @dest)
-
-  END SELECT
-
-END SUB
+    LD2_SetTargetBuffer 1
+    
+    if spriteSetId = idOBJCRP then
+        dim sp_x as integer, sp_y as integer
+        dim sp_w as integer, sp_h as integer
+        sprites->getMetrics spriteId, sp_x, sp_y, sp_w, sp_h
+        sprites->setCenter int(sp_w*0.5*w/SPRITE_W), int(sp_h*0.5*h/SPRITE_H)
+    end if
+    
+    sprites->putToScreenEx(putX, putY, spriteId, isFlipped, angle, 0, @dest)
+    
+end sub
 
 sub MapTiles_Draw
     

@@ -1702,7 +1702,9 @@ sub SceneCheck (player as PlayerType)
                     Scene5
                 end if
             elseif Player_NotItem(ItemIds.SceneElevator2) then
+                LD2_SetMusicVolume 1.0
                 LoadMapWithElevatorIntermission 7, "Weapons Locker"
+                LD2_SetMusicVolume 0.0
                 Scene6
             end if
         case "SCENE-WEAPONS1"

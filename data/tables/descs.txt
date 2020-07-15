@@ -19,7 +19,7 @@ GREENCARD        , "Allows access to doors with green trims.\It's not much, but 
 BLUECARD         , "Allows access to doors with blue and green trims."
 YELLOWCARD       , "Allows access to doors with yellow, blue, and\green trims."
 REDCARD          , "Allows access to doors with red, yellow, blue, and green trims. That's pretty much every door in the building."
-SHOTGUN          , "The good ol' shotgun. Closer hits deal more damage.\ \Damage       * * * _ _\ \        (Far) * _ _ _ _\ \Firing Rate  * * _ _ _"
+SHOTGUN          , "The good ol' shotgun. Closer hits deal more damage.\ \Damage (Near) * * * _ _\ \Damage (Far)  * _ _ _ _\ \Firing Rate   * * _ _ _"
 MACHINEGUN       , "Hits deal light damage, but the fast firing rate makes up for it.\ \Damage       * _ _ _ _\ \Firing Rate  * * * * *"
 HANDGUN          , "A great balance of fire power and firing speed. Comes in handy.\ \Damage       * * _ _ _\ \Firing Rate  * * * _ _"
 MAGNUM           , "Slow firing rate, but often deals lethal blows.\ \Damage       * * * * *\ \Firing Rate  * _ _ _ _"

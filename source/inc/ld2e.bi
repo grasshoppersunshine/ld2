@@ -308,8 +308,8 @@ declare function LD2_TileIsSolid(tileId as integer) as integer
 DECLARE SUB LD2_PopText (Message AS STRING)
 DECLARE SUB LD2_WriteText (Text AS STRING)
 
-declare sub LD2_put (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer, isFixed as integer = 0, w as integer = -1, h as integer = -1, rot as integer = 0)
-declare sub LD2_putFixed (x as integer, y as integer, NumSprite as integer, id as integer, _flip as integer)
+declare sub LD2_put (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0, isFixed as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
+declare sub LD2_putFixed (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0)
 
 const SCREEN_FULL = 1
 #define widezoom 1
