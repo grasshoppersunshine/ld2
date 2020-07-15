@@ -990,10 +990,10 @@ sub Game_Init
     else
         Font_Load FontFile
     end if
-    Elements_LoadFontMetrics FontFile
     
     Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
     Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
+    Elements_LoadFontMetrics FontFile
     
     LoadSprites LarryFile  , idLARRY  
     LoadSprites TilesFile  , idTILE

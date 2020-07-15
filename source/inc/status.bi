@@ -1,12 +1,12 @@
 #pragma once
 #inclib "status"
 
-TYPE tFloor
-  floorNo AS INTEGER
-  filename AS STRING
-  label AS STRING
-  allowed AS STRING
-END TYPE
+type FloorInfoType
+    floorNo as integer
+    filename as string
+    label as string
+    allowed as string
+end type
 
 enum WobbleTypes
     AssignType = 1
@@ -50,7 +50,7 @@ enum DialogStates
 end enum
 
 declare function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes.RevealNoSpin, wobbleAction as integer = WobbleActions.NoAction) as integer
-DECLARE SUB EStatusScreen (currentRoomId AS INTEGER)
+declare function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as integer, byref selectedRoomName as string, byval skipInput as integer = 0) as integer
 declare function StatusScreen (skipInput as integer = 0) as integer
 declare function STATUS_InitInventory() as integer
 declare sub STATUS_RefreshInventory()
@@ -65,4 +65,3 @@ declare function getEaseInAndReverseInterval(doReset as double = 0, speed as dou
 declare function getEaseInWobble(doReset as double = 0, speed as double = 1.0) as double
 declare function STATUS_DialogYesNo(message as string) as integer
 declare sub STATUS_DialogOk(message as string)
-declare sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)

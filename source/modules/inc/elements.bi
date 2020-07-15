@@ -87,7 +87,8 @@ declare function Element_GetParentPadY(e as ElementType ptr, y as integer = 0) a
 declare function Element_GetParentBorderSize(e as ElementType ptr, x as integer = 0) as integer
 declare function Element_GetParentW(e as ElementType ptr) as integer
 declare function Element_GetParentH(e as ElementType ptr) as integer
-declare function Element_GetClipTop(e as ElementType ptr, y as integer = 0, clip as integer = 0) as integer
+declare function Element_GetClipTop(e as ElementType ptr, first as integer = 1) as integer
+declare function Element_GetClipBtm(e as ElementType ptr, first as integer = 1) as integer
 
 declare sub Elements_Clear()
 declare sub Elements_Add(e as ElementType ptr, parent as ElementType ptr = 0)

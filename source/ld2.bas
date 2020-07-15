@@ -89,6 +89,8 @@
     declare sub DoAction(actionId as integer, itemId as integer = 0, prime as integer = 0)
     declare sub PrimeActions()
     
+    declare sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
+    
     '*******************************************************************
     '* SCENE-RELATED
     '*******************************************************************
@@ -1028,6 +1030,10 @@ SUB Main
     dim i as integer
     dim n as integer
     
+    dim showElevatorMenu as integer
+    dim toRoomId as integer
+    dim toRoomName as string
+    
     CustomActions(1).actionId = ActionIds.Equip
     CustomActions(1).itemId   = ItemIds.Fist
     
@@ -1062,16 +1068,18 @@ SUB Main
     SceneCheck player '* check for first scene
   DO
     
-    IF Game_hasFlag(MAPISLOADED) THEN
-		'// play music here
-        SceneRefreshMobs
+    if Game_hasFlag(MAPISLOADED) then
         Game_unsetFlag MAPISLOADED
-	END IF
+        SceneRefreshMobs
+        Player_Unhide
+        Player_SetFlip 1
+        LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
+	end if
     
     PullEvents
     PrimeActions
  
-    if (showConsole = 0) and (showStatusScreen = 0) then
+    if (showConsole = 0) and (showStatusScreen = 0) and (showElevatorMenu = 0) then
         Player_Animate
         Mobs_Animate resetClocks
         Guts_Animate
@@ -1110,6 +1118,20 @@ SUB Main
         showStatusScreen = iif(StatusScreen(showConsole)=0,1,0)
         if showStatusScreen = 0 then
             resetClocks = 1
+        end if
+    end if
+    
+    if Game_hasFlag(ELEVATORMENU) then
+        Game_unsetFlag ELEVATORMENU
+        showElevatorMenu = 1
+    end if
+    if showElevatorMenu then
+        showElevatorMenu = iif(EStatusScreen(Player_GetCurrentRoom, toRoomId, toRoomName)=0,1,0)
+        if showElevatorMenu = 0 then
+            resetClocks = 1
+            if (toRoomId <> Player_GetCurrentRoom()) then
+                LoadMapWithElevatorIntermission toRoomId, toRoomName
+            end if
         end if
     end if
     
@@ -1193,6 +1215,9 @@ SUB Main
         showStatusScreen = 1
     end if
     if showStatusScreen then
+        continue do
+    end if
+    if showElevatorMenu then
         continue do
     end if
     
@@ -1306,7 +1331,7 @@ SUB Main
 	end if
 
 	FlagsCheck player
-  
+    
   loop while Game_notFlag(EXITGAME)
   
 end sub
@@ -2374,16 +2399,6 @@ sub FlagsCheck (player as PlayerType)
         LD2_SetNotice "Found "+Inventory_GetShortName(itemId)
         'else "Inventory Full"
 	end if
-    if Game_hasFlag(ELEVATORMENU) then
-        Game_unsetFlag ELEVATORMENU
-        EStatusScreen Player_GetCurrentRoom()
-        if prevRoom <> Player_GetCurrentRoom() then
-            LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
-            if Player_HasItem(ItemIds.SceneGoo) then Player_RemoveItem(ItemIds.SceneGoo)
-        end if
-        Player_Unhide
-        Player_SetFlip 1
-    end if
     if Game_hasFlag(MUSICCHANGE) or Game_hasFlag(MUSICFADEOUT) then
         if LD2_FadeOutMusic(3.0) = 0 then
             if Game_hasFlag(MUSICCHANGE) then
@@ -2441,13 +2456,11 @@ end sub
 
 sub PlayerCheck (player as PlayerType)
     
-    dim prevRoom as integer
     dim p as PlayerType
     dim xshift as double
     
     p = player
     xshift = Map_GetXShift()
-    prevRoom = Player_GetCurrentRoom()
     
     if (timer - RecentDeathTime) > 60 then
         Game_unsetFlag RECENTDEATH
@@ -2457,19 +2470,11 @@ sub PlayerCheck (player as PlayerType)
         Map_Load str(Player_GetCurrentRoom()+1)+"th.ld2"
         Player_SetXY p.x, p.y+(13*16)-4
         Map_SetXShift xshift
-        if prevRoom <> Player_GetCurrentRoom() then
-            LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
-            if Player_HasItem(ItemIds.SceneGoo) then Player_RemoveItem(ItemIds.SceneGoo)
-        end if
     end if
     if Player.y > 196 then
         Map_Load str(Player_GetCurrentRoom()-1)+"th.ld2"
         Player_SetXY p.x, p.y-(13*16)+4
         Map_SetXShift xshift
-        if prevRoom <> Player_GetCurrentRoom() then
-            LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
-            if Player_HasItem(ItemIds.SceneGoo) then Player_RemoveItem(ItemIds.SceneGoo)
-        end if
     end if
     if Player.x < -12 then
         Player_SetXY p.x + (16*201)-4, p.y
@@ -2789,7 +2794,6 @@ function ContinueGame () as integer
         STATUS_DialogOk "Save File Not Found"
         return 0
     else
-        LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
         LD2_FadeOut 3
         WaitSeconds 0.25
         LD2_RenderFrame
@@ -3136,5 +3140,89 @@ sub decodeMobData(byval encoded as integer, byref roomId as integer, byref x as 
     state  = (encoded and &h3f): encoded = encoded shr 6
     y      = (encoded and &hff): encoded = encoded shr 8
     x      = (encoded and &hfff)
+    
+end sub
+
+sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
+    
+    dim eMessage as ElementType
+    dim eRoomName as ElementType
+    dim labelFloor as ElementType
+    dim secondsToWait as double
+    dim elevatorText as string
+    dim elevatorStep as integer
+    dim currentRoomId as integer
+    dim seconds as double
+    dim fontH as integer
+    dim i as integer
+    
+    fontH = Elements_GetFontHeightWithSpacing()
+    
+    currentRoomId = Player_GetCurrentRoom()
+    
+    elevatorStep = iif(toRoomId > currentRoomId, 1, -1)
+    elevatorText = iif(elevatorStep > 0, "Going Up", "Going Down")
+    seconds = 0
+    
+    LD2_FadeOut 3
+    Map_Load str(toRoomId)+"th.ld2"
+    Player_Hide
+    LD2_PlayMusic Tracks.Elevator
+    Element_Init @eMessage, elevatorText, 31
+    eMessage.y = 60
+    eMessage.is_centered_x = 1
+    eMessage.text_spacing = 1.9
+    eMessage.text_color = 31
+    Element_Init @eRoomName, trim(toRoomName), 31
+    eRoomName.y = 60 + fontH * 5.5
+    eRoomName.is_centered_x = 1
+    eRoomName.text_spacing = 1.9
+    eRoomName.text_color = 31
+    LD2_cls 1, 0
+    Element_Render @eMessage
+    LD2_FadeIn 2
+    for i = currentRoomId to toRoomId step elevatorStep
+        Element_Init(@labelFloor)
+        labelFloor.y = 60 + fontH * 2.5
+        labelFloor.is_centered_x = 1
+        labelFloor.text = trim(str(i))
+        labelFloor.text_spacing = 1.9
+        labelFloor.text_color = 31
+        LD2_cls 1, 0
+        Element_Render @eMessage
+        Element_Render @labelFloor
+        if i = toRoomId then Element_Render @eRoomName
+        LD2_RefreshScreen
+        PullEvents
+        select case abs(i-toRoomId)
+        case 0
+            secondsToWait = 1.00
+        case 1
+            secondsToWait = 0.40
+        case 2
+            secondsToWait = 0.35
+        case 3
+            secondsToWait = 0.30
+        case 4
+            secondsToWait = 0.25
+        case 5 to 9
+            secondsToWait = 0.2
+        case 10 to 15
+            secondsToWait = 0.15
+        case else
+            secondsToWait = 0.12
+        end select
+        WaitSeconds secondsToWait
+        seconds += secondsToWait
+    next i
+    if seconds < 2.0 then
+        WaitSeconds 2.0 - seconds
+    end if
+    LD2_FadeOut 2
+    LD2_RenderFrame
+    WaitSeconds 0.5
+    LD2_FadeIn 2
+    
+    currentRoomId = toRoomId
     
 end sub

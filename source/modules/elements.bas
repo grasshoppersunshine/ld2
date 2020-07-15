@@ -390,19 +390,22 @@ sub Element_RenderPrepare(e as ElementType ptr)
     if e->is_auto_width  then e->w = textWidth
     if e->is_auto_height then e->h = (numLineBreaks+numAutoBreaks+1)*textHeight
     
-    w = e->w: h = e->h
-    totalWidth  = w+e->padding_x*2+e->border_size*2
-    totalHeight = h+e->padding_y*2+e->border_size*2
+    totalWidth  = e->w+e->padding_x*2+e->border_size*2
+    totalHeight = e->h+e->padding_y*2+e->border_size*2
+    w = totalWidth
+    h = totalHeight
     
     dim clipTop as integer
+    dim clipBtm as integer
     clipTop = Element_GetClipTop(e)
+    clipBtm = Element_GetClipBtm(e)
     
     if parentW = -1 then parentW = SCREEN_W
     if parentH = -1 then parentH = SCREEN_H
     if y < 0 then h += y
     if x < 0 then w += x
-    if totalWidth  > parentW then w = parentW-(e->border_size*2+e->padding_x*2)
-    if totalHeight > parentH then h = parentH-(e->border_size*2+e->padding_y*2)
+    if totalWidth  > parentW then w = parentW
+    if totalHeight > parentH then h = parentH
     
     x += parentX: y += parentY
     
@@ -415,6 +418,9 @@ sub Element_RenderPrepare(e as ElementType ptr)
     if visible_y < clipTop then
         h += (visible_y - clipTop)
         visible_y = clipTop
+    end if
+    if (visible_y+h) > clipBtm then
+        h += clipBtm - (visible_y+h)
     end if
     
     e->render_text = text
@@ -471,15 +477,15 @@ sub Element_Render(e as ElementType ptr)
     
     if e->border_size > 0 then
 
-        lft = e->render_visible_x
-        top = e->render_visible_y
-        rgt = lft+e->render_visible_w+e->padding_x*2+e->border_size
-        btm = top+e->render_visible_h+e->padding_y*2+e->border_size
-        
-        fill lft, top, e->render_outer_w, e->border_size, e->border_color
-        fill lft, top, e->border_size, e->render_outer_h, e->border_color
-        fill rgt, top, e->border_size, e->render_outer_h, e->border_color
-        fill lft, btm, e->render_outer_w, e->border_size, e->border_color
+        'lft = e->render_visible_x
+        'top = e->render_visible_y
+        'rgt = lft+e->render_visible_w+e->padding_x*2+e->border_size
+        'btm = top+e->render_visible_h+e->padding_y*2+e->border_size
+        '
+        'fill lft, top, e->render_outer_w, e->border_size, e->border_color
+        'fill lft, top, e->border_size, e->render_outer_h, e->border_color
+        'fill rgt, top, e->border_size, e->render_outer_h, e->border_color
+        'fill lft, btm, e->render_outer_w, e->border_size, e->border_color
         
         lft = e->render_x
         top = e->render_y
@@ -509,6 +515,8 @@ sub Element_Render(e as ElementType ptr)
             h += (y-e->render_visible_y)
             y = e->render_visible_y
         end if
+        if w > e->render_visible_w then w = e->render_visible_w
+        if h > e->render_visible_h then h = e->render_visible_h
         if (w > 0) and (h > 0) then
             fill x, y, w, h, e->background, e->background_alpha
         end if
@@ -548,7 +556,7 @@ sub Element_Render(e as ElementType ptr)
     
     setFontColor(e->text_color)
     
-    if fy+FONT_H > e->render_visible_y+e->border_size+e->padding_y+e->render_visible_h then
+    if fy+FONT_H > e->render_visible_y+e->render_visible_h then
         e->is_rendered = 1
         exit sub
     end if
@@ -592,7 +600,7 @@ sub Element_Render(e as ElementType ptr)
                 fy += e->render_text_h
                 fx = x
                 _word = ltrim(_word)
-                if fy+FONT_H > e->render_visible_y+e->border_size+e->padding_y+e->render_visible_h then
+                if fy+FONT_H > e->render_visible_y+e->render_visible_h then
                     exit for
                 end if
             end if
@@ -612,7 +620,7 @@ sub Element_Render(e as ElementType ptr)
             fy += e->render_text_h
             fx = x
             doLtrim = 1
-            if fy+FONT_H > e->render_visible_y+e->border_size+e->padding_y+e->render_visible_h then
+            if fy+FONT_H > e->render_visible_y+e->render_visible_h then
                 exit for
             end if
         end if
@@ -775,16 +783,59 @@ function Element_GetParentH(e as ElementType ptr) as integer
     
 end function
 
-function Element_GetClipTop(e as ElementType ptr, y as integer = 0, clip as integer = 0) as integer
+function Element_GetClipTop(e as ElementType ptr, first as integer = 1) as integer
     
+    static clip as integer
     dim parent as ElementType ptr
+    dim y as integer
+    
+    if first then
+        clip = 0
+        if e->parent = 0 then return 0
+        e = e->parent
+    end if
+    
+    y = e->y+e->padding_y+e->border_size
     
     parent = e->parent
     if parent <> 0 then
-        y += parent->y+parent->padding_y+parent->border_size
+        y += Element_GetClipTop(parent, 0)
         if y > clip then clip = y
-        return Element_GetClipTop(parent, y, clip)
+        return iif(first, clip, y)
     end if
+    if y > clip then clip = y
+    return clip
+    
+end function
+
+function Element_GetClipBtm(e as ElementType ptr, first as integer = 1) as integer
+    
+    static clip as integer
+    dim parent as ElementType ptr
+    dim y as integer
+    dim h as integer
+    
+    if first then
+        clip = SCREEN_H
+        if e->parent = 0 then return SCREEN_H
+        e = e->parent
+    end if
+    
+    y = e->y+e->padding_y+e->border_size
+    
+    if (e->h = -1) or e->is_auto_height then
+        h = 0
+    else
+        h = e->h
+    end if
+    
+    parent = e->parent
+    if parent <> 0 then
+        y += Element_GetClipBtm(parent, 0)
+        if (h > 0) and (y+h < clip) then clip = y+h
+        return iif(first, clip, y)
+    end if
+    if (h > 0) and (y+h < clip) then clip = y+h
     return clip
     
 end function

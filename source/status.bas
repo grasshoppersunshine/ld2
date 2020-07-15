@@ -482,285 +482,251 @@ SUB Drop (item AS InventoryType)
     
 END SUB
 
-sub EStatusScreen (currentRoomId as integer)
+function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as integer, byref selectedRoomName as string, byval skipInput as integer = 0) as integer
 	
-	LD2_LogDebug "LD2_EStatusScreen (" + str(currentRoomId) + " )"
+	LD2_LogDebug "LD2_EStatusScreen ("+str(currentRoomId)+","+str(selectedRoomId)+","+selectedRoomName+","+str(skipInput)+" )"
 	
-	DIM top AS INTEGER
-	DIM w AS INTEGER
-	DIM h AS INTEGER
-	DIM i AS INTEGER
-	
-	DIM floorNo AS INTEGER
-	DIM floorStr AS STRING
-	DIM filename AS STRING
-	DIM label AS STRING
-	DIM allowed AS STRING
-	DIM selectedRoom AS INTEGER
-	DIM selectedFilename AS STRING
-    dim selectedLabel as string
-	DIM topFloor AS INTEGER
-	DIM btmFloor AS INTEGER
-	DIM ElevatorFile AS INTEGER
-	
-	DIM floors(50) AS tFloor
-	DIM numFloors AS INTEGER
-	DIM scroll AS INTEGER
-	DIM doLoadMap AS INTEGER
-    dim current as integer
+    static state as integer = DialogStates.closed
     
-    dim menuWindow as ElementType
-    dim menuTitle as ElementType
-    dim menuBorder as ElementType
-    redim menuNumbers(0) as ElementType
-    redim menuLabels(0) as ElementType
+    static swipe as ElementType
+    static menuWindow as ElementType
+    static menuTitle as ElementType
+    static menuBorder as ElementType
+    static container as ElementType
+    static listFloors as ElementType
+    static menuNumbers() as ElementType
+    static menuLabels() as ElementType
+    static floors() AS FloorInfoType
     
+    static e as double = -1
+    
+    static roomId as integer
+    static roomName as string
+	static floorsMin as integer
+    static floorsMax as integer
+    static numLabels as integer
+    
+    dim ElevatorFile as integer
     dim fontW as integer
     dim fontH as integer
+    
+    dim i as integer
     
     fontW = Elements_GetFontWidthWithSpacing()
     fontH = Elements_GetFontHeightWithSpacing()
 	
-	w = 6: h = 6
-	
-	selectedRoom = currentRoomId
-	topFloor = 0
-	btmFloor = 0
+	select case state
+    case DialogStates.closed
+        Element_Init @swipe, "", 31
+        swipe.background = STATUS_DIALOG_COLOR
+        swipe.background_alpha = STATUS_DIALOG_ALPHA
+        swipe.h = SCREEN_H
+        state = DialogStates.opening
+        return 0
+    case DialogStates.opening
+        if e = -1 then
+            e = getEaseInOutInterval(1)
+            LD2_PlaySound Sounds.uiMenu
+        else
+            e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
+        end if
+        swipe.w = int(e * 156)
+        Element_Render @swipe
+        if e = 1 then
+            e = -1
+            state = DialogStates.init
+        end if
+        return 0
+    case DialogStates.closing
+        if e = -1 then
+            e = getEaseInOutInterval(1)
+            LD2_PlaySound Sounds.uiMenu
+        else
+            e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
+        end if
+        swipe.w = int((1-e) * 156)
+        Element_Render @swipe
+        if e = 1 then
+            e = -1
+            state = DialogStates.closed
+            return 1
+        end if
+        return 0
+    case DialogStates.init
+        state = DialogStates.ready
+        selectedRoomId = currentRoomId
+        roomId = currentRoomId
+        floorsMin = 0
+        floorsMax = 0
+        numLabels = 0
+        '*******************************************************************
+        '* LOAD FLOORS DATA
+        '*******************************************************************
+        dim roomsFile as string
+        redim floors(0) as FloorInfoType
+        roomsFile = iif(Game_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
+        ElevatorFile = freefile
+        open DATA_DIR+roomsFile for input as ElevatorFile
+        do while not eof(ElevatorFile)
+            input #ElevatorFile, floors(0).floorNo
+            input #ElevatorFile, floors(0).filename
+            input #ElevatorFile, floors(0).label
+            input #ElevatorFile, floors(0).allowed
+            numLabels += 1
+        loop
+        
+        redim preserve floors(numLabels) as FloorInfoType
+        redim preserve menuNumbers(numLabels) as ElementType
+        redim preserve menuLabels(numLabels) as ElementType
+        
+        seek #ElevatorFile, 1
+        for i = 0 to numLabels-1
+            input #ElevatorFile, floors(i).floorNo
+            input #ElevatorFile, floors(i).filename
+            input #ElevatorFile, floors(i).label
+            input #ElevatorFile, floors(i).allowed
+            if floors(i).floorNo > floorsMax then floorsMax = floors(i).floorNo
+            if floors(i).floorNo < floorsMin then floorsMin = floors(i).floorNo
+        next i
+        close ElevatorFile
+        
+        '*******************************************************************
+        '* BUILD WINDOW
+        '*******************************************************************
+        Element_Init @menuWindow, "", 31
+        menuWindow.background = STATUS_DIALOG_COLOR
+        menuWindow.background_alpha = STATUS_DIALOG_ALPHA
+        menuWindow.padding_x = fontW
+        menuWindow.padding_y = fontH
+        menuWindow.w = 156 - menuWindow.padding_y*2
+        menuWindow.h = SCREEN_H - menuWindow.padding_y*2
+        
+        Element_Init @menuTitle, "Please Select a Floor\======================", 31
+        menuTitle.parent = @menuWindow
+        
+        dim numStars as integer
+        numStars = int((SCREEN_H+(fontH-FONT_H))/fontH)
+        Element_Init @menuBorder, "", 31
+        for i = 0 to numStars-1
+            menuBorder.text += "* "
+        next i
+        menuBorder.padding_y = int((SCREEN_H+(fontH-FONT_H)-numStars*fontH)*0.5)
+        menuBorder.parent = 0
+        menuBorder.background_alpha = 0
+        menuBorder.x = 156 - fontW
+        menuBorder.w = fontW
+        menuBorder.h = SCREEN_H - menuBorder.padding_y*2
+        
+        container.parent = @menuWindow
+        container.y = fontH * 2
+        container.w = container.parent->w
+        container.h = container.parent->h - container.y
+        
+        Element_Init @listFloors, "", 31
+        listFloors.parent = @container
+        listFloors.w = listFloors.parent->w
+        listFloors.h = numLabels*fontH
+        
+        dim floorStr as string
+        for i = 0 to numLabels-1
+            floorStr = iif(len(floors(i).filename), ltrim(str(floors(i).floorNo)), "")
+            Element_Init @menuNumbers(i), floorStr, 31, ElementFlags.MonospaceText or ElementFlags.AlignTextRight
+            menuNumbers(i).parent = @listFloors
+            menuNumbers(i).w = fontW * 2
+            menuNumbers(i).h = FONT_H
+            menuNumbers(i).padding_y = 1
+            menuNumbers(i).x = 0
+            menuNumbers(i).y = fontH * i
+            menuNumbers(i).text_color = 182
+            menuNumbers(i).background = 177
+            menuNumbers(i).background_alpha = 0.5
+            Element_Init @menuLabels(i), floors(i).label, 31
+            menuLabels(i).parent = @listFloors
+            menuLabels(i).w = 156 - fontW * 5 - 3
+            menuLabels(i).h = FONT_H
+            menuLabels(i).padding_x = 3
+            menuLabels(i).padding_y = 1
+            menuLabels(i).x = fontW * 3 - 5
+            menuLabels(i).y = fontH * i
+            menuLabels(i).text_color = 31
+        next i
+        '*******************************************************************
+        '* END BUILD WINDOW
+        '*******************************************************************
+    end select
     
-    LD2_PlaySound Sounds.uiMenu
-	
-    dim roomsFile as string
-    roomsFile = iif(Game_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
-	ElevatorFile = FREEFILE
-	OPEN DATA_DIR+roomsFile FOR INPUT AS ElevatorFile
-	DO WHILE NOT EOF(ElevatorFile)
-		INPUT #ElevatorFile, floorNo: IF EOF(ElevatorFile) THEN EXIT DO
-		INPUT #ElevatorFile, filename: IF EOF(ElevatorFile) THEN EXIT DO
-		INPUT #ElevatorFile, label
-		INPUT #ElevatorFile, allowed
-		floors(numFloors).floorNo = floorNo
-		floors(numFloors).filename = filename
-		floors(numFloors).label = label
-		floors(numFloors).allowed = allowed
-		numFloors = numFloors + 1
-	LOOP
-	CLOSE ElevatorFile
-    
-    redim menuNumbers(numFloors) as ElementType
-    redim menuLabels(numFloors) as ElementType
-	
-	DIM e AS DOUBLE
-	DIM easeTimer AS DOUBLE
-	DIM easeTime AS DOUBLE
-	DIM lft AS INTEGER
-    
-    Element_Init @menuWindow, "", 31
-    menuWindow.background = STATUS_DIALOG_COLOR
-    menuWindow.background_alpha = STATUS_DIALOG_ALPHA
-    menuWindow.padding_y = fontH
-    menuWindow.h = SCREEN_H - menuWindow.padding_y*2
-    
-    Element_Init @menuTitle, "Please Select a Floor\======================", 31
-    menuTitle.parent = @menuWindow
-    
-    dim numStars as integer
-    numStars = int((SCREEN_H+(fontH-FONT_H))/fontH)
-    Element_Init @menuBorder, "", 31
-    for i = 0 to numStars-1
-        menuBorder.text += "* "
+    if roomId <= 9 then
+        listFloors.y = -(9-roomId)*fontH
+    end if
+    for i = 0 to numLabels-1
+        if (roomId = floors(i).floorNo) and len(trim(floors(i).filename)) then
+            menuNumbers(i).background = 19: menuNumbers(i).text_color = 188
+            menuLabels(i).background = 70: menuLabels(i).text_color = 31
+            roomName = floors(i).label
+        else
+            menuNumbers(i).background = 177
+            menuLabels(i).background = -1
+            if len(trim(floors(i).filename)) then
+                menuNumbers(i).text_color = 182
+                menuLabels(i).text_color = 31
+            end if
+        end if
     next i
-    menuBorder.padding_y = int((SCREEN_H+(fontH-FONT_H)-numStars*fontH)*0.5)
-    menuBorder.parent = 0
-    menuBorder.background_alpha = 0
-    menuBorder.x = 156 - fontW
-    menuBorder.w = fontW
-    menuBorder.h = SCREEN_H - menuBorder.padding_y*2
-    
-    dim container as ElementType
-    container.parent = @menuWindow
-    container.y = fontH * 2
-    container.w = 156 - fontW
-    container.h = container.parent->h - container.y
-    
-    dim listFloors as ElementType
-    Element_Init @listFloors, "", 31
-    listFloors.parent = @container
-    listFloors.w = listFloors.parent->w
-    listFloors.h = numFloors*fontH
-    
-    for i = 0 to numFloors-1
-        floorStr = iif(len(floors(i).filename), ltrim(str(floors(i).floorNo)), "")
-        Element_Init @menuNumbers(i), floorStr, 31, ElementFlags.MonospaceText or ElementFlags.AlignTextRight
-        menuNumbers(i).parent = @listFloors
-        menuNumbers(i).w = fontW * 2
-        menuNumbers(i).h = FONT_H
-        menuNumbers(i).padding_y = 1
-        menuNumbers(i).x = 0
-        menuNumbers(i).y = fontH * i
-        menuNumbers(i).text_color = 182
-        menuNumbers(i).background = 177
-        menuNumbers(i).background_alpha = 0.5
-        Element_Init @menuLabels(i), floors(i).label, 31
-        menuLabels(i).parent = @listFloors
-        menuLabels(i).w = 156 - fontW * 5 - 3
-        menuLabels(i).h = FONT_H
-        menuLabels(i).padding_x = 3
-        menuLabels(i).padding_y = 1
-        menuLabels(i).x = fontW * 3 - 5
-        menuLabels(i).y = fontH * i
-        menuLabels(i).text_color = 31
-    next i
-	
-	LD2_SaveBuffer 2
-	LD2_CopyBuffer 1, 2
-	
-    e = getEaseInOutInterval(1)
-	do
-		e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
-        menuWindow.w = int(e * 156)
-		LD2_CopyBuffer 2, 1
-		Element_Render @menuWindow
-		LD2_RefreshScreen
-        PullEvents
-	loop while e < 1
-    
-    menuWindow.padding_x = fontW
-    menuWindow.w = 156 - menuWindow.padding_x*2
     
     Elements_Clear
     Elements_Add @menuWindow
     Elements_Add @menuTitle
     Elements_Add @menuBorder
-    for i = 0 to numFloors-1
+    for i = 0 to numLabels-1
         Elements_Add @menuNumbers(i)
         Elements_Add @menuLabels(i)
     next i
-	
-    dim roomStart as integer
-    dim roomEnd as integer
+    Elements_Render
     
-	DO
-        roomStart = 0
-        roomEnd = numFloors-1
-        if selectedRoom <= 9 then
-            listFloors.y = -(9-selectedRoom)*fontH
-        end if
-		FOR i = roomStart TO roomEnd
-		
-			floorNo = floors(i).floorNo
-			filename = floors(i).filename
-			label = floors(i).label
-			
-			floorStr = LTRIM(STR(floorNo))
-			
-			IF floorNo = selectedRoom THEN
-                menuNumbers(i).background = 19: menuNumbers(i).text_color = 188
-                menuLabels(i).background = 70: menuLabels(i).text_color = 31
-				selectedFilename = filename
-                selectedLabel = label
-			ELSE
-				menuNumbers(i).background = 177
-                menuLabels(i).background = -1
-				IF LTRIM(filename) <> "" THEN
-					menuNumbers(i).text_color = 182
-                    menuLabels(i).text_color = 31
-				END IF
-			END IF
-			IF floorNo > topFloor THEN topFloor = floorNo
-			IF floorNo < btmFloor THEN btmFloor = floorNo
-		NEXT i
-		
-        LD2_CopyBuffer 2, 1
-		Elements_Render
-		LD2_RefreshScreen
-        PullEvents
-		
-        IF keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseRB() or mouseMB() THEN
-            EXIT DO
-        END IF
-        
-        '- TODO: hold down for one second, then scroll down with delay
-        current = selectedRoom
-        if keypress(KEY_1) or keypress(KEY_KP_1) then
-            for i = 0 to numFloors - 1
-                if floors(i).floorNo = 1 then
-                    LD2_PlaySound Sounds.uiArrows
-                    selectedRoom = (numFloors - i - 1) 
-                    exit for
-                end if
-            next i
-        end if
-        IF keypress(KEY_UP) or keypress(KEY_W) or mouseWheelUp() THEN
-            selectedRoom = selectedRoom + 1
-            if selectedRoom <= numFloors - 1 then
-                while (selectedRoom <= numFloors-1)
-                    if trim(floors(numFloors-selectedRoom).filename) = "" then
-                        selectedRoom = selectedRoom + 1
-                    else
-                        exit while
-                    end if
-                wend
-            end if
-            IF selectedRoom > numFloors - 1 THEN
-                selectedRoom = current
-                LD2_PlaySound Sounds.uiInvalid
-            ELSE
-                LD2_PlaySound Sounds.uiArrows
-            END IF
-        END IF
-        IF keypress(KEY_DOWN) or keypress(KEY_S) or mouseWheelDown() THEN
-            selectedRoom = selectedRoom - 1
-            if selectedRoom >= 0 then
-                while (selectedRoom >= 0)
-                    if trim(floors(numFloors-selectedRoom).filename) = "" then
-                        selectedRoom = selectedRoom - 1
-                    else
-                        exit while
-                    end if
-                wend
-            end if
-            IF selectedRoom < 0 THEN
-                selectedRoom = current
-                LD2_PlaySound Sounds.uiInvalid
-            ELSE
-                LD2_PlaySound Sounds.uiArrows
-            END IF
-        END IF
-        IF keypress(KEY_ENTER) or keypress(KEY_SPACE) or mouseLB() THEN
-            LD2_PlaySound Sounds.uiSelect
-            doLoadMap = 1
-            EXIT DO
-        END IF
-	LOOP
-	
-	WaitForKeyup(KEY_TAB)
-    WaitForKeyup(KEY_ESCAPE)
-    WaitForKeyup(KEY_E)
-    while mouseLB(): PullEvents: wend
-    while mouseRB(): PullEvents: wend
-    while mouseMB(): PullEvents: wend
-    
-    LD2_PlaySound Sounds.uiMenu
-    
-    menuWindow.padding_x = 0
-    menuWindow.w = 156
-	
-	e = getEaseInOutInterval(1)
-	do
-		e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
-		menuWindow.w = int((1-e) * 156)
-		LD2_CopyBuffer 2, 1
-		Element_Render @menuWindow
-		LD2_RefreshScreen
-        PullEvents
-	loop while e < 1
-	LD2_RestoreBuffer 2
-	
-    if doLoadMap then
-        LoadMapWithElevatorIntermission selectedRoom, selectedLabel
+    if skipInput then
+        return 0
     end if
-	
-end sub
+    
+    if keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseRB() or mouseMB() then
+        state = DialogStates.closing
+        return 0
+    end if
+    
+    '- TODO: hold down for one second, then scroll down with delay
+    if keypress(KEY_1) or keypress(KEY_KP_1) then
+        if roomId <> 1 then
+            LD2_PlaySound Sounds.uiArrows
+            roomId = 1
+        else
+            LD2_PlaySound Sounds.uiInvalid
+        end if
+    end if
+    if keypress(KEY_UP) or keypress(KEY_W) or mouseWheelUp() then
+        if roomId < floorsMax then
+            roomId += 1
+            LD2_PlaySound Sounds.uiArrows
+        else
+            LD2_PlaySound Sounds.uiInvalid
+        end if
+    end if
+    if keypress(KEY_DOWN) or keypress(KEY_S) or mouseWheelDown() then
+        if roomId > floorsMin then
+            roomId -= 1
+            LD2_PlaySound Sounds.uiArrows
+        else
+            LD2_PlaySound Sounds.uiInvalid
+        end if
+    end if
+    if keypress(KEY_ENTER) or keypress(KEY_SPACE) or mouseLB() then
+        selectedRoomId = roomId
+        selectedRoomName = roomName
+        state = DialogStates.closing
+        LD2_PlaySound Sounds.uiSelect
+    end if
+    
+    return 0
+    
+end function
 
 function Look (item AS InventoryType, skipInput as integer = 0) as integer
 	
@@ -1329,7 +1295,7 @@ function StatusScreen(skipInput as integer = 0) as integer
     static mixItem as InventoryType
     static mixMode as integer = 0
 	static action as integer
-    static state as integer = 0
+    static state as integer = DialogStates.closed
     static row as integer
     static col as integer
     static e as double = -1
@@ -2071,86 +2037,3 @@ sub STATUS_DialogOk(message as string)
     
 end sub
 
-sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
-    
-    dim eMessage as ElementType
-    dim eRoomName as ElementType
-    dim labelFloor as ElementType
-    dim secondsToWait as double
-    dim elevatorText as string
-    dim elevatorStep as integer
-    dim currentRoomId as integer
-    dim seconds as double
-    dim fontH as integer
-    dim i as integer
-    
-    fontH = Elements_GetFontHeightWithSpacing()
-    
-    currentRoomId = Player_GetCurrentRoom()
-    
-    elevatorStep = iif(toRoomId > currentRoomId, 1, -1)
-    elevatorText = iif(elevatorStep > 0, "Going Up", "Going Down")
-    seconds = 0
-    
-    LD2_FadeOut 3
-    Map_Load str(toRoomId)+"th.ld2"
-    Player_Hide
-    LD2_PlayMusic Tracks.Elevator
-    Element_Init @eMessage, elevatorText, 31
-    eMessage.y = 60
-    eMessage.is_centered_x = 1
-    eMessage.text_spacing = 1.9
-    eMessage.text_color = 31
-    Element_Init @eRoomName, trim(toRoomName), 31
-    eRoomName.y = 60 + fontH * 5.5
-    eRoomName.is_centered_x = 1
-    eRoomName.text_spacing = 1.9
-    eRoomName.text_color = 31
-    LD2_cls 1, 0
-    Element_Render @eMessage
-    LD2_FadeIn 2
-    for i = currentRoomId to toRoomId step elevatorStep
-        Element_Init(@labelFloor)
-        labelFloor.y = 60 + fontH * 2.5
-        labelFloor.is_centered_x = 1
-        labelFloor.text = trim(str(i))
-        labelFloor.text_spacing = 1.9
-        labelFloor.text_color = 31
-        LD2_cls 1, 0
-        Element_Render @eMessage
-        Element_Render @labelFloor
-        if i = toRoomId then Element_Render @eRoomName
-        LD2_RefreshScreen
-        PullEvents
-        select case abs(i-toRoomId)
-        case 0
-            secondsToWait = 1.00
-        case 1
-            secondsToWait = 0.40
-        case 2
-            secondsToWait = 0.35
-        case 3
-            secondsToWait = 0.30
-        case 4
-            secondsToWait = 0.25
-        case 5 to 9
-            secondsToWait = 0.2
-        case 10 to 15
-            secondsToWait = 0.15
-        case else
-            secondsToWait = 0.12
-        end select
-        WaitSeconds secondsToWait
-        seconds += secondsToWait
-    next i
-    if seconds < 2.0 then
-        WaitSeconds 2.0 - seconds
-    end if
-    LD2_FadeOut 2
-    LD2_RenderFrame
-    WaitSeconds 0.5
-    LD2_FadeIn 2
-    
-    currentRoomId = toRoomId
-    
-end sub
