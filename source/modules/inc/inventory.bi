@@ -18,6 +18,7 @@ DECLARE SUB Inventory_Clear ()
 DECLARE FUNCTION Inventory_GetErrorMessage (errorId as integer) as string
 declare sub Inventory_GetItem (byref item as InventoryType, id as integer)
 declare function Inventory_GetItemBySlot (byref item as InventoryType, slot as integer) as integer
+declare function Inventory_GetQty (id as integer) as integer
 declare function Inventory_GetSize () as integer
 declare function Inventory_HasItem (itemId as integer) as integer
 DECLARE FUNCTION Inventory_Init (size AS INTEGER, sizeVisible as integer = -1) as integer

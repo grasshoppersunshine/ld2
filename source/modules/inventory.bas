@@ -1,4 +1,5 @@
 #include once "inc/inventory.bi"
+#include once "file.bi"
 
 DECLARE SUB LoadSids (filename AS STRING)
 DECLARE SUB LoadShortNames (filename as string)
@@ -37,6 +38,7 @@ function Inventory_Add (id as integer, qty as integer, max as integer = -1, slot
             InventoryItems(slot).id = id
             InventoryItems(slot).qty = qty
             InventoryItems(slot).max = max
+            InventoryItems(slot).slot = slot
             added = 1
         else
             return InventoryErr_OUTOFBOUNDS
@@ -47,6 +49,7 @@ function Inventory_Add (id as integer, qty as integer, max as integer = -1, slot
                 InventoryItems(i).id = id
                 InventoryItems(i).qty = qty
                 InventoryItems(i).max = max
+                InventoryItems(i).slot = i
                 added = 1
                 exit for
             end if
@@ -72,6 +75,7 @@ function Inventory_AddHidden (id as integer, qty as integer, max as integer = -1
             InventoryItems(i).id = id
             InventoryItems(i).qty = qty
             InventoryItems(i).max = max
+            InventoryItems(i).slot = i
             added = 1
             exit for
         end if
@@ -168,6 +172,21 @@ function Inventory_GetItemBySlot (byref item as InventoryType, slot as integer) 
     
 end function
 
+function Inventory_GetQty (id as integer) as integer
+    
+    dim qty as integer
+    dim i as integer
+    
+    for i = 0 to InventorySize - 1
+        if InventoryItems(i).id = id then
+            qty += InventoryItems(i).qty
+        end if
+    next i
+    
+    return qty
+    
+end function
+
 function Inventory_GetSize () as integer
     
     return InventorySize
@@ -203,38 +222,66 @@ FUNCTION Inventory_Init (size AS INTEGER, sizeVisible as integer = -1) as intege
     
 END FUNCTION
 
-FUNCTION Inventory_LoadDescription (itemId AS INTEGER) as string
+function Inventory_LoadDescription (itemId as integer) as string
     
-    DIM ItemsFile AS INTEGER
-    DIM id AS INTEGER
-    DIM sid AS STRING
-    DIM shortName AS STRING
-    DIM longName AS STRING
-    DIM desc AS STRING
-    DIM found AS INTEGER
-    DIM i AS INTEGER
+    dim shortName as string
+    dim longName as string
+    dim filename as string
+    dim fullpath as string
+    dim newLine as string
+    dim desc as string
+    dim row as string
+    dim sid as string
+    dim ItemsFile as integer
+    dim TextFile as integer
+    dim found as integer
+    dim id as integer
+    dim i as integer
     
-    ItemsFile = FREEFILE
-    OPEN DATA_DIR+"tables/descs.txt" FOR INPUT AS ItemsFile
+    newLine = chr(10)
+    
+    ItemsFile = freefile
+    open DATA_DIR+"tables/descs.txt" for input as ItemsFile
     found = 0
-    DO WHILE NOT EOF(ItemsFile)
-        INPUT #ItemsFile, sid: IF EOF(ItemsFile) THEN EXIT DO
-        INPUT #ItemsFile, desc
+    while not eof(ItemsFile)
+        input #ItemsFile, sid
+        input #ItemsFile, desc
         id = Inventory_SidToItemId(sid)
-        IF itemId = id THEN
+        if itemId = id then
             found = 1
-            EXIT DO
-        END IF
-    LOOP
-    CLOSE ItemsFile
+            exit while
+        end if
+    wend
+    close ItemsFile
     
-    IF found THEN
+    if found then
+        if ucase(left(desc, 5)) = "FILE:" then
+            filename = trim(right(desc, len(desc)-5))
+            fullpath = DATA_DIR+"tables/files/"+filename
+            desc = ""
+            if fileexists(fullpath) then
+                TextFile = freefile
+                if open(fullpath for input as TextFile) then
+                    desc = "Error opening file "+filename
+                    desc += newLine+newLine
+                    desc += "Err code "+str(err)
+                else
+                    while not eof(TextFile)
+                        line input #TextFile, row
+                        desc += iif(len(desc),newLine,"")+row
+                    wend
+                    close TextFile
+                end if
+            else
+                desc = "File not found "+filename
+            end if
+        end if
         return desc
-    ELSE
+    else
         return ""
-    END IF
+    end if
     
-END FUNCTION
+end function
 
 SUB Inventory_RefreshNames
     
@@ -439,7 +486,7 @@ function Inventory_Use (itemId as integer) as integer
                     itemToTest = Inventory_SidToItemId(_data.item)
                     Inventory_GetItem item, itemToTest
                     qtyToTest  = iif(_data.itemQty="max",item.max,val(_data.itemQty))
-                    if item.qty = qtyToTest then
+                    if Inventory_GetQty(item.id) = qtyToTest then
                         UseItemMessage = _data.message
                         return 0
                     end if
@@ -448,7 +495,7 @@ function Inventory_Use (itemId as integer) as integer
                     item.qty = -1
                     Inventory_GetItem item, itemToTest
                     qtyToTest  = iif(_data.itemQty="max",item.max,val(_data.itemQty))
-                    if item.qty <> qtyToTest then
+                    if Inventory_GetQty(item.id) <> qtyToTest then
                         UseItemMessage = _data.message
                         return 0
                     end if

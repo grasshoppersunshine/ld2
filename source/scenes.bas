@@ -363,8 +363,6 @@ function Scene3Go () as integer
     dim mob as Mobile
     
     'AddSound Sounds.scare, "splice/scare0.ogg"
-    AddSound Sounds.crack  , "splice/crack.wav"
-    AddSound Sounds.glass  , "splice/glass.wav"
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
     GetCharacterPose JanitorPose, CharacterIds.Janitor, PoseIds.Talking
@@ -409,11 +407,6 @@ function Scene3Go () as integer
 
     if DoScene("SCENE-3C") then return 1 '// Let's see what I can do with him
     
-    LD2_PlaySound Sounds.crack
-    WaitSeconds 1.5
-    LD2_PlaySound Sounds.glass
-    WaitSeconds 1.5
-    
     return 0
 
 end function
@@ -455,6 +448,7 @@ sub Scene4EndConditions()
     Mobs_Add 208, 144, MobIds.Rockmonster
     Map_LockElevators
     
+    FreeTempSounds
     LD2_SetMusicVolume 1.0
     LD2_PlayMusic Tracks.Chase
     
@@ -471,12 +465,14 @@ function Scene4Go(fadeIn as integer = 0) as integer
     dim StevePose as PoseType
     dim RockmonsterPose as PoseType
     
-    AddSound Sounds.shatter, "splice/glassbreak.wav"
-    AddSound Sounds.slurp  , "rock-slurp.wav"
-    AddSound Sounds.scream , "scream.wav"
-    AddSound Sounds.chew1, "splice/chew0.wav"
-    AddSound Sounds.chew2, "splice/chew1.wav"
-    AddSound Sounds.growl, "splice/growl2.wav"
+    AddTempSound Sounds.crack  , "splice/crack.wav"
+    AddTempSound Sounds.glass  , "splice/glass.wav"
+    AddTempSound Sounds.shatter, "splice/glassbreak.wav"
+    AddTempSound Sounds.slurp  , "rock-slurp.wav"
+    AddTempSound Sounds.scream , "scream.wav"
+    AddTempSound Sounds.chew1, "splice/chew0.wav"
+    AddTempSound Sounds.chew2, "splice/chew1.wav"
+    AddTempSound Sounds.growl, "splice/growl2.wav"
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
     GetCharacterPose JanitorPose, CharacterIds.Janitor, PoseIds.Talking
@@ -496,11 +492,27 @@ function Scene4Go(fadeIn as integer = 0) as integer
         LD2_StopMusic
         RenderScene RenderSceneFlags.NotPutToScreen
         LD2_FadeIn 2
-    endif
+    end if
+    
+    LD2_PlaySound Sounds.rockDie
+    if ContinueAfterSeconds(2.25) then return 1
+    LarryPose.isFlipped = 0: JanitorPose.isFlipped = 0
+    if ContinueAfterSeconds(1.25) then return 1
+    
+    if DoScene("SCENE-3D") then return 1
+    
+    if ContinueAfterSeconds(1.25) then return 1
+    LD2_PlaySound Sounds.glass
+    Shakes_Add 0.25, SPRITE_W*0.25
+    if ContinueAfterSeconds(1.25) then return 1
+    LarryPose.isFlipped = 1: JanitorPose.isFlipped = 1
+    if ContinueAfterSeconds(1.0) then return 1
+    'LD2_PlaySound Sounds.glass
+    'Shakes_Add 0.3, SPRITE_W*0.3
+    'if ContinueAfterSeconds(1.25) then return 1
     
     LD2_StopMusic
     LD2_SetMusicVolume 1.0
-    RenderScene
     
     LD2_PlaySound Sounds.shatter
     Shakes_Add 0.4, SPRITE_W*0.4
@@ -1086,7 +1098,8 @@ sub SceneVentEscapeEndConditions()
     Map_SetXShift 1400
     Player_SetXY 1420, 144
     Player_SetFlip 0
-    LD2_Drop WhiteCard2
+    MapItems_Add Player_GetX, Player_GetY, ItemIds.WhiteCard2
+    'LD2_Drop WhiteCard2
     
     'LD2_put 1450, 144, 12, idSCENE, 1
     'LD2_put 1450, 144, 14, idSCENE, 1

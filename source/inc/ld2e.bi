@@ -214,7 +214,6 @@ declare sub Player_AddItem(itemId as integer, qty as integer = 1)
 declare sub Player_SetItemQty(itemId as integer, qty as integer)
 declare sub Player_SetItemMaxQty(itemId as integer, qty as integer)
 declare function Player_GetItemMaxQty(itemId as integer) as integer
-declare function Player_AddAmmo (weaponId as integer, qty as integer) as integer
 declare function Player_AtElevator () as integer
 declare sub Player_Respawn ()
 declare sub Player_SetFlip (flipped as integer)
@@ -264,16 +263,18 @@ declare function Boot_GetNextCommandArg() as string
 declare sub Shakes_Add (duration as double = 1.0, intensity as double = 1.0)
 declare sub Shakes_Animate (resetClocks as integer = 0)
 declare function Shakes_GetScreenShake() as double
-declare function getEaseInShake(doReset as double = 0, speed as double = 1.0, byref percent as double = 0) as double
 
-declare function LD2_AddToStatus (item as integer, qty as integer) as integer
+declare function LD2_AddToStatus (item as integer, qty as integer, slot as integer = -1) as integer
+declare function LD2_AddToStatusIfExists (item as integer, qty as integer) as integer
 declare sub LD2_ClearInventorySlot (slot as integer)
 declare sub LD2_ClearStatus ()
+declare sub LD2_DeductQty(itemId as integer)
+
 declare sub LD2_CountFrame ()
 
 declare sub LD2_LogDebug (message as string)
 declare sub LD2_Debug (message as string)
-DECLARE SUB LD2_Drop (item as integer)
+DECLARE SUB LD2_Drop (slot as integer)
 DECLARE SUB LD2_GenerateSky ()
 DECLARE FUNCTION LD2_GetStatusAmount (slot AS INTEGER) as integer
 DECLARE FUNCTION LD2_GetStatusItem (slot AS INTEGER) as integer
@@ -353,5 +354,5 @@ CONST MAXFLASHES   =  6
 CONST MAXSECTORS   =  12
 CONST MAXFLOORS    =  24
 CONST MAXINVENTORY =  128
-CONST MAXINVSLOTS  =   8
+CONST MAXINVSLOTS  =  12
 CONST MAXTILES     = 251

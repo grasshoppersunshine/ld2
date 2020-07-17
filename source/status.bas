@@ -4,6 +4,7 @@
 #include once "modules/inc/ld2snd.bi"
 #include once "modules/inc/inventory.bi"
 #include once "modules/inc/elements.bi"
+#include once "modules/inc/easing.bi"
 #include once "inc/ld2e.bi"
 #include once "inc/ld2.bi"
 #include once "inc/status.bi"
@@ -15,12 +16,20 @@ declare sub Mix (item0 AS InventoryType, item1 AS InventoryType)
 declare function CanMix (itemId as integer) as integer
 declare function ShowResponse (response as string = "", textColor as integer = -1, skipInput as integer = 0) as integer
 declare function UseItem (item AS InventoryType) as integer
+declare sub GetInventoryRowsCols(byref rows as integer, byref cols as integer)
 
 dim shared selectedInventorySlot as integer
 
 dim shared BeforeUseItemCallback as sub(byval id as integer)
-dim shared UseItemCallback as sub(byval id as integer, byval qty as integer, byref exitMenu as integer)
+dim shared UseItemCallback as sub(byval id as integer, byref qty as integer, byref exitMenu as integer)
 dim shared LookItemCallback as sub(id as integer, byref description as string)
+
+const STATUS_WINDOW_HEIGHT_MIN = 96
+const STATUS_WINDOW_HEIGHT_MED = 120
+const STATUS_WINDOW_HEIGHT_MAX = SCREEN_H
+
+dim shared STATUS_INVENTORY_SIZE as integer = 8
+dim shared STATUS_WINDOW_HEIGHT as integer = STATUS_WINDOW_HEIGHT_MIN
 
 const DATA_DIR = "data/"
 const STATUS_DIALOG_ALPHA = 0.75
@@ -51,7 +60,7 @@ sub STATUS_SetBeforeUseItemCallback(callback as sub(byval id as integer))
     
 end sub
 
-sub STATUS_SetUseItemCallback(callback as sub(byval id as integer, byval qty as integer, byref exitMenu as integer))
+sub STATUS_SetUseItemCallback(callback as sub(byval id as integer, byref qty as integer, byref exitMenu as integer))
     
     UseItemCallback = callback
     
@@ -65,9 +74,15 @@ end sub
 
 function STATUS_InitInventory() as integer
     
-    return Inventory_Init(16, 8)
+    return Inventory_Init(24, 12)
     
 end function
+
+sub STATUS_SetInventorySize(size as integer)
+    
+    STATUS_INVENTORY_SIZE = size
+    
+end sub
 
 SUB BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elementHeading as ElementType ptr, elementBorder as ElementType ptr)
 	
@@ -83,7 +98,7 @@ SUB BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elem
     elementWindow->padding_x = fontW
     elementWindow->padding_y = fontH
     elementWindow->w = SCREEN_W-elementWindow->padding_x*2
-    elementWindow->h = 96-elementWindow->padding_y*2
+    elementWindow->h = STATUS_WINDOW_HEIGHT-elementWindow->padding_y*2
     
     Element_Init elementHeading, heading, 31, ElementFlags.CenterText '+"\"+string(45, "-"), 31
     elementHeading->parent = elementWindow
@@ -112,11 +127,11 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     static labelStatus as ElementType: static valueStatus as ElementType
     static labelHealth as ElementType: static valueHealth as ElementType
     static labelWeapon as ElementType: static valueWeapon as ElementType
+    static labelObjective as ElementType
     static labelCards  as ElementType: static valueCards as ElementType
     static labelInventory as ElementType
-    static labelItems(7) as ElementType
-    static labelItemsQty(7) as ElementType
-    static labelItemsDecor(7) as ElementType
+    static labelItems(11) as ElementType
+    static labelItemsQty(11) as ElementType
     static menuActions as ElementType
     static labelActions(3) as ElementType
     static labelMixing as ElementType
@@ -148,7 +163,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     dialog.padding_x = fontW
     dialog.padding_y = fontH
     dialog.w = SCREEN_W-dialog.padding_x*2
-    dialog.h = 96-dialog.padding_y*2
+    dialog.h = STATUS_WINDOW_HEIGHT-dialog.padding_y*2
     
     dim starw as integer
     dim starc as integer
@@ -213,6 +228,16 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     valueCards.x = FONT_W * 7
     
     '*******************************************************************
+    '* OBJECTIVE
+    '*******************************************************************
+    Element_Init @labelObjective, "", 75
+    labelObjective.parent = @dialog
+    labelObjective.y = labelObjective.parent->h+labelObjective.parent->padding_y-fontH*2
+    
+    'labelObjective.text = "Search Barney's office desk for a blue access card."
+    'labelObjective.text = "Meet with Barney in the Weapons Locker."
+    
+    '*******************************************************************
     '* INVENTORY
     '*******************************************************************
     Element_Init @labelInventory, "INVENTORY\----------------------------", 31
@@ -239,7 +264,8 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     Elements_Add @labelCards
     Elements_Add @valueCards
     Elements_Add @labelInventory
-    for i = 0 to 8
+    for i = 0 to 11
+        Element_Init @labelItems(i)
         Elements_Add @labelItems(i)
     next i
     if (action <> -1) and (mixItem = 0) then
@@ -258,6 +284,8 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
             end if
             Elements_Add @labelActions(n)
         next n
+    else
+        Elements_Add @labelObjective
     end if
     static labelMix as ElementType
     static labelWith as ElementType
@@ -345,9 +373,28 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     dim numCols as integer
     dim numRows as integer
     
-    colW = SPRITE_W*2.00: cspc = SPRITE_W*0.25: numCols = 4
-    rowH = SPRITE_H*1.25: rspc = SPRITE_H*0.25: numRows = 2
-    lft = dialog.w - (colW+cspc)*numCols + cspc
+    GetInventoryRowsCols numRows, numCols
+    
+    select case numCols
+    case 3: colW = int(SPRITE_W*2.00*3.5/numCols)
+    case 4: colW = int(SPRITE_W*2.00)
+    case 5: colW = int(SPRITE_W*2.00*4/numCols)
+    end select
+    cspc = int((SPRITE_W*8.75-colw*numCols)*1/(numCols-1))
+    
+    select case STATUS_WINDOW_HEIGHT
+    case STATUS_WINDOW_HEIGHT_MIN
+        rowH = SPRITE_H*1.25: rspc = SPRITE_H*0.25
+    case STATUS_WINDOW_HEIGHT_MED
+        if (numRows < 3) and (numCols < 5) then
+            rowH = SPRITE_H*1.75: rspc = SPRITE_H*0.25
+        else
+            rowH = SPRITE_H*1.25: rspc = SPRITE_H*0.25
+        end if
+    case STATUS_WINDOW_HEIGHT_MAX
+        rowH = SPRITE_H*1.75: rspc = SPRITE_H*0.25
+    end select
+    lft = dialog.w - SPRITE_W*2.25*4 + SPRITE_W*0.25 '(colW+cspc)*numCols + cspc
     top = 0
     
     labelInventory.x = lft
@@ -469,8 +516,7 @@ SUB Drop (item AS InventoryType)
         message = "Not happening."
     case else
         LD2_PlaySound Sounds.drop
-        LD2_Drop item.id
-        LD2_ClearInventorySlot item.slot
+        LD2_Drop item.slot
         STATUS_RefreshInventory
         ShowResponse "Dropped " + trim(item.shortName), STATUS_COLOR_SUCCESS
         exit sub
@@ -525,10 +571,10 @@ function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as 
         return 0
     case DialogStates.opening
         if e = -1 then
-            e = getEaseInOutInterval(1)
+            e = Easing_doEaseInOut(-1)
             LD2_PlaySound Sounds.uiMenu
         else
-            e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
+            e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
         end if
         swipe.w = int(e * 156)
         Element_Render @swipe
@@ -539,10 +585,10 @@ function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as 
         return 0
     case DialogStates.closing
         if e = -1 then
-            e = getEaseInOutInterval(1)
+            e = Easing_doEaseInOut(-1)
             LD2_PlaySound Sounds.uiMenu
         else
-            e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
+            e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
         end if
         swipe.w = int((1-e) * 156)
         Element_Render @swipe
@@ -755,6 +801,8 @@ function Look (item AS InventoryType, skipInput as integer = 0) as integer
     
     static desc as string
     
+    dim char as string*1
+    
     dim img_w as integer, img_h as integer
     img_w = SPRITE_W*4
     img_h = SPRITE_H*4
@@ -762,6 +810,7 @@ function Look (item AS InventoryType, skipInput as integer = 0) as integer
     dim filtered as string
     dim wobbleStatus as integer
     dim timediff as double
+    dim anchorJump as integer
     dim fontW as integer
     dim fontH as integer
     dim i as integer
@@ -803,17 +852,8 @@ function Look (item AS InventoryType, skipInput as integer = 0) as integer
             LookItemCallback(item.id, desc)
         end if
         if len(desc) = 0 then
-            desc = "No description found for item id: " + str(item.id)
+            desc = "No desc found for item id " + str(item.id)
         end if
-        filtered = ""
-        for i = 1 to len(desc)
-            if mid(desc, i, 1) = "`" then
-                filtered += !"\""
-            else
-                filtered += mid(desc, i, 1)
-            end if
-        next i
-        desc = filtered
         
         '***************************************************************
         '* BUILD ELEMENTS
@@ -839,7 +879,7 @@ function Look (item AS InventoryType, skipInput as integer = 0) as integer
 
         Element_Init @textDescription, "", 31, ElementFlags.CenterY
             textDescription.parent = @container
-            textDescription.text_height = 1.8
+            textDescription.text_height = 2.0
             textDescription.padding_x = fontW*1.5
             textDescription.w = textDescription.parent->w-textDescription.padding_x*2
             textDescription.text_length = 0
@@ -873,8 +913,7 @@ function Look (item AS InventoryType, skipInput as integer = 0) as integer
             Elements_Add @scrollbar
             textDescription.w -= scrollbar.w
             Element_RenderPrepare @textDescription
-            scrollRows = int((textDescription.h-container.h)/fontH)
-            if (textDescription.h-container.h)/fontH - scrollRows > 0 then scrollRows += 1
+            scrollRows = int((textDescription.h-container.h)/fontH+0.9999)
             scrollHeight = int(container.h/fontH)
             if scrollRows < scrollHeight then
                 scrollRows = scrollHeight
@@ -958,8 +997,39 @@ function Look (item AS InventoryType, skipInput as integer = 0) as integer
         return 0
     end if
     
+    if keypress(KEY_LALT) or keypress(KEY_RALT) then
+        select case STATUS_WINDOW_HEIGHT
+        case STATUS_WINDOW_HEIGHT_MIN
+            STATUS_WINDOW_HEIGHT = STATUS_WINDOW_HEIGHT_MED
+        case STATUS_WINDOW_HEIGHT_MED
+            STATUS_WINDOW_HEIGHT = STATUS_WINDOW_HEIGHT_MAX
+        case STATUS_WINDOW_HEIGHT_MAX
+            STATUS_WINDOW_HEIGHT = STATUS_WINDOW_HEIGHT_MIN
+        end select
+        state = DialogStates.init
+        LD2_PlaySound Sounds.uiSelect
+    end if
+    anchorJump = -1
+    if keypress(KEY_0) or keypress(KEY_KP_0) then anchorJump = 0
+    if keypress(KEY_1) or keypress(KEY_KP_1) then anchorJump = 1
+    if keypress(KEY_2) or keypress(KEY_KP_2) then anchorJump = 2
+    if keypress(KEY_3) or keypress(KEY_KP_3) then anchorJump = 3
+    if keypress(KEY_4) or keypress(KEY_KP_4) then anchorJump = 4
+    if keypress(KEY_5) or keypress(KEY_KP_5) then anchorJump = 5
+    if keypress(KEY_6) or keypress(KEY_KP_6) then anchorJump = 6
+    if keypress(KEY_7) or keypress(KEY_KP_7) then anchorJump = 7
+    if keypress(KEY_8) or keypress(KEY_KP_8) then anchorJump = 8
+    if keypress(KEY_9) or keypress(KEY_KP_9) then anchorJump = 9
+    if anchorJump = 0 then
+        scroll = 0
+        LD2_PlaySound Sounds.uiSelect
+    end if
+    if anchorJump > 0 then
+        Element_RenderPrepare @textDescription, str(anchorJump)+".", scroll
+        LD2_PlaySound Sounds.uiSelect
+    end if
     if keypress(KEY_DOWN) or keypress(KEY_S) or keypress(KEY_KP_2) or (mouseWheelY() > 0) then
-        if scroll < scrollRows-1 then
+        if scroll < scrollRows then
             scroll += 1
             LD2_PlaySound Sounds.dialog
         else
@@ -1015,8 +1085,8 @@ end function
 function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes.RevealNoSpin, wobbleAction as integer = WobbleActions.NoAction) as integer
     
     static stretching as integer
+    static interval as double = -1
     static e as double
-    dim percent as double
     dim stretchStart as integer
     dim img_w as integer
     dim img_h as integer
@@ -1031,7 +1101,12 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
     if wobbleAction = WobbleActions.ResetAnimations then
         wobbleAction = WobbleActions.NoAction
         stretching = 0
+        interval = -1
         e = 0
+    end if
+    
+    if (wobbleAction <> WobbleActions.NoAction) and interval = 1 then
+        interval = -1
     end if
     
     select case wobbleType
@@ -1040,7 +1115,7 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
     '*******************************************************************
     case WobbleTypes.RevealNoSpin
         
-        e = iif(e=0 or e=1, getEaseInOutInterval(0.15), getEaseInOutInterval(0, 0.45))
+        e = Easing_doEaseInOut(interval, 0.45)
         wobble->w = int(img_w*(1.0+(1-e))+0.5)
         wobble->h = int(img_h*(1.0+(1-e))+0.5)
         wobble->sprite_rot = 0
@@ -1048,7 +1123,7 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
         
     case WobbleTypes.RevealSpin
         
-        e = iif(e=0 or e=1, getEaseInOutInterval(0.15), getEaseInOutInterval(0, 0.45))
+        e = Easing_doEaseInOut(interval, 0.45)
         wobble->w = int(img_w*(1.0+(1-e))+0.5)
         wobble->h = int(img_h*(1.0+(1-e))+0.5)
         wobble->sprite_rot = int(e*360)
@@ -1056,7 +1131,7 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
         
     case WobbleTypes.RevealBackSpin
         
-        e = iif(e=0 or e=1, getEaseInOutInterval(0.15), getEaseInOutInterval(0, 0.45))
+        e = Easing_doEaseInOut(interval, 0.45)
         wobble->w = int(img_w*(1.0+(1-e))+0.5)
         wobble->h = int(img_h*(1.0+(1-e))+0.5)
         wobble->sprite_rot = int(e*-360)
@@ -1064,7 +1139,7 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
     
     case WobbleTypes.Reveal540Spin
         
-        e = iif(e=0 or e=1, getEaseInOutInterval(0.15), getEaseInOutInterval(0, 0.45))
+        e = Easing_doEaseInOut(interval, 0.45)
         wobble->w = int(img_w*(1.0+(1-e))+0.5)
         wobble->h = int(img_h*(1.0+(1-e))+0.5)
         wobble->sprite_rot = int(e*540+180)
@@ -1072,7 +1147,7 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
     
     case WobbleTypes.Reveal540BackSpin
         
-        e = iif(e=0 or e=1, getEaseInOutInterval(0.15), getEaseInOutInterval(0, 0.45))
+        e = Easing_doEaseInOut(interval, 0.45)
         wobble->w = int(img_w*(1.0+(1-e))+0.5)
         wobble->h = int(img_h*(1.0+(1-e))+0.5)
         wobble->sprite_rot = int(e*-630-90)
@@ -1086,19 +1161,19 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
         select case wobbleAction
         case WobbleActions.SlapLeft, WobbleActions.SlapRight
             
-            e = iif(e=0 or e=1, getEaseInWobble(0.15), getEaseInWobble(0, 0.45))
+            e = Easing_doWobble(interval, 0.45)
             wobble->w = int(img_w*(1-e)+0.5)
             wobble->h = int(img_h*(1+e)+0.5)
             
         case WobbleActions.Slapup, WobbleActions.SlapDown
             
-            e = iif(e=0 or e=1, getEaseInWobble(0.15), getEaseInWobble(0, 0.45))
+            e = Easing_doWobble(interval, 0.45)
             wobble->h = int(img_h*(1+e)+0.5)
         
         case WobbleActions.Punch
             
-            if e=0 or e=1 then LD2_PlaySound Sounds.punch
-            e = iif(e=0 or e=1, getEaseInShake(0.15), getEaseInShake(0, 0.7))
+            if interval=-1 then LD2_PlaySound Sounds.punch
+            e = Easing_doShake(interval, 0.7)
             wobble->w = int(img_w*(1.0+e)+0.5)
             wobble->h = int(img_h*(1.0+e)+0.5)
             
@@ -1112,8 +1187,8 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
         select case wobbleAction
         case WobbleActions.SlapLeft, WobbleActions.SlapRight
             
-            if e=0 or e=1 then LD2_PlaySound Sounds.blood2
-            e = iif(e=0 or e=1, getEaseInWobble(0.15), getEaseInWobble(0, 0.45))
+            if interval=-1 then LD2_PlaySound Sounds.blood2
+            e = Easing_doWobble(interval, 0.45)
             wobble->w = int(img_w*(1-abs(e))+0.5)
             if (wobble->w and 1) = 0 then wobble->w -= 1
             if (wobble->h and 1) = 0 then wobble->h -= 1
@@ -1127,8 +1202,8 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
         
         case WobbleActions.SlapUp, WobbleActions.SlapDown
             
-            if e=0 or e=1 then LD2_PlaySound Sounds.blood2
-            e = iif(e=0 or e=1, getEaseInWobble(0.15), getEaseInWobble(0, 0.45))
+            if interval=-1 then LD2_PlaySound Sounds.blood2
+            e = Easing_doWobble(interval, 0.45)
             wobble->h = int(img_h*(1-abs(e))+0.5)
             if (wobble->w and 1) = 0 then wobble->w -= 1
             if (wobble->h and 1) = 0 then wobble->h -= 1
@@ -1143,19 +1218,22 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
         case WobbleActions.HoldUp, WobbleActions.HoldDown
             
             if stretching = 0 then
+                stretching = 1
                 stretchStart = timer
+                Easing_doEaseInOut(-1)
+                interval = 0.15
                 LD2_PlaySound Sounds.squishy
             end if
-            e = iif(stretching = 0, getEaseInOutInterval(0.15), getEaseInOutInterval(0, 2))
+            e = Easing_doEaseInOut(interval, 2.0)
             wobble->w = int(img_h*(1+e*0.1)+0.5)
             wobble->h = int(img_h*(1+e*0.7)+0.5)
             wobble->sprite_rot = e*-2
-            stretching = 1
+            if interval = 1 then interval = 0.9999
         
         case WobbleActions.Punch
             
-            if e=0 or e=1 then LD2_PlaySound Sounds.punch: LD2_PlaySound Sounds.splatter
-            e = iif(e=0 or e=1, getEaseInShake(0.15), getEaseInShake(0, 0.7))
+            if interval=-1 then LD2_PlaySound Sounds.punch: LD2_PlaySound Sounds.splatter
+            e = Easing_doShake(interval, 0.7)
             wobble->w = int(img_w*(1.0+e)+0.5)
             wobble->h = int(img_h*(1.0+e)+0.5)
             
@@ -1165,10 +1243,10 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
                 stretching = 0
                 wobble->sprite_rot = 0
                 LD2_PlaySound Sounds.blood2
-                e = getEaseInShake(1-iif((timer-stretchStart)*0.5>0.85,0.85,(timer-stretchStart)*0.5))
-            else
-                e = getEaseInShake(0, 0.3)
+                Easing_doShake(-1)
+                interval = 1-interval
             end if
+            e = Easing_doShake(interval, 0.3)
             wobble->h = int(img_h*(1+e*1.5)+0.5)
             
         end select
@@ -1180,68 +1258,58 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
         select case wobbleAction
         case WobbleActions.SlapLeft, WobbleActions.SlapRight
             
-            if e=0 or e=1 then
-                e = getEaseInShake(0.01)
-                percent = 0
+            if interval = -1 then
                 wobble->sprite_rot = 0
                 LD2_PlaySound Sounds.lookMetal
-            else
-                e = getEaseInShake(0, 0.45, percent)
             end if
+            e = Easing_doShake(interval, 0.45)
             e = abs(e)
             select case wobbleAction
             case WobbleActions.SlapLeft
                 wobble->x = int((img_w*(1-e*0.7)-wobble->w)*0.5)
-                if percent > 0.15 then wobble->sprite_rot = 10
+                if interval > 0.15 then wobble->sprite_rot = 10
             case WobbleActions.SlapRight
                 wobble->x = int((img_w*(1+e*0.7)-wobble->w)*0.5)
-                if percent > 0.15 then wobble->sprite_rot = -45
+                if interval > 0.15 then wobble->sprite_rot = -45
             end select
             wobble->y = int((img_h-wobble->h)*0.5)
-            if e=0 or e=1 then
+            if interval = 1 then
                 wobble->sprite_rot = 0
             end if
         
         case WobbleActions.SlapUp, WobbleActions.SlapDown
             
-            if e=0 or e=1 then
-                e = getEaseInShake(0.01)
-                percent = 0
+            if interval = -1 then
                 wobble->sprite_rot = 0
                 LD2_PlaySound Sounds.lookMetal
-            else
-                e = getEaseInShake(0, 0.45, percent)
             end if
+            e = Easing_doShake(interval, 0.45)
             select case wobbleAction
             case WobbleActions.SlapUp
                 wobble->y = int((img_h*(1-abs(e)*0.5)-wobble->h)*0.5)
-                if percent > 0.15 then wobble->sprite_rot = 3
+                if interval > 0.15 then wobble->sprite_rot = 3
             case WobbleActions.SlapDown
                 wobble->y = int((img_h*(1+abs(e)*0.5)-wobble->h)*0.5)
-                if percent > 0.15 then wobble->sprite_rot = -6
+                if interval > 0.15 then wobble->sprite_rot = -6
             end select
             wobble->x = int((img_w-wobble->w)*0.5)
-            if e=0 or e=1 then
+            if interval = 1 then
                 wobble->sprite_rot = 0
             end if
         
         case WobbleActions.Punch
             
-            if e=0 or e=1 then
-                e = getEaseInShake(0.15)
-                percent = 0
+            if interval = -1 then
                 LD2_PlaySound Sounds.punch
                 LD2_PlaySound Sounds.lookMetal
-                
-            else
-                e = getEaseInShake(0, 0.35, percent)
             end if
+            e = Easing_doShake(interval, 0.35)
             e = abs(e)
             wobble->w = int(img_w*(1.0+e*0.7)+0.5)
             wobble->h = int(img_h*(1.0+e*0.7)+0.5)
             wobble->sprite_rot = 30
             
-            if e=0 or e=1 then
+            if interval = 1 then
                 wobble->sprite_rot = 0
             end if
             
@@ -1252,9 +1320,9 @@ function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes
     if (wobble->w and 1) = 0 then wobble->w -= 1
     if (wobble->h and 1) = 0 then wobble->h -= 1
     if wobble->x = 9999 then wobble->x = int((img_w-wobble->w)*0.5)
-    if wobble->y = 9999 then wobble->y = int((img_h-wobble->h)*0.5)
+    if wobble->y = 9999 then wobble->y = int((img_h-wobble->h)*0.5) + int((STATUS_WINDOW_HEIGHT - STATUS_WINDOW_HEIGHT_MIN)*0.5)
     
-    if e=0 or e=1 then
+    if interval=1 then
         return iif(is_reveal, WobbleStatuses.RevealComplete, iif(wobbleAction = WobbleActions.NoAction, WobbleStatuses.Ready, WobbleStatuses.ActionComplete))
     end if
     
@@ -1274,7 +1342,7 @@ sub STATUS_RefreshInventory
     dim qtyMax as integer
     
     Inventory_Clear
-    FOR i = 0 TO 7 '- change to LD2_GetMaxInvSize% ?
+    FOR i = 0 TO Inventory_GetSize-1
         id = LD2_GetStatusItem(i)
         qty = LD2_GetStatusAmount(i)
         qtyMax = Player_GetItemMaxQty(id)
@@ -1283,6 +1351,40 @@ sub STATUS_RefreshInventory
         END IF
     NEXT i
     Inventory_RefreshNames
+    
+end sub
+
+sub GetInventoryRowsCols(byref rows as integer, byref cols as integer)
+    
+    select case STATUS_INVENTORY_SIZE
+    case 4
+        rows = 1
+        cols = 4
+    case 5
+        rows = 1
+        cols = 5
+    case 6
+        rows = 2
+        cols = 3
+    case 8
+        rows = 2
+        cols = 4
+    case 9
+        rows = 3
+        cols = 3
+    case 10
+        rows = 2
+        cols = 5
+    case 12
+        rows = 3
+        cols = 4
+    case 15
+        rows = 3
+        cols = 5
+    case 16
+        rows = 4
+        cols = 4
+    end select
     
 end sub
 
@@ -1300,9 +1402,11 @@ function StatusScreen(skipInput as integer = 0) as integer
     static col as integer
     static e as double = -1
     
-    dim numCols as integer: numCols = 4
-    dim numRows as integer: numRows = 2
+    dim numCols as integer
+    dim numRows as integer
     dim selected as InventoryType
+    
+    GetInventoryRowsCols numRows, numCols
 	
     
     if state = DialogStates.closed then
@@ -1319,12 +1423,12 @@ function StatusScreen(skipInput as integer = 0) as integer
     select case state
     case DialogStates.opening
         if e = -1 then
-            e = getEaseInOutInterval(1)
+            e = Easing_doEaseInOut(-1)
             LD2_PlaySound Sounds.uiMenu
         else
-            e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
+            e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
         end if
-        dialog.h = e * 96
+        dialog.h = e * STATUS_WINDOW_HEIGHT
         Element_Render @dialog
         if e = 1 then
             state = DialogStates.init
@@ -1333,12 +1437,12 @@ function StatusScreen(skipInput as integer = 0) as integer
         return 0
     case DialogStates.closing
         if e = -1 then
-            e = getEaseInOutInterval(1)
+            e = Easing_doEaseInOut(-1)
             LD2_PlaySound Sounds.uiMenu
         else
-            e = getEaseInOutInterval(0, STATUS_EASE_SPEED)
+            e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
         end if
-        dialog.h = (1-e) * 96
+        dialog.h = (1-e) * STATUS_WINDOW_HEIGHT
         Element_Render @dialog
         if e = 1 then
             state = DialogStates.closed
@@ -1392,6 +1496,19 @@ function StatusScreen(skipInput as integer = 0) as integer
             state = DialogStates.closing
         END IF
     END IF
+    
+    if keypress(KEY_LALT) or keypress(KEY_RALT) then
+        select case STATUS_WINDOW_HEIGHT
+        case STATUS_WINDOW_HEIGHT_MIN
+            STATUS_WINDOW_HEIGHT = STATUS_WINDOW_HEIGHT_MED
+        case STATUS_WINDOW_HEIGHT_MED
+            STATUS_WINDOW_HEIGHT = STATUS_WINDOW_HEIGHT_MAX
+        case STATUS_WINDOW_HEIGHT_MAX
+            STATUS_WINDOW_HEIGHT = STATUS_WINDOW_HEIGHT_MIN
+        end select
+        state = DialogStates.init
+        LD2_PlaySound Sounds.uiSelect
+    end if
         
     '- TODO: hold down for one second, then scroll down with delay
     IF keypress(KEY_UP) or keypress(KEY_W) or (action = -1 and mouseWheelUp()) THEN
@@ -1504,6 +1621,7 @@ function UseItem (item AS InventoryType) as integer
 
     dim id as integer
     dim qty as integer
+    dim slot as integer
     dim message as string
     dim success as integer
     dim discard as integer
@@ -1520,16 +1638,16 @@ function UseItem (item AS InventoryType) as integer
     message = Inventory_GetUseMessage()
     
     if success then
-        id  = Inventory_GetUseItem()
-        qty = Inventory_GetUseQty()
+        id   = Inventory_GetUseItem()
+        qty  = Inventory_GetUseQty()
         discard = Inventory_GetUseItemDiscard()
-        if discard then
-            LD2_AddToStatus item.id, -qty
-        end if
         if (UseItemCallback <> 0) then
             UseItemCallback(id, qty, exitMenu)
         else
             LD2_AddToStatus id, qty
+        end if
+        if discard then
+            LD2_AddToStatus item.id, -qty, item.slot
         end if
         STATUS_RefreshInventory
         textColor = STATUS_COLOR_SUCCESS
@@ -1636,129 +1754,7 @@ function ShowResponse (response as string = "", textColor as integer = -1, skipI
     
 end function
 
-function getEaseInInterval(doReset as double = 0, speed as double = 1.0) as double
-    
-    static clock as double
-    static e as double
-    
-    if doReset <> 0 then
-        e = iif(doReset < 1, doReset, 0)
-    else
-        e += (timer-clock)/speed
-        if e > 1 then
-            e = 1
-        end if
-    end if
-    clock = timer
-    
-    return e * e * e
-    
-end function
 
-function getEaseOutInterval(doReset as double = 0, speed as double = 1.0) as double
-    
-    static clock as double
-    static e as double
-    
-    if doReset <> 0 then
-        e = iif(doReset < 1, doReset, 0)
-    else
-        e += (timer-clock)/speed
-        if e > 1 then
-            e = 1
-        end if
-    end if
-    clock = timer
-    
-    return (1 - e) * (1 - e) * (1 - e)
-    
-end function
-
-function getEaseInOutInterval(doReset as double = 0, speed as double = 1.0) as double
-    
-    static clock as double
-    static e as double
-    dim d as double
-    
-    if doReset <> 0 then
-        e = iif(doReset < 1, doReset, 0)
-    else
-        e += (timer-clock)/speed
-        if e > 1 then
-            e = 1
-        end if
-    end if
-    clock = timer
-    
-    d = iif(e <= 0.5, e*2, (1-e)*2)
-    return iif(e <= 0.5, d*d*d*0.5, 1.0-d*d*d*0.5)
-    
-end function
-
-function getEaseOutInInterval(doReset as double = 0, speed as double = 1.0) as double
-    
-    static clock as double
-    static e as double
-    dim d as double
-    
-    if doReset <> 0 then
-        e = iif(doReset < 1, doReset, 0)
-    else
-        e += (timer-clock)/speed
-        if e > 1 then
-            e = 1
-        end if
-    end if
-    clock = timer
-    
-    d = 1.0 - iif(e <= 0.5, e*2, (1-e)*2)
-    return iif(e <= 0.5, 0.5-d*0.5, 0.5+d*0.5)
-    
-end function
-
-function getEaseInAndReverseInterval(doReset as double = 0, speed as double = 1.0) as double
-    
-    static clock as double
-    static e as double
-    dim d as double
-    
-    if doReset <> 0 then
-        e = iif(doReset < 1, doReset, 0)
-    else
-        e += (timer-clock)/speed
-        if e > 1 then
-            e = 1
-        end if
-    end if
-    clock = timer
-    
-    d = iif(e <= 0.5, e*2, (1-e)*2)
-    return d*d*d*0.5
-    
-end function
-
-function getEaseInWobble(doReset as double = 0, speed as double = 1.0) as double
-    
-    static clock as double
-    static e as double
-    dim d as double
-    
-    if doReset <> 0 then
-        e = iif(doReset < 1, doReset, 0)
-        LD2_PlaySound Sounds.uiCancel
-    else
-        e += (timer-clock)/speed
-        if e > 1 then
-            e = 1
-        end if
-    end if
-    clock = timer
-    
-    d = sin(e*4*PI)*(1-e)
-    
-    return d
-    
-end function
 
 function STATUS_DialogYesNo(message as string) as integer
     
@@ -1811,9 +1807,9 @@ function STATUS_DialogYesNo(message as string) as integer
 	LD2_SaveBuffer 2
 	LD2_CopyBuffer 1, 2
 	
-    getEaseInInterval(1)
+    Easing_doEaseIn(-1)
 	do
-        e = getEaseInInterval(0, STATUS_EASE_SPEED)
+        e = Easing_doEaseIn(0, STATUS_EASE_SPEED)
         pixels = int(e * size)
         dialog.x = halfX - pixels * modw
         dialog.y = halfY - pixels * modh
@@ -1896,7 +1892,7 @@ function STATUS_DialogYesNo(message as string) as integer
     
     Elements_Clear
     
-    getEaseOutInterval(1)
+    Easing_doEaseOut(-1)
 	do
         pixels = int(e * size)
         dialog.x = halfX - pixels * modw
@@ -1907,7 +1903,7 @@ function STATUS_DialogYesNo(message as string) as integer
         Element_Render @dialog
         LD2_RefreshScreen
         PullEvents
-        e = getEaseOutInterval(0, STATUS_EASE_SPEED)
+        e = Easing_doEaseOut(0, STATUS_EASE_SPEED)
 	loop while e > 0
     
     LD2_CopyBuffer 2, 1
@@ -1963,9 +1959,9 @@ sub STATUS_DialogOk(message as string)
 	LD2_SaveBuffer 2
 	LD2_CopyBuffer 1, 2
 	
-    getEaseInInterval(1)
+    Easing_doEaseIn(-1)
 	do
-        e = getEaseInInterval(0, STATUS_EASE_SPEED)
+        e = Easing_doEaseIn(0, STATUS_EASE_SPEED)
         pixels = int(e * size)
         dialog.x = halfX - pixels * modw
         dialog.y = halfY - pixels * modh
@@ -2017,7 +2013,7 @@ sub STATUS_DialogOk(message as string)
     
     Elements_Clear
     
-    getEaseOutInterval(1)
+    Easing_doEaseOut(-1)
 	do
         pixels = int(e * size)
         dialog.x = halfX - pixels * modw
@@ -2028,7 +2024,7 @@ sub STATUS_DialogOk(message as string)
         Element_Render @dialog
         LD2_RefreshScreen
         PullEvents
-        e = getEaseOutInterval(0, STATUS_EASE_SPEED)
+        e = Easing_doEaseOut(0, STATUS_EASE_SPEED)
 	loop while e > 0
     
     LD2_CopyBuffer 2, 1

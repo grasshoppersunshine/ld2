@@ -8,6 +8,7 @@
     #include once "modules/inc/ld2gfx.bi"
     #include once "modules/inc/mobs.bi"
     #include once "modules/inc/elements.bi"
+    #include once "modules/inc/easing.bi"
     #include once "inc/ld2e.bi"
     #include once "inc/ld2.bi"
     #include once "inc/title.bi"
@@ -158,6 +159,11 @@
         screenshake as double
     end type
     
+    type InvSlotType
+        itemId as integer
+        qty as integer
+    end type
+    
     '*******************************************************************
     '* MAP PROPS
     '*******************************************************************
@@ -297,8 +303,9 @@
     '*******************************************************************
     dim shared Inventory    (MAXINVENTORY) as integer
     dim shared InventoryMax (MAXINVENTORY) as integer
-    dim shared InvSlots     (MAXINVSLOTS) as integer
+    dim shared InvSlots     (MAXINVSLOTS) as InvSlotType
     dim shared NumInvSlots as integer
+    dim shared WeaponSlot as integer
     dim shared Player AS PlayerType
     
     '*******************************************************************
@@ -383,94 +390,121 @@ sub Player_Get (p as PlayerType)
     
 end sub
 
-function Player_AddAmmo (weaponId as integer, qty as integer) as integer
+function LD2_AddToStatusIfExists (item as integer, qty as integer) as integer
     
-    dim loaded as integer
-    dim maxload as integer
-    dim canload as integer
-    dim leftover as integer
+    dim n as integer
     
-    leftover = 0
+    for n = 0 to Inventory(ItemIds.InvSize)-1
+        if InvSlots(n).itemId = item then
+            return LD2_AddToStatus(item, qty, n)
+        end if
+    next n
     
-    select case weaponId
-    case ItemIds.Shotgun
-        maxload = Maxes.Shotgun
-    case ItemIds.Handgun
-        maxload = Maxes.Handgun
-    case ItemIds.MachineGun
-        maxload = Maxes.MachineGun
-    case ItemIds.Magnum
-        maxload = Maxes.Magnum
-    case else
-        return qty
-    end select
+    return 0
     
-    loaded = Inventory(weaponId)
-    
-    canload = maxload - loaded
-    if qty > canload then
-        leftover = qty - canload
-        qty = canload
-    end if
-    if qty > 0 then
-        Player_AddItem weaponId, qty
-    end if
-    
-    return leftover
-
 end function
 
-function LD2_AddToStatus (item as integer, qty as integer) as integer
+function LD2_AddToStatus (item as integer, qty as integer, slot as integer = -1) as integer
     
     LD2_LogDebug "LD2_AddToStatus ("+str(item)+","+str(qty)+" )"
     
+    dim slotMin as integer
+    dim slotMax as integer
+    dim spaceLeft as integer
+    dim leftover as integer
     dim added as integer
     dim i as integer
     
     if MapItems_isCard(item) then
         Inventory(item) += qty
         Player_RefreshAccess
-        return 1
+        return 0
     end if
     
-    for i = 0 to NumInvSlots-1
-        if InvSlots(i) = item then
-            Inventory(item) += qty
-            if Inventory(item) <= 0 then
-                Inventory(item) = 0
-                InvSlots(i) = 0
-            end if
-            added = 1
-            exit for
-        end if
-    next i
+    if slot > -1 then
+        slotMin = slot
+        slotMax = slot
+    else
+        slotMin = 0
+        slotMax = Inventory(ItemIds.InvSize)-1
+    end if
     
-    if (added = 0) and (qty >= 0) then
-        for i = 0 to NumInvSlots-1
-            if InvSlots(i) = 0 then
-                InvSlots(i) = item
-                Inventory(item) = qty
+    if qty = 0 then
+        for i = slotMin to slotMax
+            if InvSlots(i).itemId = item then
                 added = 1
                 exit for
             end if
         next i
+        if added = 0 then
+            for i = slotMin to slotMax
+                if InvSlots(i).itemId = 0 then
+                    InvSlots(i).itemId = item
+                    InvSlots(i).qty = 0
+                    added = 1
+                    exit for
+                end if
+            next i
+        end if
+        return 0
     end if
     
-    if added then
-        return 0
-    else
-        return 1
+    do
+        added = 0
+        for i = slotMin to slotMax
+            if InvSlots(i).itemId = item then
+                spaceLeft = InventoryMax(item) - InvSlots(i).qty
+                if qty > spaceLeft then
+                    leftover = qty - spaceLeft
+                    qty = spaceLeft
+                else
+                    leftover = 0
+                end if
+                InvSlots(i).qty += qty
+                if qty <> 0 then added = 1
+                qty = leftover
+                if InvSlots(i).qty <= 0 then
+                    InvSlots(i).itemId = 0
+                    InvSlots(i).qty = 0
+                end if
+            end if
+        next i
+    loop while (qty > 0) and (added = 1)
+    
+    if qty > 0 then
+        do
+            added = 0
+            for i = slotMin to slotMax
+                if InvSlots(i).itemId = 0 then
+                    if qty > InventoryMax(item) then
+                        leftover = qty - InventoryMax(item)
+                        qty = InventoryMax(item)
+                    else
+                        leftover = 0
+                    end if
+                    InvSlots(i).itemId = item
+                    InvSlots(i).qty = qty
+                    qty = leftover
+                    added = 1
+                    exit for
+                end if
+            next i
+        loop while (qty > 0) and (added = 1)
     end if
+    
+    LD2_DeductQty item
+    
+    return qty
     
 end function
 
 sub LD2_ClearInventorySlot (slot as integer)
     
     dim item as integer
-    item = InvSlots(slot)
+    item = InvSlots(slot).itemId
     
-    Inventory(item) = 0
-    InvSlots(slot) = 0
+    InvSlots(slot).itemId = 0
+    InvSlots(slot).qty = 0
     
     if MapItems_isCard(item) then
         Player_RefreshAccess
@@ -481,12 +515,32 @@ end sub
 sub LD2_ClearStatus ()
     
     dim item as integer
+    dim qty as integer
     dim i as integer
-    for i = 0 to NumInvSlots-1
-        item = InvSlots(i)
-        Inventory(item) = 0
-        InvSlots(i) = 0
+    dim j as integer
+    for i = 0 to Inventory(ItemIds.InvSize)-1
+        item = InvSlots(i).itemId
+        qty = InvSlots(i).qty
+        InvSlots(i).itemId = 0
+        InvSlots(i).qty = 0
+        LD2_DeductQty item
     next i
+    
+end sub
+
+sub LD2_DeductQty(itemId as integer)
+    
+    dim qty as integer
+    dim i as integer
+    
+    for i = 0 to Inventory(ItemIds.InvSize)-1
+        if itemId = InvSlots(i).itemId then
+            qty += InvSlots(i).qty
+        end if
+    next i
+    if qty < Inventory(itemId) then
+        Inventory(itemId) = qty
+    end if
     
 end sub
 
@@ -495,7 +549,7 @@ function LD2_GetStatusItem (slot as integer) as integer
     LD2_LogDebug "LD2_GetStatusItem% ("+str(slot)+" )"
     
     if slot >= 0 and slot <= NumInvSlots then
-        return InvSlots(slot)
+        return InvSlots(slot).itemId
     else
         return -1
     end if
@@ -505,7 +559,7 @@ end function
 function LD2_GetStatusAmount (slot as integer) as integer
     
     if slot >= 0 and slot <= NumInvSlots then
-        return Inventory(InvSlots(slot))
+        return InvSlots(slot).qty
     else
         return -1
     end if
@@ -742,7 +796,7 @@ function CheckMobWallHit (mob AS Mobile) as integer
   
 end function
 
-sub LD2_Drop (item as integer)
+sub LD2_Drop (slot as integer)
     
     dim n as integer
     dim x as integer, y as integer
@@ -766,10 +820,13 @@ sub LD2_Drop (item as integer)
     loop
     
     Items(n).y   = int(y / SPRITE_H) * SPRITE_H
-    Items(n).id  = item
-    Items(n).qty = Inventory(item)
+    Items(n).id  = InvSlots(slot).itemId
+    Items(n).qty = InvSlots(slot).qty
     Items(n).isVisible = 1
     Items(n).canPickup = 1
+    
+    LD2_ClearInventorySlot slot
+    LD2_DeductQty Items(n).id 
     
 end sub
 
@@ -921,7 +978,7 @@ sub Game_Init
     NumTeleports = 0
     NumFlashes = 0
     NumSectors = 0
-    NumInvSlots = 8
+    NumInvSlots = MAXINVSLOTS
     '///////////////////////////////////////////////////////////////////
     CanSaveMap = 0
     MobsWereLoaded = 0
@@ -2736,7 +2793,7 @@ sub Shakes_Add (duration as double = 1.0, intensity as double = 1.0)
         Shakes(n).duration    = 1/duration
         Shakes(n).intensity   = intensity
         Shakes(n).clock       = timer
-        Shakes(n).screenshake = getEaseInShake(0)*intensity
+        Shakes(n).screenshake = Easing_getOutput(EaseTypes.Shake, 0)*intensity
     end if
     
 end sub
@@ -2759,7 +2816,7 @@ sub Shakes_Animate (resetClocks as integer = 0)
                 exit for
             end if
         end if
-        Shakes(i).screenshake = getEaseInShake(clock)*Shakes(i).intensity
+        Shakes(i).screenshake = Easing_getOutput(EaseTypes.Shake, clock)*Shakes(i).intensity
     next i
     
 end sub
@@ -3005,29 +3062,6 @@ sub Map_UpdateShift
     
 end sub
 
-function getEaseInShake(doReset as double = 0, speed as double = 1.0, byref percent as double = 0) as double
-    
-    static clock as double
-    static e as double
-    dim d as double
-    
-    if doReset <> 0 then
-        e = iif(doReset < 1, doReset, 0)
-    else
-        e += (timer-clock)/speed
-        if e > 1 then
-            e = 1
-        end if
-    end if
-    clock = timer
-    percent = e
-    
-    d = sin(e*6*PI)*(1-e)
-    
-    return d
-    
-end function
-
 sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer = LayerIds.Tile)
     
     select case layer
@@ -3176,6 +3210,7 @@ function MapItems_Pickup () as integer
     dim i as integer
     dim n as integer
     dim success as integer
+    dim leftover as integer
 
     success = 0
 
@@ -3184,14 +3219,19 @@ function MapItems_Pickup () as integer
             continue for
         end if
         if int(Player.x + 8) >= Items(i).x and int(Player.x + 8) <= Items(i).x + 16 then
-            if LD2_AddToStatus(Items(i).id, Items(i).qty) = 0 then
+            leftover = LD2_AddToStatus(Items(i).id, Items(i).qty)
+            if leftover < Items(i).qty then
                 success = 1
                 Game_SetFlag GOTITEM
                 GotItemId = items(i).id
-                for n = i to NumItems - 2
-                    Items(n) = Items(n + 1)
-                next n
-                NumItems = NumItems - 1
+                if leftover > 0 then
+                    Items(i).qty = leftover
+                else
+                    NumItems -= 1
+                    for n = i to NumItems-1
+                        Items(n) = Items(n+1)
+                    next n
+                end if
                 exit for
             end if
         end if
@@ -6420,7 +6460,16 @@ end sub
 
 function Player_SetWeapon (itemId as integer) as integer
     
+    dim i as integer
+    
     Player.weapon = itemId
+    
+    for i = 0 to Inventory(ItemIds.InvSize)-1
+        if InvSlots(i).itemId = itemId then
+            WeaponSlot = i
+            exit for
+        end if
+    next i
     
     select case itemId
     case ItemIds.Fist
@@ -6513,23 +6562,19 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     mobtop = iif(mob.id=MobIds.Blobmine,7,0)
 
     if Player.is_shooting then return 0
-
-    if Player.weapon = ItemIds.Shotgun    and Inventory(ItemIds.Shotgun)    = 0 then return -1
-    if Player.weapon = ItemIds.Handgun    and Inventory(ItemIds.Handgun)    = 0 then return -1
-    if Player.weapon = ItemIds.MachineGun and Inventory(ItemIds.MachineGun) = 0 then return -1
-    if Player.weapon = ItemIds.Magnum     and Inventory(ItemIds.Magnum)     = 0 then return -1
-
+    if (Player.weapon <> ItemIds.Fist) and (InvSlots(WeaponSlot).qty = 0) then return -1
+    
     timeSinceLastShot = (timer - timestamp)
     
     select case Player.weapon
     case ItemIds.Shotgun
         
-        Inventory(ItemIds.Shotgun) -= 1
+        InvSlots(WeaponSlot).qty -= 1
         damage = HpDamage.Shotgun
         fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 8)
         Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.SgCrouchShoot0-1, UpperSprites.SgShoot0-1))
         Player.stillAni = Player.uAni
-        Shakes_Add 0.3, SPRITE_W*0.3
+        Shakes_Add 0.25, SPRITE_W*0.3
         
     case ItemIds.Handgun
         
@@ -6540,7 +6585,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             if (is_repeat = 1 and timeSinceLastShot < 0.45) then return 0
             if (is_repeat = 0 and timeSinceLastShot < 0.25) then return 0
         end if
-        Inventory(ItemIds.Handgun) -= 1
+        InvSlots(WeaponSlot).qty -= 1
         damage = HpDamage.Handgun
         fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 5)
         Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.HgCrouchShoot0-1, UpperSprites.HgShoot0-1))
@@ -6550,7 +6595,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     case ItemIds.MachineGun
         
         if timeSinceLastShot < 0.12 then return 0
-        Inventory(ItemIds.MachineGun) -= 1
+        InvSlots(WeaponSlot).qty -= 1
         damage = HpDamage.MachineGun
         fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 7, 5)
         Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.MgCrouchShoot0-1, UpperSprites.MgShoot0-1))
@@ -6561,12 +6606,12 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         
         if (is_repeat = 1 and timeSinceLastShot < 0.70) then return 0
         if (is_repeat = 0 and timeSinceLastShot < 0.50) then return 0
-        Inventory(ItemIds.Magnum) -= 1
+        InvSlots(WeaponSlot).qty -= 1
         damage = HpDamage.Magnum
         fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 8)
         Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.MaCrouchShoot0-1, UpperSprites.MaShoot0-1))
         Player.stillAni = Player.uAni
-        Shakes_Add 0.4, SPRITE_W*0.4
+        Shakes_Add 0.3, SPRITE_W*0.6
         
         if Player.state <> PlayerStates.Jumping then
             SetPlayerState( PlayerStates.Blocked )
@@ -6847,7 +6892,7 @@ sub Stats_Draw ()
     if Player.weapon = ItemIds.Fist then
         Font_putTextCol pad+16, pad+12+3, " INF", 15, 1
     else
-        Font_putTextCol pad+16, pad+12+3, " "+str(Inventory(Player.weapon)), 15, 1
+        Font_putTextCol pad+16, pad+12+3, " "+str(InvSlots(WeaponSlot).qty), 15, 1
     end if
     
 end sub
@@ -6991,7 +7036,8 @@ type PlayerFileData
     numInvSlots as ubyte
     inventory(MAXINVENTORY-1) as integer
     inventoryMax(MAXINVENTORY-1) as ushort
-    invslots(MAXINVSLOTS-1) as ubyte
+    invslotsitem(MAXINVSLOTS-1) as ubyte
+    invslotsqty(MAXINVSLOTS-1) as ushort
 end type
 
 type ItemFileData
@@ -7151,7 +7197,8 @@ sub Game_Save (filename as string)
         pdata.inventoryMax(n) = InventoryMax(n)
     next n
     for n = 0 to MAXINVSLOTS-1
-        pdata.invslots(n) = cast(ubyte, InvSlots(n))
+        pdata.invslotsitem(n) = cast(ubyte, InvSlots(n).itemId)
+        pdata.invslotsqty(n)  = cast(ushort, InvSlots(n).qty)
     next n
     
     dim loadfile as integer
@@ -7263,7 +7310,8 @@ function Game_Load (filename as string, roomId as integer = -1) as integer
             InventoryMax(n) = pdata.inventoryMax(n)
         next n
         for n = 0 to MAXINVSLOTS-1
-            InvSlots(n) = pdata.invslots(n)
+            InvSlots(n).itemId = pdata.invslotsitem(n)
+            InvSlots(n).qty    = pdata.invslotsqty(n)
         next n
     end if
     
@@ -7334,8 +7382,9 @@ sub Game_Reset()
     NumSwitches = 0
     NumTeleports = 0
     NumFlashes = 0
+    NumShakes = 0
     NumSectors = 0
-    NumInvSlots = 8
+    NumInvSlots = MAXINVSLOTS
     '///////////////////////////////////////////////////////////////////
     CanSaveMap = 0
     MobsWereLoaded = 0
@@ -7347,7 +7396,8 @@ sub Game_Reset()
         InventoryMax(n) = 0
     next n
     for n = 0 to MAXINVSLOTS-1
-        InvSlots(n) = 0
+        InvSlots(n).itemId = 0
+        InvSlots(n).qty = 0
     next n
     '///////////////////////////////////////////////////////////////////
     

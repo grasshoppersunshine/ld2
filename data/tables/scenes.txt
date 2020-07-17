@@ -188,10 +188,15 @@ END
 SCENE-3D
     
     JANITOR
-    Ok...
-    Here... take my mop.
-    You go call for help.
-    I'll see what I can do.
+    Did you hear that?
+    
+    LARRY
+    Yeah...
+    Please tell me that was your stomach?
+    
+    JANITOR
+    ...
+    I'm afraid not.
     
 END
 
@@ -337,6 +342,25 @@ SCENE-7A
 
 END
 
+SCENE-8A
+    
+    RADIO_STATIC
+    
+    BARNEY_RADIO
+    Larry, this is Barney. Do you copy?
+    
+    RADIO_STATIC
+    
+    LARRY_RADIO
+    Barney, I copy.
+    
+    BARNEY_RADIO
+    You won't get very far with just a green card.
+    I have a blue card in my office that you can use.
+    Search my desk and you will find it there.
+    
+END
+
 SCENE-STEVE-GONE
     
     LARRY
@@ -476,7 +500,7 @@ SCENE-FLASHLIGHT-1A
     I don't recognize this part of the building...
     ... or if we are in the same building.
     Hmm...
-    I still have my walky-talky.
+    I still have my walkie-talkie.
 
 END
 

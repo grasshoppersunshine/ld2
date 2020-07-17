@@ -258,6 +258,7 @@ dim modulesUpdated as integer
 
 args.init
 args.add "modules/common.bas"      , "-lib -x lib/libcommon.a"      , "lib/libcommon.a"
+args.add "modules/easing.bas"      , "-lib -x lib/libeasing.a"      , "lib/libeasing.a"
 args.add "modules/mobs.bas"        , "-lib -x lib/libmobs.a"        , "lib/libmobs.a"
 args.add "modules/poses.bas"       , "-lib -x lib/libposes.a"       , "lib/libposes.a"
 args.add "modules/inventory.bas"   , "-lib -x lib/libinventory.a"   , "lib/libinventory.a"

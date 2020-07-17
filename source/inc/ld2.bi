@@ -97,6 +97,7 @@ enum ItemIds
     Wrench          = 26
     ExtraLife       = 27
     WalkieTalkie    = 28
+    Instructions    = 29
     Auth            = 50
     TempAuth        = 51
     '=======================================
@@ -158,6 +159,7 @@ enum ItemIds
     BarneyData           = 120
     SteveData            = 121
     JanitorData          = 122
+    InvSize              = 123
     '=======================================
     SwapSrcA0            = 50
     SwapSrcA1            = 51
@@ -190,13 +192,16 @@ end enum
 
 enum Maxes
     Hp              = 100
+    InvSize         = 12
+    Medikit50       = 2
+    Medikit100      = 1
     Shotgun         = 8
     MachineGun      = 30
     Handgun         = 15
     Magnum          = 6
-    SgAmmo          = 80
+    SgAmmo          = 40
     HgAmmo          = 150
-    MaAmmo          = 60
+    MaAmmo          = 30
     MgAmmo          = 300
 end enum
 
@@ -781,10 +786,10 @@ enum RenderSceneFlags
 end enum
 
 declare sub LD2_BeforeUseItem (byval id as integer)
-declare sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as integer)
+declare sub LD2_UseItem (byval id as integer, byref qty as integer, byref exitMenu as integer)
 declare sub LD2_LookItem (id as integer, byref desc as string)
 declare sub AddMusic (id as integer, filepath as string, loopmusic as integer)
-declare sub AddSound (id as integer, filepath as string, loops as integer = 0)
+declare sub AddSound (id as integer, filepath as string, volume as double = 1.0, loops as integer = 0)
 declare sub AddTempSound (id as integer, filepath as string, loops as integer = 0)
 declare sub FreeTempSounds ()
 

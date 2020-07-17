@@ -731,11 +731,11 @@ sub FreeTempSounds ()
     
 end sub
 
-sub AddSound (id as integer, filepath as string, loops as integer = 0)
+sub AddSound (id as integer, filepath as string, volume as double = 1.0, loops as integer = 0)
     
     LD2_LogDebug "AddSound ("+str(id)+", "+filepath+","+str(loops)+" )"
     
-    LD2_AddSound id, DATA_DIR+"sound/"+filepath, loops
+    LD2_AddSound id, DATA_DIR+"sound/"+filepath, loops, volume
     
 end sub
 
@@ -754,7 +754,7 @@ sub LoadSounds ()
     AddSound Sounds.uiMenu   , "ui-menu.wav"
     AddSound Sounds.uiSubmenu, "ui-submenu.wav"
     AddSound Sounds.uiArrows , "ui-arrows.wav"
-    AddSound Sounds.uiSelect , "ui-select.wav"
+    AddSound Sounds.uiSelect , "ui-select.wav", 0.5
     AddSound Sounds.uiDenied , "ui-denied.wav"
     AddSound Sounds.uiInvalid, "ui-invalid.wav"
     AddSound Sounds.uiCancel , "ui-cancel.wav"
@@ -1282,13 +1282,13 @@ SUB Main
         if keyboard(KEY_LEFT ) or keyboard(KEY_A) then doAction ActionIds.RunLeft
     end if
 	IF keyboard(KEY_UP   ) or keyboard(KEY_W    ) then doAction ActionIds.LookUp
-    IF keyboard(KEY_CTRL ) or keyboard(KEY_Q    ) or mouseLB() then
+    IF keyboard(KEY_LCTRL) or keyboard(KEY_RCTRL) or keyboard(KEY_Q    ) or mouseLB() then
         doAction iif(newShot, ActionIds.Shoot, ActionIds.ShootRepeat)
         newShot = 0
     else
         newShot = 1
     end if
-    IF keyboard(KEY_ALT) or keyboard(KEY_SPACE) then
+    IF keyboard(KEY_LALT) or keyboard(KEY_RALT) or keyboard(KEY_SPACE) then
         if keyboard(KEY_DOWN) or keyboard(KEY_S) then
             doAction ActionIds.JumpDown
             newJump = 1
@@ -1306,10 +1306,10 @@ SUB Main
     
     if Game_isTestMode() then
         if keypress(KEY_R) or ((mouseRB() > 0) and newReload) then
-            Player_AddAmmo ItemIds.Shotgun, 99
-            Player_AddAmmo ItemIds.Handgun, 99
-            Player_AddAmmo ItemIds.MachineGun, 99
-            Player_AddAmmo ItemIds.Magnum, 99
+            LD2_AddToStatus ItemIds.Shotgun, 99
+            LD2_AddToStatus ItemIds.Handgun, 99
+            LD2_AddToStatus ItemIds.MachineGun, 99
+            LD2_AddToStatus ItemIds.Magnum, 99
             LD2_PlaySound Sounds.reload
             newReload = 0
         end if
@@ -2045,20 +2045,16 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             end select
             select case args(1)
             case "shotgun"
-                LD2_AddToStatus(ItemIds.Shotgun, 1)
-                Player_AddAmmo ItemIds.Shotgun, 99
+                LD2_AddToStatus(ItemIds.Shotgun, 99)
                 response = "Added SHOTGUN to inventory"
             case "handgun"
-                LD2_AddToStatus(ItemIds.Handgun, 1)
-                Player_AddAmmo ItemIds.Handgun, 99
+                LD2_AddToStatus(ItemIds.Handgun, 99)
                 response = "Added HANDGUN to inventory"
             case "machinegun"
-                LD2_AddToStatus(ItemIds.MachineGun, 1)
-                Player_AddAmmo ItemIds.MachineGun, 99
+                LD2_AddToStatus(ItemIds.MachineGun, 99)
                 response = "Added MACHINEGUN to inventory"
             case "magnum"
-                LD2_AddToStatus(ItemIds.Magnum, 1)
-                Player_AddAmmo ItemIds.Magnum, 99
+                LD2_AddToStatus(ItemIds.Magnum, 99)
                 response = "Added MAGNUM to inventory"
             case else
                 if (args(1) = "0") or (val(args(1)) <> 0) then
@@ -2441,10 +2437,10 @@ sub ItemsCheck (player as PlayerType)
     end if
     if Player_HasItem(ItemIds.BlockOfDoom) then
         if (timer - doomtime) >= 0.75 then
-            Player_AddAmmo ItemIds.Shotgun, 1
-            Player_AddAmmo ItemIds.Handgun, 1
-            Player_AddAmmo ItemIds.MachineGun, 1
-            Player_AddAmmo ItemIds.Magnum, 1
+            LD2_AddToStatusIfExists ItemIds.Shotgun, 1
+            LD2_AddToStatusIfExists ItemIds.Handgun, 1
+            LD2_AddToStatusIfExists ItemIds.MachineGun, 1
+            LD2_AddToStatusIfExists ItemIds.Magnum, 1
             doomtime = timer
         end if
     end if
@@ -2658,6 +2654,8 @@ sub NewGame
     next n
     
     Player_SetItemMaxQty ItemIds.Hp, Maxes.Hp
+    Player_SetItemMaxQty ItemIds.Medikit50 , Maxes.Medikit50
+    Player_SetItemMaxQty ItemIds.Medikit100, Maxes.Medikit100 
     Player_SetItemMaxQty ItemIds.Shotgun   , Maxes.Shotgun
     Player_SetItemMaxQty ItemIds.Handgun   , Maxes.Handgun
     Player_SetItemMaxQty ItemIds.MachineGun, Maxes.MachineGun
@@ -2665,7 +2663,10 @@ sub NewGame
     Player_SetItemMaxQty ItemIds.SgAmmo    , Maxes.SgAmmo
     Player_SetItemMaxQty ItemIds.HgAmmo    , Maxes.HgAmmo
     Player_SetItemMaxQty ItemIds.MaAmmo    , Maxes.MaAmmo
-    Player_SetItemMaxQty ItemIds.MgAmmo    , Maxes.MgAmmo    
+    Player_SetItemMaxQty ItemIds.MgAmmo    , Maxes.MgAmmo
+    Player_SetItemMaxQty ItemIds.InvSize   , Maxes.InvSize
+    
+    LD2_AddToStatus(ItemIds.Instructions, 1)
     
     Map_Load "14th.ld2", 1, 1
     
@@ -2674,6 +2675,7 @@ sub NewGame
     player.is_visible = 1
     Player_SetItemQty ItemIds.Lives, StartVals.Lives
     Player_SetItemQty ItemIds.Hp, Maxes.Hp
+    Player_SetItemQty ItemIds.InvSize, 8
     
     Player_Update player
     
@@ -2696,14 +2698,10 @@ sub NewGame
             LD2_AddToStatus(ItemIds.RedCard, 1)
         end if
         if (Boot_HasCommandArg("noguns") = 0) and (Boot_HasCommandArg("shotgun,handgun,machinegun,magnum,allguns") = 0) then
-            LD2_AddToStatus(ItemIds.Handgun, 0)
-            LD2_AddToStatus(ItemIds.Shotgun, 0)
-            LD2_AddToStatus(ItemIds.MachineGun, 0)
-            LD2_AddToStatus(ItemIds.Magnum, 0)
-            Player_AddAmmo ItemIds.Handgun, 99
-            Player_AddAmmo ItemIds.MachineGun, 99
-            Player_AddAmmo ItemIds.Shotgun, 99
-            Player_AddAmmo ItemIds.Magnum, 99
+            LD2_AddToStatus(ItemIds.Handgun, 99)
+            LD2_AddToStatus(ItemIds.Shotgun, 99)
+            LD2_AddToStatus(ItemIds.MachineGun, 99)
+            LD2_AddToStatus(ItemIds.Magnum, 99)
             'LD2_AddToStatus(ItemIds.Medikit100, 1)
             LD2_AddToStatus(ItemIds.Flashlight, 1)
             LD2_AddToStatus(ItemIds.JanitorNote, 1)
@@ -2714,26 +2712,18 @@ sub NewGame
             arg = Boot_GetNextCommandArg()
             select case arg
             case "shotgun"
-                LD2_AddToStatus(ItemIds.Shotgun, 1)
-                Player_AddAmmo ItemIds.Shotgun, 99
+                LD2_AddToStatus(ItemIds.Shotgun, 99)
             case "handgun"
-                LD2_AddToStatus(ItemIds.Handgun, 1)
-                Player_AddAmmo ItemIds.Handgun, 99
+                LD2_AddToStatus(ItemIds.Handgun, 99)
             case "machinegun"
-                LD2_AddToStatus(ItemIds.MachineGun, 1)
-                Player_AddAmmo ItemIds.MachineGun, 99
+                LD2_AddToStatus(ItemIds.MachineGun, 99)
             case "magnum"
-                LD2_AddToStatus(ItemIds.Magnum, 1)
-                Player_AddAmmo ItemIds.Magnum, 99
+                LD2_AddToStatus(ItemIds.Magnum, 99)
             case "allguns"
-                LD2_AddToStatus(ItemIds.Shotgun, 1)
-                LD2_AddToStatus(ItemIds.Handgun, 1)
-                LD2_AddToStatus(ItemIds.MachineGun, 1)
-                LD2_AddToStatus(ItemIds.Magnum, 1)
-                Player_AddAmmo ItemIds.Shotgun, 99
-                Player_AddAmmo ItemIds.Handgun, 99
-                Player_AddAmmo ItemIds.MachineGun, 99
-                Player_AddAmmo ItemIds.Magnum, 99
+                LD2_AddToStatus(ItemIds.Shotgun, 99)
+                LD2_AddToStatus(ItemIds.Handgun, 99)
+                LD2_AddToStatus(ItemIds.MachineGun, 99)
+                LD2_AddToStatus(ItemIds.Magnum, 99)
             case "greencard"
                 LD2_AddToStatus(ItemIds.GreenCard, 1)
             case "bluecard"
@@ -2838,40 +2828,25 @@ sub LD2_BeforeUseItem (byval id as integer)
     
 end sub
 
-sub LD2_UseItem (byval id as integer, byval qty as integer, byref exitMenu as integer)
+sub LD2_UseItem (byval id as integer, byref qty as integer, byref exitMenu as integer)
     
     dim leftover as integer
-    dim carrying as integer
-    dim ammoId as integer
     dim success as integer
     
     success = 1
     
     select case id
     case ItemIds.Shotgun, ItemIds.Handgun, ItemIds.MachineGun, ItemIds.Magnum '// need to separate use from add
-        if qty = 1 then
+        if qty = 0 then
             CustomActions(0).actionId = ActionIds.Equip
             CustomActions(0).itemId   = id
             DoAction ActionIds.Equip, id
-        elseif qty > 1 then
-            select case id
-            case ItemIds.Shotgun   : ammoId = ItemIds.SgAmmo
-            case ItemIds.Handgun   : ammoId = ItemIds.HgAmmo
-            case ItemIds.MachineGun: ammoId = ItemIds.MgAmmo
-            case ItemIds.Magnum    : ammoId = ItemIds.MaAmmo
-            end select
-            carrying = Player_GetItemQty(ammoId)
-            qty = iif(qty > carrying, carrying, qty)
-            leftover = Player_AddAmmo(id, qty)
-            if leftover = 1 then
-                LD2_AddToStatus ammoId, 2: LD2_AddToStatus ammoId, -1
-            elseif leftover > 1 then
-                LD2_AddToStatus ammoId, leftover
-            end if
+        elseif qty > 0 then
+            qty -= LD2_AddToStatus(id, qty)
             LD2_PlaySound Sounds.equip
         end if
     case ItemIds.Hp
-        Player_AddItem id, qty
+        LD2_AddToStatus id, qty
         LD2_PlaySound Sounds.useMedikit
     case ItemIds.ExtraLife
         Player_AddItem ItemIds.Lives, qty

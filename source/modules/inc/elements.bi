@@ -48,8 +48,6 @@ type ElementType
     render_text_w as integer
     render_text_h as integer
     render_text_spacing as integer
-    render_num_line_breaks as integer
-    render_line_breaks(32) as integer
 end type
 
 declare sub Elements_Init( _
@@ -77,7 +75,8 @@ declare sub Elements_SetSpriteHeight(h as integer)
 
 declare sub Element_Init(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
 declare sub Element_Render(e as ElementType ptr)
-declare sub Element_RenderPrepare(e as ElementType ptr)
+declare sub Element_FilterText(byref text as string)
+declare sub Element_RenderPrepare(e as ElementType ptr, anchorText as string = "", byref anchorLine as integer = 0)
 declare sub Element_RenderParent(e as ElementType ptr)
 declare function Element_GetTextWidth (e as ElementType ptr, text as string = "") as integer
 declare function Element_GetParentX(e as ElementType ptr, x as integer = 0) as integer

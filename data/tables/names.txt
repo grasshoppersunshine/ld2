@@ -24,6 +24,7 @@ MACHINEGUN        , Machine Gun     , Machine Gun
 HANDGUN           , Handgun         , Handgun
 MAGNUM            , Magnum          , Magnum
 WALKIETALKIE      , Walkie-Talkie   , Walkie-Talkie
+INSTRUCTIONS      , How to Play     , How to Play Instructions
 MGAMMO            , MG Ammo         , MG Ammo
 EXTRALIFE         , Extra Life      , Extra Life
 ACTIVE410         , Active 410      , Execute "SceneGooGone" Scene

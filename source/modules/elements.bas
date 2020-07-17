@@ -46,6 +46,8 @@ dim shared CallbackSpriteMetrics as sub(byval spriteId as integer, byval spriteS
 '* END PRIVATE CALLBACK VARS
 '***********************************************************************
 
+const NEW_LINE = chr(10)
+
 '***********************************************************************
 '* CALLBACK SETTERS
 '***********************************************************************
@@ -200,6 +202,7 @@ end function
 function Element_GetTextWidth (e as ElementType ptr, text as string = "") as integer
     
     dim char as string * 1
+    dim maxpixels as integer
     dim pixels as integer
     dim n as integer
     dim d as double
@@ -214,11 +217,20 @@ function Element_GetTextWidth (e as ElementType ptr, text as string = "") as int
     d = (FONT_W*e->text_spacing)-FONT_W
     textSpacing = int(d)
     
+    maxpixels = 0
     pixels = 0
     for n = 1 to len(text)
         char = mid(text, n, 1)
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
+        select case char
+        case NEW_LINE, "@"
+            if pixels > maxpixels then maxpixels = pixels
+            pixels = 0
+            continue for
+        case else
+            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
+        end select
     next n
+    if pixels > maxpixels then maxpixels = pixels
     
     return pixels
     
@@ -271,15 +283,37 @@ sub Element_Init(e as ElementType ptr, text as string = "", text_color as intege
     e->render_outer_w = 0: e->render_outer_h = 0
     e->render_text_w = 0: e->render_text_h = 0
     e->render_text_spacing = 0
-    e->render_num_line_breaks = 0
-    for n = 0 to 31: e->render_line_breaks(n) = 0: next n
     
 end sub
 
-sub Element_RenderPrepare(e as ElementType ptr)
+sub Element_FilterText(byref text as string)
+    
+    dim filtered as string
+    dim char as string*1
+    dim n as integer
+    
+    filtered = ""
+    for n = 1 to len(text)
+        char = mid(text, n, 1)
+        select case char
+        case "`"
+            filtered += !"\""
+        case "\", NEW_LINE
+            filtered += NEW_LINE
+        case else
+            if (FontVal(char) >= 0) and (FontVal(char) <= 64) then
+                filtered += char
+            end if
+        end select
+    next n
+    text = filtered
+    
+end sub
+
+sub Element_RenderPrepare(e as ElementType ptr, anchorText as string = "", byref anchorLine as integer = 0)
     
     dim text as string
-    dim char as string * 1
+    dim char as string*1
     
     dim d as double
     
@@ -290,17 +324,13 @@ sub Element_RenderPrepare(e as ElementType ptr)
     
     dim newText as string
     dim numLineBreaks as integer
-    dim numAutoBreaks as integer
-    dim lineChars as integer
-    dim maxLineChars as integer
     dim maxpixels as integer
     dim pixels as integer
-    
-    dim lineBreaks(32) as integer
     
     dim textWidth as integer
     dim textHeight as integer
     dim textSpacing as integer
+    dim charWidth as integer
     
     dim totalWidth as integer
     dim totalHeight as integer
@@ -326,69 +356,69 @@ sub Element_RenderPrepare(e as ElementType ptr)
     d = (FONT_W*e->text_spacing)-FONT_W: textSpacing = int(d)
     
     text = ucase(e->text)
+    Element_FilterText text
+    if left(text, 12) = "-MONOSPACE-"+NEW_LINE then
+        text = right(text, len(text)-12)
+        e->text_is_monospace = 1
+    end if
     
     pixels = 0
     maxpixels = 0
     for n = 1 to len(text)
         char = mid(text, n, 1)
-        if char = "\" then
+        select case char
+        case NEW_LINE
             if pixels > maxpixels then maxpixels = pixels
             pixels = 0
             continue for
-        end if
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
+        case "@"
+            continue for
+        case else
+            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
+        end select
     next n
     if pixels > maxpixels then maxpixels = pixels
     textWidth = maxpixels
     
     newText = ""
     numLineBreaks = 0
-    maxLineChars = 0
-    numAutoBreaks = 0
-    lineChars = 0
     pixels = 0
     for n = 1 to len(text)
-        char = mid(text, n, 1)
-        if (char = "\") then
-            if numLineBreaks < 32 then
-                lineBreaks(numLineBreaks) = n-numLineBreaks
-                numLineBreaks += 1
-                if lineChars > maxLineChars then
-                    maxLineChars = lineChars
-                    lineChars = 0
-                end if
-                pixels = 0
+        if len(anchorText) then
+            if mid(text, n, len(anchorText)) = anchorText then
+                anchorLine = numLineBreaks
             end if
-        else
-            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char))) + iif(n < len(text), textSpacing, 0)
-            if (e->w > -1) and (pixels > e->w) then
-                numAutoBreaks += 1
-                pixels -= e->w
-                if lineChars > maxLineChars then
-                    maxLineChars = lineChars
-                    lineChars = 0
-                end if
-            elseif (parentW > 0) and (pixels > parentW) then
-                numAutoBreaks += 1
-                pixels -= parentW
-                if lineChars > maxLineChars then
-                    maxLineChars = lineChars
-                    lineChars = 0
-                end if
-            end if
-            newText += char
-            lineChars += 1
         end if
+        char = mid(text, n, 1)
+        select case char
+        case NEW_LINE
+            numLineBreaks += 1
+            pixels = 0
+            newText += char
+            continue for
+        case "@"
+            newText += char
+            continue for
+        case else
+            charWidth = iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))
+            pixels += charWidth
+            if (e->w > -1) and (pixels > e->w) then
+                numLineBreaks += 1
+                pixels = charWidth
+            elseif (parentW > 0) and (pixels > parentW) then
+                numLineBreaks += 1
+                pixels = charWidth
+            end if
+            pixels += iif(n < len(text), textSpacing, 0)
+            newText += char
+        end select
     next n
     text = newText
-    if numLineBreaks = 0 then
-        maxLineChars = len(newText)
-    end if
     
     if e->w = -1 then e->is_auto_width  = 1
     if e->h = -1 then e->is_auto_height = 1
     if e->is_auto_width  then e->w = textWidth
-    if e->is_auto_height then e->h = (numLineBreaks+numAutoBreaks+1)*textHeight
+    if e->is_auto_height then e->h = textHeight*(numLineBreaks+1)
     
     totalWidth  = e->w+e->padding_x*2+e->border_size*2
     totalHeight = e->h+e->padding_y*2+e->border_size*2
@@ -436,10 +466,6 @@ sub Element_RenderPrepare(e as ElementType ptr)
     e->render_text_w = textWidth
     e->render_text_h = textHeight
     e->render_text_spacing = textSpacing
-    for n = 0 to numLineBreaks-1
-        e->render_line_breaks(n) = lineBreaks(n)
-    next n
-    e->render_num_line_breaks = numLineBreaks
     
 end sub
 
@@ -455,8 +481,6 @@ sub Element_Render(e as ElementType ptr)
     dim fx as integer, fy as integer
     dim n as integer
     dim i as integer
-    
-    dim idx as integer
     
     dim lft as integer, rgt as integer
     dim top as integer, btm as integer
@@ -545,7 +569,6 @@ sub Element_Render(e as ElementType ptr)
         end if
     end if
     
-    idx = 0
     pixels = 0
     _word = ""
     printWord = 0
@@ -560,6 +583,7 @@ sub Element_Render(e as ElementType ptr)
         e->is_rendered = 1
         exit sub
     end if
+    dim column as integer
     lookAhead = 0
     prevWordBreak = 0
     textLength = iif(e->text_length > -1, e->text_length, len(text))
@@ -568,38 +592,35 @@ sub Element_Render(e as ElementType ptr)
         if char = " " then
             printWord = 1
         end if
-        if e->render_num_line_breaks > 0 then
-            if n = e->render_line_breaks(idx) then
-                idx += 1
-                printWord = 1
-                newLine = 1
-            end if
+        if char = "@" then
+            printWord = 1
+        end if
+        if char = NEW_LINE then
+            printWord = 1
+            newLine = 1
         end if
         if n = len(text) then
             printWord = 1
             _word += char
-            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), e->render_text_spacing, 0)
+            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))
         end if
         if (n = textLength) and (printWord = 0) then
             lookAhead = 1
         end if
         if lookAhead and (printWord or newLine) then
             lookAhead = 0
-            if pixels > e->w then
+            if pixels > e->w+e->render_text_spacing then
                 printWord = 0
             else
                 _word = left(_word, textLength-prevWordBreak+1)
             end if
         end if
         if printWord and (len(_word) > 0) then
-            if doLTrim then
-                _word = ltrim(_word)
-                doLtrim = 0
-            end if
-            if pixels > e->w then
+            printWord = 0
+            if pixels > e->w+e->render_text_spacing then
                 fy += e->render_text_h
                 fx = x
-                _word = ltrim(_word)
+                _word = trim(_word)
                 if fy+FONT_H > e->render_visible_y+e->render_visible_h then
                     exit for
                 end if
@@ -614,20 +635,27 @@ sub Element_Render(e as ElementType ptr)
             _word = ""
             pixels = fx - x
             prevWordBreak = n
+            if char = "@" then
+                char = ""
+                pixels = column*(FONT_W+e->render_text_spacing)
+                fx = x + pixels
+            end if
         end if
         if newLine then
+            newLine = 0
             pixels = 0
+            column = 0
             fy += e->render_text_h
             fx = x
-            doLtrim = 1
             if fy+FONT_H > e->render_visible_y+e->render_visible_h then
                 exit for
             end if
         end if
-        _word += char
-        pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), e->render_text_spacing, 0)
-        newLine = 0
-        printWord = 0
+        if char <> NEW_LINE then
+            _word += char
+            column += 1
+            pixels += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(char)))+iif(n < len(text), e->render_text_spacing, 0)
+        end if
         if (n >= textLength) and (lookAhead = 0) then
             exit for
         end if
