@@ -361,6 +361,31 @@ SCENE-8A
     
 END
 
+SCENE-RADIO-01
+    
+    #RADIO_STATIC
+    
+    LARRY_RADIO
+    Barney, come in. Over.
+    
+    #RADIO_STATIC
+    
+    BARNEY_RADIO
+    Larry? I'm here. Over.
+    
+    LARRY_RADIO
+    What's the plan?
+    
+    BARNEY_RADIO
+    Go to my office and search my desk. You should find a blue access card there.
+    
+    LARRY_RADIO
+    I copy that.
+    
+    #RADIO_STATIC
+    
+END
+
 SCENE-STEVE-GONE
     
     LARRY

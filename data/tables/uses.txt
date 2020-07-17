@@ -37,6 +37,7 @@ CHEMICAL409      , HAS , CHEMICAL409    ,   1, keep   , "Larry doesn't feel like
 CHEMICAL410      , EQ  , CALLBACK       ,   0, keep   , "I can't use this here."
 CHEMICAL410      , USE , CHEMICAL410    ,   1, discard, "Used Chemical 410"
 JANITORNOTE      , HAS , JANITORNOTE    ,   1, keep   , "Not usable."
+WALKIETALKIE     , USE , WALKIETALKIE   ,   0, keep   , ""
 ELEVATORMENU     , USE , ELEVATORMENU   ,   1, keep   , ""
 NOVAHEART        , HAS , NOVAHEART      ,   1, keep   , "Used automatically when health drops."
 BLOCKOFDOOM      , HAS , BLOCKOFDOOM    ,   1, keep   , "Used automatically when ammo drops."

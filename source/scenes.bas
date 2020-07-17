@@ -25,6 +25,8 @@ declare function SceneWeapons2Go() as integer
 declare function SceneWeapons3Go() as integer
 declare function ScenePortalGo() as integer
 
+declare function SceneHT01Go() as integer
+
 declare sub Scene1EndConditions ()
 declare sub Scene3EndConditions ()
 declare sub Scene4EndConditions ()
@@ -42,6 +44,8 @@ declare sub SceneGotYellowCardEndConditions ()
 declare sub SceneWeapons2EndConditions ()
 declare sub SceneWeapons3EndConditions ()
 declare sub ScenePortalEndConditions ()
+
+declare sub SceneHT01EndConditions ()
 
 function ContinueAfterSlowMo(seconds as double) as integer
     dim pausetime as double
@@ -619,6 +623,7 @@ sub Scene5EndConditions()
     Player_SetItemQty ItemIds.SceneElevator, 1
     Player_Hide
     Map_LockElevators
+    FreeTempSounds
     
 end sub
 
@@ -630,7 +635,7 @@ function Scene5Go() as integer
 
     LD2_SetSceneMode LETTERBOX
     
-    AddSound Sounds.snarl   , "splice/snarl.wav"
+    AddTempSound Sounds.snarl   , "splice/snarl.wav"
 
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
     LarryPose.x = Guides.SceneElevator: LarryPose.y =  112
@@ -1844,4 +1849,62 @@ function ScenePortalGo () as integer
     
     return 0
     
+end function
+
+sub SceneHT01
+    
+    if SceneHT01Go() then
+        LD2_FadeOut 2
+        SceneHT01EndConditions
+        RenderScene RenderSceneFlags.NotPutToScreen
+        LD2_FadeIn 2
+    else
+        SceneHT01EndConditions
+    end if
+    
+end sub
+
+sub SceneHT01EndConditions
+    
+    ClearPoses
+    LD2_SetSceneMode MODEOFF
+    FreeTempSounds
+    
+end sub
+
+function SceneHT01Go() as integer
+    
+    dim LarryPose as PoseType
+    dim BarneyPose as PoseType
+    
+    AddTempSound Sounds.radioBeep, "radio-beep.wav"
+    AddTempSound Sounds.radioStatic, "radio-static.wav"
+    
+    LD2_SetSceneMode LETTERBOX
+    
+    GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Radio
+    GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
+    
+    LarryPose.x = Player_GetX: LarryPose.y = Player_GetY
+    LarryPose.isFlipped = Player_GetFlip
+    BarneyPose.setHidden 1
+    
+    ClearPoses
+    AddPose @LarryPose
+    AddPose @BarneyPose
+    
+    if ContinueAfterSeconds(0.25) then return 1
+    LD2_PlaySound Sounds.radioBeep
+    if ContinueAfterSeconds(0.5) then return 1
+    LD2_PlaySound Sounds.radioStatic
+    
+    if ContinueAfterSeconds(1.0) then return 1
+    
+    if DoScene("SCENE-RADIO-01") then return 1
+    
+    LD2_PlaySound Sounds.radioStatic
+    if ContinueAfterSeconds(1.0) then return 1
+    
+    return 0
+
 end function

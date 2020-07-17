@@ -18,3 +18,5 @@ declare sub SceneCaptured ()
 declare sub SceneVentEscape ()
 declare sub ScenePortal ()
 declare sub SceneTheEnd ()
+
+declare sub SceneHT01 ()

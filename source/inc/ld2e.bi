@@ -221,6 +221,7 @@ declare sub Player_SetXY (x as double, y as double)
 declare sub Player_Stop()
 declare function Player_GetX() as double
 declare function Player_GetY() as double
+declare function Player_GetFlip() as integer
 declare sub Player_Hide ()
 declare sub Player_Unhide ()
 declare sub Player_Update (p as PlayerType)

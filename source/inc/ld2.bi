@@ -597,6 +597,8 @@ enum Sounds
     '//
     squishy
     lookMetal
+    radioBeep
+    radioStatic
 end enum
 
 enum EditSounds

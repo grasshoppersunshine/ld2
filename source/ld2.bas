@@ -716,7 +716,7 @@ sub AddTempSound (id as integer, filepath as string, loops as integer = 0)
     
     TempSoundIds(NumTempSounds-1) = id
     
-    AddSound id, filepath, loops
+    AddSound id, filepath, 1.0, loops
     
 end sub
 
@@ -1098,6 +1098,11 @@ SUB Main
             e.text = left(consoleDialog.text, GetTextInputCursor()+1)
             Font_putTextCol consoleDialog.x+consoleDialog.padding_x+Element_GetTextWidth(@e)+1, consoleDialog.y+consoleDialog.padding_y, "_", 15, 1
         end if
+    end if
+    
+    if (showStatusScreen = 0) and (SceneCallback <> 0) then
+        SceneCallback()
+        SceneCallback = 0
     end if
     
     Player_Get player
@@ -1650,11 +1655,6 @@ sub SceneCheck (player as PlayerType)
                 moveToX = -1
             end if
         end if
-    end if
-    
-    if SceneCallback <> 0 then
-        SceneCallback()
-        SceneCallback = 0
     end if
     
     if Player_HasItem(ItemIds.SceneTheEnd) then
@@ -2666,8 +2666,6 @@ sub NewGame
     Player_SetItemMaxQty ItemIds.MgAmmo    , Maxes.MgAmmo
     Player_SetItemMaxQty ItemIds.InvSize   , Maxes.InvSize
     
-    LD2_AddToStatus(ItemIds.Instructions, 1)
-    
     Map_Load "14th.ld2", 1, 1
     
     player.x = 92
@@ -2676,6 +2674,9 @@ sub NewGame
     Player_SetItemQty ItemIds.Lives, StartVals.Lives
     Player_SetItemQty ItemIds.Hp, Maxes.Hp
     Player_SetItemQty ItemIds.InvSize, 8
+    
+    'LD2_AddToStatus(ItemIds.Instructions, 1)
+    LD2_AddToStatus(ItemIds.WalkieTalkie, 1)
     
     Player_Update player
     
@@ -2856,6 +2857,9 @@ sub LD2_UseItem (byval id as integer, byref qty as integer, byref exitMenu as in
         exitMenu = 1
     case ItemIds.ElevatorMenu
         Game_setFlag(ELEVATORMENU)
+        exitMenu = 1
+    case ItemIds.WalkieTalkie
+        SceneCallback = @SceneHT01
         exitMenu = 1
     end select
     

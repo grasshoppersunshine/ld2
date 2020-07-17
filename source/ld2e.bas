@@ -6210,6 +6210,12 @@ function Player_GetY() as double
     
 end function
 
+function Player_GetFlip() as integer
+    
+    return Player._flip
+    
+end function
+
 sub Player_Update(p as PlayerType)
     
     Player = p
