@@ -5,11 +5,12 @@
 #include once "modules/inc/ld2snd.bi"
 #include once "inc/ld2.bi"
 #include once "inc/ld2e.bi"
+#include once "inc/enums.bi"
 #include once "inc/scenes.bi"
 
 declare function Scene1Go () as integer
 declare function Scene3Go () as integer
-declare function Scene4Go (fadeIn as integer=0) as integer
+declare function Scene4Go () as integer
 declare function Scene5Go () as integer
 declare function Scene6Go () as integer
 declare function Scene7Go () as integer
@@ -46,6 +47,20 @@ declare sub SceneWeapons3EndConditions ()
 declare sub ScenePortalEndConditions ()
 
 declare sub SceneHT01EndConditions ()
+
+declare sub SceneInit(sceneCallback as function() as integer, endConditionsCallback as sub(), roomId as integer = -1, playerStartX as integer = -1, playerStartY as integer = -1, playerStartFlip as integer = -1)
+declare sub SceneGo()
+declare sub BeforeScene()
+declare sub AfterScene(skippedScene as integer = 0)
+declare function SkipScene() as integer
+
+dim shared SCENE_CALLBACK as function() as integer
+dim shared END_CONDITIONS_CALLBACK as sub()
+dim shared SCENE_ROOM_ID as integer
+dim shared PLAYER_START_X as double
+dim shared PLAYER_START_Y as double
+dim shared PLAYER_START_FLIP as integer
+
 
 function ContinueAfterSlowMo(seconds as double) as integer
     dim pausetime as double
@@ -153,47 +168,98 @@ function PanPose(pose as PoseType ptr, vx as integer, vy as integer, mapSquaresP
     
 end function
 
+sub BeforeScene()
+    
+    if (SCENE_ROOM_ID <> -1) and (Player_GetCurrentRoom() <> SCENE_ROOM_ID) then
+        Map_Load RoomToFilename(SCENE_ROOM_ID)
+    end if
+    
+    if (PLAYER_START_X <> -1) or (PLAYER_START_Y <> -1) and ((int(Player_GetX()) <> PLAYER_START_X) or (int(Player_GetY()) <> PLAYER_START_Y)) then
+        Player_SetXY PLAYER_START_X, PLAYER_START_Y
+        if PLAYER_START_FLIP <> -1 then
+            Player_SetFlip PLAYER_START_FLIP
+        end if
+        LD2_FadeOut 2
+        FadeOutMusic 0.5
+        LD2_StopMusic
+        Map_UpdateShift 1
+        LD2_SetSceneMode LETTERBOX
+        RenderScene RenderSceneFlags.NotPutToScreen
+        LD2_FadeIn 2
+    else
+        LD2_SetSceneMode LETTERBOX
+        Map_UpdateShift 1
+    end if
+    
+    ClearPoses
+    
+end sub
+
+sub AfterScene(skippedScene as integer = 0)
+    
+    if END_CONDITIONS_CALLBACK <> 0 then
+        END_CONDITIONS_CALLBACK()
+    end if
+    ClearPoses
+    LD2_SetSceneMode MODEOFF
+    SceneRefreshMobs
+    FreeTempSounds
+    
+    if skippedScene then
+        RenderScene RenderSceneFlags.NotPutToScreen
+        SceneFadeIn 0.5
+    end if
+    
+end sub
+
+function SkipScene() as integer
+    
+    SceneFadeOut 0.5
+    
+    return 1
+    
+end function
+
+sub SceneInit(sceneCallback as function() as integer, endConditionsCallback as sub(), roomId as integer = -1, playerStartX as integer = -1, playerStartY as integer = -1, playerStartFlip as integer = -1)
+    
+    SCENE_CALLBACK = sceneCallback
+    END_CONDITIONS_CALLBACK = endConditionsCallback
+    SCENE_ROOM_ID = roomId
+    PLAYER_START_X = playerStartX
+    PLAYER_START_Y = playerStarty
+    PLAYER_START_FLIP = playerStartFlip
+    GameSetFlag MUSICFADEIN
+    
+end sub
+
+sub SceneGo
+    
+    dim skipped as integer
+    
+    BeforeScene
+    skipped = SCENE_CALLBACK()
+    AfterScene skipped
+    
+end sub
 
 sub Scene1 ()
     
-    if Player_GetCurrentRoom() <> Rooms.LarrysOffice then
-        Map_Load "14th.ld2"
-    end if
-    ClearPoses
-    LD2_SetSceneMode LETTERBOX
-    Player_SetXY int(Guides.SceneIntro), int(Guides.Floor)
-    Player_SetFlip 0
-    Map_UpdateShift
-    
-    if Scene1Go() then
-        SceneFadeOut 0.5
-        Scene1EndConditions
-        SceneFadeIn 0.5
-    else
-        Scene1EndConditions
-    end if
+    SceneInit @Scene1Go, @Scene1EndConditions, Rooms.LarrysOffice
+    SceneGo
     
 end sub
 
 sub Scene1EndConditions()
     
-    ClearPoses
-    LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneIntro, 1
-    
     Player_SetItemQty ItemIds.SteveData, encodeMobData(14, SPRITE_W*10.125, Guides.Floor, MobStates.PassedOut, 1)
     Player_SetItemQty ItemIds.JanitorData, encodeMobData(14, SPRITE_W*74, Guides.Floor, MobStates.Go, 1)
-    SceneRefreshMobs
-    
-    FreeTempSounds
     
 end sub
 
-function Scene1Go () as integer
+function Scene1Go() as integer
 
-	IF Game_isDebugMode() THEN LD2_Debug "Scene1Go()"
-
-    Mobs_Clear
+	Mobs_Clear
     
     AddTempSound Sounds.kickvending, "kick.wav"
     AddTempSound Sounds.sodacanopen, "splice/sodacanopen.wav"
@@ -217,19 +283,18 @@ function Scene1Go () as integer
 
 	LD2_RenderFrame
 	RenderPoses
-    if SceneFadeIn(1.0) then return 1
+    if SceneFadeIn(1.0) then return SkipScene()
 
-	'FadeInMusic Tracks.Wandering, 1.0
-    LD2_PlayMusic Tracks.Wandering
-    if ContinueAfterSeconds(1.0) then return 1
+	SceneFadeInMusic 1.0, Tracks.Wandering
+    if ContinueAfterSeconds(1.0) then return SkipScene()
 	
     dim escaped as integer
     dim x as integer
     dim i as integer
         
-    if SceneKeySkip() then return 1
+    if SceneKeySkip() then return SkipScene()
 
-    if DoScene("SCENE-1A") then return 1 '// Well Steve, that was a good game of chess
+    if DoScene("SCENE-1A") then return SkipScene() '// Well Steve, that was a good game of chess
 
     '- Steve walks to soda machine
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Walking
@@ -242,14 +307,14 @@ function Scene1Go () as integer
         RenderScene
         ContinueAfterSeconds 0.0333
         PullEvents
-        if SceneKeySkip() then return 1
+        if SceneKeySkip() then return SkipScene()
     next x
 
     StevePose.x = leftX+70
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Talking
     RenderScene
 
-    if DoScene("SCENE-1B") then return 1 '// Hey, you got a quarter?
+    if DoScene("SCENE-1B") then return SkipScene() '// Hey, you got a quarter?
 
     '- Steve kicks the soda machine
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Kicking
@@ -263,7 +328,7 @@ function Scene1Go () as integer
         end if
         ContinueAfterSeconds 0.3333
         PullEvents
-        if SceneKeySkip() then return 1
+        if SceneKeySkip() then return SkipScene()
     next i
     
     ContinueAfterSeconds 0.5
@@ -276,7 +341,7 @@ function Scene1Go () as integer
         StevePose.nextFrame
         ContinueAfterSeconds 0.6667
         PullEvents
-        if SceneKeySkip() then return 1
+        if SceneKeySkip() then return SkipScene()
     next i
     
     'StevePose.btmMod = 2
@@ -288,7 +353,7 @@ function Scene1Go () as integer
     LD2_PlaySound Sounds.sodacanopen
     
     SceneFadeOut 0.20
-    if DoScene("SCENE-1C") then return 1 '// Steve drinks the cola!
+    if DoScene("SCENE-1C") then return SkipScene() '// Steve drinks the cola!
     
     '// Steve looks ill
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Surprised
@@ -299,7 +364,7 @@ function Scene1Go () as integer
 
     ContinueAfterSeconds  1.3333
 
-    if DoScene("SCENE-1D") then return 1 '// Larry, I don't feel so good
+    if DoScene("SCENE-1D") then return SkipScene() '// Larry, I don't feel so good
     
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.PassedOut
     RenderScene
@@ -308,9 +373,9 @@ function Scene1Go () as integer
 
     ContinueAfterSeconds 1.3333
 
-    if DoScene("SCENE-1E") then return 1 '// Steve! I gotta get help1
+    if DoScene("SCENE-1E") then return SkipScene() '// Steve! I gotta get help1
     SceneFadeOut 0.20
-    if DoScene("SCENE-1F") then return 1 '// The Journey Begins...Again!!
+    if DoScene("SCENE-1F") then return SkipScene() '// The Journey Begins...Again!!
     RenderScene RenderSceneFlags.NotPutToScreen
     SceneFadeIn 1.0
 
@@ -318,7 +383,7 @@ function Scene1Go () as integer
     WaitForKeyup(KEY_SPACE)
     
     return 0
-
+    
 end function
 
 sub Scene3()
@@ -330,7 +395,7 @@ sub Scene3()
     LD2_SetSceneMode LETTERBOX
     Player_SetXY int(Guides.SceneJanitor), int(Guides.Floor)
     Player_SetFlip 0
-    Map_UpdateShift
+    Map_UpdateShift 1
     
     if Scene3Go() then
         LD2_FadeOut 2
@@ -351,7 +416,7 @@ sub Scene3EndConditions()
     
     Player_SetXY 240, 144
     Player_SetFlip 1
-    Map_SetXShift 0
+    Map_UpdateShift
     
 end sub
 
@@ -387,7 +452,7 @@ function Scene3Go () as integer
 
     if ContinueAfterSeconds(0.5) then return 1
 
-    FadeOutMusic 1.0
+    SceneFadeOutMusic 1.0
     LD2_StopMusic
 
     if DoScene("SCENE-3A") then return 1 '// Hey, you a doctor?
@@ -401,7 +466,7 @@ function Scene3Go () as integer
     
     Player_SetXY LarryPose.x, LarryPose.y
     Player_SetFlip LarryPose.getFlip()
-    Map_SetXShift 0
+    Map_UpdateShift 1
     
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.PassedOut
     StevePose.x = 170: StevePose.y =  144: StevePose.isFlipped = 1
@@ -417,52 +482,28 @@ end function
 
 sub Scene4()
     
-    dim fadeIn as integer
-    
-    if Player_GetCurrentRoom() <> Rooms.LarrysOffice then
-        Map_Load "14th.ld2"
-    end if
-    if int(Player_GetX()) <> Guides.SceneJanitorDies then
-        fadeIn = 1
-    end if
-    ClearPoses
-    LD2_SetSceneMode LETTERBOX
-    Player_SetXY int(Guides.SceneJanitorDies), int(Guides.Floor)
-    Player_SetFlip 1
-    Map_UpdateShift
-    
-    if Scene4Go(fadeIn) then
-        LD2_FadeOut 2
-        Scene4EndConditions
-        RenderScene RenderSceneFlags.NotPutToScreen
-        LD2_FadeIn 2
-    else
-        Scene4EndConditions
-    end if
+    SceneInit @Scene4Go, @Scene4EndConditions, Rooms.LarrysOffice, Guides.SceneJanitorDies, Guides.Floor, 1
+    SceneGo
     
 end sub
 
 sub Scene4EndConditions()
     
-    ClearPoses
-    LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneJanitorDies, 1
     
     Map_PutTile 13, 8, 131, LayerIds.Tile
     Mobs_Add 208, 144, MobIds.Rockmonster
     Map_LockElevators
     
-    FreeTempSounds
+    Player_SetItemQty ItemIds.SteveData, encodeMobData(14, SPRITE_W*10.125, Guides.Floor, MobStates.PassedOut, 1)
+    Player_SetItemQty ItemIds.JanitorData, encodeMobData(14, 0, 0, MobStates.Dead, 0)
+    
     LD2_SetMusicVolume 1.0
     LD2_PlayMusic Tracks.Chase
     
-    Player_SetItemQty ItemIds.SteveData, encodeMobData(14, SPRITE_W*10.125, Guides.Floor, MobStates.PassedOut, 1)
-    Player_SetItemQty ItemIds.JanitorData, encodeMobData(14, 0, 0, MobStates.Dead, 0)
-    SceneRefreshMobs
-    
 end sub
 
-function Scene4Go(fadeIn as integer = 0) as integer
+function Scene4Go() as integer
     
     dim LarryPose as PoseType
     dim JanitorPose as PoseType
@@ -490,30 +531,22 @@ function Scene4Go(fadeIn as integer = 0) as integer
     AddPose @JanitorPose
     AddPose @StevePose
     
-    if fadeIn then
-        LD2_FadeOut 2
-        FadeOutMusic 0.5
-        LD2_StopMusic
-        RenderScene RenderSceneFlags.NotPutToScreen
-        LD2_FadeIn 2
-    end if
-    
     LD2_PlaySound Sounds.rockDie
-    if ContinueAfterSeconds(2.25) then return 1
+    if ContinueAfterSeconds(2.25) then return SkipScene()
     LarryPose.isFlipped = 0: JanitorPose.isFlipped = 0
-    if ContinueAfterSeconds(1.25) then return 1
+    if ContinueAfterSeconds(1.25) then return SkipScene()
     
-    if DoScene("SCENE-3D") then return 1
+    if DoScene("SCENE-3D") then return SkipScene()
     
-    if ContinueAfterSeconds(1.25) then return 1
+    if ContinueAfterSeconds(1.25) then return SkipScene()
     LD2_PlaySound Sounds.glass
     Shakes_Add 0.25, SPRITE_W*0.25
-    if ContinueAfterSeconds(1.25) then return 1
+    if ContinueAfterSeconds(1.25) then return SkipScene()
     LarryPose.isFlipped = 1: JanitorPose.isFlipped = 1
-    if ContinueAfterSeconds(1.0) then return 1
+    if ContinueAfterSeconds(1.0) then return SkipScene()
     'LD2_PlaySound Sounds.glass
     'Shakes_Add 0.3, SPRITE_W*0.3
-    'if ContinueAfterSeconds(1.25) then return 1
+    'if ContinueAfterSeconds(1.25) then return SkipScene()
     
     LD2_StopMusic
     LD2_SetMusicVolume 1.0
@@ -532,7 +565,7 @@ function Scene4Go(fadeIn as integer = 0) as integer
     RockmonsterPose.x = 208
     AddPose @RockmonsterPose
     
-    if ContinueAfterSlowMo(2.0) then return 1
+    if ContinueAfterSlowMo(2.0) then return SkipScene()
     LD2_PlayMusic Tracks.Uhoh
 
     dim clock as double
@@ -543,30 +576,30 @@ function Scene4Go(fadeIn as integer = 0) as integer
         if d > 1 then d = 1
         RockmonsterPose.y = 128+int(d*d*16)
         RenderScene
-        if SceneKeySkip() then return 1
+        if SceneKeySkip() then return SkipScene()
     loop while d < 1
     
     RockmonsterPose.y =  144
     Shakes_Add 0.2, SPRITE_W*0.4
-    if ContinueAfterSeconds(0.75) then return 1
+    if ContinueAfterSeconds(0.75) then return SkipScene()
     
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Still
-    if ContinueAfterSeconds(1.25) then return 1
+    if ContinueAfterSeconds(1.25) then return SkipScene()
 
     GetCharacterPose JanitorPose, CharacterIds.Janitor, PoseIds.Tongue
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Tongue
     JanitorPose.isFlipped = 0
     RenderScene
     LD2_PlaySound Sounds.slurp
-    if ContinueAfterSeconds(1.4) then return 1
+    if ContinueAfterSeconds(1.4) then return SkipScene()
     LD2_PlaySound Sounds.scream
 
     dim x as integer
     for x = JanitorPose.x to 210 step -1
-        if ContinueAfterInterval(0.0167) then return 1
+        if ContinueAfterInterval(0.0167) then return SkipScene()
         JanitorPose.x = int(x)
         RenderScene
-        if SceneKeySkip() then return 1
+        if SceneKeySkip() then return SkipScene()
     next x
 
     LD2_PlaySound Sounds.chew1
@@ -577,18 +610,20 @@ function Scene4Go(fadeIn as integer = 0) as integer
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Chewing
     dim i as integer
     for i = 1 to 20
-        if ContinueAfterInterval(0.15) then return 1
+        if ContinueAfterInterval(0.15) then return SkipScene()
         RockmonsterPose.nextFrame
         RenderScene
         if i = 6 then LD2_PlaySound Sounds.chew2
-        if SceneKeySkip() then return 1
+        if SceneKeySkip() then return SkipScene()
     next i
     
     GetCharacterPose RockmonsterPose, CharacterIds.Rockmonster, PoseIds.Still
     RenderScene
-    if ContinueAfterSeconds(0.4) then return 1
+    if ContinueAfterSeconds(0.4) then return SkipScene()
     LD2_PlaySound Sounds.growl
-    if ContinueAfterSeconds(2.0) then return 1
+    if ContinueAfterSeconds(2.0) then return SkipScene()
+    
+    return 0
 
 end function
 
@@ -723,7 +758,7 @@ function Scene5Go() as integer
     wend
     
     RenderScene
-    FadeOutMusic 0.5
+    SceneFadeOutMusic 0.5
     LD2_StopMusic
     
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Shooting
@@ -987,7 +1022,7 @@ function Scene7Go() as integer
     
     RenderScene
     
-    FadeInMusic GetFloorMusicId(Rooms.WeaponsLocker), 1.0
+    SceneFadeInMusic 2.0, GetFloorMusicId(Rooms.WeaponsLocker)
     
     if DoScene("SCENE-7A") then return 1
     
@@ -1055,11 +1090,11 @@ function SceneCapturedGo() as integer
 	RenderPoses
     LD2_FadeIn 1
     LD2_SetMusicVolume 0
-    FadeInMusic Tracks.Ambient5
+    SceneFadeInMusic 3.0, Tracks.Ambient5
 
     if DoScene("SCENE-FLASHLIGHT-1A") then return 1
     
-    FadeOutMusic
+    SceneFadeOutMusic
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Radio
     if DoScene("SCENE-FLASHLIGHT-1B") then return 1
@@ -1067,12 +1102,12 @@ function SceneCapturedGo() as integer
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
     BarneyPose.setHidden 1
     AddPose @BarneyPose
-    FadeInMusic Tracks.Truth
+    SceneFadeInMusic 3.0, Tracks.Truth
     if DoScene("SCENE-FLASHLIGHT-1C") then return 1
     
-    FadeOutMusic
+    SceneFadeOutMusic
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    FadeInMusic Tracks.Ambient5
+    SceneFadeInMusic 3.0, Tracks.Ambient5
     RemovePose @BarneyPose
     if DoScene("SCENE-FLASHLIGHT-1D") then return 1
     
@@ -1215,7 +1250,7 @@ function SceneTheEndGo () as integer
     ClearPoses
     AddPose @LarryPose
     
-    FadeOutMusic
+    SceneFadeOutMusic
     if DoScene("SCENE-THEEND") then return 1
     
     '- Larry walks to the right off the screen
@@ -1631,7 +1666,7 @@ function ScenePortalGo () as integer
     'if DoScene("SCENE-PORTAL-1A") then return 1
     'if DoScene("SCENE-PORTAL-1B") then return 1
     
-    FadeOutMusic 1.5
+    SceneFadeOutMusic 1.5
     LD2_StopMusic
     'if DoScene("SCENE-PORTAL-1CA") then return 1
     
@@ -1640,7 +1675,7 @@ function ScenePortalGo () as integer
     Steve.isFlipped = 1
     'if DoScene("SCENE-PORTAL-1CB") then return 1
     
-    'FadeOutMusic 1.5
+    'SceneFadeOutMusic 1.5
     'LD2_StopMusic
     if DoScene("SCENE-PORTAL-1CC") then return 1
     
@@ -1869,6 +1904,7 @@ sub SceneHT01EndConditions
     ClearPoses
     LD2_SetSceneMode MODEOFF
     FreeTempSounds
+    Game_SetFlag MUSICFADEIN
     
 end sub
 
@@ -1877,8 +1913,8 @@ function SceneHT01Go() as integer
     dim LarryPose as PoseType
     dim BarneyPose as PoseType
     
-    AddTempSound Sounds.radioBeep, "radio-beep.wav"
-    AddTempSound Sounds.radioStatic, "radio-static.wav"
+    'AddTempSound Sounds.radioBeep, "radio-beep.wav"
+    'AddTempSound Sounds.radioStatic, "radio-static.wav"
     
     LD2_SetSceneMode LETTERBOX
     
@@ -1893,7 +1929,7 @@ function SceneHT01Go() as integer
     AddPose @LarryPose
     AddPose @BarneyPose
     
-    if ContinueAfterSeconds(0.25) then return 1
+    if SceneFadeOutMusic(1.0) then return 1
     LD2_PlaySound Sounds.radioBeep
     if ContinueAfterSeconds(0.5) then return 1
     LD2_PlaySound Sounds.radioStatic
@@ -1903,7 +1939,7 @@ function SceneHT01Go() as integer
     if DoScene("SCENE-RADIO-01") then return 1
     
     LD2_PlaySound Sounds.radioStatic
-    if ContinueAfterSeconds(1.0) then return 1
+    if SceneFadeInMusic(1.0) then return 1
     
     return 0
 

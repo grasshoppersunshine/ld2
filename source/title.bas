@@ -6,9 +6,9 @@
 #include once "modules/inc/ld2gfx.bi"
 #include once "modules/inc/ld2snd.bi"
 #include once "modules/inc/elements.bi"
-#include once "inc/ld2e.bi"
 #include once "inc/ld2.bi"
 #include once "inc/title.bi"
+#include once "inc/enums.bi"
 #include once "file.bi"
 
 'inc\LD2_bi -- only needed for music ids
@@ -61,8 +61,6 @@ sub TITLE_Opening_Classic
 end sub
 
 SUB TITLE_Opening
-    
-    IF Game_isDebugMode() THEN LD2_Debug "TITLE_Opening"
     
     DIM e AS ElementType
     
@@ -133,20 +131,14 @@ sub TITLE_Menu_Classic
             WaitSeconds CLASSIC_SCREEN_DELAY
             LD2_cls
             WaitSeconds CLASSIC_SCREEN_DELAY
-            Game_setFlag EXITGAME
+            GameSetFlag EXITGAME
             exit do
         endif
     loop
     
 end sub
 
-SUB TITLE_Menu
-    
-    LD2_LogDebug "TITLE_Menu"
-    
-    LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 2, -1
-    LD2_CopyBuffer 2, 1
-    LD2_FadeIn 3, 15
+sub TITLE_Menu
     
     dim menu as ElementType
     dim menuNew as ElementType
@@ -159,6 +151,12 @@ SUB TITLE_Menu
     dim nextSelected as integer
     dim selected as integer
     dim n as integer
+    dim soundClock as double
+    dim playedSound as integer
+    
+    LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 2, -1
+    LD2_CopyBuffer 2, 1
+    LD2_FadeIn 3, 15
     
     Element_Init @menu, "", 31
     Element_Init @menuNew    , "New Game", 31
@@ -188,7 +186,16 @@ SUB TITLE_Menu
     menu.x = 208
     menu.y = 26
     
-    DO
+    LD2_PlaySound Sounds.radioStatic
+    soundClock = timer
+    
+    do
+        if playedSound = 0 then
+            if (timer - soundClock) > 0.25 then
+                playedSound = 1
+                LD2_PlaySound Sounds.radioBeep
+            end if
+        end if
         for n = 0 to 3
             if n = selected then
                 menuItems(n)->text_color = 15
@@ -231,58 +238,33 @@ SUB TITLE_Menu
             case 1
                 LD2_StopMusic
                 LD2_PlaySound Sounds.titleSelect
-                Game_setFlag LOADGAME
+                GameSetFlag LOADGAME
                 exit do
             case 2
                 LD2_PlaySound Sounds.titleSelect
                 WaitSeconds 0.15
                 LD2_FadeOut 3
-                TITLE_ShowCredits
+                TITLE_TheEnd 1
                 LD2_cls
-                LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
+                LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 2, -1
+                LD2_CopyBuffer 2, 1
                 LD2_FadeIn 3
+                LD2_PlaySound Sounds.radioStatic
+                playedSound = 0
+                soundClock = timer
             case 3
-                Game_setFlag EXITGAME
+                GameSetFlag EXITGAME
                 LD2_PlaySound Sounds.titleSelect
                 exit do
             end select
         end if
-        IF keyboard(KEY_1) OR keyboard(KEY_KP_1) THEN
-          '- shatter glass
-          LD2_StopMusic
-          LD2_PlaySound Sounds.titleStart
-          LD2_FadeIn 8, 12
-          LD2_FadeIn 4, 15
-          WaitSeconds 1.0
-          EXIT DO
-        END IF
-        IF keyboard(KEY_2) OR keyboard(KEY_KP_2) THEN
-          LD2_PlaySound Sounds.titleSelect
-          WaitSeconds 0.15
-          LD2_FadeOut 3
-          TITLE_ShowCredits
-          LD2_cls
-          LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
-          LD2_FadeIn 3
-        END IF
-        IF keyboard(KEY_3) OR keyboard(KEY_KP_3) THEN
-          Game_setFlag EXITGAME
-          LD2_PlaySound Sounds.titleSelect
-          EXIT DO
-        END IF
-        if keyboard(KEY_7) then
-            LD2_GenerateSky
-            TITLE_TheEnd
-            LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 1, -1
-            LD2_FadeIn 3, 15
-        end if
-    LOOP
+    loop
     WaitSeconds 0.15
     LD2_FadeOut 2
     LD2_cls
     LD2_StopMusic
     
-END SUB
+end sub
 
 sub TITLE_Intro_Classic
 
@@ -350,8 +332,6 @@ end sub
 
 SUB TITLE_Intro
 
-    LD2_LogDebug "TITLE_Intro"
-
     dim file as integer
     dim text as string
     dim x as integer
@@ -360,26 +340,15 @@ SUB TITLE_Intro
     dim e as ElementType
     dim a as double
 
-    LD2_CLS 0, 0
-
-    WaitSecondsUntilKey(2.0)
-    if keyboard(KEY_ENTER) then
-        LD2_FadeOut 2
-    end if
+    LD2_cls 0, 0
+    ContinueAfterSeconds(2.0, 0)
 
     LD2_LoadBitmap DATA_DIR+"gfx/back.bmp", 2, 0
     LD2_CopyBuffer 2, 1
     LD2_FadeInWhileNoKey 1
     LD2_SetMusicVolume 0.0
-    LD2_PlayMusic Tracks.Intro
-    while LD2_FadeInMusic(3.0)
-        PullEvents
-        if keyboard(KEY_ENTER) then
-            while LD2_FadeOutMusic(0.5): PullEvents: wend
-            LD2_FadeOut 2
-            exit sub
-        end if
-    wend
+    
+    if FadeInMusic(3.0, Tracks.Intro) then exit sub
 
     dim state as integer
     state = 0
@@ -388,96 +357,80 @@ SUB TITLE_Intro
     e.y = 60
     e.background_alpha = 0.0
     
-    file = FREEFILE
-    OPEN DATA_DIR+"tables/intro.txt" FOR INPUT AS file
+    file = freefile
+    open DATA_DIR+"tables/intro.txt" for input as file
     
-  DO WHILE NOT EOF(File)
-    
-    LINE INPUT #File, text
-    
-    if state = 0 then
-        LD2_CopyBuffer 2, 1
-        'LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
-    end if
-    if state = 1 then LD2_CLS 1, 0
-    
-    e.text = ltrim(rtrim(text))
-    
-    FOR y = 0 TO 7
+    do while not eof(File)
         
+        line input #file, text
         
-        a = (1/255)*(255-((8-y)*54-1))
-        if a > 1.0 then a = 1.0
-        if a < 0.0 then a = 0.0
-        e.text_alpha = a
-        LD2_CopyBuffer 2, 1
-        'LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
-        Element_Render @e
+        e.text = ltrim(rtrim(text))
         
-        'LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
-        
-        LD2_RefreshScreen
-        IF WaitSecondsUntilKey(0.27) THEN EXIT DO
-        
-    NEXT y
-    
-    Element_Render @e
-    LD2_RefreshScreen
-    IF WaitSecondsUntilKey(3.3333) THEN EXIT DO
-    
-    if instr(lcase(text), "larry the dinosaur ii") then
-        while LD2_FadeOutMusic(3.0)
-            PullEvents
-            if keyboard(KEY_ENTER) then
-                while LD2_FadeOutMusic(30.0): PullEvents: wend
-                LD2_FadeOut 2
-                exit sub
-            end if
-        wend
-    end if
-    
-    FOR y = 0 TO 7
-        
-        if (state = 0) and instr(lcase(text), "all thanks") then
-            Element_Render @e
-            a = (y+1)*54-1
-            LD2_fillm 0, 0, SCREEN_W, SCREEN_H, 0, 1, iif(a > 255, 255, a)
-            Element_Render @e
-            if y = 7 then
-                state = 1
-                y = 0
-                LD2_cls 2, 0
-            end if
-        else
-            a = (1/255)*(255-((y+1)*54-1))
+        for y = 0 to 7
+            
+            a = (1/255)*(255-((8-y)*54-1))
             if a > 1.0 then a = 1.0
             if a < 0.0 then a = 0.0
-            e.text_alpha = iif(a > 1.0, 1.0, a)
+            e.text_alpha = a
             LD2_CopyBuffer 2, 1
             Element_Render @e
-        end if
+            
+            LD2_RefreshScreen
+            if ContinueAfterSeconds(0.27, 0) then exit do
+            
+        next y
         
+        Element_Render @e
         LD2_RefreshScreen
-        if state = 1 then
-            LD2_FadeOut 3
-            exit for
-        else
-            IF WaitSecondsUntilKey(0.27) THEN EXIT DO
+        if ContinueAfterSeconds(3.3333, 0) then exit do
+        
+        if instr(lcase(text), "larry the dinosaur ii") then
+            if FadeOutMusic(3.0) then exit sub
         end if
         
-    NEXT y
-    if state = 1 then state = 2
-    
-  LOOP
+        for y = 0 to 7
+            
+            if (state = 0) and instr(lcase(text), "all thanks") then
+                Element_Render @e
+                a = (y+1)*54-1
+                LD2_fillm 0, 0, SCREEN_W, SCREEN_H, 0, 1, iif(a > 255, 255, a)
+                Element_Render @e
+                if y = 7 then
+                    state = 1
+                    y = 0
+                    LD2_cls 2, 0
+                end if
+            else
+                a = (1/255)*(255-((y+1)*54-1))
+                if a > 1.0 then a = 1.0
+                if a < 0.0 then a = 0.0
+                e.text_alpha = iif(a > 1.0, 1.0, a)
+                LD2_CopyBuffer 2, 1
+                Element_Render @e
+            end if
+            
+            LD2_RefreshScreen
+            if state = 1 then
+                LD2_FadeOut 3
+                'LD2_FadeOutStep 0, 0, (255-((y+1)*54-1))
+                'if ContinueAfterSeconds(0.27, 0) then exit do
+                exit for
+            else
+                if ContinueAfterSeconds(0.27, 0) then exit do
+            end if
+            
+        next y
+        if state = 1 then state = 2
+        
+    loop
   
-  CLOSE File
+    close file
   
-  while LD2_FadeOutMusic(0.5): PullEvents: wend
-  LD2_FadeOut 2
-  WaitSeconds 0.5
-    
+    FadeOutMusic(0.5)
+    LD2_FadeOut 2
+    WaitSeconds 0.5
+
     dim title as ElementType
-    dim subtitle as ElementType
     dim heading as ElementType
     dim fontH as integer
     
@@ -485,17 +438,11 @@ SUB TITLE_Intro
     
     LD2_cls 1, 0
 	
-    'WaitSecondsUntilKey(1.0)
     Element_Init @title, "One Year Later", 31
     title.y = 60
     title.is_centered_x = 1
     title.text_spacing = 1.9
     title.text_color = 31
-    Element_Init @subtitle, "Corporate Headquarters", 31
-    subtitle.y = 60 + fontH * 2.5
-    subtitle.is_centered_x = 1
-    subtitle.text_spacing = 1.9
-    subtitle.text_color = 31
     Element_Init @heading, "Larry's Office", 31
     heading.y = 60 + fontH * 5.5
     heading.is_centered_x = 1
@@ -507,18 +454,8 @@ SUB TITLE_Intro
     
     Element_Render @title
     LD2_FadeIn 2
-    
-    'WaitSeconds 1.0
     '
-    'LD2_RenderElement @subtitle
-    'LD2_RefreshScreen
-    '
-    'WaitSeconds 1.0
-    '
-    'LD2_RenderElement @heading
-    'LD2_RefreshScreen
-    '
-    if WaitSecondsUntilKey(3.3333) then
+    if ContinueAfterSeconds(3.3333, 0) then
         LD2_FadeOut 2
         exit sub
     end if
@@ -567,8 +504,6 @@ end sub
 
 sub TITLE_ShowCredits
     
-    if Game_isDebugMode() then LD2_Debug "TITLE_ShowCredits"
-
     dim e as ElementType
     dim y as integer
     dim text as string
@@ -706,10 +641,9 @@ SUB TITLE_Ad
   
 END SUB
 
-sub TITLE_TheEnd
+sub TITLE_TheEnd (skipEpilogue as integer = 0)
     
-    LD2_LogDebug "TITLE_TheEnd"
-
+    dim barSize as integer
     dim file as integer
     dim text as string
     dim x as integer
@@ -717,8 +651,11 @@ sub TITLE_TheEnd
     dim n as integer
     dim e as ElementType
     dim a as double
-
+    
+    barSize = int(SPRITE_H*1.5)
+    
     LD2_CLS 0, 0
+    
     while LD2_FadeOutMusic(0.5): PullEvents: wend
     LD2_StopMusic
 
@@ -727,7 +664,11 @@ sub TITLE_TheEnd
         LD2_FadeOut 2
     end if
     
+    GenerateSky
+    
     LD2_CopyBuffer 2, 1
+    LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0, 1
+    LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0, 1
     LD2_FadeInWhileNoKey 1
     WaitSecondsUntilKey(1.5)
     LD2_SetMusicVolume 1.0
@@ -748,7 +689,14 @@ sub TITLE_TheEnd
     
     file = FREEFILE
     OPEN DATA_DIR+"tables/ending.txt" FOR INPUT AS file
-    
+    if skipEpilogue then
+        do while not eof(File)
+            line input #File, text
+            if trim(lcase(text)) = "for now..." then
+                exit do
+            end if
+        loop
+    end if
   DO WHILE NOT EOF(File)
     
     LINE INPUT #File, text
@@ -769,6 +717,8 @@ sub TITLE_TheEnd
         if a < 0.0 then a = 0.0
         e.text_alpha = a
         LD2_CopyBuffer 2, 1
+        LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0, 1
+        LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0, 1
         'LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
         Element_Render @e
         
@@ -812,6 +762,8 @@ sub TITLE_TheEnd
             if a < 0.0 then a = 0.0
             e.text_alpha = iif(a > 1.0, 1.0, a)
             LD2_CopyBuffer 2, 1
+            LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0, 1
+            LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0, 1
             Element_Render @e
         end if
         
@@ -827,44 +779,45 @@ sub TITLE_TheEnd
     if state = 1 then state = 2
     
   LOOP
-  
-  while LD2_FadeOutMusic(3.0): PullEvents: wend
+    
+    if eof(File) then
+        while LD2_FadeOutMusic(3.0): PullEvents: wend
+    else
+        while LD2_FadeOutMusic(0.5): PullEvents: wend
+    end if
   
 end sub
 
 SUB TITLE_TheEnd_Classic
     
-    IF Game_isDebugMode() THEN LD2_Debug "TITLE_TheEnd"
-    
     LD2_PlayMusic Tracks.Ending
-    LD2_PopText "THE END"
+    'LD2_PopText "THE END"
     TITLE_ShowCredits
     
 END SUB
 
 SUB TITLE_Goodbye
     
-    IF Game_isDebugMode() THEN LD2_Debug "TITLE_Goodbye"
-    
     dim e as ElementType
-    dim chances(6) as integer
-    dim goodbyes(6) as string
+    dim chances(7) as integer
+    dim goodbyes(7) as string
     dim d20 as integer
     dim d7 as integer
     dim n as integer
     
     chances(0) = 20: goodbyes(0) = "GOODBYE"
     chances(1) =  2: goodbyes(1) = "SMELL YA LATER"
-    chances(2) =  1: goodbyes(2) = "MOTHER OF GOD"
-    chances(3) =  1: goodbyes(3) = "SAVE YOURSELF FROM HELL"
-    chances(4) =  1: goodbyes(4) = "REALITY IS MUCH WORSE"
-    chances(5) =  1: goodbyes(5) = "LIBERA TE TUTAMET EX INFERIS"
-    chances(6) =  2: goodbyes(6) = "CAN'T WIN THEM ALL"
+    chances(2) =  2: goodbyes(2) = "PLAY A GOOD GAME OF CHESS"
+    chances(3) =  1: goodbyes(3) = "MOTHER OF GOD"
+    chances(4) =  1: goodbyes(4) = "SAVE YOURSELF FROM HELL"
+    chances(5) =  1: goodbyes(5) = "REALITY IS MUCH WORSE"
+    chances(6) =  1: goodbyes(6) = "LIBERA TE TUTAMET EX INFERIS"
+    chances(7) =  2: goodbyes(7) = "CAN'T WIN THEM ALL"
     
     do
-        d7  = iif(Game_hasFlag(RECENTDEATH),int(7*rnd(1)),int(6*rnd(1)))
+        d7  = iif(GameHasFlag(RECENTDEATH),int(8*rnd(1)),int(7*rnd(1)))
         d20 = int(20*rnd(1))
-        if d20 <= chances(d7) then
+        if d20 < chances(d7) then
             n = d7
             exit do
         end if
@@ -925,7 +878,7 @@ SUB TITLE_AdTwo
       a = 0
       FOR x = 70 TO 120 STEP 1
         LD2_cls 1, backColor
-        LD2_Put INT(x), 90, (7+(INT(a) AND 1)), idScene, 0
+        'LD2_Put INT(x), 90, (7+(INT(a) AND 1)), idScene, 0
         LD2_RefreshScreen
         WaitSeconds 0.10
         a = a + .2
@@ -939,7 +892,7 @@ SUB TITLE_AdTwo
       a = 0
       FOR x = 120 TO 170 STEP 1
         LD2_cls 1, backColor
-        LD2_Put INT(x), 90, (9+(INT(a) AND 1)), idScene, 0
+        'LD2_Put INT(x), 90, (9+(INT(a) AND 1)), idScene, 0
         LD2_RefreshScreen
         WaitSeconds 0.10
         a = a + .2

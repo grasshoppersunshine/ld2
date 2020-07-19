@@ -57,6 +57,7 @@
     #include once "inc/status.bi"
     #include once "inc/scene.bi"
     #include once "inc/scenes.bi"
+    #include once "inc/enums.bi"
     #include once "SDL2/SDL.bi"
     #include once "file.bi"
     #include once "dir.bi"
@@ -294,11 +295,6 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     LD2_WriteText caption
     poseTalking.firstFrame
     UpdatePose renderPose, poseTalking
-    RenderScene RenderSceneFlags.NotPutToScreen
-    if chatBox then
-        LD2_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
-    end if
-    LD2_RefreshScreen
     
     while SceneKeyTextJump()
         PullEvents: RenderScene RenderSceneFlags.NotPutToScreen
@@ -334,7 +330,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     
     while SceneKeyTextJump()
         PullEvents: RenderScene RenderSceneFlags.NotPutToScreen
-        if chatBox then LD2_putFixed 0, 180, chatBox, idScene, renderPose.getFlip()
+        if chatBox then LD2_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
         LD2_RefreshScreen
     wend
     
@@ -760,7 +756,6 @@ sub LoadSounds ()
     AddSound Sounds.uiCancel , "ui-cancel.wav"
     AddSound Sounds.uiMix    , "ui-mix.wav"
     
-    AddSound Sounds.titleReveal, "ui-submenu.wav"
     AddSound Sounds.titleSelect, "use-medikit.wav"
     
     AddSound Sounds.pickup , "item-pickup.wav"
@@ -821,6 +816,9 @@ sub LoadSounds ()
     AddSound Sounds.squishy, "splice/squishy.wav"
     
     AddSound Sounds.lookMetal, "look-metal.wav"
+    
+    AddSound Sounds.radioBeep, "radio-beep.wav"
+    AddSound Sounds.radioStatic, "radio-static.wav"
     
 end sub
 
@@ -1027,6 +1025,8 @@ SUB Main
     dim numLogs as integer
     dim logPointer as integer
     dim resetClocks as integer
+    dim selection as integer
+    dim paused as integer
     dim i as integer
     dim n as integer
     
@@ -1074,6 +1074,7 @@ SUB Main
         Player_Unhide
         Player_SetFlip 1
         LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
+        Map_SetXShift Player_GetX() - SCREEN_W*0.5
 	end if
     
     PullEvents
@@ -1103,6 +1104,7 @@ SUB Main
     if (showStatusScreen = 0) and (SceneCallback <> 0) then
         SceneCallback()
         SceneCallback = 0
+        resetClocks = 1
     end if
     
     Player_Get player
@@ -1136,6 +1138,8 @@ SUB Main
             resetClocks = 1
             if (toRoomId <> Player_GetCurrentRoom()) then
                 LoadMapWithElevatorIntermission toRoomId, toRoomName
+            else
+                Player_Unhide
             end if
         end if
     end if
@@ -1216,7 +1220,7 @@ SUB Main
             LD2_PlaySound Sounds.uiSubmenu
         end if
     end if
-    if keyboard(KEY_E) or keypress(KEY_TAB) or mouseMB() then
+    if keypress(KEY_E) or keypress(KEY_TAB) or mouseMB() then
         showStatusScreen = 1
     end if
     if showStatusScreen then
@@ -1226,20 +1230,36 @@ SUB Main
         continue do
     end if
     
-    if keypress(KEY_ESCAPE) then
+    if keypress(KEY_ESCAPE) or paused then
         LD2_PauseMusic
         resetClocks = 1
-        if STATUS_DialogYesNo("Exit Game?") = Options.Yes then
-            Game_setFlag EXITGAME
-            exit do
-        else
-            LD2_ContinueMusic
-        end if
+        LD2_PlaySound Sounds.uiMenu
+        do
+            selection = STATUS_DialogExitGame("Paused", 0)
+            select case selection
+            case OptionIds.BackToGame
+                paused = 0
+                LD2_ContinueMusic
+                exit do
+            case OptionIds.HowToPlay
+                STATUS_SetLookItem ItemIds.Instructions
+                STATUS_SetTempWindowSize StatusSizes.Max
+                showStatusScreen = 1
+                paused = 1
+                exit do
+            case OptionIds.ExitGame
+                if STATUS_DialogYesNo("Exit Game?", 0) = OptionIds.Yes then
+                    paused = 0
+                    Game_setFlag EXITGAME
+                    exit do
+                end if
+            end select
+        loop
     end if
     
     if Game_hasFlag(SAVEGAME) then
         resetClocks = 1
-        if STATUS_DialogYesNo("Save Progress?") = Options.Yes then
+        if STATUS_DialogYesNo("Save Progress?") = OptionIds.Yes then
             Game_Save SESSION_FILE
             if Game_SaveCopy(SESSION_FILE, GAMESAVE_FILE) = 0 then
                 LD2_SetRevealText "Game Saved"
@@ -1275,6 +1295,8 @@ SUB Main
             Game_unsetFlag(PLAYERDIED)
             deadTimer = 0
             YouDied
+            Game_Reset
+            if ContinueGame = 0 then exit do
         end if
         continue do
     end if
@@ -1311,10 +1333,10 @@ SUB Main
     
     if Game_isTestMode() then
         if keypress(KEY_R) or ((mouseRB() > 0) and newReload) then
-            LD2_AddToStatus ItemIds.Shotgun, 99
-            LD2_AddToStatus ItemIds.Handgun, 99
-            LD2_AddToStatus ItemIds.MachineGun, 99
-            LD2_AddToStatus ItemIds.Magnum, 99
+            LD2_AddToStatus ItemIds.Shotgun, Maxes.Shotgun
+            LD2_AddToStatus ItemIds.Handgun, Maxes.Handgun
+            LD2_AddToStatus ItemIds.MachineGun, Maxes.MachineGun
+            LD2_AddToStatus ItemIds.Magnum, Maxes.Magnum
             LD2_PlaySound Sounds.reload
             newReload = 0
         end if
@@ -1341,21 +1363,18 @@ SUB Main
   
 end sub
 
-'- do (render pose/frames)
-'- then (fix btmMod adjustments)
-'- then (fix topMod adjustments)
-SUB RenderPoses ()
+sub RenderPoses ()
 	
-    IF Game_isDebugMode() THEN LD2_Debug "RenderPoses ()"
+    LD2_LogDebug "RenderPoses ()"
     
-	DIM pose AS PoseType ptr
+	dim pose as PoseType ptr
     dim frame as PoseFrame ptr
     dim sprite as PoseAtom ptr
     dim x as integer
     dim y as integer
 	dim n as integer
     
-    FOR n = 0 TO NumPoses - 1
+    for n = 0 to NumPoses - 1
 		pose = Poses(n)
         if pose->isHidden() then continue for
         frame = pose->getCurrentFrame()
@@ -1366,12 +1385,7 @@ SUB RenderPoses ()
             LD2_put x, y, sprite->idx, pose->getSpriteSetId(), iif(sprite->is_flipped, 1, pose->getFlip())
             sprite = frame->getNextSprite()
         loop
-        'IF pose->isSpeaking THEN
-        '    LD2_putFixed 0, 180, pose->chatBox, pose->spriteSetId, pose->flipped
-        'END IF
-		'LD2_put pose->x+pose->btmXmod, pose->y+pose->btmYmod, pose->btm+pose->btmMod, pose->spriteSetId, pose->flipped
-		'LD2_put pose->x+pose->topXmod, pose->y+pose->topYmod, pose->top+pose->topMod, pose->spriteSetId, pose->flipped
-	NEXT n
+	next n
 	
 END SUB
 
@@ -1713,6 +1727,7 @@ sub SceneCheck (player as PlayerType)
                     moveToX = Guides.SceneWeapons1
                 else
                     Scene7
+                    LD2_AddToStatus(ItemIds.WalkieTalkie, 1)
                 end if
             end if
         case "SCENE-STEVE-GONE"
@@ -2045,16 +2060,16 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             end select
             select case args(1)
             case "shotgun"
-                LD2_AddToStatus(ItemIds.Shotgun, 99)
+                LD2_AddToStatus(ItemIds.Shotgun, Maxes.Shotgun)
                 response = "Added SHOTGUN to inventory"
             case "handgun"
-                LD2_AddToStatus(ItemIds.Handgun, 99)
+                LD2_AddToStatus(ItemIds.Handgun, Maxes.Handgun)
                 response = "Added HANDGUN to inventory"
             case "machinegun"
-                LD2_AddToStatus(ItemIds.MachineGun, 99)
+                LD2_AddToStatus(ItemIds.MachineGun, Maxes.MachineGun)
                 response = "Added MACHINEGUN to inventory"
             case "magnum"
-                LD2_AddToStatus(ItemIds.Magnum, 99)
+                LD2_AddToStatus(ItemIds.Magnum, Maxes.Magnum)
                 response = "Added MAGNUM to inventory"
             case else
                 if (args(1) = "0") or (val(args(1)) <> 0) then
@@ -2670,13 +2685,13 @@ sub NewGame
     
     player.x = 92
     player.y = 144
+    player._flip = 0
     player.is_visible = 1
     Player_SetItemQty ItemIds.Lives, StartVals.Lives
     Player_SetItemQty ItemIds.Hp, Maxes.Hp
     Player_SetItemQty ItemIds.InvSize, 8
     
     'LD2_AddToStatus(ItemIds.Instructions, 1)
-    LD2_AddToStatus(ItemIds.WalkieTalkie, 1)
     
     Player_Update player
     
@@ -2692,6 +2707,7 @@ sub NewGame
         'Player_SetItemQty ItemIds.SceneSteveGone, 1
         'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
         'LD2_PlayMusic mscWANDERING
+        LD2_AddToStatus(ItemIds.WalkieTalkie, 1)
         if Boot_HasCommandArg("noelevator") = 0 then
             'LD2_AddToStatus(ItemIds.ElevatorMenu, 1)
         end if
@@ -2699,10 +2715,10 @@ sub NewGame
             LD2_AddToStatus(ItemIds.RedCard, 1)
         end if
         if (Boot_HasCommandArg("noguns") = 0) and (Boot_HasCommandArg("shotgun,handgun,machinegun,magnum,allguns") = 0) then
-            LD2_AddToStatus(ItemIds.Handgun, 99)
-            LD2_AddToStatus(ItemIds.Shotgun, 99)
-            LD2_AddToStatus(ItemIds.MachineGun, 99)
-            LD2_AddToStatus(ItemIds.Magnum, 99)
+            LD2_AddToStatus(ItemIds.Handgun, Maxes.Handgun)
+            LD2_AddToStatus(ItemIds.Shotgun, Maxes.Shotgun)
+            LD2_AddToStatus(ItemIds.MachineGun, Maxes.MachineGun)
+            LD2_AddToStatus(ItemIds.Magnum, Maxes.Magnum)
             'LD2_AddToStatus(ItemIds.Medikit100, 1)
             LD2_AddToStatus(ItemIds.Flashlight, 1)
             LD2_AddToStatus(ItemIds.JanitorNote, 1)
@@ -2713,18 +2729,18 @@ sub NewGame
             arg = Boot_GetNextCommandArg()
             select case arg
             case "shotgun"
-                LD2_AddToStatus(ItemIds.Shotgun, 99)
+                LD2_AddToStatus(ItemIds.Shotgun, Maxes.Shotgun)
             case "handgun"
-                LD2_AddToStatus(ItemIds.Handgun, 99)
+                LD2_AddToStatus(ItemIds.Handgun, Maxes.Handgun)
             case "machinegun"
-                LD2_AddToStatus(ItemIds.MachineGun, 99)
+                LD2_AddToStatus(ItemIds.MachineGun, Maxes.MachineGun)
             case "magnum"
-                LD2_AddToStatus(ItemIds.Magnum, 99)
+                LD2_AddToStatus(ItemIds.Magnum, Maxes.Magnum)
             case "allguns"
-                LD2_AddToStatus(ItemIds.Shotgun, 99)
-                LD2_AddToStatus(ItemIds.Handgun, 99)
-                LD2_AddToStatus(ItemIds.MachineGun, 99)
-                LD2_AddToStatus(ItemIds.Magnum, 99)
+                LD2_AddToStatus(ItemIds.Shotgun, Maxes.Shotgun)
+                LD2_AddToStatus(ItemIds.Handgun, Maxes.Handgun)
+                LD2_AddToStatus(ItemIds.MachineGun, Maxes.MachineGun)
+                LD2_AddToStatus(ItemIds.Magnum, Maxes.Magnum)
             case "greencard"
                 LD2_AddToStatus(ItemIds.GreenCard, 1)
             case "bluecard"
@@ -2847,7 +2863,7 @@ sub LD2_UseItem (byval id as integer, byref qty as integer, byref exitMenu as in
             LD2_PlaySound Sounds.equip
         end if
     case ItemIds.Hp
-        LD2_AddToStatus id, qty
+        Player_AddItem id, qty
         LD2_PlaySound Sounds.useMedikit
     case ItemIds.ExtraLife
         Player_AddItem ItemIds.Lives, qty
@@ -2880,13 +2896,11 @@ sub LD2_LookItem (id as integer, byref desc as string)
     
 end sub
 
-function FadeInMusic(id as integer = -1, seconds as double = 3.0) as integer
-    
-    dim quickExit as integer
+function FadeInMusic(seconds as double = 3.0, id as integer = -1) as integer
     
     while LD2_FadeOutMusic(2.0)
         PullEvents
-        if keypress(KEY_ENTER) then
+        if SceneKeySkip() then
             while LD2_FadeOutMusic(0.5): PullEvents: wend
             return 1
         end if
@@ -2896,18 +2910,11 @@ function FadeInMusic(id as integer = -1, seconds as double = 3.0) as integer
     end if
     while LD2_FadeInMusic(seconds)
         PullEvents
-        if keypress(KEY_ENTER) then
-            while LD2_FadeOutMusic(0.5): PullEvents: wend
+        if SceneKeySkip() then
+            while LD2_FadeInMusic(0.5): PullEvents: wend
             return 1
         end if
     wend
-    
-    if quickExit then
-        while LD2_FadeOutMusic(0.5): PullEvents: wend
-        return 1
-    else
-        return 0
-    end if
     
 end function
 
@@ -2915,8 +2922,46 @@ function FadeOutMusic(seconds as double = 3.0) as integer
     
     while LD2_FadeOutMusic(seconds)
         PullEvents
-        if keypress(KEY_ENTER) then
+        if SceneKeySkip() then
             while LD2_FadeOutMusic(0.5): PullEvents: wend
+            return 1
+        end if
+    wend
+    
+    return 0
+    
+end function
+
+function SceneFadeInMusic(seconds as double = 3.0, id as integer = -1) as integer
+    
+    while LD2_FadeOutMusic(2.0)
+        PullEvents : RenderScene
+        if SceneKeySkip() then
+            while LD2_FadeOutMusic(0.5): PullEvents: RenderScene: wend
+            return 1
+        end if
+    wend
+    if id > -1 then
+        LD2_PlayMusic id
+    end if
+    while LD2_FadeInMusic(seconds)
+        PullEvents : RenderScene
+        if SceneKeySkip() then
+            while LD2_FadeInMusic(0.5): PullEvents: RenderScene: wend
+            return 1
+        end if
+    wend
+    
+    return 0
+    
+end function
+
+function SceneFadeOutMusic(seconds as double = 3.0) as integer
+    
+    while LD2_FadeOutMusic(seconds)
+        PullEvents : RenderScene
+        if SceneKeySkip() then
+            while LD2_FadeOutMusic(0.5): PullEvents: RenderScene: wend
             return 1
         end if
     wend
@@ -2962,11 +3007,12 @@ function GetRoomName(id as integer) as string
     
 end function
 
-function ContinueAfterSeconds(seconds as double) as integer
+function ContinueAfterSeconds(seconds as double, render as integer = 1) as integer
     dim pausetime as double
     pausetime = timer
     while (timer-pausetime) <= seconds
-        PullEvents : RenderScene
+        PullEvents
+        if render then RenderScene
         if SceneKeySkip() then return 1
     wend
     return 0
@@ -3097,9 +3143,6 @@ sub YouDied ()
         PullEvents
     wend
     
-    Game_Reset
-    ContinueGame
-    
 end sub
 
 function encodeMobData(byval roomId as integer, byval x as integer, byval y as integer, byval state as integer, byval _flip as integer) as integer
@@ -3205,5 +3248,52 @@ sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
     LD2_FadeIn 2
     
     currentRoomId = toRoomId
+    
+end sub
+
+function RoomToFilename(roomId as integer) as string
+    
+    dim roomsFile as string
+    dim floorNo as integer
+    dim filename as string
+    dim label as string
+    dim allowed as string
+    dim file as integer
+    
+    roomsFile = iif(Game_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
+    file = freefile
+    open DATA_DIR+roomsFile for input as file
+    do while not eof(file)
+        input #file, floorNo
+        input #file, filename
+        input #file, label
+        input #file, allowed
+        if floorNo = roomId then
+            return filename
+        end if
+    loop
+    
+    return ""
+    
+end function
+
+'* for title.bas
+function GameHasFlag(flag as integer) as integer
+    
+    return Game_HasFlag(flag)
+    
+end function
+
+'* for title.bas
+sub GameSetFlag(flag as integer)
+    
+    Game_SetFlag(flag)
+    
+end sub
+
+'* for title.bas
+sub GenerateSky()
+    
+    LD2_GenerateSky
     
 end sub

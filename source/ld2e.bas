@@ -10,8 +10,7 @@
     #include once "modules/inc/elements.bi"
     #include once "modules/inc/easing.bi"
     #include once "inc/ld2e.bi"
-    #include once "inc/ld2.bi"
-    #include once "inc/title.bi"
+    #include once "inc/enums.bi"
     #include once "file.bi"
     #include once "dir.bi"
     
@@ -27,6 +26,35 @@
     property GutsIncorporated.facingRight(isFacingRight as integer)
         this.facing = (isFacingRight <> 0)
     end property
+    
+    property IntervalType.interval() as double
+        dim timediff as double
+        timediff = (timer - this._clock) * this._speed
+        if this._loops and (timediff>1) then
+            timediff = timediff-int(timediff)
+        end if
+        return iif(timediff<1,timediff,1)
+    end property
+    property IntervalType.reversed() as double
+        return -this.interval+1
+    end property
+    property IntervalType.size() as double
+        return this._size
+    end property
+    property IntervalType.speed() as double
+        return this._speed
+    end property
+    sub IntervalType.init(loops as integer=0, spd as double=1.0, sz as double=1.0, intrvl as double=0.0)
+        this._speed = spd
+        this._size = sz
+        this._interval = intrvl
+        this._clock = timer
+        this._loops = loops
+    end sub
+    sub IntervalType.reset(intrvl as double=0.0)
+        this._interval = intrvl
+        this._clock = timer
+    end sub
     
     sub PlayerType.init
         
@@ -2275,6 +2303,7 @@ sub Elevators_Animate ()
     
     if (Player.state = PlayerStates.EnteringElevator) and (countClosed = NumElevators) then
         Player.state = PlayerStates.ExitingElevator
+
         Player.is_visible = 0
         Game_SetFlag ELEVATORMENU
     end if
@@ -2670,7 +2699,7 @@ sub GameNotice_Draw
     static labelNotice as ElementType
     if labelNotice.y = 0 then
         Element_Init @labelNotice, "", 31, ElementFlags.AlignTextRight
-        labelNotice.y = 170
+        labelNotice.y = int(0.85*SCREEN_H)
         labelNotice.w = SCREEN_W-12
         labelNotice.padding_x = 6
         labelNotice.background_alpha = 0
@@ -2916,7 +2945,7 @@ sub Map_UnlockElevators
     
 end sub
 
-sub Map_UpdateShiftY
+sub Map_UpdateShiftY (skipEase as integer = 0)
     
     static midline as double = -1
     static anchor as double
@@ -2944,7 +2973,7 @@ sub Map_UpdateShiftY
     focusDist = int(0.03125 * SCREEN_H)
     focus = -(equiDist+focusDist)
     
-    if e = 0 then
+    if (e = 0) or (skipEase = 1) then
         anchor = midline
         d = (-(MAPH*SPRITE_H)+Player.y*3)/(MAPH*SPRITE_H)
         if d < 0 then d = 0
@@ -2979,6 +3008,10 @@ sub Map_UpdateShiftY
     
     YShift = (midline-36)+focus
     
+    if skipEase then
+        YShift = (midline-36)+target
+    end if
+    
     dim YShiftMax as integer
     
     YShiftMax = MAPH*SPRITE_H-SCREEN_H
@@ -2988,7 +3021,7 @@ sub Map_UpdateShiftY
     
 end sub
 
-sub Map_UpdateShift
+sub Map_UpdateShift (skipEase as integer = 0)
     
     if LockShift then
         exit sub
@@ -3016,10 +3049,13 @@ sub Map_UpdateShift
     halfW = int(SCREEN_W*0.5)
     range = 8'int(0.0625 * SCREEN_W)
     
-    if direction <> Player._flip then
+    if (direction <> Player._flip) or (skipEase = 1) then
         direction = Player._flip
         e = 0
         clock = timer
+    end if
+    if skipEase then
+        focus = target
     end if
     
     if e = 0 then
@@ -5918,7 +5954,7 @@ end function
 
 function Player_Move (dx as double, canFlip as integer = 1) as integer
 
-    if Player.hasFlag(PlayerFlags.Crouching)  or (Player.state = PlayerStates.LookingUp) or (Player.state = PlayerStates.Blocked) then
+    if Player.hasFlag(PlayerFlags.Crouching) or (Player.state = PlayerStates.LookingUp) or (Player.state = PlayerStates.Blocked) then
         return 0
     end if
     if (Player.state = PlayerStates.EnteringElevator) or (Player.state = PlayerStates.ExitingElevator) then
@@ -5931,7 +5967,6 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     dim cond0 as integer
     dim cond1 as integer
     dim box as BoxType
-    dim f as double
     
     success = 1
     Player.moved = 1
@@ -5943,9 +5978,6 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     cond0 = (dx > 0) and (Player._flip = 0)
     cond1 = (dx < 0) and (Player._flip = 1)
     forward = iif((cond0 or cond1), 1, 0)
-    
-    f = DELAYMOD
-    dx *= f
     
     if Player.state = PlayerStates.Jumping then
         dx *= 1.1
@@ -5965,7 +5997,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     dim hitWall as integer
     dim px as double
     dim bx as BoxType
-    Player.vx   = dx
+    'Player.vx   = dx
     box = Player_GetCollisionBox()
     hitWall = 0
     if dx > 0 then
@@ -5975,7 +6007,6 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
             px = Player.x
             Player.x = fromX * SPRITE_W+box.padRgt
             bx = Player_GetCollisionBox()
-            'LD2_SetNotice str(bx.rgt)
             if CheckPlayerWallHit() then
                 hitWall = 1
             end if
@@ -5988,7 +6019,6 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
             px = Player.x
             Player.x = fromX * SPRITE_W-box.padLft
             bx = Player_GetCollisionBox()
-            'LD2_SetNotice str(bx.lft)
             if CheckPlayerWallHit() then
                 hitWall = 1
             end if
@@ -5998,32 +6028,37 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     
     if hitWall = 0 then
     if Player.weapon = ItemIds.Fist then
+        if Player.vx = 0 then
+            Player.lowerLoop.init(1, abs(dx), FullBodySprites.FsRun1 - FullBodySprites.FsRun0 + 1)
+        end if
         Player.vx   = dx
         Player.x    = Player.x + dx
         if (Player.lAni < FullBodySprites.FsRun0) or (Player.lani >= (FullBodySprites.FsRun1+1)) then
             Player.lAni = int(FullBodySprites.FsRun0)
             footstep = 0
         end if
-        Player.lAni = Player.lAni + iif(forward, abs(dx / 7.5), -abs(dx / 7.5))
+        Player.lAni = FullBodySprites.FsRun0 + iif(forward,Player.lowerLoop.interval,Player.lowerLoop.reversed)*Player.lowerLoop.size
         if Player.state <> PlayerStates.Jumping then
             select case footstep
             case 0
-                if (forward = 1) and (player.lani >= (FullBodySprites.FsRun0+1)) then LD2_PlaySound Sounds.footstep: footstep += 1
-                if (forward = 0) and (player.lani <= (FullBodySprites.FsRun0+5)) then LD2_PlaySound Sounds.footstep: footstep += 1
+                if (Player.lowerLoop.interval >= 0.125) and (Player.lowerLoop.interval < 0.625) then LD2_PlaySound Sounds.footstep: footstep += 1
             case 1
-                if (forward = 1) and (player.lani >= (FullBodySprites.FsRun0+5)) then LD2_PlaySound Sounds.footstep: footstep += 1
-                if (forward = 0) and (player.lani <= (FullBodySprites.FsRun0+1)) then LD2_PlaySound Sounds.footstep: footstep += 1
+                if Player.lowerLoop.interval >= 0.625 then LD2_PlaySound Sounds.footstep: footstep = 0
             end select
         end if
     else
+        if Player.vx = 0 then
+            Player.lowerLoop.init(1, abs(dx*2), LowerSprites.Run1 - LowerSprites.Run0 + 1)
+        end if
         Player.vx   = dx
         Player.x    = Player.x + dx
-        Player.lAni = Player.lAni + iif(forward, abs(dx / 7.5), -abs(dx / 7.5))
+        Player.lAni = LowerSprites.Run0 + iif(forward,Player.lowerLoop.interval,Player.lowerLoop.reversed)*Player.lowerLoop.size
         if Player.state <> PlayerStates.Jumping then
             select case footstep
             case 0
-                if (forward = 1) and (player.lani >= 23) then LD2_PlaySound Sounds.footstep: footstep += 1
-                if (forward = 0) and (player.lani <= 23) then LD2_PlaySound Sounds.footstep: footstep += 1
+                if Player.lowerLoop.interval >= 0.5 then LD2_PlaySound Sounds.footstep: footstep += 1
+            case 1
+                if Player.lowerLoop.interval < 0.5 then footstep = 0
             end select
         end if
     end if
@@ -6037,34 +6072,8 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
         box = Player_GetCollisionBox()
         Player.x = WallContactPointX + iif(dx > 0, -(box.w+box.padLft), -box.padLft+1)
         Player.vx = 0
-        Player.lAni = int(LowerSprites.Stand)
+        'Player.lAni = int(LowerSprites.Stand)
         success = 0
-    else
-        if (forward = 1) then
-            if Player.weapon = ItemIds.Fist then
-                if Player.lAni >= (FullBodySprites.FsRun1+1) then
-                    Player.lAni = int(FullBodySprites.FsRun0)
-                    footstep = 0
-                end if
-            else
-                if Player.lAni >= (LowerSprites.Run1+1) then
-                    Player.lAni = int(LowerSprites.Run0)
-                    footstep = 0
-                end if
-            end if
-        elseif (forward = 0) then
-            if Player.weapon = ItemIds.Fist then
-                if Player.lAni < FullBodySprites.FsRun0 then
-                    Player.lAni = (FullBodySprites.FsRun1+0.9999)
-                    footstep = 0
-                end if
-            else
-                if Player.lAni < LowerSprites.Run0 then
-                    Player.lAni = (LowerSprites.Run1+0.9999)
-                    footstep = 0
-                end if
-            end if
-        end if
     end if
     
     return success

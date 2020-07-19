@@ -7,9 +7,10 @@ SCENE-1A
     [ MUSIC WANDERING ]
     
     LARRY
-    Well Steve, that was a good game of chess.
+    Well, Steve, that was one good game of chess.
 
     STEVE
+    ...
     Only because you won.
     Wouldn't think so if I won.
 
@@ -18,20 +19,66 @@ SCENE-1A
 
     STEVE
     Uh...
-    No... in fact I think you're the one who's jealous.
+    No...
+    In fact... I think it is you who is the jealous one.
 
     LARRY
-    But I'm the guy who won.
+    Yeah, but... I am the winner.
+    ... so...
 
     STEVE
     You're jealous because you didn't lose like me.
 
     LARRY
-    Alright... That's enough from you.
+    ...
+    Alright! That's enough outta' you.
 
     STEVE
     Yeah, I guess so.
-    Well, I gotta get going.
+    Well... I should get going.
+    Smell ya later.
+
+    LARRY
+    Yep...
+    Smell ya later.
+    
+    STEVE [ WAIT 0.20, FACE RIGHT, WAIT 0.20 ]
+
+END
+
+
+SCENE-1A-B
+    
+    LARRY [ X  83, Y 144, FACE RIGHT ]
+
+    STEVE [ X 127, Y 144, FACE LEFT  ]
+    
+    [ MUSIC WANDERING ]
+    
+    LARRY
+    Steve...
+    
+    STEVE
+    Yeah, Larry?
+    
+    LARRY
+    Before you go...
+    Thanks, again, for meeting me at my office here.
+    I've been so busy lately, it's been hard to find time for friends and family.
+    Heh...
+    ... being delegated to paperwork after saving the world seems...
+    ... about as crazy as anything else these days.
+    
+    STEVE
+    I hear ya', Larry!
+    Happy to catch-up on current events and play a game of anxiety-inducing chess.
+    
+    LARRY
+    Heh... don't pass out on me now.
+    
+    STEVE
+    Thanks, saur!
+    Well... I should get going.
     Smell ya later.
 
     LARRY
@@ -149,7 +196,7 @@ SCENE-3A
     
     LARRY
     Seriously?
-    #What, now you'll tell me you completed your degree today as well?
+    Let me guess, you got your degree today as well?
     
     JANITOR
     Heh... well...
@@ -210,6 +257,9 @@ END
 
 SCENE-5B
     
+    BARNEY
+    HUZZAAAH!!!
+    
     LARRY
     Barney!
     
@@ -217,7 +267,7 @@ SCENE-5B
     Why hello there.
     
     LARRY
-    Thanks man...
+    Thanks saur!
     I owe you.
     
     BARNEY
@@ -286,7 +336,7 @@ SCENE-7A
     
     BARNEY
     Good!
-    Now here's the problem...
+    Now here's the situation...
     All forms of communication with the outside world have been sabotaged.
     The land line is disconnected. Phones are dead.
     And the satelitte systems are jammed.
@@ -378,6 +428,7 @@ SCENE-RADIO-01
     
     BARNEY_RADIO
     Go to my office and search my desk. You should find a blue access card there.
+    That'll give you access to more areas of the building.
     
     LARRY_RADIO
     I copy that.

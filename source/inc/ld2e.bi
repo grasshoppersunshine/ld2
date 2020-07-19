@@ -4,6 +4,20 @@
 
 const MAX_ACTION_ITEMS = 4
 
+type IntervalType
+    _interval as double
+    _clock as double
+    _speed as double
+    _size as double
+    _loops as integer
+    declare property interval() as double
+    declare property reversed() as double
+    declare property size() as double
+    declare property speed() as double
+    declare sub init(loops as integer=0, spd as double=1.0, sz as double=1.0, intrvl as double=0.0)
+    declare sub reset(intrvl as double=0.0)
+end type
+
 type PlayerType
     x as double
     y as double
@@ -22,6 +36,8 @@ type PlayerType
     lAni as double
     uAni as double
     stillani as integer
+    upperLoop as IntervalType
+    lowerLoop as IntervalType
     moved as integer
     declare sub init()
     declare function hasFlag(flag as integer) as integer
@@ -169,7 +185,8 @@ declare function Map_GetXShift () as integer
 declare sub Map_SetXShift (x as integer)
 declare sub Map_PutTile (x as integer, y as integer, tile as integer, layer as integer = LayerIds.Tile)
 declare sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
-declare sub Map_UpdateShift ()
+declare sub Map_UpdateShift (skipEase as integer = 0)
+declare sub Map_UpdateShiftY (skipEase as integer = 0)
 
 declare function toMapX(screenX as double) as integer
 declare function toMapY(screenY as double) as integer
@@ -312,36 +329,6 @@ DECLARE SUB LD2_WriteText (Text AS STRING)
 
 declare sub LD2_put (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0, isFixed as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
 declare sub LD2_putFixed (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0)
-
-const SCREEN_FULL = 1
-#define widezoom 1
-'* CLASSIC
-#ifdef screen13
-    const SCREEN_W = 320
-    const SCREEN_H = 200
-    const SPRITE_W = 16
-    const SPRITE_H = 16
-    const FONT_W = 6
-    const FONT_h = 5
-#endif
-'* WIDESCREEN
-#ifdef widescreen
-    const SCREEN_W = 352
-    const SCREEN_H = 198
-    const SPRITE_W = 16
-    const SPRITE_H = 16
-    const FONT_W = 6
-    const FONT_h = 5
-#endif
-'* WIDEZOOM
-#ifdef widezoom
-    const SCREEN_W = 320
-    const SCREEN_H = 180
-    const SPRITE_W = 16
-    const SPRITE_H = 16
-    const FONT_W = 6
-    const FONT_h = 5
-#endif
 
 CONST MAXGUTS      = 100
 CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)

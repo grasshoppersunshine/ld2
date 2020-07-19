@@ -8,7 +8,7 @@ DECLARE SUB TITLE_Menu ()
 DECLARE SUB TITLE_Opening ()
 DECLARE SUB TITLE_ShowCredits ()
 DECLARE SUB TITLE_ShowCreditsNew ()
-DECLARE SUB TITLE_TheEnd ()
+declare sub TITLE_TheEnd (skipEpilogue as integer = 0)
 DECLARE SUB TITLE_Ad ()
 DECLARE SUB TITLE_AdTwo ()
 

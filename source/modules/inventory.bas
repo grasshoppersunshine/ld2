@@ -2,7 +2,7 @@
 #include once "file.bi"
 
 DECLARE SUB LoadSids (filename AS STRING)
-DECLARE SUB LoadShortNames (filename as string)
+DECLARE SUB LoadNames (filename as string)
 
 type UseType
     dim toUse as string
@@ -16,6 +16,7 @@ end type
 REDIM SHARED InventoryItems(0) AS InventoryType
 REDIM SHARED ItemSids(0) AS STRING
 redim shared ItemShortNames(0) as string
+redim shared ItemLongNames(0) as string
 DIM SHARED InventorySize AS INTEGER
 dim shared VisibleSize as integer
 
@@ -209,7 +210,7 @@ FUNCTION Inventory_Init (size AS INTEGER, sizeVisible as integer = -1) as intege
             InventoryItems(i).visible = iif(i < sizeVisible, 1, 0)
         NEXT i
         LoadSids "tables/items.txt"
-        LoadShortNames "tables/names.txt"
+        LoadNames "tables/names.txt"
     ELSE
         IF size <= 0 THEN
             return InventoryErr_INVALIDSIZE
@@ -397,7 +398,7 @@ SUB LoadSids (filename AS STRING)
     
 END SUB
 
-SUB LoadShortNames (filename as string)
+SUB LoadNames (filename as string)
     
     DIM ItemsFile AS INTEGER
     DIM sid AS STRING
@@ -415,18 +416,19 @@ SUB LoadShortNames (filename as string)
         if id > max then max = id
     LOOP
     redim ItemShortNames(max) as string
+    redim ItemLongNames(max) as string
     SEEK ItemsFile, 1
     DO WHILE NOT EOF(ItemsFile)
         INPUT #ItemsFile, sid, shortName, longName
         id = Inventory_SidToItemId(sid)
         if id >= 0 then
             ItemShortNames(id) = ucase(trim(shortName))
+            ItemLongNames(id) = ucase(trim(longName))
         end if
     LOOP
     CLOSE ItemsFile
     
 END SUB
-
 
 function Inventory_Use (itemId as integer) as integer
 
@@ -551,6 +553,15 @@ function Inventory_GetShortName(id as integer) as string
     return "OUT OF BOUNDS"
 end function
 
+function Inventory_GetLongName(id as integer) as string
+    dim bound as integer
+    bound = UBOUND(ItemLongNames)
+    if id >= 0 and id <= bound then
+        return ItemLongNames(id)
+    end if
+    return "OUT OF BOUNDS"
+end function
+
 function Inventory_GetSid(id as integer) as string
     dim bound as integer
     bound = UBOUND(ItemSids)
@@ -633,3 +644,12 @@ FUNCTION Inventory_Mix(itemId0 AS INTEGER, itemId1 AS INTEGER, resultMixMsg AS S
     END IF
     
 END FUNCTION
+
+sub Inventory_PopulateItem(byref item as InventoryType, byval id as integer)
+    
+    Inventory_ResetItem item
+    item.id = id
+    item.shortName = Inventory_GetShortName(id)
+    item.longName = Inventory_GetLongName(id)
+    
+end sub

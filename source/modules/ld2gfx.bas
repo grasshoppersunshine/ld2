@@ -372,21 +372,26 @@ function LD2_FadeInStep (delay as double, col as integer = 0) as integer
     
 end function
 
-function LD2_FadeOutStep (delay as double, col as integer = 0) as integer
+function LD2_FadeOutStep (delay as double, col as integer = 0, a255 as integer = -1) as integer
     
     static timestamp as double
     static a as double = 255
     dim t as double
     
-    if a = 255 then
+    if a255 > -1 then
+        a = a255
+        timestamp = timer
+    elseif a = 255 then
         a = 0
         timestamp = timer
     end if
     
-    t = (timer - timestamp)
-    if t >= delay then
-        a += 4.25*t/delay
-        timestamp = timer
+    if delay > 0 then
+        t = (timer - timestamp)
+        if t >= delay then
+            a += 4.25*t/delay
+            timestamp = timer
+        end if
     end if
     
     if a > 255 then a = 255

@@ -7,6 +7,10 @@ function Easing_getOutput(easeType as integer, e as double) as double
     dim d as double
     
     select case easeType
+    case EaseTypes.Linear
+        
+        return e
+        
     case EaseTypes.CubicIn
         
         return e * e * e

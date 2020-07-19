@@ -7,8 +7,9 @@ enum EaseTypes
     CubicInOut
     CubicOutIn
     CubicInAndReverse
-    Wobble
+    Linear
     Shake
+    Wobble
 end enum
 
 declare function Easing_getOutput(easeType as integer, e as double) as double

@@ -7,14 +7,12 @@ To bring reinforcements from their homeworld.
 They were stopped.
 For now...
 Larry the Dinosaur II
-Programming and Level Design\ \ \ Joseph King
-Story and Characters\ \ \Joseph King
-Testing\ \ \Conrad Hart\ \Lester Chaykin\ \Claire Redfield
-Music and Sound Design\ \ \Joseph King
-Special Thanks\ \ \ChipTone\ \PixelPLUS 256\ \Modplug Tracker
-Special Thanks\ \ \Freebasic Programming Language\ \Simple DirectMedia Layer (SDL)\ \SDL Mixer\ \Geany IDE
-Special Thanks\ \ \Fans of the 2002 original
-Copyright (c) 2002, 2020\ \ \All Rights Reserved
-Rest In Peace\ \ \Steve\ \Matt\ \Barney ???
+Programming and Level Design\\\Joseph King
+Music and Sound Design\\\Joseph King
+Testing\\\Conrad Hart\\Lester Chaykin\\Claire Redfield
+Special Thanks\\\ChipTone\\PixelPLUS 256\\Modplug Tracker
+Special Thanks\\\Freebasic Programming Language\\Simple DirectMedia Layer (SDL)\\SDL Mixer\\Geany IDE
+Special Thanks\\\Fans of the 2002 original
+Copyright (c) 2002, 2020\\\All Rights Reserved
 
 Thanks for Playing

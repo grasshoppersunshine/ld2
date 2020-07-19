@@ -24,8 +24,8 @@ declare sub LD2_StopSound (id as integer)
 declare function LD2_GetMusicId() as integer
 declare function LD2_GetMusicFile() as string
 DECLARE SUB LD2_PlaySound (id as integer)
-declare function LD2_FadeInMusic (speed as double = 1.0) as integer
-declare function LD2_FadeOutMusic (speed as double = 1.0) as integer
+declare function LD2_FadeInMusic (seconds as double = 3.0) as integer
+declare function LD2_FadeOutMusic (seconds as double = 3.0) as integer
 declare function LD2_GetMusicVolume() as double
 declare sub LD2_SetMusicVolume(v as double)
 declare sub LD2_SetMusicMaxVolume(v as double)

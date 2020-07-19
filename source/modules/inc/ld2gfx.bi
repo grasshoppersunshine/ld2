@@ -25,7 +25,7 @@ DECLARE SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)
 DECLARE SUB LD2_FadeInWhileNoKey (speed AS INTEGER, col as integer = 0)
 DECLARE SUB LD2_FadeOut (speed AS INTEGER, col as integer = 0)
 declare function LD2_FadeInStep (delay as double, col as integer = 0) as integer
-declare function LD2_FadeOutStep (delay as double, col as integer = 0) as integer
+declare function LD2_FadeOutStep (delay as double, col as integer = 0, a255 as integer = -1) as integer
 
 DECLARE SUB LD2_RestoreBuffer (bufferNum AS INTEGER)
 DECLARE SUB LD2_SaveBuffer (bufferNum AS INTEGER)

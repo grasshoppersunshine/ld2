@@ -6,7 +6,7 @@
 #include once "modules/inc/elements.bi"
 #include once "modules/inc/easing.bi"
 #include once "inc/ld2e.bi"
-#include once "inc/ld2.bi"
+#include once "inc/enums.bi"
 #include once "inc/status.bi"
 
 declare sub Drop (item AS InventoryType)
@@ -30,11 +30,18 @@ const STATUS_WINDOW_HEIGHT_MAX = SCREEN_H
 
 dim shared STATUS_INVENTORY_SIZE as integer = 8
 dim shared STATUS_WINDOW_HEIGHT as integer = STATUS_WINDOW_HEIGHT_MIN
+dim shared STATUS_TEMP_HEIGHT as integer
+dim shared LOOK_ITEM_ID as integer = -1
 
 const DATA_DIR = "data/"
 const STATUS_DIALOG_ALPHA = 0.75
 const STATUS_DIALOG_COLOR = 66
 const STATUS_EASE_SPEED = 0.3333
+
+const OPTION_ACTIVE_BG   = STATUS_DIALOG_COLOR+4
+const OPTION_INACTIVE_BG = STATUS_DIALOG_COLOR+2
+const OPTION_ACTIVE_COLOR   = 15
+const OPTION_INACTIVE_COLOR = 7
 
 const STATUS_COLOR_SUCCESS = 56
 const STATUS_COLOR_DENIED = 232
@@ -118,6 +125,41 @@ SUB BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elem
     Elements_Add elementBorder
 	
 END SUB
+
+sub STATUS_CycleWindowSize(forceSize as integer = -1)
+    
+    dim sizes(2) as integer
+    
+    sizes(0) = STATUS_WINDOW_HEIGHT_MIN
+    sizes(1) = STATUS_WINDOW_HEIGHT_MED
+    sizes(2) = STATUS_WINDOW_HEIGHT_MAX
+    
+    if (forceSize >= 0) and (forceSize <= ubound(sizes)) then
+        STATUS_WINDOW_HEIGHT = sizes(forceSize)
+    else
+        select case STATUS_WINDOW_HEIGHT
+        case STATUS_WINDOW_HEIGHT_MIN
+            STATUS_WINDOW_HEIGHT = STATUS_WINDOW_HEIGHT_MED
+        case STATUS_WINDOW_HEIGHT_MED
+            STATUS_WINDOW_HEIGHT = STATUS_WINDOW_HEIGHT_MAX
+        case STATUS_WINDOW_HEIGHT_MAX
+            STATUS_WINDOW_HEIGHT = STATUS_WINDOW_HEIGHT_MIN
+        end select
+    end if
+    
+end sub
+
+sub STATUS_SetWindowSize(size as integer)
+    
+    STATUS_CycleWindowSize size
+    
+end sub
+
+sub STATUS_SetTempWindowSize(size as integer)
+    
+    STATUS_TEMP_HEIGHT = size
+    
+end sub
 
 sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0, mixItemWith as InventoryType ptr = 0)
     
@@ -1388,6 +1430,12 @@ sub GetInventoryRowsCols(byref rows as integer, byref cols as integer)
     
 end sub
 
+sub STATUS_SetLookItem(itemId as integer)
+    
+    LOOK_ITEM_ID = itemId
+    
+end sub
+
 function StatusScreen(skipInput as integer = 0) as integer
 	
 	LD2_LogDebug "StatusScreen ()"
@@ -1397,6 +1445,7 @@ function StatusScreen(skipInput as integer = 0) as integer
     static mixItem as InventoryType
     static mixMode as integer = 0
 	static action as integer
+    static prevWindowHeight as integer = -1
     static state as integer = DialogStates.closed
     static row as integer
     static col as integer
@@ -1425,6 +1474,11 @@ function StatusScreen(skipInput as integer = 0) as integer
         if e = -1 then
             e = Easing_doEaseInOut(-1)
             LD2_PlaySound Sounds.uiMenu
+            if STATUS_TEMP_HEIGHT > -1 then
+                prevWindowHeight = STATUS_WINDOW_HEIGHT
+                STATUS_SetWindowSize STATUS_TEMP_HEIGHT
+                STATUS_TEMP_HEIGHT = -1
+            end if
         else
             e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
         end if
@@ -1447,6 +1501,10 @@ function StatusScreen(skipInput as integer = 0) as integer
         if e = 1 then
             state = DialogStates.closed
             e = -1
+            if prevWindowHeight > -1 then
+                STATUS_WINDOW_HEIGHT = prevWindowHeight
+                prevWindowHeight = -1
+            end if
             return 1
         else
             return 0
@@ -1458,6 +1516,9 @@ function StatusScreen(skipInput as integer = 0) as integer
         col = selectedInventorySlot-row*numCols
         LookItem.id = -1
         action = -1
+        if LOOK_ITEM_ID > -1 then
+            Inventory_PopulateItem(lookItem, LOOK_ITEM_ID)
+        end if
     end select
     
     
@@ -1467,6 +1528,11 @@ function StatusScreen(skipInput as integer = 0) as integer
     if LookItem.id > -1 then
         if Look(LookItem, skipInput) then
             LookItem.id = -1
+            if LOOK_ITEM_ID > -1 then
+                LOOK_ITEM_ID = -1
+                state = DialogStates.closing
+                return StatusScreen(skipInput)
+            end if
         else
             return 0
         end if
@@ -1754,19 +1820,15 @@ function ShowResponse (response as string = "", textColor as integer = -1, skipI
     
 end function
 
-
-
-function STATUS_DialogYesNo(message as string) as integer
+function STATUS_DialogYesNo(message as string, playOpenSound as integer = 1) as integer
     
     dim e as double
     dim pixels as integer
     dim halfX as integer
     dim halfY as integer
     dim size as integer
-    dim x as integer
-    dim y as integer
+    dim maxw as integer
     dim w as integer
-    dim h as integer
     
     dim dialog as ElementType
     dim title as ElementType
@@ -1802,14 +1864,16 @@ function STATUS_DialogYesNo(message as string) as integer
     dim modw as double: modw = 1.6
     dim modh as double: modh = 0.8
     
-    LD2_PlaySound Sounds.uiMenu
+    if playOpenSound then
+        LD2_PlaySound Sounds.uiMenu
+    end if
 	
 	LD2_SaveBuffer 2
 	LD2_CopyBuffer 1, 2
 	
-    Easing_doEaseIn(-1)
+    Easing_doEaseInOut(-1)
 	do
-        e = Easing_doEaseIn(0, STATUS_EASE_SPEED)
+        e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
         pixels = int(e * size)
         dialog.x = halfX - pixels * modw
         dialog.y = halfY - pixels * modh
@@ -1828,16 +1892,20 @@ function STATUS_DialogYesNo(message as string) as integer
     dialog.h = pixels * modh * 2
     title.x = fontW
     title.y = fontH
-    optionYes.y = dialog.h*0.5-fontH-3
-    optionYes.padding_x = fontW: optionYes.padding_y = 3
+    optionYes.y = int(dialog.h*0.3333)
+    optionYes.padding_x = int(fontW*2.5): optionYes.padding_y = 5
     optionYes.background = 68
-    optionYes.text_is_monospace = 1
     optionYes.text_height = 1
-    optionNo.y  = optionYes.y + fontH*2
-    optionNo.padding_x = fontW: optionNo.padding_y = 3
-    optionNo.text_is_monospace = 1
+    optionNo.y  = optionYes.y + int(fontH*2.5)
+    optionNo.padding_x = int(fontW*2.5): optionNo.padding_y = 5
     optionNo.text_height = 1
     optionYes.background = 70
+    
+    maxw = Element_GetTextWidth(@optionYes)
+    w = Element_GetTextWidth(@optionNo)
+    if w > maxw then maxw = w
+    optionYes.w = maxw
+    optionNo.w = maxw
     
     Elements_Clear
     Elements_Add @dialog
@@ -1845,16 +1913,16 @@ function STATUS_DialogYesNo(message as string) as integer
     Elements_Add @optionYes, @dialog
     Elements_Add @optionNo, @dialog
     
-    selections(0) = Options.Yes
-    selections(1) = Options.No: selection = 1: escapeSelection = 1
+    selections(0) = OptionIds.Yes
+    selections(1) = OptionIds.No: selection = 1: escapeSelection = 1
     
     do
         select case selections(selection)
-        case Options.Yes
+        case OptionIds.Yes
             optionYes.background = 70: optionYes.text_color = 31
             optionNo.background = STATUS_DIALOG_COLOR
             optionNo.text_color = 7
-        case Options.No
+        case OptionIds.No
             optionYes.background = STATUS_DIALOG_COLOR
             optionYes.text_color = 7
             optionNo.background = 70: optionNo.text_color = 31
@@ -1892,19 +1960,21 @@ function STATUS_DialogYesNo(message as string) as integer
     
     Elements_Clear
     
-    Easing_doEaseOut(-1)
-	do
-        pixels = int(e * size)
-        dialog.x = halfX - pixels * modw
-        dialog.y = halfY - pixels * modh
-        dialog.w = pixels * modw * 2
-        dialog.h = pixels * modh * 2
-        LD2_CopyBuffer 2, 1
-        Element_Render @dialog
-        LD2_RefreshScreen
-        PullEvents
-        e = Easing_doEaseOut(0, STATUS_EASE_SPEED)
-	loop while e > 0
+    if selections(selection) <> OptionIds.No then
+        e = Easing_doEaseInOut(-1)
+        do
+            pixels = int((1-e) * size)
+            dialog.x = halfX - pixels * modw
+            dialog.y = halfY - pixels * modh
+            dialog.w = pixels * modw * 2
+            dialog.h = pixels * modh * 2
+            LD2_CopyBuffer 2, 1
+            Element_Render @dialog
+            LD2_RefreshScreen
+            PullEvents
+            e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
+        loop while e < 1
+    end if
     
     LD2_CopyBuffer 2, 1
     LD2_RefreshScreen
@@ -1914,7 +1984,7 @@ function STATUS_DialogYesNo(message as string) as integer
     
 end function
 
-sub STATUS_DialogOk(message as string)
+sub STATUS_DialogOk(message as string, playOpenSound as integer = 1)
     
     dim e as double
     dim pixels as integer
@@ -1954,14 +2024,16 @@ sub STATUS_DialogOk(message as string)
     dim modw as double: modw = 1.6
     dim modh as double: modh = 0.8
     
-    LD2_PlaySound Sounds.uiMenu
+    if playOpenSound then
+        LD2_PlaySound Sounds.uiMenu
+    end if
 	
 	LD2_SaveBuffer 2
 	LD2_CopyBuffer 1, 2
 	
-    Easing_doEaseIn(-1)
+    Easing_doEaseInOut(-1)
 	do
-        e = Easing_doEaseIn(0, STATUS_EASE_SPEED)
+        e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
         pixels = int(e * size)
         dialog.x = halfX - pixels * modw
         dialog.y = halfY - pixels * modh
@@ -1983,7 +2055,6 @@ sub STATUS_DialogOk(message as string)
     optionOk.y = dialog.h*0.5
     optionOk.padding_x = fontW: optionOk.padding_y = 3
     optionOk.background = 70
-    optionOk.text_is_monospace = 1
     
     Elements_Clear
     Elements_Add @dialog
@@ -2013,7 +2084,7 @@ sub STATUS_DialogOk(message as string)
     
     Elements_Clear
     
-    Easing_doEaseOut(-1)
+    e = Easing_doEaseInOut(-1)
 	do
         pixels = int(e * size)
         dialog.x = halfX - pixels * modw
@@ -2024,7 +2095,7 @@ sub STATUS_DialogOk(message as string)
         Element_Render @dialog
         LD2_RefreshScreen
         PullEvents
-        e = Easing_doEaseOut(0, STATUS_EASE_SPEED)
+        e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
 	loop while e > 0
     
     LD2_CopyBuffer 2, 1
@@ -2033,3 +2104,168 @@ sub STATUS_DialogOk(message as string)
     
 end sub
 
+function STATUS_DialogExitGame(message as string, playOpenSound as integer = 1) as integer
+    
+    dim e as double
+    dim pixels as integer
+    dim halfX as integer
+    dim halfY as integer
+    dim size as integer
+    dim maxw as integer
+    dim w as integer
+    dim n as integer
+    
+    dim dialog as ElementType
+    dim title as ElementType
+    dim options(2) as ElementType
+    
+    dim selections(2) as integer
+    dim selection as integer
+    dim escapeSelection as integer
+    
+    dim fontW as integer
+    dim fontH as integer
+    
+    fontW = Elements_GetFontWidthWithSpacing()
+    fontH = Elements_GetFontHeightWithSpacing()
+    
+    Element_Init @dialog
+    Element_Init @title, message, 31
+    Element_Init @options(0), "Back to Game", 31, ElementFlags.CenterX
+    Element_Init @options(1), "How to Play ", 31, ElementFlags.CenterX
+    Element_Init @options(2), "Exit Game   ", 31, ElementFlags.CenterX
+    
+    dialog.background = STATUS_DIALOG_COLOR
+    dialog.background_alpha = STATUS_DIALOG_ALPHA
+    dialog.border_size = 1
+    dialog.border_color = 15
+    title.text_height = 2.0
+    
+    halfX = int(SCREEN_W*0.5)
+    halfY = int(SCREEN_H*0.5)
+    
+    size = int(SCREEN_H*0.25)
+    
+    dim modw as double: modw = 1.6
+    dim modh as double: modh = 0.8+ubound(options)*0.1
+    
+    if playOpenSound then
+        LD2_PlaySound Sounds.uiMenu
+    end if
+	
+	LD2_SaveBuffer 2
+	LD2_CopyBuffer 1, 2
+	
+    Easing_doEaseInOut(-1)
+	do
+        e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
+        pixels = int(e * size)
+        dialog.x = halfX - pixels * modw
+        dialog.y = halfY - pixels * modh
+        dialog.w = pixels * modw * 2
+        dialog.h = pixels * modh * 2
+        LD2_CopyBuffer 2, 1
+        Element_Render @dialog
+        LD2_RefreshScreen
+        PullEvents
+	loop while e < 1
+    
+    dim top as integer
+    top = int(dialog.h*0.3333)
+    pixels = size
+    dialog.x = halfX - pixels * modw
+    dialog.y = halfY - pixels * modh
+    dialog.w = pixels * modw * 2
+    dialog.h = pixels * modh * 2
+    title.x = fontW
+    title.y = fontH
+    for n = 0 to 2
+        options(n).padding_x = fontW
+        options(n).padding_y = 5
+        options(n).y  = top + n*int(fontH*2.5) - options(n).padding_y
+        options(n).text_height = 1
+        w = Element_GetTextWidth(@options(n)) 
+        if w > maxw then maxw = w
+    next n
+    for n = 0 to 2
+        options(n).w = maxw
+    next n
+    
+    Elements_Clear
+    Elements_Add @dialog
+    Elements_Add @title, @dialog
+    for n = 0 to 2
+        Elements_Add @options(n), @dialog
+    next n
+    
+    selections(0) = OptionIds.BackToGame
+    selections(1) = OptionIds.HowToPlay
+    selections(2) = OptionIds.ExitGame
+    selection = 0: escapeSelection = 0
+    
+    do
+        for n = 0 to 2
+            if selection = n then
+                options(n).background = OPTION_ACTIVE_BG
+                options(n).text_color = OPTION_ACTIVE_COLOR
+            else
+                options(n).background = OPTION_INACTIVE_BG
+                options(n).text_color = OPTION_INACTIVE_COLOR
+            end if
+        next n
+        LD2_CopyBuffer 2, 1
+        Elements_Render
+		LD2_RefreshScreen
+        PullEvents
+        if keypress(KEY_ENTER) then
+            LD2_PlaySound Sounds.uiSelect
+            exit do
+        end if
+        if keypress(KEY_DOWN) then
+            selection += 1
+            if selection > ubound(options) then
+                selection = ubound(options): LD2_PlaySound Sounds.uiInvalid
+            else
+                LD2_PlaySound Sounds.uiArrows
+            end if
+        end if
+        if keypress(KEY_UP) then
+            selection -= 1
+            if selection < 0 then
+                selection = 0: LD2_PlaySound Sounds.uiInvalid
+            else
+                LD2_PlaySound Sounds.uiArrows
+            end if
+        end if
+        if keypress(KEY_ESCAPE) then
+            selection = escapeSelection
+            LD2_PlaySound Sounds.uiCancel
+            exit do
+        end if
+    loop
+    
+    Elements_Clear
+    
+    if selections(selection) <> OptionIds.ExitGame then
+        e = Easing_doEaseInOut(-1)
+        do
+            pixels = int((1-e) * size)
+            dialog.x = halfX - pixels * modw
+            dialog.y = halfY - pixels * modh
+            dialog.w = pixels * modw * 2
+            dialog.h = pixels * modh * 2
+            LD2_CopyBuffer 2, 1
+            Element_Render @dialog
+            LD2_RefreshScreen
+            PullEvents
+            e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
+        loop while pixels > 1
+    end if
+    
+    LD2_CopyBuffer 2, 1
+    LD2_RefreshScreen
+    LD2_RestoreBuffer 2
+    
+    return selections(selection)
+    
+end function

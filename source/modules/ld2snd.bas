@@ -84,7 +84,69 @@ sub LD2_FreeSound (id as integer)
     
 end sub
 
-function LD2_FadeInMusic (speed as double = 1.0) as integer
+function LD2_FadeInMusic (seconds as double = 3.0) as integer
+
+	static clock as double = 0
+    static warp as double = 1
+    static volume as double = 0
+    dim timediff as double
+    
+    if LD2soundEnabled = 0 then return 0
+    
+    if clock = 0 then
+        warp = 1-LD2_GetMusicVolume()
+        volume = LD2_GetMusicVolume()
+        clock = iif(volume < 1, timer, 0)
+        return (volume < 1)
+    end if
+    
+    timediff = timer - clock
+    if timediff > 0.0167 then
+        volume += timediff/seconds*warp
+        if volume >= 1 then
+            volume = 1: clock = 0
+        else
+            clock = timer
+        end if
+        LD2_SetMusicVolume volume
+    end if
+    
+    return (volume < 1)
+
+end function
+
+function LD2_FadeOutMusic (seconds as double = 3.0) as integer
+
+	static clock as double = 0
+    static warp as double = 1
+    static volume as double = 1
+    dim timediff as double
+    
+    if LD2soundEnabled = 0 then return 0
+    
+    if clock = 0 then
+        warp = LD2_GetMusicVolume()
+        volume = LD2_GetMusicVolume()
+        clock = iif(volume > 0, timer, 0)
+        return (volume > 0)
+    end if
+    
+    timediff = timer - clock
+    if timediff > 0.0167 then
+        volume -= timediff/seconds*warp
+        if volume <= 0 then
+            volume = 0: clock = 0
+        else
+            clock = timer
+        end if
+        LD2_SetMusicVolume volume
+    end if
+    
+    return (volume > 0)
+    
+end function
+
+function ClassicLD2_FadeInMusic (speed as double = 1.0) as integer
 
 	dim v as double
 	dim delay as double
@@ -106,7 +168,7 @@ function LD2_FadeInMusic (speed as double = 1.0) as integer
 
 end function
 
-function LD2_FadeOutMusic (speed as double = 1.0) as integer
+function ClassicLD2_FadeOutMusic (speed as double = 1.0) as integer
 
 	dim v as double
 	dim delay as double
@@ -244,17 +306,16 @@ end function
 
 sub LD2_SetMusicVolume(v as double)
     
-    SOUND_SetMusicVolume iif(v > MaxMusicVolume, MaxMusicVolume, v)
+    SOUND_SetMusicVolume v*MaxMusicVolume
     
 end sub
 
 sub LD2_SetMusicMaxVolume(v as double)
     
     MaxMusicVolume = v
-    v = SOUND_GetMusicVolume()
-    if v > MaxMusicVolume then
-        v = MaxMusicVolume
-        SOUND_SetMusicVolume v
+    
+    if SOUND_GetMusicVolume() > MaxMusicVolume then
+        SOUND_SetMusicVolume MaxMusicVolume
     end if
     
 end sub
@@ -267,17 +328,16 @@ end function
 
 sub LD2_SetSoundVolume(v as double)
     
-    SOUND_SetSoundVolume iif(v > MaxSoundVolume, MaxSoundVolume, v)
+    SOUND_SetSoundVolume v*MaxSoundVolume
     
 end sub
 
 sub LD2_SetSoundMaxVolume(v as double)
     
     MaxSoundVolume = v
-    v = SOUND_GetSoundVolume()
-    if v > MaxSoundVolume then
-        v = MaxSoundVolume
-        SOUND_SetSoundVolume v
+    
+    if SOUND_GetSoundVolume() > MaxSoundVolume then
+        SOUND_SetSoundVolume MaxSoundVolume
     end if
     
 end sub

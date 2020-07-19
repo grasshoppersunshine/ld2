@@ -35,8 +35,11 @@ declare function Inventory_GetUseQty() as integer
 declare function Inventory_GetUseMessage() as string
 declare function Inventory_GetUseItemDiscard() as integer
 declare function Inventory_GetShortName(id as integer) as string
+declare function Inventory_GetLongtName(id as integer) as string
 declare function Inventory_GetSid(id as integer) as string
 declare function Inventory_GetMaxId() as integer
+
+declare sub Inventory_PopulateItem(byref item as InventoryType, byval id as integer)
 
 CONST INVENTORYMAXSIZE = 99
 CONST InventoryErr_OUTOFBOUNDS = -101
