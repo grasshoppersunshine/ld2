@@ -2,12 +2,15 @@
 '- July, 2002 - Created by Joe King
 '====================================
 
+    #define EDITOR
+    
     #include once "modules/inc/ld2gfx.bi"
     #include once "modules/inc/ld2snd.bi"
     #include once "modules/inc/common.bi"
     #include once "modules/inc/keys.bi"
     #include once "modules/inc/elements.bi"
     #include once "inc/ld2.bi"
+    #include once "inc/enums.bi"
     #include once "file.bi"
     #include once "dir.bi"
 
@@ -21,6 +24,9 @@
     const DIALOG_OPTION_COLOR = 7
     const DIALOG_SELECTED_BACKGROUND = 7
     const DIALOG_SELECTED_COLOR = 15
+    
+    const SCREENSHOT_W = 1280
+    const SCREENSHOT_H = 720
 
 type PointType
     x as integer
@@ -164,7 +170,6 @@ end type
     declare function RemoveItem(x as integer, y as integer) as integer
     declare function GetItem(x as integer, y as integer) as integer
     declare sub showHelp ()
-    declare sub GenerateSky()
     declare sub Notice(message as string)
     declare function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integer, byref cursor as PointType, bgcolor as integer = 18) as integer
     declare sub MoveMap(dx as integer, dy as integer)
@@ -333,7 +338,7 @@ end type
   DO
     
     if keypress(KEY_ESCAPE) then
-        if DialogYesNo("Exit Editor?") = Options.Yes then
+        if DialogYesNo("Exit Editor?") = OptionIds.Yes then
             SaveMap DATA_DIR+"editor/exitsave.ld2"
             WaitSeconds 0.33 '// let option-select sound play
             exit do
@@ -415,6 +420,15 @@ end type
     putText "XY "+str((Cursor.x)+XScroll)+" "+str(Cursor.y), FONT_W*0.5, FONT_H*34.5
     putText "Animations "+iif(Animation, "ON", "OFF"), FONT_W*0.5, FONT_H*38.5
     
+    if keypress(KEY_F2) then
+        filename = ""
+        Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+        noticeMessage = "Saved "+filename
+        LD2_PlaySound EditSounds.turnPage
+    end if
+    
+    if keypress(KEY_H) then showHelp
+    
     if (noticeTimer = 0) then
         if len(noticeMessage) then
             noticeTimer = timer
@@ -428,9 +442,8 @@ end type
         end if
     end if
     
-    if keypress(KEY_H) then showHelp
-    
     LD2_RefreshScreen
+    
     LD2_CopyBuffer 2, 1
     
     PullEvents
@@ -725,7 +738,7 @@ end type
         LD2_PlaySound iif(pastePreview,EditSounds.arrows,EditSounds.cancel)
     end if
     
-    if keypress(KEY_F2) then
+    if keypress(KEY_O) then
         LD2_PlaySound EditSounds.inputText
         filename = trim(inputText("Save Filename: ", mapFilename))
         if filename <> "" then
@@ -2280,6 +2293,12 @@ function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integ
         
         LD2_RefreshScreen
         
+        if keypress(KEY_F2) then
+            dim filename as string
+            Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+            LD2_PlaySound EditSounds.turnPage
+        end if
+        
         addX = 0: addY = 0
         addPage = 0
         if keyboard(KEY_LSHIFT) or keyboard(KEY_RSHIFT) then
@@ -2747,16 +2766,16 @@ function DialogYesNo(message as string) as integer
     Elements_Add @optionYes, @dialog
     Elements_Add @optionNo, @dialog
     
-    selections(0) = Options.Yes
-    selections(1) = Options.No: selection = 1: escapeSelection = 1
+    selections(0) = OptionIds.Yes
+    selections(1) = OptionIds.No: selection = 1: escapeSelection = 1
     
     do
         select case selections(selection)
-        case Options.Yes
+        case OptionIds.Yes
             optionYes.background = DIALOG_SELECTED_BACKGROUND: optionYes.text_color = DIALOG_SELECTED_COLOR
             optionNo.background = DIALOG_OPTION_BACKGROUND
             optionNo.text_color = DIALOG_OPTION_COLOR
-        case Options.No
+        case OptionIds.No
             optionYes.background = DIALOG_OPTION_BACKGROUND
             optionYes.text_color = DIALOG_OPTION_COLOR
             optionNo.background = DIALOG_SELECTED_BACKGROUND: optionNo.text_color = DIALOG_SELECTED_COLOR

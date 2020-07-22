@@ -174,11 +174,11 @@ sub BeforeScene()
         Map_Load RoomToFilename(SCENE_ROOM_ID)
     end if
     
-    if (PLAYER_START_X <> -1) or (PLAYER_START_Y <> -1) and ((int(Player_GetX()) <> PLAYER_START_X) or (int(Player_GetY()) <> PLAYER_START_Y)) then
-        Player_SetXY PLAYER_START_X, PLAYER_START_Y
-        if PLAYER_START_FLIP <> -1 then
-            Player_SetFlip PLAYER_START_FLIP
-        end if
+    if ((PLAYER_START_X <> -1) and (int(Player_GetX()) <> PLAYER_START_X)) _
+    or ((PLAYER_START_Y <> -1) and (int(Player_GetY()) <> PLAYER_START_Y)) then
+        if PLAYER_START_X <> -1 then Player_SetXY PLAYER_START_X, Player_GetY()
+        if PLAYER_START_Y <> -1 then Player_SetXY Player_GetX(), PLAYER_START_Y
+        if PLAYER_START_FLIP <> -1 then Player_SetFlip PLAYER_START_FLIP
         LD2_FadeOut 2
         FadeOutMusic 0.5
         LD2_StopMusic
@@ -192,6 +192,9 @@ sub BeforeScene()
     end if
     
     ClearPoses
+    PLAYER_START_X = -1
+    PLAYER_START_Y = -1
+    PLAYER_START_FLIP = -1
     
 end sub
 
@@ -226,7 +229,7 @@ sub SceneInit(sceneCallback as function() as integer, endConditionsCallback as s
     END_CONDITIONS_CALLBACK = endConditionsCallback
     SCENE_ROOM_ID = roomId
     PLAYER_START_X = playerStartX
-    PLAYER_START_Y = playerStarty
+    PLAYER_START_Y = playerStartY
     PLAYER_START_FLIP = playerStartFlip
     GameSetFlag MUSICFADEIN
     

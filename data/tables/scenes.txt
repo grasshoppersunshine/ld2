@@ -195,16 +195,22 @@ SCENE-3A
     I am a doctor.
     
     LARRY
+    ...
     Seriously?
-    Let me guess, you got your degree today as well?
     
     JANITOR
     Heh... well...
-    I used to be a doctor... Long story.
+    ... No.
     
     LARRY
-    Good enough.
-    He needs help fast.
+    Oh...
+    
+    JANITOR
+    I used to be a doctor... well, nurse... Long story.
+    
+    LARRY
+    Good enough!
+    He needs help fast!
     Come on!
 
 END
@@ -271,11 +277,10 @@ SCENE-5B
     I owe you.
     
     BARNEY
-    Actually, you do.
-    Twenty bucks from losing that game of pool last night.
+    Actually, you do... from losing that game of pool last night.
     
     LARRY
-    Oh yeah...
+    Oh, yeah...
     I was gonna get that to you...
     ... but...
     
@@ -356,6 +361,7 @@ SCENE-7A
     Unfortunately.
     
     LARRY
+    ...
     Damn!
     
     BARNEY
@@ -366,22 +372,29 @@ SCENE-7A
     But... it requires a yellow access card to get inside.
     
     LARRY
-    Damn!
+    ...
     
     BARNEY
+    ...
     We need to split up and find a yellow access card.
     
     LARRY
-    Alright!
+    Got it!
     
     BARNEY
     Oh, and here's something else.
     
     LARRY
-    A walky-talky?
+    A walkie-talkie?
     
     BARNEY
-    Yes, so we can keep in touch.
+    Ahem, it's called a handheld transceiver.
+    
+    LARRY
+    Yes, so we can keep in touch?
+    
+    BARNEY
+    Correct.
     
     LARRY
     Nice!

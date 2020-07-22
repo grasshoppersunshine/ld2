@@ -16,7 +16,7 @@ public:
     declare sub init(v as Video ptr)
     declare sub setPalette(p as Palette256 ptr)
     declare sub loadBmp(filename as string)
-    declare sub saveBmp(filename as string)
+    declare sub saveBmp(filename as string, xscale as double = 1.0, yscale as double = 1.0)
     declare sub setAsTarget()
     declare sub putToScreen(src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)
     declare sub copy(buffer as VideoBuffer ptr, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)

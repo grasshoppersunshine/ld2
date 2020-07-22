@@ -5,17 +5,20 @@
 const MAX_ACTION_ITEMS = 4
 
 type IntervalType
-    _interval as double
     _clock as double
-    _speed as double
+    _seconds as double
     _size as double
     _loops as integer
+    _first as integer
+    _offset as integer
     declare property interval() as double
     declare property reversed() as double
-    declare property size() as double
-    declare property speed() as double
-    declare sub init(loops as integer=0, spd as double=1.0, sz as double=1.0, intrvl as double=0.0)
-    declare sub reset(intrvl as double=0.0)
+    declare property transformed() as integer
+    declare property offset() as integer
+    declare property offset(offst as integer)
+    declare sub initLoop(first as integer, last as integer, seconds as double=1.0, start as double=0.0)
+    declare sub initNoLoop(first as integer, last as integer, seconds as double=1.0, start as double=0.0)
+    declare sub reset(start as double=0.0)
 end type
 
 type PlayerType
@@ -33,11 +36,10 @@ type PlayerType
     is_lookingdown as integer
     flags as integer
     _flip as integer
-    lAni as double
-    uAni as double
-    stillani as integer
-    upperLoop as IntervalType
-    lowerLoop as IntervalType
+    lAni as integer
+    uAni as integer
+    upper as IntervalType
+    lower as IntervalType
     moved as integer
     declare sub init()
     declare function hasFlag(flag as integer) as integer
@@ -255,6 +257,7 @@ declare function Player_GetCurrentRoom () as integer
 declare function Player_GetGotItem() as integer
 declare sub Player_DoAction ()
 declare sub Player_Hurt(damage as integer, contactX as integer, contactY as integer)
+declare sub Player_InitUpper (intervalStart as double=0.0)
 
 declare sub Game_Init ()
 declare function Game_isTestMode () as integer
@@ -272,6 +275,8 @@ declare function Game_GetGravity () as double
 declare sub Game_SetBossBar (mobId as integer)
 declare sub Game_ShutDown ()
 declare sub Game_SetSessionFile (filename as string)
+
+declare sub GameNotice_Draw ()
 
 declare function Boot_HasCommandArg(argcsv as string) as integer
 declare sub Boot_ReadyCommandArgs()

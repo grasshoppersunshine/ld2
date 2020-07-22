@@ -6,6 +6,8 @@
 #include once "inc/videobuffer.bi"
 #include once "inc/videosprites.bi"
 #include once "inc/ld2gfx.bi"
+#include once "file.bi"
+#include once "dir.bi"
 
 declare function fontVal(ch as string) as integer
 
@@ -482,6 +484,44 @@ sub Font_putTextCol (x as integer, y as integer, text as string, col as integer,
             SpritesFont.putToScreen((n * FONT_W - FONT_W) + x, y, fontVal(mid(text, n, 1)))
         end if
     next n
+    
+end sub
+
+sub Screenshot_Take(byref filename as string = "", xscale as double = 1.0, yscale as double = 1.0)
+    
+    dim datetime as string
+    dim count as integer
+    dim file as integer
+    dim n as integer
+    
+    if dir(DATA_DIR+"screenshots", fbDirectory) <> DATA_DIR+"screenshots" then
+        mkdir DATA_DIR+"screenshots"
+    end if
+    
+    if filename = "" then
+        datetime = date
+        count = 0
+        do
+            filename = ""
+            for n = 1 to len(datetime)
+                if instr("1234567890", mid(datetime, n, 1)) then
+                    filename += mid(datetime, n, 1)
+                end if
+            next n
+            if count > 0 then
+                if count > 26 then
+                    filename += string(int(count/26), "z")
+                end if
+                filename += chr(asc("a")+((count-1) mod 26))
+            end if
+            filename += ".bmp"
+            count += 1
+        loop while FileExists(DATA_DIR+"screenshots/"+filename)
+    end if
+    
+    file = freefile
+    open filename for binary as file: close file
+    VideoBuffers(0).saveBMP DATA_DIR+"screenshots/"+filename, xscale, yscale
     
 end sub
 

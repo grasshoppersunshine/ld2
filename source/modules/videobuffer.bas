@@ -113,13 +113,29 @@ sub VideoBuffer.loadBmp(filename as string)
     
 end sub
 
-sub VideoBuffer.saveBmp(filename as string)
+sub VideoBuffer.saveBmp(filename as string, xscale as double = 1.0, yscale as double = 1.0)
     
     dim surface as SDL_Surface ptr
+    dim texture as SDL_Texture ptr
+    dim w as integer
+    dim h as integer
     
-    surface = SDL_CreateSurfaceFromTexture(this._renderer, this._data)
-    SDL_SaveBMP(surface, filename)
-    SDL_FreeSurface(surface)
+    w = int(this._w * xscale)
+    h = int(this._h * yscale)
+    if (w = this._w) and (h = this._h) then
+        surface = SDL_CreateSurfaceFromTexture(this._renderer, this._data)
+        SDL_SaveBMP(surface, filename)
+        SDL_FreeSurface(surface)
+    else
+        texture = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, h)
+        SDL_SetTextureBlendMode( texture, SDL_BLENDMODE_BLEND )
+        SDL_SetRenderTarget( this._renderer, texture )
+        SDL_RenderCopy( this._renderer, this._data, 0, 0)
+        surface = SDL_CreateSurfaceFromTexture(this._renderer, texture)
+        SDL_SaveBMP(surface, filename)
+        SDL_FreeSurface(surface)
+        SDL_DestroyTexture(texture)
+    end if
     
 end sub
 

@@ -29,31 +29,43 @@
     
     property IntervalType.interval() as double
         dim timediff as double
-        timediff = (timer - this._clock) * this._speed
-        if this._loops and (timediff>1) then
-            timediff = timediff-int(timediff)
+        timediff = (timer - this._clock) * this._seconds
+        if this._loops and timediff > 1 then
+            timediff -= int(timediff)
         end if
-        return iif(timediff<1,timediff,1)
+        return iif(timediff>1,1,timediff)
     end property
     property IntervalType.reversed() as double
         return -this.interval+1
     end property
-    property IntervalType.size() as double
-        return this._size
+    property IntervalType.transformed() as integer
+        dim d as double
+        d = this.interval*this._size
+        if d >= this._size then d = this._size-1
+        return int(d+this._first)
     end property
-    property IntervalType.speed() as double
-        return this._speed
+    property IntervalType.offset() as integer
+        return this._offset
     end property
-    sub IntervalType.init(loops as integer=0, spd as double=1.0, sz as double=1.0, intrvl as double=0.0)
-        this._speed = spd
-        this._size = sz
-        this._interval = intrvl
-        this._clock = timer
-        this._loops = loops
+    property IntervalType.offset(offst as integer)
+        this._offset = offst
+    end property
+    sub IntervalType.initLoop(first as integer, last as integer, seconds as double=1.0, start as double=0.0)
+        this._first = first
+        this._seconds = 1/iif(seconds>0,seconds,1)
+        this._size = (last-first)+1
+        this._clock = timer-start*seconds
+        this._loops = 1
     end sub
-    sub IntervalType.reset(intrvl as double=0.0)
-        this._interval = intrvl
-        this._clock = timer
+    sub IntervalType.initNoLoop(first as integer, last as integer, seconds as double=1.0, start as double=0.0)
+        this._first = first
+        this._seconds = 1/iif(seconds>0,seconds,1)
+        this._size = (last-first)+1
+        this._clock = timer-start*seconds
+        this._loops = 0
+    end sub
+    sub IntervalType.reset(start as double=0.0)
+        this._clock = timer-start*this._seconds
     end sub
     
     sub PlayerType.init
@@ -74,7 +86,6 @@
         this._flip = 0
         this.lAni = 0
         this.uAni = 0
-        this.stillAni = 0
         this.moved = 0
         
     end sub
@@ -259,7 +270,6 @@
     declare sub MapLightFG_Draw ()
     declare sub SceneCaption_Draw ()
     declare sub TextReveal_Draw ()
-    declare sub GameNotice_Draw ()
     '*******************************************************************
     '* SPRITES
     '*******************************************************************
@@ -2609,7 +2619,7 @@ sub MapLightFG_Draw
     tilesAcross = int((SCREEN_W / SPRITE_W)+.99)+1
     tilesDown   = int((SCREEN_H / SPRITE_H)+.99)+1
     
-    playerIsLit = Player.is_shooting and (Player.weapon <> ItemIds.Fist) and ((Player.uAni-Player.stillAni) < 1.5)
+    playerIsLit = Player.is_shooting and (Player.weapon <> ItemIds.Fist) and (Player.upper.interval < 0.2)
     yp = ypStart: mapY = mapYstart
     for y = 0 to tilesDown-1
         xp = xpStart
@@ -2729,7 +2739,6 @@ sub LD2_RenderForeground (renderElevators as integer = 0)
     Stats_Draw
     SceneCaption_Draw
     TextReveal_Draw
-    GameNotice_Draw
     
 end sub
 
@@ -3055,7 +3064,7 @@ sub Map_UpdateShift (skipEase as integer = 0)
         clock = timer
     end if
     if skipEase then
-        focus = target
+        focus = Player.x
     end if
     
     if e = 0 then
@@ -3275,31 +3284,7 @@ function MapItems_Pickup () as integer
     
     Player.setFlag(PlayerFlags.Crouching)
     
-    if Player.is_shooting then '* need code for reverse -- going from crouch to standing while shooting
-        dim offset as double
-        select case Player.weapon
-        case ItemIds.Fist
-            offset = Player.uAni - UpperSprites.FsPunch
-            Player.uAni = UpperSprites.FsCrouchPunch+offset
-            Player.stillAni = Player.uAni
-        case ItemIds.Shotgun
-            offset = Player.uAni - UpperSprites.SgShoot0
-            Player.uAni = UpperSprites.SgCrouchShoot0+offset
-            Player.stillAni = Player.uAni
-        case ItemIds.Handgun
-            offset = Player.uAni - UpperSprites.HgShoot0
-            Player.uAni = UpperSprites.HgCrouchShoot0+offset
-            Player.stillAni = Player.uAni
-        case ItemIds.MachineGun
-            offset = Player.uAni - UpperSprites.MgShoot0
-            Player.uAni = UpperSprites.MgCrouchShoot0+offset
-            Player.stillAni = Player.uAni
-        case ItemIds.Magnum
-            offset = Player.uAni - UpperSprites.MaShoot0
-            Player.uAni = UpperSprites.MaCrouchShoot0+offset
-            Player.stillAni = Player.uAni
-        end select
-    end if
+    Player_InitUpper Player.upper.interval
 
     return success
 end function
@@ -5482,91 +5467,18 @@ sub Player_Animate()
     
     Player.moved = 0
     
+    dim crouching as integer
+    crouching = Player.hasFlag(PlayerFlags.Crouching)
+    
     if Player.is_shooting then
-        select case Player.weapon
-        case ItemIds.Fist
-            Player.uAni = Player.uAni + .15
-            if Player.hasFlag(PlayerFlags.Crouching) then
-                if Player.uAni >= (UpperSprites.FsCrouchPunch+1) then
-                    Player.uAni = int(UpperSprites.FsCrouch)
-                    Player.stillani = Player.uAni
-                    Player.is_shooting = 0
-                end if
-            else
-                if Player.uAni >= (UpperSprites.FsPunch+1) then
-                    Player.uAni = int(UpperSprites.FsStand)
-                    Player.lAni = int(LowerSprites.Stand)
-                    Player.stillani = Player.uAni
-                    Player.is_shooting = 0
-                end if
-            end if
-        case ItemIds.Shotgun
-            Player.uAni = Player.uAni + .15
-            if Player.hasFlag(PlayerFlags.Crouching) then
-                if Player.uAni >= (UpperSprites.SgCrouchShoot1+1) then
-                    Player.uAni = int(UpperSprites.SgCrouch)
-                    Player.stillani = Player.uAni
-                    Player.is_shooting = 0
-                end if
-            else
-                if Player.uAni >= (UpperSprites.SgShoot1+1) then
-                    Player.uAni = int(UpperSprites.SgHold)
-                    Player.stillani = Player.uAni
-                    Player.is_shooting = 0
-                end if
-            end if
-        case ItemIds.Handgun
-            if Player.hasFlag(PlayerFlags.Crouching) then
-                Player.uAni += 0.23
-                if Player.uAni >= (UpperSprites.HgCrouchShoot1+1) then
-                    Player.uAni = int(UpperSprites.HgCrouch)
-                    Player.stillani = Player.uAni
-                    Player.is_shooting = 0
-                end if
-            else
-                Player.uAni += 0.19
-                if Player.uAni >= (UpperSprites.HgShoot1+1) then
-                    Player.uAni = int(UpperSprites.HgAim)
-                    Player.stillani = UpperSprites.HgAim
-                    Player.is_shooting = 0
-                end if
-            end if
-        case ItemIds.MachineGun
-            Player.uAni = Player.uAni + .4
-            if Player.hasFlag(PlayerFlags.Crouching) then
-                if Player.uAni >= (UpperSprites.MgCrouchShoot1+1) then
-                    Player.uAni = int(UpperSprites.MgCrouch)
-                    Player.stillani = Player.uAni
-                    Player.is_shooting = 0
-                end if
-            else
-                if Player.uAni >= (UpperSprites.MgShoot1+1) then
-                    Player.uAni = int(UpperSprites.MgShoot1) '* keep machinegun aimed for moment after
-                    Player.stillani = int(UpperSprites.MgHold)
-                    Player.is_shooting = 0
-                    machineTimer = timer
-                end if
-            end if
-        case ItemIds.Magnum
-            Player.uAni = Player.uAni + .17
-            if Player.hasFlag(PlayerFlags.Crouching) then
-                if Player.uAni >= (UpperSprites.MaCrouchShoot1+1) then
-                    Player.uAni = int(UpperSprites.MaCrouch)
-                    Player.stillani = Player.uAni
-                    Player.is_shooting = 0
-                end if
-            else
-                if Player.uAni >= (UpperSprites.MaShoot1+1) then
-                    Player.uAni = int(UpperSprites.MaHold)
-                    Player.stillani = Player.uAni
-                    Player.is_shooting = 0
-                end if
-            end if
-        end select
+        Player.uani = Player.upper.transformed
+        if Player.upper.interval = 1 then
+            Player.is_shooting = 0
+            Player_InitUpper
+        end if
     else
         if (machineTimer > 0) and ((timer-machineTimer) > 0.45) then
             Player.uAni = int(UpperSprites.MgHold)
-            Player.stillAni = Player.uAni
             machineTimer = 0
         end if
     end if
@@ -5577,33 +5489,7 @@ sub Player_Animate()
         if (timer - crouchClock) > 0.07 then
             Player.unsetFlag(PlayerFlags.Crouching)
             crouchClock = 0
-            if Player.is_shooting then '* need code for reverse -- going from crouch to standing while shooting
-                dim offset as double
-                select case Player.weapon
-                case ItemIds.Fist
-                    offset = Player.uAni - UpperSprites.FsCrouchPunch
-                    Player.uAni = UpperSprites.FsPunch+offset
-                    Player.stillAni = Player.uAni
-                case ItemIds.Shotgun
-                    offset = Player.uAni - UpperSprites.SgCrouchShoot0
-                    Player.uAni = UpperSprites.SgShoot0+offset
-                    Player.stillAni = Player.uAni
-                case ItemIds.Handgun
-                    offset = Player.uAni - UpperSprites.HgCrouchShoot0
-                    Player.uAni = UpperSprites.HgShoot0+offset
-                    Player.stillAni = Player.uAni
-                case ItemIds.MachineGun
-                    offset = Player.uAni - UpperSprites.MgCrouchShoot0
-                    Player.uAni = UpperSprites.MgShoot0+offset
-                    Player.stillAni = Player.uAni
-                case ItemIds.Magnum
-                    offset = Player.uAni - UpperSprites.MaCrouchShoot0
-                    Player.uAni = UpperSprites.MaShoot0+offset
-                    Player.stillAni = Player.uAni
-                end select
-            else
-                Player_SetWeapon Player.weapon '- reset upper-sprites back to normal
-            end if
+            Player_InitUpper Player.upper.interval
         end if
     end if
     Player.unsetFlag(PlayerFlags.StillCrouching)
@@ -5661,47 +5547,24 @@ sub Player_Draw()
     
     px = int(Player.x - XShift): py = int(Player.y - YShift)
     lan = int(Player.lAni): uan = int(Player.uAni)
+    offset = iif(Player._flip=0,Player.upper.offset,Player.upper.offset*-1)
+    
     if Player.hasFlag(PlayerFlags.Crouching) then
         select case Player.weapon
-        case ItemIds.Fist
-            SpritesLarry.putToScreenEx(px, py, LowerSprites.FsCrouch, Player._flip)
+        case ItemIds.Fist      : SpritesLarry.putToScreenEx(px, py, LowerSprites.FsCrouch    , Player._flip)
+        case ItemIds.Handgun   : SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player._flip)
+        case ItemIds.Shotgun   : SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player._flip)
+        case ItemIds.MachineGun: SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player._flip)
+        case ItemIds.Magnum    : SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player._flip)
+        end select
+        SpritesLarry.putToScreenEx(px+offset, py, Player.upper.transformed, Player._flip)
+        if Player.weapon = ItemIds.Magnum then
             if Player.is_shooting then
-                SpritesLarry.putToScreenEx(px+iif(Player._flip=0,3,-3), py, int(Player.uAni), Player._flip)
+                SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaCrouchShootLeft0+(Player.upper.transformed-MaCrouchShoot0), Player._flip)
             else
-                SpritesLarry.putToScreenEx(px, py, UpperSprites.FsCrouch, Player._flip)
-            end if
-        case ItemIds.Handgun
-            SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player._flip)
-            if Player.is_shooting then
-                SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, int(Player.uAni), Player._flip)
-            else
-                SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.HgCrouch, Player._flip)
-            end if
-        case ItemIds.Shotgun
-            SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player._flip)
-            if Player.is_shooting then
-                SpritesLarry.putToScreenEx(px, py, int(Player.uAni), Player._flip)
-            else
-                SpritesLarry.putToScreenEx(px, py, UpperSprites.SgCrouch, Player._flip)
-            end if
-        case ItemIds.MachineGun
-            SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player._flip)
-            if Player.is_shooting then
-                SpritesLarry.putToScreenEx(px, py, int(Player.uAni), Player._flip)
-            else
-                SpritesLarry.putToScreenEx(px, py, UpperSprites.MgCrouch, Player._flip)
-            end if
-        case ItemIds.Magnum
-            offset = int(uan - int(UpperSprites.MaCrouchShoot0))
-            SpritesLarry.putToScreenEx(px, py, LowerSprites.CrouchWeapon, Player._flip)
-            if Player.is_shooting then
-                SpritesLarry.putToScreenEx(px+iif(Player._flip=0,6,-6), py, int(Player.uAni), Player._flip)
-                SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaCrouchShootLeft0+offset, Player._flip)
-            else
-                SpritesLarry.putToScreenEx(px+iif(Player._flip=0,6,-6), py, UpperSprites.MaCrouch, Player._flip)
                 SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaCrouchLeft, Player._flip)
             end if
-        end select
+        end if
     else
         select case Player.state
         
@@ -5717,29 +5580,13 @@ sub Player_Draw()
                     SpritesLarry.putToScreenEx(px, py, 55, Player._flip)
                 end if
             else
-                dim ux as integer, uy as integer
                 dim lx as integer, ly as integer
-                ux = px: uy = py
                 lx = px: ly = py
                 select case Player.weapon
                 case ItemIds.Fist
                     if (Player.vy = 0) and Player.is_shooting then
-                        ux += iif(Player._flip = 0, 4, -4)
                         lx += iif(Player._flip = 0, 4, -4)
                     end if
-                case ItemIds.Handgun
-                    if Player.vy = 0 then
-                        ux += iif(Player._flip = 0, 2, -2)
-                    elseif Player.is_shooting then
-                        ux += iif(Player._flip = 0, 2, -2)
-                    end if
-                    if lan <> LowerSprites.Stand then
-                        'lx += iif(Player.flip = 0, -2, 2)
-                    end if
-                case ItemIds.Magnum
-                    ux += iif(Player._flip = 0, 2, -2)
-                case else
-                    
                 end select
                 if (Player.vy <> 0) or (lan <> LowerSprites.Stand) then
                     lx += iif(Player._flip = 0, -2, 2)
@@ -5754,16 +5601,13 @@ sub Player_Draw()
                     SpritesLarry.putToScreenEx(lx, ly, lan, Player._flip)
                 else
                     SpritesLarry.putToScreenEx(lx, ly, lan, Player._flip)
+                    SpritesLarry.putToScreenEx(px+offset, py, Player.upper.transformed, Player._flip)
                     if Player.weapon = ItemIds.Magnum then
-                        offset = int(uan - int(UpperSprites.MaShoot0))
-                        SpritesLarry.putToScreenEx(ux+iif(Player._flip = 0, 4, -4), uy, UpperSprites.MaShoot0+offset, Player._flip)
                         if Player.is_shooting then
-                            SpritesLarry.putToScreenEx(ux, uy, UpperSprites.MaShootLeft0+offset, Player._flip)
+                            SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaShootLeft0+(Player.upper.transformed-MaShoot0), Player._flip)
                         else
-                            SpritesLarry.putToScreenEx(ux, uy, UpperSprites.MaHoldLeft, Player._flip)
+                            SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaHoldLeft, Player._flip)
                         end if
-                    else
-                        SpritesLarry.putToScreenEx(ux, uy, uan, Player._flip)
                     end if
                 end if
             end if
@@ -5910,7 +5754,6 @@ function Player_Fall() as integer
             elseif Player.weapon = ItemIds.Handgun then
                 Player.uAni = int(UpperSprites.HgHold)
                 Player.lAni = 24
-                Player.stillAni = UpperSprites.HgHold
             else
                 Player.lAni = 24
             end if
@@ -5958,6 +5801,9 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
         return 0
     end if
     if (Player.state = PlayerStates.EnteringElevator) or (Player.state = PlayerStates.ExitingElevator) then
+        return 0
+    end if
+    if dx = 0 then '* avoid division by zero / chicken out
         return 0
     end if
 
@@ -6029,36 +5875,32 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     if hitWall = 0 then
     if Player.weapon = ItemIds.Fist then
         if Player.vx = 0 then
-            Player.lowerLoop.init(1, abs(dx), FullBodySprites.FsRun1 - FullBodySprites.FsRun0 + 1)
+            Player.lower.initLoop(FullBodySprites.FsRun0, FullBodySprites.FsRun1, abs(dx/7.5)*4)
         end if
         Player.vx   = dx
         Player.x    = Player.x + dx
-        if (Player.lAni < FullBodySprites.FsRun0) or (Player.lani >= (FullBodySprites.FsRun1+1)) then
-            Player.lAni = int(FullBodySprites.FsRun0)
-            footstep = 0
-        end if
-        Player.lAni = FullBodySprites.FsRun0 + iif(forward,Player.lowerLoop.interval,Player.lowerLoop.reversed)*Player.lowerLoop.size
+        Player.lani = Player.lower.transformed
         if Player.state <> PlayerStates.Jumping then
             select case footstep
             case 0
-                if (Player.lowerLoop.interval >= 0.125) and (Player.lowerLoop.interval < 0.625) then LD2_PlaySound Sounds.footstep: footstep += 1
+                if (Player.lower.interval >= 0.125) and (Player.lower.interval < 0.625) then LD2_PlaySound Sounds.footstep: footstep += 1
             case 1
-                if Player.lowerLoop.interval >= 0.625 then LD2_PlaySound Sounds.footstep: footstep = 0
+                if Player.lower.interval >= 0.625 then LD2_PlaySound Sounds.footstep: footstep = 0
             end select
         end if
     else
         if Player.vx = 0 then
-            Player.lowerLoop.init(1, abs(dx*2), LowerSprites.Run1 - LowerSprites.Run0 + 1)
+            Player.lower.initLoop(LowerSprites.Run0, LowerSprites.Run1, abs(dx/7.5)*2)
         end if
         Player.vx   = dx
         Player.x    = Player.x + dx
-        Player.lAni = LowerSprites.Run0 + iif(forward,Player.lowerLoop.interval,Player.lowerLoop.reversed)*Player.lowerLoop.size
+        Player.lani = Player.lower.transformed
         if Player.state <> PlayerStates.Jumping then
             select case footstep
             case 0
-                if Player.lowerLoop.interval >= 0.5 then LD2_PlaySound Sounds.footstep: footstep += 1
+                if Player.lower.interval >= 0.5 then LD2_PlaySound Sounds.footstep: footstep += 1
             case 1
-                if Player.lowerLoop.interval < 0.5 then footstep = 0
+                if Player.lower.interval < 0.5 then footstep = 0
             end select
         end if
     end if
@@ -6486,23 +6328,7 @@ function Player_SetWeapon (itemId as integer) as integer
         end if
     next i
     
-    select case itemId
-    case ItemIds.Fist
-        Player.uAni = int(UpperSprites.FsStand)
-    case ItemIds.Shotgun
-        Player.uAni = int(UpperSprites.SgHold)
-    case ItemIds.Handgun
-        Player.uAni = int(UpperSprites.HgHold)
-    case ItemIds.MachineGun
-        Player.uAni = int(UpperSprites.MgHold)
-    case ItemIds.Magnum
-        Player.uAni = int(UpperSprites.MaHold)
-    end select
-    
-    select case itemId
-    case ItemIds.Fist, ItemIds.Shotgun, ItemIds.Handgun, ItemIds.MachineGun, ItemIds.Magnum
-        Player.stillani = Player.uAni
-    end select
+    Player_InitUpper
     
     return 1
     
@@ -6546,6 +6372,100 @@ sub Player_RefreshAccess
     
 end sub
 
+sub Player_InitUpper (intervalStart as double=0.0)
+    
+    dim seconds as double
+    dim offset as integer
+    dim first as integer
+    dim last as integer
+    dim crouching as integer
+    dim shooting as integer
+    
+    crouching = Player.hasFlag(PlayerFlags.Crouching)
+    shooting  = Player.is_shooting
+    
+    if crouching then
+        select case Player.weapon
+        case ItemIds.Shotgun   : offset = iif(shooting, 0, 0)
+        case ItemIds.Handgun   : offset = iif(shooting, 2, 2)
+        case ItemIds.MachineGun: offset = iif(shooting, 0, 0)
+        case ItemIds.Magnum    : offset = iif(shooting, 6, 6)
+        case ItemIds.Fist      : offset = iif(shooting, 3, 0)
+        end select
+    else
+        select case Player.weapon
+        case ItemIds.Shotgun   : offset = iif(shooting, 0, 0)
+        case ItemIds.Handgun   : offset = iif(shooting, 2, 2)
+        case ItemIds.MachineGun: offset = iif(shooting, 0, 0)
+        case ItemIds.Magnum    : offset = iif(shooting, 6, 6)
+        case ItemIds.Fist      : offset = iif(shooting, 4, 0)
+        end select
+    end if
+    
+    if shooting = 0 then
+        select case Player.weapon
+        case ItemIds.Shotgun   : first = iif(crouching, UpperSprites.SgCrouch, UpperSprites.SgHold)
+        case ItemIds.Handgun   : first = iif(crouching, UpperSprites.HgCrouch, UpperSprites.HgHold)
+        case ItemIds.MachineGun: first = iif(crouching, UpperSprites.MgCrouch, UpperSprites.MgHold)
+        case ItemIds.Magnum    : first = iif(crouching, UpperSprites.MaCrouch, UpperSprites.MaHold)
+        case ItemIds.Fist      : first = iif(crouching, UpperSprites.FsCrouch, UpperSprites.FsStand)
+        end select
+        last    = first
+        seconds = 0
+    elseif crouching then
+        select case Player.weapon
+        case ItemIds.Shotgun
+            first   = UpperSprites.SgCrouchShoot0
+            last    = UpperSprites.SgCrouchShoot1
+            seconds = 0.6667
+        case ItemIds.Handgun
+            first   = UpperSprites.HgCrouchShoot0
+            last    = UpperSprites.HgCrouchShoot1
+            seconds = 0.175
+        case ItemIds.MachineGun
+            first   = UpperSprites.MgCrouchShoot0
+            last    = UpperSprites.MgCrouchShoot1
+            seconds = 0.0833
+        case ItemIds.Magnum
+            first   = UpperSprites.MaCrouchShoot0
+            last    = UpperSprites.MaCrouchShoot1
+            seconds = 0.3
+        case ItemIds.Fist
+            first   = UpperSprites.FsCrouchPunch
+            last    = first
+            seconds = 0.1111
+        end select
+    else
+        select case Player.weapon
+        case ItemIds.Shotgun
+            first   = UpperSprites.SgShoot0
+            last    = UpperSprites.SgShoot1
+            seconds = 0.6667
+        case ItemIds.Handgun
+            first   = UpperSprites.HgShoot0
+            last    = UpperSprites.HgShoot1
+            seconds = 0.145
+        case ItemIds.MachineGun
+            first   = UpperSprites.MgShoot0
+            last    = UpperSprites.MgShoot1
+            seconds = 0.0833
+        case ItemIds.Magnum
+            first   = UpperSprites.MaShoot0
+            last    = UpperSprites.MaShoot1
+            seconds = 0.3
+        case ItemIds.Fist
+            first   = UpperSprites.FsPunch
+            last    = UpperSprites.FsPunch
+            seconds = 0.1111
+        end select
+    end if
+    
+    Player.upper.initNoLoop(first, last, seconds, intervalStart)
+    Player.upper.offset = offset
+    Player.uani = Player.upper.transformed
+    
+end sub
+
 function Player_ShootRepeat() as integer
     
     return Player_Shoot(1)
@@ -6573,23 +6493,26 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     static timestamp as double
     dim timeSinceLastShot as double
     dim mobtop as integer
+    dim noammo as integer
+    dim yesammo as integer
     
     mobtop = iif(mob.id=MobIds.Blobmine,7,0)
 
     if Player.is_shooting then return 0
-    if (Player.weapon <> ItemIds.Fist) and (InvSlots(WeaponSlot).qty = 0) then return -1
     
     timeSinceLastShot = (timer - timestamp)
+    noammo  = (Player.weapon <> ItemIds.Fist) and (InvSlots(WeaponSlot).qty = 0)
+    yesammo = (Player.weapon <> ItemIds.Fist) and (InvSlots(WeaponSlot).qty > 0)
     
     select case Player.weapon
     case ItemIds.Shotgun
         
-        InvSlots(WeaponSlot).qty -= 1
-        damage = HpDamage.Shotgun
-        fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 8)
-        Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.SgCrouchShoot0-1, UpperSprites.SgShoot0-1))
-        Player.stillAni = Player.uAni
-        Shakes_Add 0.25, SPRITE_W*0.3
+        if yesammo then
+            InvSlots(WeaponSlot).qty -= 1
+            damage = HpDamage.Shotgun
+            fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 8)
+            Shakes_Add 0.25, SPRITE_W*0.3
+        end if
         
     case ItemIds.Handgun
         
@@ -6600,45 +6523,43 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             if (is_repeat = 1 and timeSinceLastShot < 0.45) then return 0
             if (is_repeat = 0 and timeSinceLastShot < 0.25) then return 0
         end if
-        InvSlots(WeaponSlot).qty -= 1
-        damage = HpDamage.Handgun
-        fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 5)
-        Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.HgCrouchShoot0-1, UpperSprites.HgShoot0-1))
-        Player.stillAni = Player.uAni
-        Shakes_Add 0.2, SPRITE_W*0.2
+        if yesammo then
+            InvSlots(WeaponSlot).qty -= 1
+            damage = HpDamage.Handgun
+            fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 5)
+            Shakes_Add 0.2, SPRITE_W*0.2
+        end if
         
     case ItemIds.MachineGun
         
         if timeSinceLastShot < 0.12 then return 0
-        InvSlots(WeaponSlot).qty -= 1
-        damage = HpDamage.MachineGun
-        fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 7, 5)
-        Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.MgCrouchShoot0-1, UpperSprites.MgShoot0-1))
-        Player.stillAni = Player.uAni
-        Shakes_Add 0.15, SPRITE_W*0.1
+        if yesammo then
+            InvSlots(WeaponSlot).qty -= 1
+            damage = HpDamage.MachineGun
+            fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 7, 5)
+            Shakes_Add 0.15, SPRITE_W*0.1
+        end if
         
     case ItemIds.Magnum
         
         if (is_repeat = 1 and timeSinceLastShot < 0.70) then return 0
         if (is_repeat = 0 and timeSinceLastShot < 0.50) then return 0
-        InvSlots(WeaponSlot).qty -= 1
-        damage = HpDamage.Magnum
-        fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 8)
-        Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.MaCrouchShoot0-1, UpperSprites.MaShoot0-1))
-        Player.stillAni = Player.uAni
-        Shakes_Add 0.3, SPRITE_W*0.6
-        
-        if Player.state <> PlayerStates.Jumping then
-            SetPlayerState( PlayerStates.Blocked )
-            Player.lAni = 21 '- make const for legs still/standing
+        if yesammo then
+            InvSlots(WeaponSlot).qty -= 1
+            damage = HpDamage.Magnum
+            fireY = iif(Player.hasFlag(PlayerFlags.Crouching), 12, 8)
+            Shakes_Add 0.3, SPRITE_W*0.6
+            
+            if Player.state <> PlayerStates.Jumping then
+                SetPlayerState( PlayerStates.Blocked )
+                Player.lAni = 21 '- make const for legs still/standing
+            end if
         end if
         
     case ItemIds.Fist
         
         if timeSinceLastShot < 0.30 then return 0
         damage = HpDamage.Fist
-        Player.uAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), UpperSprites.FsCrouchPunch-1, UpperSprites.FsPunch-1))
-        Player.stillAni = Player.uAni
         
     case else
         
@@ -6646,16 +6567,18 @@ function Player_Shoot(is_repeat as integer = 0) as integer
         
     end select
     
+    timestamp = timer
+    
+    if noammo then return -1
+    
+    Player.is_shooting = 1 '* must be set before call to Player_InitUpper
+    Player_InitUpper
+    
     damageMod = iif(Inventory(ItemIds.DamageMod) > 0, Inventory(ItemIds.DamageMod), 1)
     damage *= damageMod
     
-    Player.is_shooting = 1
-    timestamp = timer
-    
-    if (Player.weapon <> ItemIds.Fist) and (Player.uAni = Player.stillAni) then
+    if Player.weapon <> ItemIds.Fist then
 
-        Player.uAni = Player.uAni + 1
-        
         box = Player_GetCollisionBox()
         Flashes_Add toUnitX(iif(Player._flip=0,box.rgt+toPixelsX(0.5),box.lft-toPixelsX(0.5))), toUnitY(box.midY)
         
@@ -6776,9 +6699,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             end if
         end if
         
-    elseif (Player.weapon = ItemIds.Fist) and (Player.uAni = Player.stillAni) then
-        
-        Player.uAni = Player.uAni + 1
+    elseif Player.weapon = ItemIds.Fist then
         
         Mobs.resetNext
         do while Mobs.canGetNext()
@@ -7046,7 +6967,6 @@ type PlayerFileData
     isFlipped as ubyte
     upper as ubyte
     lower as ubyte
-    still as ubyte
     isVisible as ubyte
     numInvSlots as ubyte
     inventory(MAXINVENTORY-1) as integer
@@ -7204,7 +7124,6 @@ sub Game_Save (filename as string)
     pdata.isFlipped = cast(ubyte, Player._flip)
     pdata.upper     = cast(ubyte, int(Player.uAni))
     pdata.lower     = cast(ubyte, int(Player.lAni))
-    pdata.still     = cast(ubyte, int(Player.stillAni))
     pdata.isVisible = cast(ubyte, Player.is_visible)
     pdata.numInvSlots = cast(ubyte, NumInvSlots)
     for n = 0 to MAXINVENTORY-1
@@ -7317,7 +7236,6 @@ function Game_Load (filename as string, roomId as integer = -1) as integer
         Player._flip = pdata.isFlipped
         Player.uAni = pdata.upper
         Player.lAni = pdata.lower
-        Player.stillAni = pdata.still
         Player.is_visible = pdata.isVisible
         NumInvSlots = pdata.numInvSlots
         for n = 0 to MAXINVENTORY-1

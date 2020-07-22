@@ -212,7 +212,6 @@ enum UpperSprites
     FsCrouchPunch  = 31
     FsPunch        = 27
     FsStand        = 26
-    HgAim          = 11
     HgHold         = 11 '69
     HgCrouch       = 59
     HgCrouchShoot0 = 60
@@ -597,6 +596,7 @@ enum Sounds
     lookMetal
     radioBeep
     radioStatic
+    tick
 end enum
 
 enum EditSounds
@@ -788,32 +788,36 @@ enum RenderSceneFlags
     WithoutElevator = &h40
 end enum
 
-const SCREEN_FULL = 1
-#define widezoom 1
-'* CLASSIC
-#ifdef screen13
-    const SCREEN_W = 320
-    const SCREEN_H = 200
-    const SPRITE_W = 16
-    const SPRITE_H = 16
-    const FONT_W = 6
-    const FONT_h = 5
-#endif
-'* WIDESCREEN
-#ifdef widescreen
-    const SCREEN_W = 352
-    const SCREEN_H = 198
-    const SPRITE_W = 16
-    const SPRITE_H = 16
-    const FONT_W = 6
-    const FONT_h = 5
-#endif
-'* WIDEZOOM
-#ifdef widezoom
-    const SCREEN_W = 320
-    const SCREEN_H = 180
-    const SPRITE_W = 16
-    const SPRITE_H = 16
-    const FONT_W = 6
-    const FONT_h = 5
+#ifndef EDITOR
+    const SCREEN_FULL = 1
+    #define widezoom 1
+    '* CLASSIC
+    #ifdef screen13
+        const SCREEN_W = 320
+        const SCREEN_H = 200
+        const SPRITE_W = 16
+        const SPRITE_H = 16
+        const FONT_W = 6
+        const FONT_H = 5
+    #endif
+    '* WIDESCREEN
+    #ifdef widescreen
+        const SCREEN_W = 352
+        const SCREEN_H = 198
+        const SPRITE_W = 16
+        const SPRITE_H = 16
+        const FONT_W = 6
+        const FONT_H = 5
+    #endif
+    '* WIDEZOOM
+    #ifdef widezoom
+        const SCREEN_W = 320
+        const SCREEN_H = 180
+        const SPRITE_W = 16
+        const SPRITE_H = 16
+        const FONT_W = 6
+        const FONT_H = 5
+    #endif
+    const SCREENSHOT_W = 1920 '960
+    const SCREENSHOT_H = 1080 '540
 #endif

@@ -126,6 +126,14 @@
     Start
     END
 
+'***********************************************************************
+'*
+'* take screenshot
+'* game notice
+'* callback for when ESC is pressed (or global key combination)
+'* unrelated, but set callback for continueafterseconds()
+'*
+'***********************************************************************
 sub GlobalControls()
     
     exit sub 
@@ -772,7 +780,7 @@ sub LoadSounds ()
     AddSound Sounds.handgun    , "shoot-handgun.wav"
     AddSound Sounds.machinegun , "shoot-machinegun.wav"
     AddSound Sounds.magnum     , "shoot-magnum.wav"
-    AddSound Sounds.outofammo  , "shoot-outofammo.wav"
+    AddSound Sounds.outofammo  , "shoot-noammo.wav"
     AddSound Sounds.reload     , "shoot-reload.wav"
     AddSound Sounds.equip      , "shoot-reload.wav"
     
@@ -819,6 +827,8 @@ sub LoadSounds ()
     
     AddSound Sounds.radioBeep, "radio-beep.wav"
     AddSound Sounds.radioStatic, "radio-static.wav"
+    
+    AddSound Sounds.tick, "tick.wav"
     
 end sub
 
@@ -875,7 +885,6 @@ sub DoAction(actionId as integer, itemId as integer = 0, prime as integer = 0)
     dim player as PlayerType
     dim success as integer
     dim playQuad as integer
-    static soundTimer as double
     static alreadyRan as integer = 0
     
     if prime then
@@ -965,10 +974,7 @@ sub DoAction(actionId as integer, itemId as integer = 0, prime as integer = 0)
                 LD2_PlaySound Sounds.quad
             end if
         elseif success = -1 then
-            if (timer - soundTimer) > 0.5 then
-                LD2_PlaySound Sounds.outofammo
-                soundTimer = timer
-            end if
+            LD2_PlaySound Sounds.outofammo
         end if
     end select
     
@@ -1065,6 +1071,10 @@ SUB Main
     consoleDialog.h = SCREEN_H-consoleDialog.y-6
     Element_Init @e, "", 31
     
+    dim filename as string
+    dim snapTimer as double
+    dim snapCount as integer
+    
     SceneCheck player '* check for first scene
   DO
     
@@ -1144,6 +1154,44 @@ SUB Main
         end if
     end if
     
+    
+    if keypress(KEY_F2) then
+        filename = ""
+        Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+        LD2_SetNotice "Saved "+filename
+        LD2_PlaySound Sounds.tick
+    end if
+    if keypress(KEY_F4) then
+        snapTimer = timer
+        snapCount = -3
+        LD2_PlaySound Sounds.uiSubmenu
+        LD2_SetNotice "Starting in 3"
+    end if
+    if snapTimer > 0 then
+        if timer - snapTimer > 1.0 then
+            if snapCount < 0 then
+                snapCount += 1
+                if snapCount < 0 then
+                    LD2_SetNotice "Starting in "+str(abs(snapCount))
+                else
+                    LD2_SetNotice ""
+                end if
+                snapTimer = timer
+            else
+                filename = ""
+                Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+                LD2_SetNotice "Saved "+filename
+                LD2_PlaySound Sounds.tick
+                snapCount += 1
+                if snapCount = 10 then
+                    snapTimer = 0
+                else
+                    snapTimer = timer
+                end if
+            end if
+        end if
+    end if
+    GameNotice_Draw
 	LD2_RefreshScreen
 	LD2_CountFrame
     
@@ -1488,6 +1536,13 @@ sub RenderScene (flags as integer = 0)
         exit sub
     end if
     if NotFlag(RenderSceneFlags.NotPutToScreen) then
+        if keypress(KEY_F2) then
+            dim filename as string
+            Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+            LD2_SetNotice "Saved "+filename
+            LD2_PlaySound Sounds.uiSubmenu
+        end if
+        GameNotice_Draw
         LD2_RefreshScreen
         Guts_Animate
         Doors_Animate
@@ -2091,8 +2146,8 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
                     end if
                 end if
                 if id > -1 then
-                    if (args(2) = "0") or (val(args(2)) > 0) or (args(2) = "") then
-                        if val(args(2)) > 0 then
+                    if (args(2) = "0") or (val(args(2)) > 0) or (val(args(2)) < 0) or (args(2) = "") then
+                        if val(args(2)) <> 0 then
                             qty = val(args(2))
                         else
                             qty = 1
@@ -3034,6 +3089,23 @@ function ContinueAfterInterval(seconds as double) as integer
     end if
     lastTime = timer
     return skip
+end function
+
+function UnderSeconds(seconds as double) as integer
+    
+    static clock as double = 0
+    
+    if clock = 0 then
+        clock = timer
+    end if
+    
+    if (timer - clock) >= seconds then
+        clock = 0
+        return 0
+    else
+        return 1
+    end if
+    
 end function
 
 function SceneFadeIn(seconds as double) as integer

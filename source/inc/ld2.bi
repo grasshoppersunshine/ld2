@@ -27,6 +27,7 @@ declare function GetFloorMusicId(roomId as integer) as integer
 
 declare function ContinueAfterSeconds(seconds as double, render as integer = 1) as integer
 declare function ContinueAfterInterval(seconds as double) as integer
+declare function UnderSeconds(seconds as double) as integer
 declare function SceneFadeIn(seconds as double) as integer
 declare function SceneFadeOut(seconds as double) as integer
 

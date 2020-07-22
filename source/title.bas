@@ -643,6 +643,7 @@ END SUB
 
 sub TITLE_TheEnd (skipEpilogue as integer = 0)
     
+    dim filename as string
     dim barSize as integer
     dim file as integer
     dim text as string
@@ -652,7 +653,7 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
     dim e as ElementType
     dim a as double
     
-    barSize = int(SPRITE_H*1.5)
+    barSize = 0 'int(SPRITE_H*1.5)
     
     LD2_CLS 0, 0
     
@@ -722,16 +723,30 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
         'LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
         Element_Render @e
         
+        if keypress(KEY_F2) then
+            filename = ""
+            Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+            LD2_PlaySound Sounds.tick
+        end if
+        
         'LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
         
         LD2_RefreshScreen
-        IF WaitSecondsUntilKey(0.27) THEN EXIT DO
+        IF ContinueAfterSeconds(0.27, 0) THEN EXIT DO
         
     NEXT y
     
     Element_Render @e
     LD2_RefreshScreen
-    IF WaitSecondsUntilKey(3.3333) THEN EXIT DO
+    while UnderSeconds(3.3333)
+        PullEvents
+        if keypress(KEY_F2) then
+            filename = ""
+            Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+            LD2_PlaySound Sounds.tick
+        end if
+        if SceneKeySkip() then exit do
+    wend
     
     'if instr(lcase(text), "larry the dinosaur ii") then
     '    while LD2_FadeOutMusic(3.0)
@@ -767,12 +782,17 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
             Element_Render @e
         end if
         
+        if keypress(KEY_F2) then
+            filename = ""
+            Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+            LD2_PlaySound Sounds.tick
+        end if
         LD2_RefreshScreen
         if state = 1 then
             LD2_FadeOut 3
             exit for
         else
-            IF WaitSecondsUntilKey(0.27) THEN EXIT DO
+            IF ContinueAfterSeconds(0.27, 0) THEN EXIT DO
         end if
         
     NEXT y

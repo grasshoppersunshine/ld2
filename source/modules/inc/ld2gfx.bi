@@ -43,6 +43,8 @@ declare sub Font_put(x as integer, y as integer, sprite as integer, bufferNum as
 declare sub Font_putText (x as integer, y as integer, text as string, bufferNum as integer)
 declare sub Font_putTextCol (x as integer, y as integer, text as string, col as integer, bufferNum as integer)
 
+declare sub Screenshot_Take(byref filename as string = "", xscale as double = 1.0, yscale as double = 1.0)
+
 enum SpriteFlags
     Transparent = &h01
     UseWhitePalette = &h02
