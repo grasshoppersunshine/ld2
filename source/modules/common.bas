@@ -2,6 +2,7 @@
 #include once "sdl2/sdl.bi"
 #include once "inc/ld2snd.bi"
 #include once "inc/keys.bi"
+#include once "dir.bi"
 
 dim shared EventQuit as integer
 dim shared EventKeyDown as integer
@@ -96,41 +97,44 @@ function keypress(code as integer) as integer
     
 end function
 
-SUB logdebug(message AS STRING)
+sub logtofile(filename as string, message as string)
     
-    DIM logFile AS INTEGER
-    DIM timeStr AS STRING
-    STATIC lastTime AS SINGLE
-    STATIC lastMem AS LONG
+    static lastTime as double
+    static lastMem as long
+    dim timeStr as string
+    dim logFile as integer
     
-    '- check if file exists first !!!
-    IF message = "!debugstart!" THEN
-        message  = DATE+" "+TIME+" START DEBUG SESSION"
-        lastTime = TIMER
+    if lastTime = 0 then
+        lastTime = timer
+        message  = date+" "+time+" START LOG SESSION"
         
-        logFile = FREEFILE
-        OPEN "debug.log" FOR APPEND AS logFile
-            WRITE #logFile, STRING(72, "=")
-            WRITE #logFile, "= "+SPACE(70)
-            WRITE #logFile, "= "+message
-            WRITE #logFile, "= "+SPACE(70)
-            WRITE #logFile, STRING(72, "=")
-        CLOSE logFile
+        if dir("var", fbDirectory) <> "var" then
+            mkdir "var"
+        end if
+        
+        logFile = freefile
+        open "var/"+filename for append as logFile
+            write #logFile, string(72, "=")
+            write #logFile, "= "+space(70)
+            write #logFile, "= "+message
+            write #logFile, "= "+space(70)
+            write #logFile, string(72, "=")
+        close logFile
     ELSE
-        timeStr  = left(STR(TIMER-lastTime), 8)
-        lastTime = TIMER
-        IF LEFT(timeStr, 1) = "." THEN
+        timeStr  = left(str(timer-lastTime), 8)
+        lastTime = timer
+        if left(timeStr, 1) = "." then
             timeStr = "0"+timeStr
-        END IF
-        message  = timeStr+SPACE(12-LEN(timeStr))+message
+        end if
+        message  = timeStr+space(12-len(timeStr))+message
         
-        logFile = FREEFILE
-        OPEN "debug.log" FOR APPEND AS logFile
-            WRITE #logFile, message
-        CLOSE logFile
-    END IF
+        logFile = freefile
+        open "var/"+filename for append as logFile
+            write #logFile, message
+        close logFile
+    end if
     
-END SUB
+end sub
 
 SUB WaitSeconds (seconds AS DOUBLE)
     

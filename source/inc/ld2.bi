@@ -38,8 +38,10 @@ declare function encodeMobData(byval roomId as integer, byval x as integer, byva
 declare sub decodeMobData(byval encoded as integer, byref roomId as integer, byref x as integer, byref y as integer, byref state as integer, byref _flip as integer)
 declare sub SceneRefreshMobs ()
 
+declare function GetRoomsFile() as string
 declare function RoomToFilename(roomId as integer) as string
 
 declare function GameHasFlag(flag as integer) as integer
 declare sub GameSetFlag(flag as integer)
+declare sub GameUnsetFlag(flag as integer)
 declare sub GenerateSky

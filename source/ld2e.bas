@@ -255,7 +255,6 @@
     declare function CheckMobWallHit (mob AS Mobile) as integer
     declare function CheckPlayerFloorHit () as integer
     declare function CheckPlayerWallHit () as integer
-    declare sub LoadSprites (filename as string, BufferNum as integer)
     declare sub Player_RefreshAccess ()
     
     declare function randF(fromN as double, toN as double) as double
@@ -353,10 +352,10 @@
     dim shared QuakeClock as double
     dim shared QuakeCounter as double
     
-    dim shared AVGFPS   as double
-    dim shared FPS      as integer
-    dim shared FPSCOUNT as integer
-    dim shared DELAYMOD as double
+    dim shared TESTMODE as integer
+    dim shared DEBUGMODE as integer
+    dim shared CLASSICMODE as integer
+    dim shared NOSOUND as integer
     
     dim shared SceneCaption as string
     dim shared SceneMode as integer
@@ -368,7 +367,7 @@
     dim shared CanSaveMap as integer
     dim shared MobsWereLoaded as integer
     
-    dim shared GameFlags as integer
+    dim shared GameFlagsHolder as integer
     dim shared GameNoticeMsg as string
     dim shared GameNoticeExpire as double
     
@@ -383,6 +382,11 @@
     dim shared CommandArgIndex as integer
     
     dim shared LockShift as integer
+    
+    dim shared SCREEN_W as integer
+    dim shared SCREEN_H as integer
+    dim shared SCREEN_FULL as integer
+    dim shared SCREEN_MODE as integer
     
     '*******************************************************************
     '* COLLISION VARS
@@ -444,7 +448,7 @@ end function
 
 function LD2_AddToStatus (item as integer, qty as integer, slot as integer = -1) as integer
     
-    LD2_LogDebug "LD2_AddToStatus ("+str(item)+","+str(qty)+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, str(item), str(qty), str(slot)
     
     dim slotMin as integer
     dim slotMax as integer
@@ -584,7 +588,7 @@ end sub
 
 function LD2_GetStatusItem (slot as integer) as integer
     
-    LD2_LogDebug "LD2_GetStatusItem% ("+str(slot)+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, str(slot)
     
     if slot >= 0 and slot <= NumInvSlots then
         return InvSlots(slot).itemId
@@ -944,31 +948,38 @@ sub Game_Init
         end if
         select case arg
         case "test"
-          Game_SetFlag TESTMODE
+            Game_SetFlag GameFlags.TestMode
         case "debug"
-          Game_SetFlag DEBUGMODE
-        case "nosound", "ns"
-          Game_SetFlag NOSOUND
-        case "nomix"
-          Game_SetFlag NOMIX
-        case "skip"
-          Game_SetFlag SKIPOPENING
+            Game_setFlag GameFlags.DebugMode
         case "classic"
-          Game_SetFlag CLASSICMODE
+            Game_setFlag GameFlags.ClassicMode
+        case "nosound", "ns"
+            Game_setFlag GameFlags.NoSound
+        case "skip"
+            Game_setFlag GameFlags.SkipOpening
+        case "widescreen", "wide"
+            SCREEN_MODE = ScreenModes.WideScreen
+        case "screen13", "13"
+            SCREEN_MODE = ScreenModes.Screen13
         end select
         i += 1
     loop
     
-    if Game_isDebugMode() then
-        LD2_Debug "!debugstart!"
-        LD2_Debug "LD2_Init"
+    TESTMODE    = iif(Game_hasFlag(GameFlags.TestMode)   , 1, 0)
+    DEBUGMODE   = iif(Game_hasFlag(GameFlags.DebugMode)  , 1, 0)
+    CLASSICMODE = iif(Game_hasFlag(GameFlags.ClassicMode), 1, 0)
+    NOSOUND     = iif(Game_hasFlag(GameFlags.NoSound)    , 1, 0)
+    
+    if DEBUGMODE then
+        LogDebug "!debugstart!"
+        LogDebug __FUNCTION__
     end if
     
     randomize timer
     
     print "Larry the Dinosaur II v1.1.170"
     
-    if Game_hasFlag(CLASSICMODE) then
+    if CLASSICMODE then
         print "STARTING CLASSIC (2002) MODE"
     end if
     
@@ -979,7 +990,7 @@ sub Game_Init
     
     WaitSeconds 0.3333
     
-    if Game_hasFlag(CLASSICMODE) then
+    if CLASSICMODE then
         LarryFile   = DATA_DIR+"2002/gfx/larry2.put"
         TilesFile   = DATA_DIR+"2002/gfx/ld2tiles.put"
         LightFile   = DATA_DIR+"2002/gfx/ld2light.put"
@@ -1025,16 +1036,16 @@ sub Game_Init
         SessionSaveFile = "session.ld2"
     end if
     
-    if Game_notFlag(NOSOUND) then
-
+    if NOSOUND = 0 then
+        
         print "Initializing sound...  ("+LD2_GetSoundInfo()+")"
         WaitSeconds 0.3333
-
+        
         if LD2_InitSound(1) <> 0 then
             print "SOUND ERROR! "+LD2_GetSoundErrorMsg()
             end
         end if
-    
+        
     else
         LD2_InitSound 0
     end if
@@ -1042,6 +1053,23 @@ sub Game_Init
     '///////////////////////////////////////////////////////////////////
     
     print "Initializing video...  ("+LD2_GetVideoInfo()+")"
+    
+    if CLASSICMODE then
+        SCREEN_MODE = ScreenModes.Classic
+    end if
+    
+    SCREEN_FULL = 1
+    select case SCREEN_MODE
+    case ScreenModes.Classic, ScreenModes.Screen13
+        SCREEN_W = 320
+        SCREEN_H = 200
+    case ScreenModes.WideScreen
+        SCREEN_W = 352
+        SCREEN_H = 198
+    case else '* wide zoom
+        SCREEN_W = 320
+        SCREEN_H = 180
+    end select
     
     if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL) <> 0 then
         print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
@@ -1053,7 +1081,7 @@ sub Game_Init
     WaitSeconds 0.3333
     
     PaletteFile = DATA_DIR+"gfx/gradient.pal"
-    if Game_hasFlag(CLASSICMODE) then
+    if CLASSICMODE then
         LD2_LoadPalette PaletteFile, 0
     else
         LD2_LoadPalette PaletteFile
@@ -1067,7 +1095,7 @@ sub Game_Init
     WaitSeconds 0.3333
     
     Font_Init FONT_W, FONT_H
-    if Game_hasFlag(CLASSICMODE) then
+    if CLASSICMODE then
         Font_Load FontFile, 0
     else
         Font_Load FontFile
@@ -1077,15 +1105,16 @@ sub Game_Init
     Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
     Elements_LoadFontMetrics FontFile
     
-    LoadSprites LarryFile  , idLARRY  
-    LoadSprites TilesFile  , idTILE
-    LoadSprites LightFile  , idLIGHT
-    LoadSprites MobsFile   , idMOBS
-    LoadSprites GutsFile   , idGUTS
-    LoadSprites SceneFile  , idSCENE
-    LoadSprites ObjectsFile, idOBJECT
-    LoadSprites ObjectsFile, idOBJCRP
-    LoadSprites BossFile   , idBOSS
+    Sprites_Load LarryFile  , idLARRY  
+    Sprites_Load TilesFile  , idTILE
+    Sprites_Load TilesFile  , idOPTILE
+    Sprites_Load LightFile  , idLIGHT
+    Sprites_Load MobsFile   , idMOBS
+    Sprites_Load GutsFile   , idGUTS
+    Sprites_Load SceneFile  , idSCENE
+    Sprites_Load ObjectsFile, idOBJECT
+    Sprites_Load ObjectsFile, idOBJCRP
+    Sprites_Load BossFile   , idBOSS
     
     LD2_InitLayer DATA_DIR+"gfx/mountains.bmp", @LayerMountains, SpriteFlags.Transparent
     LD2_InitLayer DATA_DIR+"gfx/foliage.bmp", @LayerFoliage, SpriteFlags.Transparent
@@ -1107,7 +1136,9 @@ sub Game_Init
     Mobs.AddType MobIds.BlobMine
     Mobs.AddType MobIds.JellyBlob
     
-    LD2_LogDebug "LD2_Init SUCCESS"
+    if DEBUGMODE then
+        LogDebug __FUNCTION__+" SUCCESS"
+    end if
     
 end sub
 
@@ -1427,7 +1458,7 @@ end sub
 
 sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as integer = 0)
     
-    LD2_LogDebug "Map_Load ( "+filename+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, filename, str(skipMobs), str(skipSessionLoad)
     
     dim versiontag as string*12
     dim mapFile as integer
@@ -1442,7 +1473,7 @@ sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as in
     roomId = val(mid(filename, i+1, j-i-1))
     Inventory(ItemIds.CurrentRoom) = roomId
     
-    if Game_hasFlag(CLASSICMODE) then
+    if CLASSICMODE then
         filename = DATA_DIR+"2002/rooms/"+filename
     else
         filename = DATA_DIR+"rooms/" + filename
@@ -1451,7 +1482,10 @@ sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as in
     mapFile = freefile
     
     if FileExists(filename) = 0 then
-        LD2_LogDebug "Map_Load ( "+filename+" )   !!! ERROR: FILE NOT FOUND"
+        if DEBUGMODE then
+            LogDebug "!!! ERROR: FILE NOT FOUND on line "+str(__LINE__)+" of "+__FILE__
+        end if
+        exit sub
     end if
     
     open filename for binary as mapFile
@@ -1464,8 +1498,10 @@ sub Map_Load (filename as string, skipMobs as integer = 0, skipSessionLoad as in
     case "[LD2L-V1.01]"
         Map_Load101 filename
     case else
-        LD2_LogDebug "Map_Load ( "+filename+" )   !!! ERROR: INVALID VERSION TAG"
-        LD2_LogDebug !"Expected \"[LD2L-V0.45]\" but got \""+versiontag+!"\""
+        if DEBUGMODE then
+            LogDebug "!!! ERROR: INVALID VERSION TAG on line "+str(__LINE__)+" of "+__FILE__
+            LogDebug !"Expected \"[LD2L-V0.45]\" but got \""+versiontag+!"\""
+        end if
         exit sub
     end select
     
@@ -1479,7 +1515,7 @@ end sub
 
 sub Map_Load045 (filename as string)
     
-    LD2_LogDebug "Map_Load045 ( "+filename+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, filename
     
     dim mapFile as integer
     dim _byte as ubyte
@@ -1506,14 +1542,18 @@ sub Map_Load045 (filename as string)
     separator  = "|"
     
     if FileExists(filename) = 0 then
-        LD2_LogDebug "Map_Load045 ( "+filename+" )   !!! ERROR: FILE NOT FOUND"
+        if DEBUGMODE then
+            LogDebug "!!! ERROR: FILE NOT FOUND on line "+str(__LINE__)+" of "+__FILE__
+        end if
         exit sub
     end if
     
     mapFile = freefile
     
     if open(filename for binary as mapFile) <> 0 then
-        LD2_LogDebug "Map_Load045 ( "+filename+" )   !!! ERROR OPENING FILE"
+        if DEBUGMODE then
+            LogDebug "!!! ERROR OPENING FILE on line "+str(__LINE__)+" of "+__FILE__
+        end if
         exit sub
     end if
     
@@ -1522,8 +1562,11 @@ sub Map_Load045 (filename as string)
     '*******************************************************************
     get #mapFile, , versiontag
     if versiontag <> "[LD2L-V0.45]" then
-        LD2_LogDebug "Map_Load045 ( "+filename+" )   !!! ERROR: INVALID VERSION TAG"
-        LD2_LogDebug !"Expected \"[LD2L-V0.45]\" but got \""+versiontag+!"\""
+        if DEBUGMODE then
+            LogDebug "!!! ERROR: INVALID VERSION TAG on line "+str(__LINE__)+" of "+__FILE__
+            LogDebug !"Expected \"[LD2L-V0.45]\" but got \""+versiontag+!"\""
+        end if
+        close #mapFile
         exit sub
     end if
     
@@ -1614,7 +1657,7 @@ end sub
 
 sub Map_Load101 (filename as string)
     
-    LD2_LogDebug "Map_Load101 ( "+filename+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, filename
     
     type fileItem
         x as ubyte
@@ -1635,7 +1678,9 @@ sub Map_Load101 (filename as string)
     dim _byte as ubyte
     
     if FileExists(filename) = 0 then
-        LD2_LogDebug !"ERROR!$$ * File not found$$   "+filename
+        if DEBUGMODE then
+            LogDebug "!!! ERROR: FILE NOT FOUND on line "+str(__LINE__)+" of "+__FILE__
+        end if
         return
     end if
     
@@ -1643,15 +1688,20 @@ sub Map_Load101 (filename as string)
     mapFile = freefile
     
     if open(filename for binary as #mapFile) <> 0 then
-        LD2_LogDebug !"ERROR!$$ * Error Opening File$$   "+filename
-        return
+        if DEBUGMODE then
+            LogDebug "!!! ERROR OPENING FILE on line "+str(__LINE__)+" of "+__FILE__
+        end if
+        exit sub
     end if
     
     get #mapFile, , versionTag
     if versionTag <> "[LD2L-V1.01]" then
-        LD2_LogDebug !"ERROR!$$ * Invalid Version Tag$$   "+filename+"$$   "+versionTag
+        if DEBUGMODE then
+            LogDebug "!!! ERROR: INVALID VERSION TAG on line "+str(__LINE__)+" of "+__FILE__
+            LogDebug !"Expected \"[LD2L-V1.01]\" but got \""+versiontag+!"\""
+        end if
         close #mapFile
-        return
+        exit sub
     end if
     
     seek #mapFile, 1
@@ -1745,10 +1795,11 @@ sub Map_Load101 (filename as string)
     
 end sub
 
-function LD2_GetVideoSprites(id as integer) as VideoSprites ptr
+function Sprites_GetSpriteSet(id as integer) as VideoSprites ptr
     
     select case id
     case idTILE  : return @SpritesTile
+    case idOPTILE: return @SpritesOpaqueTile
     case idMOBS  : return @SpritesMobs
     case idLARRY : return @SpritesLarry
     case idGUTS  : return @SpritesGuts
@@ -1756,57 +1807,35 @@ function LD2_GetVideoSprites(id as integer) as VideoSprites ptr
     case idSCENE : return @SpritesScene
     case idOBJECT: return @SpritesObject
     case idOBJCRP: return @SpritesObjectCropped
+    case else    : return 0
     end select
     
 end function
 
-SUB LoadSprites (Filename as string, BufferNum as integer)
-  
-  IF Game_isDebugMode() THEN LD2_Debug "LoadSprite ( "+Filename+","+STR(BufferNum)+" )"
-
-  '- Load a sprite set into a given buffer
-  '---------------------------------------
-
-  SELECT CASE BufferNum
-
-    CASE idTILE
-
-      LD2_InitSprites filename, @SpritesTile, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
-      LD2_InitSprites filename, @SpritesOpaqueTile, SPRITE_W, SPRITE_H
-
-    CASE idMOBS
-
-      LD2_InitSprites filename, @SpritesMobs, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
-
-    CASE idLARRY
-
-      LD2_InitSprites filename, @SpritesLarry, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
-
-    CASE idGUTS
-
-      LD2_InitSprites filename, @SpritesGuts, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
-
-    CASE idLIGHT
+sub Sprites_Load (filename as string, spriteSetId as integer)
     
-      LD2_InitSprites filename, @SpritesLight, SPRITE_W, SPRITE_H
-      SpritesLight.setPalette(@LightPalette)
-      SpritesLight.load(filename)
-   
-    CASE idSCENE
-
-      LD2_InitSprites filename, @SpritesScene, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
-
-    CASE idOBJECT
-
-      LD2_InitSprites filename, @SpritesObject, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
+    if DEBUGMODE then LogDebug __FUNCTION__, filename, str(spriteSetId)
     
-    CASE idOBJCRP
-
-      LD2_InitSprites filename, @SpritesObjectCropped, SPRITE_W, SPRITE_H, SpriteFlags.Transparent or SpriteFlags.Crop
- 
-  END SELECT
-
-END SUB
+    dim sprites as VideoSprites ptr
+    
+    sprites = Sprites_GetSpriteSet(spriteSetId)
+    
+    if sprites <> 0 then
+        select case spriteSetId
+        case idOPTILE
+            LD2_InitSprites filename, sprites, SPRITE_W, SPRITE_H
+        case idLIGHT
+            LD2_InitSprites filename, sprites, SPRITE_W, SPRITE_H
+            sprites->setPalette(@LightPalette)
+            sprites->load(filename)
+        case idOBJCRP
+            LD2_InitSprites filename, sprites, SPRITE_W, SPRITE_H, SpriteFlags.Transparent or SpriteFlags.Crop
+        case else
+            LD2_InitSprites filename, sprites, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
+        end select
+    end if
+    
+end sub
 
 sub Guts_Add (gutsId as integer, x as integer, y as integer, qty as integer, direction as integer = 0)
     
@@ -1890,20 +1919,17 @@ end sub
 
 sub Guts_Animate
     
-    dim f as double
     dim i as integer
     dim n as integer
     dim deleteGut as integer
     
-    f = DELAYMOD
-    
     for i = 0 to NumGuts-1
         select case Guts(i).id
         case GutsIds.Gibs, GutsIds.Glass
-            Guts(i).x = Guts(i).x + Guts(i).vx*f
-            Guts(i).y = Guts(i).y + Guts(i).vy*f
-            Guts(i).vy = Guts(i).vy + Gravity*f
-            Guts(i).angle += Guts(i).spin*f
+            Guts(i).x = Guts(i).x + Guts(i).vx
+            Guts(i).y = Guts(i).y + Guts(i).vy
+            Guts(i).vy = Guts(i).vy + Gravity
+            Guts(i).angle += Guts(i).spin
             if Guts(i).angle > 360 then Guts(i).angle -= 360
             if Guts(i).angle < -360 then Guts(i).angle += 360
         case GutsIds.BloodSprite
@@ -1916,8 +1942,8 @@ sub Guts_Animate
                 deleteGut = 1
             end if
         case GutsIds.Blood
-            Guts(i).x = Guts(i).x + Guts(i).vx*f
-            Guts(i).y = Guts(i).y + Guts(i).vy*f
+            Guts(i).x = Guts(i).x + Guts(i).vx
+            Guts(i).y = Guts(i).y + Guts(i).vy
             Guts(i).count = Guts(i).count + 1
             if Guts(i).y > SCREEN_H or Guts(i).y < -15 or Guts(i).count > 30 then
                 deleteGut = 1
@@ -1928,14 +1954,14 @@ sub Guts_Animate
                 deleteGut = 1
             end if
         case GutsIds.Plasma
-            Guts(i).x += Guts(i).vx*f
-            Guts(i).y += Guts(i).vy*f
+            Guts(i).x += Guts(i).vx
+            Guts(i).y += Guts(i).vy
             if (timer - Guts(i).startTime) > Guts(i).expireTime then
                 deleteGut = 1
             end if
         case else
-            Guts(i).x = Guts(i).x + Guts(i).vx*f
-            Guts(i).y = Guts(i).y + Guts(i).vy*f
+            Guts(i).x = Guts(i).x + Guts(i).vx
+            Guts(i).y = Guts(i).y + Guts(i).vy
             Guts(i).count = Guts(i).count + 1
             if Guts(i).count >= 4 then
                 Guts(i).count = 0
@@ -1969,7 +1995,7 @@ end sub
 
 sub Guts_Draw()
     
-    LD2_LogDebug "Guts_Draw()"
+    if DEBUGMODE then LogDebug __FUNCTION__
     
     dim x as integer, y as integer
     dim sz as integer
@@ -2151,7 +2177,7 @@ SUB Doors_Animate
             Doors_Close i
         end if
         
-        Doors(i).percentOpen += Doors(i).speed * DELAYMOD
+        Doors(i).percentOpen += Doors(i).speed
         if Doors(i).percentOpen >= 1.0 then
             Doors(i).percentOpen = 1.0
             Doors(i).speed = 0
@@ -2169,7 +2195,7 @@ end sub
 
 sub Doors_Draw()
     
-    LD2_LogDebug "Doors_Draw()"
+    if DEBUGMODE then LogDebug __FUNCTION__
     
     dim crop as SDL_Rect
     dim doorIsMoving as integer
@@ -2315,15 +2341,13 @@ sub Elevators_Animate ()
         Player.state = PlayerStates.ExitingElevator
 
         Player.is_visible = 0
-        Game_SetFlag ELEVATORMENU
+        Game_SetFlag GameFlags.ElevatorMenu
     end if
     if (Player.state = PlayerStates.ExitingElevator) and (countOpen = NumElevators) then
         Player.state = 0
     end if
     
 end sub
-
-
 
 sub Elevators_Open (id as integer)
     
@@ -2476,7 +2500,7 @@ sub LD2_put (x as integer, y as integer, spriteId as integer, spriteSetId as int
     dim putX as integer
     dim putY as integer
     
-    sprites = LD2_GetVideoSprites(spriteSetId)
+    sprites = Sprites_GetSpriteSet(spriteSetId)
     if sprites = 0 then exit sub
 
     putX = iif(isFixed, x, int(x - XShift))
@@ -2744,7 +2768,7 @@ end sub
 
 sub LD2_RenderFrame (flags as integer = 0)
     
-    LD2_LogDebug "LD2_RenderFrame ("+str(flags)+")"
+    if DEBUGMODE then LogDebug __FUNCTION__, str(flags)
     
     dim renderElevator as integer
     dim pushShift as double
@@ -2792,7 +2816,7 @@ end sub
 
 function Game_hasFlag (flag as integer) as integer
     
-    return ((GameFlags and flag) > 0)
+    return ((GameFlagsHolder and flag) > 0)
     
 end function
 
@@ -2800,7 +2824,7 @@ function Game_notFlag (flag as integer) as integer
     
     dim hasFlag as integer
     
-    hasFLag = (GameFlags and flag)
+    hasFLag = (GameFlagsHolder and flag)
     
     if hasFlag then
         return 0
@@ -2812,13 +2836,13 @@ end function
 
 sub Game_SetFlag (flag as integer)
     
-    GameFlags = (GameFlags or flag)
+    GameFlagsHolder = (GameFlagsHolder or flag)
     
 end sub
 
 sub Game_UnsetFlag (flag as integer)
     
-    GameFlags = (GameFlags or flag) xor flag
+    GameFlagsHolder = (GameFlagsHolder or flag) xor flag
     
 end sub
 
@@ -3203,7 +3227,7 @@ end sub
 
 sub MapItems_Draw ()
     
-    LD2_LogDebug "MapItems_Draw()"
+    if DEBUGMODE then LogDebug __FUNCTION__
     
     static fastTime as double
     static slowTime as double
@@ -5255,7 +5279,7 @@ end sub
 '- TODO: only draw entities in frame
 sub Mobs_Draw()
     
-    LD2_LogDebug "Mobs_Draw()"
+    if DEBUGMODE then LogDebug __FUNCTION__
     
     dim dst as SDL_Rect
     dim mob as Mobile
@@ -5531,7 +5555,7 @@ end sub
 
 sub Player_Draw()
     
-    LD2_LogDebug "Player_Draw()"
+    if DEBUGMODE then LogDebug __FUNCTION__
     
     dim offset as integer
     dim px as integer, py as integer
@@ -5642,7 +5666,7 @@ function Player_Jump (amount as double, is_repeat as integer = 0) as integer
 
     IF CheckPlayerFloorHit() AND Player.vy >= 0 THEN
         Player.vy = -Amount
-        Player.y = Player.y + Player.vy*DELAYMOD
+        Player.y = Player.y + Player.vy
         success = 1
     END IF
 
@@ -5697,14 +5721,12 @@ function Player_Fall() as integer
     static isFalling as integer = 0
     dim fallingDown as integer
     dim box as BoxType
-    dim f as double
     dim radius as integer
     dim x as integer, y as integer
     dim n as integer
     
     box = Player_GetCollisionBox()
     fallingDown = iif(Player.vy >= 0, 1, 0)
-    f = DELAYMOD
     
     Player.y += Player.vy
     if CheckPlayerFloorHit() = 0 then
@@ -5719,7 +5741,7 @@ function Player_Fall() as integer
         else
             Player.lAni = 67
         end if
-        Player.vy += Gravity*f
+        Player.vy += Gravity
         if Player.vy > 9 then
             Player.vy = 9
         end if
@@ -6798,7 +6820,7 @@ end function
 
 sub Stats_Draw ()
     
-    LD2_LogDebug "Stats_Draw()"
+    if DEBUGMODE then LogDebug __FUNCTION__
     
     dim pad as integer
     
@@ -6894,63 +6916,18 @@ sub LD2_WriteText (text as string)
 
 end sub
 
-SUB LD2_CountFrame
-
-  STATIC seconds as double
-  STATIC first as integer
-  DIM AVGMOD as double
-  dim f as double
-  
-  IF first = 0 THEN
-    seconds  = TIMER
-    AVGFPS   = 0
-    FPS      = 0
-    FPSCOUNT = 0
-    first    = 1
-  END IF
-  
-  FPSCOUNT = FPSCOUNT + 1
-  
-  IF TIMER >= (seconds + 1.0) THEN
-    seconds = TIMER
-    AVGFPS   = (AVGFPS + FPSCOUNT) / 2
-    FPS      = FPSCOUNT
-    FPSCOUNT = 0
-    IF F > 0 THEN
-      F       = FPS
-      DELAYMOD = 60/F
-    END IF
-    'AVGMOD   = 60/AVGFPS
-    IF DELAYMOD < 1 THEN DELAYMOD = 1
-    'IF DELAYMOD > AVGMOD THEN DELAYMOD = AVGMOD
-  END IF
-  DELAYMOD = 1
-
-END SUB
-
-FUNCTION Game_isTestMode() as integer
+sub LogDebug(message as string, p0 as string = "", p1 as string = "", p2 as string = "", p3 as string = "")
     
-    return Game_hasFlag(TESTMODE)
+    dim params as string
     
-END FUNCTION
-
-FUNCTION Game_isDebugMode() as integer
-    
-    return Game_hasFlag(DEBUGMODE)
-    
-END FUNCTION
-
-sub LD2_LogDebug(message as string)
-    
-    if Game_isDebugMode() then
-        logdebug message
+    if len(p0) then params += p0
+    if len(p1) then params += iif(len(params), ", ", "") + p1
+    if len(p2) then params += iif(len(params), ", ", "") + p2
+    if len(p3) then params += iif(len(params), ", ", "") + p3
+    if len(p0) or len(p1) or len(p2) or len(p3) then
+        params = " ( "+params+" ) "
     end if
-    
-end sub
-
-sub LD2_Debug(message as string)
-    
-    LD2_LogDebug message
+    logtofile "debug.log", message+params
     
 end sub
 
@@ -7439,7 +7416,7 @@ end sub
 
 sub elementsSpriteMetrics(spriteId as integer, spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
     dim sprites as VideoSprites ptr
-    sprites = LD2_GetVideoSprites(spriteSetId)
+    sprites = Sprites_GetSpriteSet(spriteSetId)
     if sprites <> 0 then
         sprites->getMetrics spriteId, x, y, w, h
     end if

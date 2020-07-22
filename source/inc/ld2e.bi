@@ -260,8 +260,6 @@ declare sub Player_Hurt(damage as integer, contactX as integer, contactY as inte
 declare sub Player_InitUpper (intervalStart as double=0.0)
 
 declare sub Game_Init ()
-declare function Game_isTestMode () as integer
-declare function Game_isDebugMode () as integer
 declare function Game_HasFlag (flag as integer) as integer
 declare function Game_NotFlag (flag as integer) as integer
 declare sub Game_SetFlag (flag as integer)
@@ -287,25 +285,22 @@ declare sub Shakes_Add (duration as double = 1.0, intensity as double = 1.0)
 declare sub Shakes_Animate (resetClocks as integer = 0)
 declare function Shakes_GetScreenShake() as double
 
+declare function Sprites_GetSpriteSet(id as integer) as VideoSprites ptr
+declare sub Sprites_Load (filename as string, spriteSetId as integer)
+
+declare sub LogDebug(message as string, p0 as string = "", p1 as string = "", p2 as string = "", p3 as string = "")
+
 declare function LD2_AddToStatus (item as integer, qty as integer, slot as integer = -1) as integer
 declare function LD2_AddToStatusIfExists (item as integer, qty as integer) as integer
 declare sub LD2_ClearInventorySlot (slot as integer)
 declare sub LD2_ClearStatus ()
 declare sub LD2_DeductQty(itemId as integer)
 
-declare sub LD2_CountFrame ()
-
-declare sub LD2_LogDebug (message as string)
-declare sub LD2_Debug (message as string)
 DECLARE SUB LD2_Drop (slot as integer)
 DECLARE SUB LD2_GenerateSky ()
 DECLARE FUNCTION LD2_GetStatusAmount (slot AS INTEGER) as integer
 DECLARE FUNCTION LD2_GetStatusItem (slot AS INTEGER) as integer
 
-declare function LD2_GetVideoSprites(id as integer) as VideoSprites ptr
-declare sub LD2_GetSpriteMetrics(spriteId as integer, setId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
-
-DECLARE SUB LD2_ProcessEntities ()
 declare sub LD2_RenderBackground(height as double)
 declare sub LD2_RenderFrame (flags as integer = 0)
 declare sub LD2_RenderForeground (renderElevators as integer = 0)

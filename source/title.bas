@@ -131,7 +131,7 @@ sub TITLE_Menu_Classic
             WaitSeconds CLASSIC_SCREEN_DELAY
             LD2_cls
             WaitSeconds CLASSIC_SCREEN_DELAY
-            GameSetFlag EXITGAME
+            GameSetFlag GameFlags.ExitGame
             exit do
         endif
     loop
@@ -253,7 +253,7 @@ sub TITLE_Menu
                 playedSound = 0
                 soundClock = timer
             case 3
-                GameSetFlag EXITGAME
+                GameSetFlag GameFlags.ExitGame
                 LD2_PlaySound Sounds.titleSelect
                 exit do
             end select

@@ -33,6 +33,10 @@ dim shared STATUS_WINDOW_HEIGHT as integer = STATUS_WINDOW_HEIGHT_MIN
 dim shared STATUS_TEMP_HEIGHT as integer
 dim shared LOOK_ITEM_ID as integer = -1
 
+dim shared ROOMS_FILE as string
+
+dim shared DEBUGMODE as integer
+
 const DATA_DIR = "data/"
 const STATUS_DIALOG_ALPHA = 0.75
 const STATUS_DIALOG_COLOR = 66
@@ -80,6 +84,8 @@ sub STATUS_SetLookItemCallback(callback as sub(id as integer, byref description 
 end sub
 
 function STATUS_InitInventory() as integer
+    
+    DEBUGMODE = iif(Game_hasFlag(GameFlags.DebugMode), 1, 0)
     
     return Inventory_Init(24, 12)
     
@@ -158,6 +164,12 @@ end sub
 sub STATUS_SetTempWindowSize(size as integer)
     
     STATUS_TEMP_HEIGHT = size
+    
+end sub
+
+sub STATUS_SetRoomsFile(filename as string)
+    
+    ROOMS_FILE = filename
     
 end sub
 
@@ -572,7 +584,7 @@ END SUB
 
 function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as integer, byref selectedRoomName as string, byval skipInput as integer = 0) as integer
 	
-	LD2_LogDebug "LD2_EStatusScreen ("+str(currentRoomId)+","+str(selectedRoomId)+","+selectedRoomName+","+str(skipInput)+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, str(currentRoomId), str(selectedRoomId), selectedRoomName, str(skipInput)
 	
     static state as integer = DialogStates.closed
     
@@ -650,11 +662,9 @@ function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as 
         '*******************************************************************
         '* LOAD FLOORS DATA
         '*******************************************************************
-        dim roomsFile as string
         redim floors(0) as FloorInfoType
-        roomsFile = iif(Game_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
         ElevatorFile = freefile
-        open DATA_DIR+roomsFile for input as ElevatorFile
+        open DATA_DIR+ROOMS_FILE for input as ElevatorFile
         do while not eof(ElevatorFile)
             input #ElevatorFile, floors(0).floorNo
             input #ElevatorFile, floors(0).filename
@@ -1438,7 +1448,7 @@ end sub
 
 function StatusScreen(skipInput as integer = 0) as integer
 	
-	LD2_LogDebug "StatusScreen ()"
+    if DEBUGMODE then LogDebug __FUNCTION__, str(skipInput)
 	
 	static dialog as ElementType
     static lookItem as InventoryType

@@ -123,6 +123,10 @@
     redim shared TempSoundIds(0) as integer
     dim shared NumTempSounds as integer
     
+    dim shared DEBUGMODE as integer
+    dim shared TESTMODE as integer
+    dim shared CLASSICMODE as integer
+    
     Start
     END
 
@@ -150,9 +154,9 @@ sub GlobalControls()
     
 end sub
 
-SUB AddPose (pose AS PoseType ptr)
+sub AddPose (pose as PoseType ptr)
     
-    IF Game_isDebugMode() THEN LD2_Debug "AddPose ( pose )"
+    if DEBUGMODE then LogDebug __FUNCTION__, str(pose)
     
     NumPoses = NumPoses + 1
     
@@ -164,7 +168,7 @@ SUB AddPose (pose AS PoseType ptr)
     
     Poses(NumPoses-1) = pose
     
-END SUB
+end sub
 
 sub RemovePose (pose as PoseType ptr)
     
@@ -207,7 +211,7 @@ end function
 
 function CharacterSpeak (characterId as integer, caption as string, talkingPoseId as integer, chatBox as integer) as integer
     
-    LD2_LogDebug "CharacterSpeak ("+str(characterId)+", "+caption+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, str(characterId), caption, str(talkingPoseId), str(chatBox)
 	
     dim chatBoxTop as integer
     dim chatBoxLft as integer
@@ -348,7 +352,7 @@ end function
 
 sub ClearPoses
     
-    LD2_LogDebug "ClearPoses ()"
+    if DEBUGMODE then LogDebug __FUNCTION__
 	
 	NumPoses = 0
 	redim Poses(0) as PoseType
@@ -357,7 +361,7 @@ end sub
 
 sub CharacterDoCommands(characterId as integer)
     
-    if Game_isDebugMode() then LD2_debug "DoCommands()"
+    if DEBUGMODE then LogDebug __FUNCTION__, str(characterId)
     
     dim comm as string
     dim param as string
@@ -416,7 +420,7 @@ function DoDialogue() as integer
     dim poseId as integer
     dim chatBox as integer
 	
-	LD2_LogDebug "DoDialogue()"
+    if DEBUGMODE then LogDebug __FUNCTION__
 	
 	sid = ucase(trim(SCENE_GetSpeakerId()))
 	dialogue = trim(SCENE_GetSpeakerDialogue())
@@ -496,7 +500,7 @@ end function
 
 SUB GetCharacterPose (pose AS PoseType, characterId AS INTEGER, poseId AS INTEGER)
 	
-    LD2_LogDebug "GetCharacterPose ( pose,"+STR(characterId)+","+STR(poseId)+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, "PoseType[id="+str(pose.getId())+"]", str(characterId), str(poseId)
     
     pose.truncateFrames
     pose.setId characterId
@@ -700,7 +704,7 @@ END SUB
 
 SUB GetPose (pose AS PoseType, poseId AS INTEGER)
 	
-    IF Game_isDebugMode() THEN LD2_Debug "GetPose ( pose,"+STR(poseId)+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, "PoseType[id="+str(pose.getId())+"]", str(poseId)
     
 	DIM n AS INTEGER
 	
@@ -737,7 +741,7 @@ end sub
 
 sub AddSound (id as integer, filepath as string, volume as double = 1.0, loops as integer = 0)
     
-    LD2_LogDebug "AddSound ("+str(id)+", "+filepath+","+str(loops)+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, str(id), filepath, str(volume), str(loops)
     
     LD2_AddSound id, DATA_DIR+"sound/"+filepath, loops, volume
     
@@ -745,7 +749,7 @@ end sub
 
 sub AddMusic (id as integer, filepath as string, loopmusic as integer)
     
-    LD2_LogDebug "AddMusic ("+str(id)+", "+filepath+","+str(loopmusic)+" )"
+    if DEBUGMODE then LogDebug __FUNCTION__, str(id), filepath, str(loopmusic)
     
     LD2_AddMusic id, DATA_DIR+"sound/music/"+filepath, loopmusic
     
@@ -1075,8 +1079,14 @@ SUB Main
     dim snapTimer as double
     dim snapCount as integer
     
+    if CLASSICMODE then
+        LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp", 2, 0 '- add function to load bsv file?
+    else
+        LD2_GenerateSky 
+    end if
+    
     SceneCheck player '* check for first scene
-  DO
+    DO
     
     if Game_hasFlag(MAPISLOADED) then
         Game_unsetFlag MAPISLOADED
@@ -1138,8 +1148,8 @@ SUB Main
         end if
     end if
     
-    if Game_hasFlag(ELEVATORMENU) then
-        Game_unsetFlag ELEVATORMENU
+    if Game_hasFlag(GameFlags.ElevatorMenu) then
+        Game_unsetFlag GameFlags.ElevatorMenu
         showElevatorMenu = 1
     end if
     if showElevatorMenu then
@@ -1193,7 +1203,6 @@ SUB Main
     end if
     GameNotice_Draw
 	LD2_RefreshScreen
-	LD2_CountFrame
     
     if showConsole then
         if keypress(KEY_ESCAPE) or keypress(KEY_SLASH) then
@@ -1298,7 +1307,7 @@ SUB Main
             case OptionIds.ExitGame
                 if STATUS_DialogYesNo("Exit Game?", 0) = OptionIds.Yes then
                     paused = 0
-                    Game_setFlag EXITGAME
+                    Game_setFlag GameFlags.ExitGame
                     exit do
                 end if
             end select
@@ -1379,7 +1388,7 @@ SUB Main
     if mouseRelX() < -115 then Player_SetFlip 1
     if mouseRelX() >  115 then Player_SetFlip 0
     
-    if Game_isTestMode() then
+    if TESTMODE then
         if keypress(KEY_R) or ((mouseRB() > 0) and newReload) then
             LD2_AddToStatus ItemIds.Shotgun, Maxes.Shotgun
             LD2_AddToStatus ItemIds.Handgun, Maxes.Handgun
@@ -1407,13 +1416,13 @@ SUB Main
 
 	FlagsCheck player
     
-  loop while Game_notFlag(EXITGAME)
+  loop while Game_notFlag(GameFlags.ExitGame)
   
 end sub
 
 sub RenderPoses ()
 	
-    LD2_LogDebug "RenderPoses ()"
+    if DEBUGMODE then LogDebug __FUNCTION__
     
 	dim pose as PoseType ptr
     dim frame as PoseFrame ptr
@@ -1728,7 +1737,7 @@ sub SceneCheck (player as PlayerType)
     
     if Player_HasItem(ItemIds.SceneTheEnd) then
         Player_SetItemQty ItemIds.SceneTheEnd, 0
-        Game_setFlag EXITGAME
+        Game_setFlag GameFlags.ExitGame
         LD2_FadeOut 1
         TITLE_TheEnd
     end if
@@ -1928,12 +1937,12 @@ sub BeforeMobKill (mob as Mobile ptr)
     select case mob->id
     case MobIds.BossRooftop
         Game_setBossBar 0
-        Game_setFlag MUSICFADEOUT
+        Game_setFlag GameFlags.FadeOutMusic
         MapItems_Add mob->x, mob->y, ItemIds.YellowCard
         Player_AddItem ItemIds.BossRooftopEnd
     case MobIds.BossPortal
         Player_SetAccessLevel REDACCESS
-        Game_setFlag MUSICCHANGE
+        Game_setFlag GameFlags.ChangeMusic
         NextMusicId = Tracks.Wandering
     case MobIds.GruntMg, MobIds.GruntHg
         if int(5*rnd(1)) = 0 then
@@ -1956,7 +1965,7 @@ sub BossCheck (player as PlayerType)
             Player_AddItem ItemIds.BossRooftopBegin
         elseif (player.x <= 1300) and (bossMusicStarted = 0) then
             bossMusicStarted = 1
-            Game_setFlag MUSICCHANGE
+            Game_setFlag GameFlags.ChangeMusic
             NextMusicId = Tracks.Boss
         end if
     end if
@@ -2442,7 +2451,7 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             end select
         end if
     case "elevator"
-        Game_setFlag(ELEVATORMENU)
+        Game_setFlag GameFlags.ElevatorMenu
     case else
         if len(trim(comstring)) then
             response = !"!Invalid command\\ \\Use \"list\" to see commands"
@@ -2467,20 +2476,20 @@ sub FlagsCheck (player as PlayerType)
         LD2_SetNotice "Found "+Inventory_GetShortName(itemId)
         'else "Inventory Full"
 	end if
-    if Game_hasFlag(MUSICCHANGE) or Game_hasFlag(MUSICFADEOUT) then
+    if Game_hasFlag(GameFlags.ChangeMusic) or Game_hasFlag(GameFlags.FadeOutMusic) then
         if LD2_FadeOutMusic(3.0) = 0 then
-            if Game_hasFlag(MUSICCHANGE) then
+            if Game_hasFlag(GameFlags.ChangeMusic) then
                 LD2_StopMusic
                 musicdelay = 1.5
                 musictimer = timer
-                Game_unsetFlag MUSICCHANGE
+                Game_unsetFlag GameFlags.ChangeMusic
             end if
-            Game_unsetFlag MUSICFADEOUT
+            Game_unsetFlag GameFlags.FadeOutMusic
         end if
     end if
-    if Game_hasFlag(MUSICFADEIN) then
+    if Game_hasFlag(GameFlags.FadeInMusic) then
         if LD2_FadeInMusic(3.0) then
-            Game_unsetFlag MUSICFADEIN
+            Game_unsetFlag GameFlags.FadeInMusic
         end if
     end if
     
@@ -2588,7 +2597,7 @@ SUB SetAllowedEntities (codeString AS STRING)
 	codeString = UCASE(codeString)
 	
 	'Mobs.DisableAllTypes
-	'LD2_Debug codeString
+	'LogDebug codeString
 	cursor = 1
 	DO
 	comma = INSTR(cursor, codeString, ",")
@@ -2599,7 +2608,7 @@ SUB SetAllowedEntities (codeString AS STRING)
 		code = MID(codeString, cursor, LEN(codeString) - cursor)
 	END IF
 	code = UCASE(LTRIM(RTRIM(code)))
-	'LD2_Debug "Mob enable code: " + code
+	'LogDebug "Mob enable code: " + code
 	SELECT CASE code
 	CASE "ALL"
 		'Mobs.EnableAllTypes
@@ -2621,8 +2630,11 @@ END SUB
 
 sub Start
     
-    dim i as integer
+    dim TitleOpening as sub
+    dim TitleMenu as sub
+    dim TitleIntro as sub
     dim firstLoop as integer
+    
     firstLoop = 1
     
     STATUS_SetBeforeUseItemCallback @LD2_BeforeUseItem
@@ -2630,10 +2642,16 @@ sub Start
     STATUS_SetLookItemCallback @LD2_LookItem
     
     Game_Init
+    
+    TESTMODE    = iif(Game_hasFlag(GameFlags.TestMode)   , 1, 0)
+    DEBUGMODE   = iif(Game_hasFlag(GameFlags.DebugMode)  , 1, 0)
+    CLASSICMODE = iif(Game_hasFlag(GameFlags.ClassicMode), 1, 0)
+    
     LD2_SetMusicMaxVolume 1.0
     LD2_SetSoundMaxVolume 0.5
     LD2_SetMusicVolume 1.0
     LD2_SetSoundVolume 1.0
+    
     LoadSounds
     LoadMusic
     Game_SetSessionFile SESSION_FILE
@@ -2649,62 +2667,55 @@ sub Start
         Game_SetFlag LOADGAME
     end if
     
+    if CLASSICMODE then
+        SCENE_SetScenesFile "2002/tables/scenes.txt"
+        TitleOpening = @TITLE_Opening_Classic
+        TitleMenu    = @TITLE_Menu_Classic
+        TitleIntro   = @TITLE_Intro_Classic
+    else
+        TitleOpening = @TITLE_Opening
+        TitleMenu    = @TITLE_Menu
+        TitleIntro   = @TITLE_Intro
+    end if
+    
+    if Game_hasFlag(GameFlags.LoadGame) or TESTMODE then
+        Game_setFlag GameFlags.SkipOpening
+    end if
+    
     do  
         Game_Reset
-
-        if Game_hasFlag(CLASSICMODE) then
-            SCENE_SetScenesFile "2002/tables/scenes.txt"
-        end if
-
-        if Game_notFlag(TESTMODE) and Game_notFlag(LOADGAME) and Game_notFlag(SKIPOPENING) then
+        
+        if Game_notFlag(GameFlags.SkipOpening) then
             if firstLoop then
-                if Game_hasFlag(CLASSICMODE) then
-                    TITLE_Opening_Classic
-                else
-                    TITLE_Opening
-                end if
+                TitleOpening()
             end if
-            if Game_hasFlag(CLASSICMODE) then
-                TITLE_Menu_Classic
-            else
-                TITLE_Menu
-            end if
+            TitleMenu()
         end if
         
-        if Game_hasFlag(EXITGAME) then
+        if Game_hasFlag(GameFlags.ExitGame) then
             exit do
         end if
-
-        LD2_LogDebug "Starting intro..."
         
-        if Game_notFlag(LOADGAME) and Game_notFlag(TESTMODE) and Game_notFlag(SKIPOPENING) then
+        if DEBUGMODE then LogDebug "Starting intro..."
+        
+        if Game_notFlag(GameFlags.SkipOpening) then
             LD2_FadeOutMusic
-            if Game_hasFlag(CLASSICMODE) then
-                TITLE_Intro_Classic
-            else
-                TITLE_Intro
-            end if
+            TitleIntro()
         end if
         
-        Game_UnsetFlag(SKIPOPENING)
+        Game_UnsetFlag(GameFlags.SkipOpening)
         
-        LD2_LogDebug "Starting game..."
+        if DEBUGMODE then LogDebug "Starting game..."
         
-        if Game_hasFlag(CLASSICMODE) then
-            LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp", 2, 0 '- add function to load bsv file?
-        else
-            LD2_GenerateSky 
-        end if
-        
-        if Game_notFlag(EXITGAME) then
+        if Game_notFlag(GameFlags.ExitGame) then
             Main
-            if Game_notFlag(TESTMODE) then
-                Game_unsetFlag(EXITGAME)
-            end if
+            if TESTMODE = 0 then
+                Game_unsetFlag(GameFlags.ExitGame)
+            endif
         end if
         firstLoop = 0
     
-    loop while Game_notFlag(EXITGAME)
+    loop while Game_notFlag(GameFlags.ExitGame)
   
   TITLE_Goodbye
   Game_shutdown
@@ -2713,7 +2724,7 @@ END SUB
 
 sub NewGame
     
-    LD2_LogDebug "NewGame()"
+    if DEBUGMODE then LogDebug __FUNCTION__
     
     dim player as PlayerType
     dim arg as string
@@ -2752,7 +2763,7 @@ sub NewGame
     
     Player_SetWeapon ItemIds.Fist '// must be called after Player_Init()
     
-    if Game_isTestMode() then
+    if TESTMODE then
         Player_SetItemQty ItemIds.Lives, 99
         
         Player_SetItemQty ItemIds.SceneIntro, 1
@@ -2870,7 +2881,7 @@ end function
 
 SUB UpdatePose (target AS PoseType, pose AS PoseType)
     
-    IF Game_isDebugMode() THEN LD2_Debug "UpdatePose ( target, pose )"
+    if DEBUGMODE then LogDebug __FUNCTION__, "PoseType[id="+str(target.getId())+"]", "PoseType[id="+str(pose.getId())+"]"
 	
 	DIM n AS INTEGER
 	
@@ -2927,7 +2938,7 @@ sub LD2_UseItem (byval id as integer, byref qty as integer, byref exitMenu as in
         SceneCallback = @SceneGooGone
         exitMenu = 1
     case ItemIds.ElevatorMenu
-        Game_setFlag(ELEVATORMENU)
+        Game_setFlag GameFlags.ElevatorMenu
         exitMenu = 1
     case ItemIds.WalkieTalkie
         SceneCallback = @SceneHT01
@@ -3031,6 +3042,12 @@ function inputText(text as string, currentVal as string = "") as string
 	
 end function
 
+function GetRoomsFile() as string
+    
+    return iif(CLASSICMODE, "2002/tables/rooms.txt", "tables/rooms.txt")
+    
+end function
+
 function GetRoomName(id as integer) as string
     
     dim fileNo as integer
@@ -3040,7 +3057,7 @@ function GetRoomName(id as integer) as string
     dim label as string
     dim allowed as string
     
-    roomsFile = iif(Game_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
+    roomsFile = GetRoomsFile()
 	
     fileNo = freefile
 	open DATA_DIR+roomsFile for input as #fileNo
@@ -3332,7 +3349,8 @@ function RoomToFilename(roomId as integer) as string
     dim allowed as string
     dim file as integer
     
-    roomsFile = iif(Game_hasFlag(CLASSICMODE),"2002/tables/rooms.txt","tables/rooms.txt")
+    roomsFile = GetRoomsFile()
+    
     file = freefile
     open DATA_DIR+roomsFile for input as file
     do while not eof(file)
@@ -3360,6 +3378,12 @@ end function
 sub GameSetFlag(flag as integer)
     
     Game_SetFlag(flag)
+    
+end sub
+
+sub GameUnsetFlag(flag as integer)
+    
+    Game_UnsetFlag(flag)
     
 end sub
 

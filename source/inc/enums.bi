@@ -461,6 +461,7 @@ CONST idSCENE  = 406
 CONST idOBJECT = 407
 CONST idBOSS   = 408
 CONST idOBJCRP = 409
+CONST idOPTILE = 410
 
 '======================
 '= MUSIC
@@ -661,34 +662,37 @@ end enum
 '======================
 '= GAME FLAGS
 '======================
-CONST EXITGAME      = &h01
-CONST TESTMODE      = &h02
-CONST DEBUGMODE     = &h04
-CONST NOSOUND       = &h08
-CONST NOMIX         = &h10
-CONST SKIPOPENING   = &h20
-CONST MAPISLOADED   = &h40
-CONST CLASSICMODE   = &h80
-CONST PLAYERDIED    = &h100
-CONST GOTITEM       = &h200
-CONST ELEVATORMENU  = &h400
-CONST MUSICFADEIN   = &h800
-CONST MUSICFADEOUT  = &h1000
-CONST MUSICCHANGE   = &h2000
-CONST NOMOBS        = &h4000
-CONST REVEALTEXT    = &h8000
-CONST REVEALDONE    = &h10000
-CONST SAVEGAME      = &h20000
-CONST LOADGAME      = &h40000
-CONST RECENTDEATH   = &h80000
+enum GameFlags
+    ExitGame     = &h01
+    Paused       = &h02
+    NoSound      = &h04
+    ResetClocks  = &h08
+    MapIsLoaded  = &h100
+    SaveGame     = &h200
+    LoadGame     = &h400
+    FadeInMusic  = &h800
+    FadeOutMusic = &h1000
+    ChangeMusic  = &h2000
+    PlayerDied   = &h4000
+    RecentDeath  = &h8000
+    RevealText   = &h10000
+    RevealDone   = &h20000
+    ElevatorMenu = &h40000
+    StatusScreen = &h80000
+    GotItem      = &h100000
+    NoMobs       = &h200000
+    SkipOpening  = &h400000
+    TestMode     = &h800000
+    DebugMode    = &h1000000
+    ClassicMode  = &h2000000
+end enum
 
-'======================
-'= SCENE POSES
-'======================
-CONST STEVEPASSEDOUT = 27
-CONST POSEJANITOR = 28
-CONST BARNEYBOX = 45
-CONST BARNEYEXITELEVATOR = 50
+enum ScreenModes
+    Classic = 1
+    Screen13
+    WideScreen
+    WideZoom
+end enum
 
 enum CharacterIds
     Barney = 1
@@ -789,35 +793,10 @@ enum RenderSceneFlags
 end enum
 
 #ifndef EDITOR
-    const SCREEN_FULL = 1
-    #define widezoom 1
-    '* CLASSIC
-    #ifdef screen13
-        const SCREEN_W = 320
-        const SCREEN_H = 200
-        const SPRITE_W = 16
-        const SPRITE_H = 16
-        const FONT_W = 6
-        const FONT_H = 5
-    #endif
-    '* WIDESCREEN
-    #ifdef widescreen
-        const SCREEN_W = 352
-        const SCREEN_H = 198
-        const SPRITE_W = 16
-        const SPRITE_H = 16
-        const FONT_W = 6
-        const FONT_H = 5
-    #endif
-    '* WIDEZOOM
-    #ifdef widezoom
-        const SCREEN_W = 320
-        const SCREEN_H = 180
-        const SPRITE_W = 16
-        const SPRITE_H = 16
-        const FONT_W = 6
-        const FONT_H = 5
-    #endif
+    const SPRITE_W = 16
+    const SPRITE_H = 16
+    const FONT_W = 6
+    const FONT_H = 5
     const SCREENSHOT_W = 1920 '960
     const SCREENSHOT_H = 1080 '540
 #endif

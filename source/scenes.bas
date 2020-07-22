@@ -231,7 +231,7 @@ sub SceneInit(sceneCallback as function() as integer, endConditionsCallback as s
     PLAYER_START_X = playerStartX
     PLAYER_START_Y = playerStartY
     PLAYER_START_FLIP = playerStartFlip
-    GameSetFlag MUSICFADEIN
+    GameSetFlag GameFlags.FadeInMusic
     
 end sub
 
@@ -1907,7 +1907,7 @@ sub SceneHT01EndConditions
     ClearPoses
     LD2_SetSceneMode MODEOFF
     FreeTempSounds
-    Game_SetFlag MUSICFADEIN
+    Game_SetFlag GameFlags.FadeInMusic
     
 end sub
 
