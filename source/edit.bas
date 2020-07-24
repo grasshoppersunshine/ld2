@@ -25,8 +25,8 @@
     const DIALOG_SELECTED_BACKGROUND = 7
     const DIALOG_SELECTED_COLOR = 15
     
-    const SCREENSHOT_W = 1280
-    const SCREENSHOT_H = 720
+    const SCREENSHOT_W = 320
+    const SCREENSHOT_H = 200
 
 type PointType
     x as integer
@@ -146,6 +146,7 @@ enum LayerIds
     item
     larry
     mobs
+    scene
 end enum
 
 type LayerMeta
@@ -201,6 +202,7 @@ end type
     dim shared SpritesMob as VideoSprites
     dim shared SpritesObject as VideoSprites
     dim shared SpritesOpaqueObject as VideoSprites
+    dim shared SpritesScene as VideoSprites
 
     const MAPW = 201
     const MAPH = 13
@@ -243,6 +245,8 @@ end type
     
 
     const DATA_DIR = "data/"
+    
+    const CLASSICMODE = 1
 
   Init
   
@@ -274,7 +278,7 @@ end type
     dim cursors(5) as PointType
     dim cursor as PointType
     
-    dim layers(6) as LayerMeta
+    dim layers(7) as LayerMeta
     layers(0).isVisible = 1: layers(0).id = LayerIds.Video  : layers(0).sid = "Screen"
     layers(1).isVisible = 1: layers(1).id = LayerIds.Tile   : layers(1).sid = "Tile"
     layers(2).isVisible = 1: layers(2).id = LayerIds.LightBG: layers(2).sid = "Light BG"
@@ -282,6 +286,7 @@ end type
     layers(4).isVisible = 1: layers(4).id = LayerIds.Item   : layers(4).sid = "Item"
     layers(5).isVisible = 0: layers(5).id = LayerIds.Larry  : layers(5).sid = "Larry"
     layers(6).isVisible = 0: layers(6).id = LayerIds.Mobs   : layers(6).sid = "Mobs"
+    layers(7).isVisible = 0: layers(7).id = LayerIds.Scene  : layers(7).sid = "Scene"
     dim activeLayer as integer
     activeLayer = LayerIds.Tile
     
@@ -473,6 +478,8 @@ end type
                 nextScreen = SpriteSelectScreen(@spritesLarry, 0, cursors(3))
             case LayerIds.Mobs
                 nextScreen = SpriteSelectScreen(@spritesMob, 0, cursors(4))
+            case LayerIds.Scene
+                nextScreen = SpriteSelectScreen(@spritesScene, 0, cursors(5))
             end select
             if nextScreen = -1 then
                 if activeLayer > 0 then
@@ -483,7 +490,7 @@ end type
                 end if
             end if
             if nextScreen = 1 then
-                if activeLayer < 6 then
+                if activeLayer < 7 then
                     activeLayer += 1
                     LD2_PlaySound EditSounds.switchLayer
                 else
@@ -894,12 +901,22 @@ SUB Init
     Font_Load DATA_DIR+"gfx/font.put"
     Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
     Elements_LoadFontMetrics DATA_DIR+"gfx/font.put"
-
-    LoadSprites DATA_DIR+"gfx/ld2tiles.put", idTILE
-    LoadSprites DATA_DIR+"gfx/ld2light.put", idLIGHT
-    LoadSprites DATA_DIR+"gfx/mobs.put", idMOBS
-    LoadSprites DATA_DIR+"gfx/larry2.put", idLARRY
-    LoadSprites DATA_DIR+"gfx/objects.put", idOBJECT
+    
+    if CLASSICMODE then
+        LoadSprites DATA_DIR+"2002/gfx/ld2tiles.put", idTILE
+        LoadSprites DATA_DIR+"2002/gfx/ld2light.put", idLIGHT
+        LoadSprites DATA_DIR+"2002/gfx/enemies.put", idMOBS
+        LoadSprites DATA_DIR+"2002/gfx/larry2.put", idLARRY
+        LoadSprites DATA_DIR+"2002/gfx/objects.put", idOBJECT
+        LoadSprites DATA_DIR+"2002/gfx/ld2scene.put", idSCENE
+    else
+        LoadSprites DATA_DIR+"gfx/ld2tiles.put", idTILE
+        LoadSprites DATA_DIR+"gfx/ld2light.put", idLIGHT
+        LoadSprites DATA_DIR+"gfx/mobs.put", idMOBS
+        LoadSprites DATA_DIR+"gfx/larry2.put", idLARRY
+        LoadSprites DATA_DIR+"gfx/objects.put", idOBJECT
+        LoadSprites DATA_DIR+"gfx/ld2scene.put", idSCENE
+    end if
     
     LD2_AddSound EditSounds.quiet   , DATA_DIR+"sound/scenechar.wav"
     
@@ -1377,6 +1394,10 @@ sub LoadSprites (filename as string, spriteSetId as integer)
     CASE idLARRY
 
       LD2_InitSprites filename, @SpritesLarry, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
+    
+    CASE idSCENE
+
+      LD2_InitSprites filename, @SpritesScene, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
 
     CASE idLIGHT
     

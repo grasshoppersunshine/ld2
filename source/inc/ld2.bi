@@ -1,7 +1,7 @@
 #include once "modules/inc/poses.bi"
 
 declare sub LD2_BeforeUseItem (byval id as integer)
-declare sub LD2_UseItem (byval id as integer, byref qty as integer, byref exitMenu as integer)
+declare sub LD2_UseItem (byval id as integer, byref qty as integer = 0, byref exitMenu as integer = 0)
 declare sub LD2_LookItem (id as integer, byref desc as string)
 declare sub AddMusic (id as integer, filepath as string, loopmusic as integer)
 declare sub AddSound (id as integer, filepath as string, volume as double = 1.0, loops as integer = 0)
@@ -45,3 +45,6 @@ declare function GameHasFlag(flag as integer) as integer
 declare sub GameSetFlag(flag as integer)
 declare sub GameUnsetFlag(flag as integer)
 declare sub GenerateSky
+
+declare function ScreenGetWidth() as integer
+

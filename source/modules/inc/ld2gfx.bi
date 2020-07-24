@@ -5,7 +5,7 @@
 
 declare function LD2_GetVideoInfo() as string
 declare function LD2_GetVideoErrorMsg() as string
-declare function LD2_InitVideo(title as string, screen_w as integer, screen_h as integer, fullscreen as integer = 0) as integer
+declare function LD2_InitVideo(title as string, scrn_w as integer, scrn_h as integer, fullscreen as integer = 0) as integer
 declare sub LD2_LoadPalette(filename as string, alter as integer = 1)
 declare sub LD2_CreateLightPalette(pal as Palette256 ptr)
 declare sub LD2_SetTargetBuffer(bufferNum as integer)
@@ -42,6 +42,9 @@ declare sub Font_SetAlpha(a as double)
 declare sub Font_put(x as integer, y as integer, sprite as integer, bufferNum as integer)
 declare sub Font_putText (x as integer, y as integer, text as string, bufferNum as integer)
 declare sub Font_putTextCol (x as integer, y as integer, text as string, col as integer, bufferNum as integer)
+
+declare function Screen_GetWidth() as integer
+declare function Screen_GetHeight() as integer
 
 declare sub Screenshot_Take(byref filename as string = "", xscale as double = 1.0, yscale as double = 1.0)
 

@@ -29,6 +29,9 @@ dim shared ElementsCount as integer
 dim shared BackupElementsCount as integer
 dim shared RenderElements(64) as ElementType ptr
 dim shared BackupElements(64) as ElementType ptr
+dim shared DEFAULT_ELEMENT_FLAGS as integer = 0
+dim shared DEFAULT_TEXT_SPACING as double = 1.2
+dim shared DEFAULT_LINE_SPACING as double = 1.4
 '***********************************************************************
 '* END PRIVATE VARS
 '***********************************************************************
@@ -181,18 +184,38 @@ sub Elements_SetSpriteHeight(h as integer)
     SPRITE_H = h
 end sub
 
-function Elements_GetFontWidthWithSpacing (spacing as double = 1.2) as integer
+sub Elements_SetDefaultFlags(flags as integer)
+    DEFAULT_ELEMENT_FLAGS = flags
+end sub
+
+sub Elements_SetDefaultTextSpacing(spacing as double)
+    DEFAULT_TEXT_SPACING = spacing
+end sub
+
+sub Elements_SetDefaultLineSpacing(spacing as double)
+    DEFAULT_LINE_SPACING = spacing
+end sub
+
+function Elements_GetFontWidthWithSpacing (spacing as double = -1) as integer
         
     dim d as double
+    
+    if spacing = -1 then
+        spacing = DEFAULT_TEXT_SPACING
+    end if
     
     d = (FONT_W*spacing)
     return int(d)
     
 end function
 
-function Elements_GetFontHeightWithSpacing (spacing as double = 1.4) as integer
+function Elements_GetFontHeightWithSpacing (spacing as double = -1) as integer
     
     dim d as double
+    
+    if spacing = -1 then
+        spacing = DEFAULT_LINE_SPACING
+    end if
     
     d = (FONT_H*spacing)
     return int(d)
@@ -240,6 +263,8 @@ sub Element_Init(e as ElementType ptr, text as string = "", text_color as intege
     
     dim n as integer
     
+    flags = DEFAULT_ELEMENT_FLAGS or flags
+    
     e->x = 0
     e->y = 0
     e->w = -1
@@ -251,8 +276,8 @@ sub Element_Init(e as ElementType ptr, text as string = "", text_color as intege
     e->text = text
     e->text_alpha = 1.0
     e->text_color   = text_color
-    e->text_spacing = 1.2
-    e->text_height  = 1.4
+    e->text_spacing = DEFAULT_TEXT_SPACING
+    e->text_height  = DEFAULT_LINE_SPACING
     e->text_is_centered = ((flags and ElementFlags.CenterText) > 0)
     e->text_is_monospace = ((flags and ElementFlags.MonospaceText) > 0)
     e->text_align_right = ((flags and ElementFlags.AlignTextRight) > 0)

@@ -18,6 +18,8 @@ dim shared WhitePalette as Palette256
 dim shared VideoErrorMessage as string
 dim shared SpritesFont as VideoSprites
 
+dim shared SCREEN_W as integer
+dim shared SCREEN_H as integer
 dim shared FONT_W as integer
 dim shared FONT_H as integer
 
@@ -45,10 +47,10 @@ function LD2_GetVideoErrorMsg() as string
     
 end function
 
-function LD2_InitVideo(title as string, screen_w as integer, screen_h as integer, fullscreen as integer = 0) as integer
+function LD2_InitVideo(title as string, scrn_w as integer, scrn_h as integer, fullscreen as integer = 0) as integer
     
     VideoErrorMessage = ""
-    if VideoHandle.init(screen_w, screen_h, fullscreen, title) <> 0 then
+    if VideoHandle.init(scrn_w, scrn_h, fullscreen, title) <> 0 then
         VideoErrorMessage = VideoHandle.getErrorMsg()
         return 1
     end if
@@ -60,6 +62,9 @@ function LD2_InitVideo(title as string, screen_w as integer, screen_h as integer
         WhitePalette.setRGBA(n, 255, 255, 255, 255)
     next n
     WhitePalette.setRGBA(0, 0, 0, 0, 255)
+    
+    SCREEN_W = scrn_w
+    SCREEN_H = scrn_h
     
     return 0
     
@@ -524,6 +529,18 @@ sub Screenshot_Take(byref filename as string = "", xscale as double = 1.0, yscal
     VideoBuffers(0).saveBMP DATA_DIR+"screenshots/"+filename, xscale, yscale
     
 end sub
+
+function Screen_GetWidth() as integer
+    
+    return SCREEN_W
+    
+end function
+
+function Screen_GetHeight() as integer
+    
+    return SCREEN_H
+    
+end function
 
 private function fontVal(ch as string) as integer
     

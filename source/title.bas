@@ -26,6 +26,9 @@ const DATA_DIR = "data/"
 const CLASSIC_LOADBMP_DELAY = 0.5
 const CLASSIC_SCREEN_DELAY = 0.2
 
+dim shared SCREEN_W as integer
+dim shared SCREEN_H as integer
+
 SUB TITLE_EndDemo
 
 '  DIM Message(10) AS STRING
@@ -275,6 +278,9 @@ sub TITLE_Intro_Classic
   dim n as integer
   dim a as integer
   dim e as ElementType
+    
+    SCREEN_W = Screen_GetWidth()
+    SCREEN_H = Screen_GetHeight()
   
     LD2_cls: LD2_cls 1, 0
     LD2_StopMusic
@@ -339,6 +345,9 @@ SUB TITLE_Intro
     dim n as integer
     dim e as ElementType
     dim a as double
+    
+    SCREEN_W = Screen_GetWidth()
+    SCREEN_H = Screen_GetHeight()
 
     LD2_cls 0, 0
     ContinueAfterSeconds(2.0, 0)
@@ -507,6 +516,9 @@ sub TITLE_ShowCredits
     dim e as ElementType
     dim y as integer
     dim text as string
+    
+    SCREEN_W = Screen_GetWidth()
+    SCREEN_H = Screen_GetHeight()
 
     LD2_cls
     LD2_CLS 1, 0
@@ -581,6 +593,9 @@ SUB TITLE_Ad
   DIM backColor AS INTEGER
   dim i as integer
   dim n as integer
+    
+    SCREEN_W = Screen_GetWidth()
+    SCREEN_H = Screen_GetHeight()
   
   textColor = 57
   backColor = 48
@@ -652,6 +667,9 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
     dim n as integer
     dim e as ElementType
     dim a as double
+    
+    SCREEN_W = Screen_GetWidth()
+    SCREEN_H = Screen_GetHeight()
     
     barSize = 0 'int(SPRITE_H*1.5)
     
@@ -879,6 +897,9 @@ SUB TITLE_AdTwo
   dim a as single
   dim i as integer
   dim n as integer
+    
+    SCREEN_W = Screen_GetWidth()
+    SCREEN_H = Screen_GetHeight()
   
   textColor = 40
   backColor = 32

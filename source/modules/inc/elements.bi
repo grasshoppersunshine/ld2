@@ -72,6 +72,9 @@ declare sub Elements_SetFontWidth(w as integer)
 declare sub Elements_SetFontHeight(h as integer)
 declare sub Elements_SetSpriteWidth(w as integer)
 declare sub Elements_SetSpriteHeight(h as integer)
+declare sub Elements_SetDefaultFlags(flags as integer)
+declare sub Elements_SetDefaultTextSpacing(spacing as double)
+declare sub Elements_SetDefaultLineSpacing(spacing as double)
 
 declare sub Element_Init(e as ElementType ptr, text as string = "", text_color as integer = 15, flags as integer = 0)
 declare sub Element_Render(e as ElementType ptr)
@@ -96,8 +99,8 @@ declare sub Elements_Backup()
 declare sub Elements_Restore()
 declare function Elements_GetRootParent() as ElementType ptr
 
-declare function Elements_GetFontWidthWithSpacing (spacing as double = 1.2) as integer
-declare function Elements_GetFontHeightWithSpacing (spacing as double = 1.4) as integer
+declare function Elements_GetFontWidthWithSpacing (spacing as double = -1) as integer
+declare function Elements_GetFontHeightWithSpacing (spacing as double = -1) as integer
 
 enum ElementFlags
     CenterX         = &h01

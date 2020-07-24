@@ -18,6 +18,9 @@ declare function ShowResponse (response as string = "", textColor as integer = -
 declare function UseItem (item AS InventoryType) as integer
 declare sub GetInventoryRowsCols(byref rows as integer, byref cols as integer)
 
+dim shared SCREEN_W as integer
+dim shared SCREEN_H as integer
+
 dim shared selectedInventorySlot as integer
 
 dim shared BeforeUseItemCallback as sub(byval id as integer)
@@ -26,7 +29,7 @@ dim shared LookItemCallback as sub(id as integer, byref description as string)
 
 const STATUS_WINDOW_HEIGHT_MIN = 96
 const STATUS_WINDOW_HEIGHT_MED = 120
-const STATUS_WINDOW_HEIGHT_MAX = SCREEN_H
+const STATUS_WINDOW_HEIGHT_MAX = 180 'SCREEN_H
 
 dim shared STATUS_INVENTORY_SIZE as integer = 8
 dim shared STATUS_WINDOW_HEIGHT as integer = STATUS_WINDOW_HEIGHT_MIN
@@ -86,6 +89,8 @@ end sub
 function STATUS_InitInventory() as integer
     
     DEBUGMODE = iif(Game_hasFlag(GameFlags.DebugMode), 1, 0)
+    SCREEN_W = Screen_GetWidth()
+    SCREEN_H = Screen_GetHeight()
     
     return Inventory_Init(24, 12)
     
@@ -1445,6 +1450,87 @@ sub STATUS_SetLookItem(itemId as integer)
     LOOK_ITEM_ID = itemId
     
 end sub
+
+function StatusScreen_Classic(skipInput as integer = 0) as integer
+    
+    static dialog as ElementType
+    static dialogBorder as ElementType
+    static labelStatusScreen as ElementType
+    static labelInventory as ElementType
+    static inventoryDivider as ElementType
+    static menuActions as ElementType
+    static labelItems(7) as ElementType
+    dim fontH as integer
+    dim i as integer
+    
+    dim lft as integer
+    dim top as integer
+    lft = 200
+    top = 4
+    fontH = FONT_H+1
+    
+    Element_Init @dialog, "", 31
+    dialog.w = SCREEN_W
+    dialog.h = STATUS_WINDOW_HEIGHT
+    dialog.background = 68
+    
+    '*******************************************************************
+    '* INVENTORY
+    '*******************************************************************
+    Element_Init @labelStatusScreen, "STATUS SCREEN\============="
+    labelStatusScreen.parent = @dialog
+    labelStatusScreen.x = 4
+    labelStatusScreen.y = 4
+    
+    Element_Init @labelInventory, "INVENTORY"
+    labelInventory.parent = @dialog
+    labelInventory.x = lft + int((9*FONT_W)*0.5)
+    labelInventory.y = top
+    
+    Element_Init @inventoryDivider, "=================="
+    inventoryDivider.parent = @dialog
+    inventoryDivider.x = lft
+    inventoryDivider.y = top+fontH
+    
+    Element_Init @dialogBorder, string(53, "*")
+    dialogBorder.parent = @dialog
+    dialogBorder.x = 0
+    dialogBorder.y = dialogBorder.parent->h-fontH
+    
+    '*******************************************************************
+    '* INVENTORY ITEMS
+    '*******************************************************************
+    for i = 0 to 7
+        Element_Init @labelItems(i), "  NOTHING"
+        labelItems(i).parent = @dialog
+        labelItems(i).x = lft-FONT_W*2
+        labelItems(i).y = 20+i*fontH
+    next i
+    
+    '*******************************************************************
+    '* ACTIONS MENU
+    '*******************************************************************
+    Element_Init @menuActions, "  USE     LOOK     MIX     DROP"
+    menuActions.parent = @dialog
+    menuActions.x = menuActions.parent->w - FONT_W * len(menuActions.text)
+    menuActions.y = menuActions.parent->h - fontH * 2
+    
+    Elements_Clear
+    Elements_Add @dialog
+    Elements_Add @dialogBorder
+    Elements_Add @labelStatusScreen
+    Elements_Add @labelInventory
+    Elements_Add @inventoryDivider
+    for i = 0 to 7
+        Elements_Add @labelItems(i)
+    next i
+    Elements_Add @menuActions
+    
+    Elements_Render
+    
+    return iif(keypress(KEY_TAB),1,0)
+    
+end function
 
 function StatusScreen(skipInput as integer = 0) as integer
 	

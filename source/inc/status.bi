@@ -58,6 +58,7 @@ end enum
 declare function DoWobble(wobble as ElementType ptr, wobbleType as integer = WobbleTypes.RevealNoSpin, wobbleAction as integer = WobbleActions.NoAction) as integer
 declare function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as integer, byref selectedRoomName as string, byval skipInput as integer = 0) as integer
 declare function StatusScreen (skipInput as integer = 0) as integer
+declare function StatusScreen_Classic(skipInput as integer = 0) as integer
 declare function STATUS_InitInventory() as integer
 declare sub STATUS_SetInventorySize(size as integer)
 declare sub STATUS_RefreshInventory()

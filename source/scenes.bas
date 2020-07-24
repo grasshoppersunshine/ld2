@@ -1093,7 +1093,7 @@ function SceneCapturedGo() as integer
 	RenderPoses
     LD2_FadeIn 1
     LD2_SetMusicVolume 0
-    SceneFadeInMusic 3.0, Tracks.Ambient5
+    SceneFadeInMusic 3.0, Tracks.Breezeway
 
     if DoScene("SCENE-FLASHLIGHT-1A") then return 1
     
@@ -1105,12 +1105,12 @@ function SceneCapturedGo() as integer
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
     BarneyPose.setHidden 1
     AddPose @BarneyPose
-    SceneFadeInMusic 3.0, Tracks.Truth
+    SceneFadeInMusic 3.0, Tracks.Captured
     if DoScene("SCENE-FLASHLIGHT-1C") then return 1
     
     SceneFadeOutMusic
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    SceneFadeInMusic 3.0, Tracks.Ambient5
+    SceneFadeInMusic 3.0, Tracks.Breezeway
     RemovePose @BarneyPose
     if DoScene("SCENE-FLASHLIGHT-1D") then return 1
     
@@ -1593,7 +1593,7 @@ function SceneWeapons3Go() as integer
     if DoScene("SCENE-WEAPONS3") then return 1
     
     GetCharacterPose Barney, CharacterIds.Barney, PoseIds.Walking
-    if PanPose(@Barney, SCREEN_W, 0, 5.0, 0.15) then return 1
+    if PanPose(@Barney, ScreenGetWidth(), 0, 5.0, 0.15) then return 1
     RemovePose @Barney
     
     Larry.isFlipped = 0

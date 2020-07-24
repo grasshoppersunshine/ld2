@@ -287,6 +287,8 @@ declare function Shakes_GetScreenShake() as double
 
 declare function Sprites_GetSpriteSet(id as integer) as VideoSprites ptr
 declare sub Sprites_Load (filename as string, spriteSetId as integer)
+declare sub Sprites_put (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0, isFixed as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
+declare sub Sprites_putFixed (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0)
 
 declare sub LogDebug(message as string, p0 as string = "", p1 as string = "", p2 as string = "", p3 as string = "")
 
@@ -310,9 +312,9 @@ DECLARE SUB LD2_SetSceneMode (OnOff AS INTEGER)
 DECLARE SUB LD2_SetSceneNo (Num AS INTEGER)
 declare sub LD2_SetRevealText (message as string)
 
-declare sub LD2_LightingToggle (id as integer)
-declare sub LD2_LightingSetEnabled (id as integer, enabled as integer)
-declare function LD2_LightingIsEnabled (id as integer) as integer
+declare sub Lighting_Toggle (id as integer)
+declare sub Lighting_SetEnabled (id as integer, enabled as integer)
+declare function Lighting_IsEnabled (id as integer) as integer
 
 declare function LD2_TileIsSolid(tileId as integer) as integer
 
@@ -326,9 +328,6 @@ declare function LD2_TileIsSolid(tileId as integer) as integer
 
 DECLARE SUB LD2_PopText (Message AS STRING)
 DECLARE SUB LD2_WriteText (Text AS STRING)
-
-declare sub LD2_put (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0, isFixed as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
-declare sub LD2_putFixed (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0)
 
 CONST MAXGUTS      = 100
 CONST MAXITEMS     = 100 '- 100 in case of player moving every item possible to one room (is 100 even enough then?)

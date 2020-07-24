@@ -961,6 +961,10 @@ sub Game_Init
             SCREEN_MODE = ScreenModes.WideScreen
         case "screen13", "13"
             SCREEN_MODE = ScreenModes.Screen13
+        case "zoom256", "256"
+            SCREEN_MODE = ScreenModes.Zoom256
+        case "maxzoom", "max"
+            SCREEN_MODE = ScreenModes.MaxZoom
         end select
         i += 1
     loop
@@ -1066,6 +1070,12 @@ sub Game_Init
     case ScreenModes.WideScreen
         SCREEN_W = 352
         SCREEN_H = 198
+    case ScreenModes.Zoom256
+        SCREEN_W = 256
+        SCREEN_H = 144
+    case ScreenModes.MaxZoom
+        SCREEN_W = 224
+        SCREEN_H = 126
     case else '* wide zoom
         SCREEN_W = 320
         SCREEN_H = 180
@@ -1104,6 +1114,11 @@ sub Game_Init
     Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
     Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
     Elements_LoadFontMetrics FontFile
+    
+    if CLASSICMODE then
+        Elements_SetDefaultTextSpacing 1.0
+        Elements_SetDefaultFlags ElementFlags.MonospaceText
+    end if
     
     Sprites_Load LarryFile  , idLARRY  
     Sprites_Load TilesFile  , idTILE
@@ -1837,6 +1852,43 @@ sub Sprites_Load (filename as string, spriteSetId as integer)
     
 end sub
 
+sub Sprites_put (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0, isFixed as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
+
+    dim sprites as VideoSprites ptr
+    dim dest as SDL_Rect
+    dim putX as integer
+    dim putY as integer
+    
+    sprites = Sprites_GetSpriteSet(spriteSetId)
+    if sprites = 0 then exit sub
+
+    putX = iif(isFixed, x, int(x - XShift))
+    putY = iif(isFixed, y, int(y - YShift))
+
+    dest.x = putX
+    dest.y = putY
+    dest.w = iif(w > -1, w, SPRITE_W)
+    dest.h = iif(h > -1, h, SPRITE_H)
+    
+    LD2_SetTargetBuffer 1
+    
+    if spriteSetId = idOBJCRP then
+        dim sp_x as integer, sp_y as integer
+        dim sp_w as integer, sp_h as integer
+        sprites->getMetrics spriteId, sp_x, sp_y, sp_w, sp_h
+        sprites->setCenter int(sp_w*0.5*w/SPRITE_W), int(sp_h*0.5*h/SPRITE_H)
+    end if
+    
+    sprites->putToScreenEx(putX, putY, spriteId, isFlipped, angle, 0, @dest)
+    
+end sub
+
+sub Sprites_putFixed (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0)
+    
+    Sprites_put x, y, spriteId, spriteSetId, isFlipped, 1
+    
+end sub
+
 sub Guts_Add (gutsId as integer, x as integer, y as integer, qty as integer, direction as integer = 0)
     
     dim dx as double, dy as double
@@ -2487,43 +2539,6 @@ sub Flashes_Draw ()
     
 end sub
 
-sub LD2_putFixed (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0)
-    
-    LD2_put x, y, spriteId, spriteSetId, isFlipped, 1
-    
-end sub
-
-sub LD2_put (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0, isFixed as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
-
-    dim sprites as VideoSprites ptr
-    dim dest as SDL_Rect
-    dim putX as integer
-    dim putY as integer
-    
-    sprites = Sprites_GetSpriteSet(spriteSetId)
-    if sprites = 0 then exit sub
-
-    putX = iif(isFixed, x, int(x - XShift))
-    putY = iif(isFixed, y, int(y - YShift))
-
-    dest.x = putX
-    dest.y = putY
-    dest.w = iif(w > -1, w, SPRITE_W)
-    dest.h = iif(h > -1, h, SPRITE_H)
-    
-    LD2_SetTargetBuffer 1
-    
-    if spriteSetId = idOBJCRP then
-        dim sp_x as integer, sp_y as integer
-        dim sp_w as integer, sp_h as integer
-        sprites->getMetrics spriteId, sp_x, sp_y, sp_w, sp_h
-        sprites->setCenter int(sp_w*0.5*w/SPRITE_W), int(sp_h*0.5*h/SPRITE_H)
-    end if
-    
-    sprites->putToScreenEx(putX, putY, spriteId, isFlipped, angle, 0, @dest)
-    
-end sub
-
 sub MapTiles_Draw
     
     static fastTimer as double
@@ -3039,11 +3054,18 @@ sub Map_UpdateShiftY (skipEase as integer = 0)
         if Player.y > midline+16 then e = 0
     end if
     
-    YShift = (midline-36)+focus
-    
-    if skipEase then
-        YShift = (midline-36)+target
-    end if
+    select case SCREEN_MODE
+    case ScreenModes.MaxZoom
+        YShift = midline-36
+        if skipEase then
+            YShift = midline-36
+        end if
+    case else
+        YShift = (midline-36)+focus
+        if skipEase then
+            YShift = (midline-36)+target
+        end if
+    end select
     
     dim YShiftMax as integer
     
@@ -5419,10 +5441,10 @@ sub Mobs_Draw()
         Mobs.GetFirstOfType mob, id
         select case id
         case MobIds.BossRooftop
-            LD2_putFixed SCREEN_W-SPRITE_W*3, SCREEN_H-SPRITE_H*1.25, 40, idMOBS, 1
+            Sprites_putFixed SCREEN_W-SPRITE_W*3, SCREEN_H-SPRITE_H*1.25, 40, idMOBS, 1
         case MobIds.BossPortal
-            LD2_putFixed SCREEN_W-SPRITE_W*3 - 5, SCREEN_H-SPRITE_H*1.25, 76, idSCENE, 0
-            LD2_putFixed SCREEN_W-SPRITE_W*3 + 11, SCREEN_H-SPRITE_H*1.25, 77, idSCENE, 0
+            Sprites_putFixed SCREEN_W-SPRITE_W*3 - 5, SCREEN_H-SPRITE_H*1.25, 76, idSCENE, 0
+            Sprites_putFixed SCREEN_W-SPRITE_W*3 + 11, SCREEN_H-SPRITE_H*1.25, 77, idSCENE, 0
         end select
         Font_putText SCREEN_W-SPRITE_W*2, SCREEN_H-SPRITE_H, str(mob.getQty(MobItems.Hp)), 1
     end if
@@ -5463,7 +5485,6 @@ sub Player_Animate()
     static machineTimer as double
     static crouchClock as double
     dim prevX as double
-    dim f as double
     dim radius as integer
     dim x as integer, y as integer
     dim n as integer
@@ -5485,9 +5506,15 @@ sub Player_Animate()
         next n
     end if
     
-    f = 1 'DELAYMOD
-    
     falling = Player_Fall()
+    
+    if falling then
+        Player.lower.initNoLoop(ClassicLower.Jump, ClassicLower.Jump, 0)
+        Player.lani = Player.lower.transformed
+    elseif (Player.moved = 0) and (Player.vx = 0) then
+        Player.lower.initNoLoop(ClassicLower.Stand, ClassicLower.Stand, 0)
+        Player.lani = Player.lower.transformed
+    end if
     
     Player.moved = 0
     
@@ -5573,6 +5600,12 @@ sub Player_Draw()
     lan = int(Player.lAni): uan = int(Player.uAni)
     offset = iif(Player._flip=0,Player.upper.offset,Player.upper.offset*-1)
     
+    if CLASSICMODE then
+        SpritesLarry.putToScreenEx(px, py, Player.lower.transformed, Player._flip)
+        SpritesLarry.putToScreenEx(px, py, Player.upper.transformed, Player._flip)
+        exit sub
+    end if
+    
     if Player.hasFlag(PlayerFlags.Crouching) then
         select case Player.weapon
         case ItemIds.Fist      : SpritesLarry.putToScreenEx(px, py, LowerSprites.FsCrouch    , Player._flip)
@@ -5597,7 +5630,7 @@ sub Player_Draw()
             if idx > 2 then idx = 2
             SpritesLarry.putToScreenEx(px, py, FullBodySprites.TurnToWall+idx, Player._flip)
         case else
-            if Player.is_lookingdown then
+            if Player.is_lookingdown and (Player.weapon = ItemIds.Handgun) then
                 if Player.is_shooting then
                     SpritesLarry.putToScreenEx(px, py, 56+int(Player.uAni-12), Player._flip)
                 else
@@ -5628,7 +5661,7 @@ sub Player_Draw()
                     SpritesLarry.putToScreenEx(px+offset, py, Player.upper.transformed, Player._flip)
                     if Player.weapon = ItemIds.Magnum then
                         if Player.is_shooting then
-                            SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaShootLeft0+(Player.upper.transformed-MaShoot0), Player._flip)
+                            SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaShootLeft0+(Player.upper.transformed-UpperSprites.MaShoot0), Player._flip)
                         else
                             SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaHoldLeft, Player._flip)
                         end if
@@ -5652,6 +5685,17 @@ end function
 
 function Player_Jump (amount as double, is_repeat as integer = 0) as integer
     
+    if CLASSICMODE then
+        if CheckPlayerFloorHit() and Player.vy >= 0 then
+            Player.vy = -Amount
+            Player.y += Player.vy
+            SetPlayerState( PlayerStates.Jumping )
+            return 1
+        else
+            return 0
+        end if
+    end if
+    
     dim success as integer
     IF is_repeat and ((TIMER - Player.landtime) < 0.15) THEN
         return 0
@@ -5666,7 +5710,7 @@ function Player_Jump (amount as double, is_repeat as integer = 0) as integer
 
     IF CheckPlayerFloorHit() AND Player.vy >= 0 THEN
         Player.vy = -Amount
-        Player.y = Player.y + Player.vy
+        Player.y += Player.vy
         success = 1
     END IF
 
@@ -5727,6 +5771,28 @@ function Player_Fall() as integer
     
     box = Player_GetCollisionBox()
     fallingDown = iif(Player.vy >= 0, 1, 0)
+    
+    if CLASSICMODE then
+        Player.y += Player.vy
+        if CheckPlayerFloorHit() = 0 then
+            Player.vy += Gravity
+            if Player.vy > 1 then
+                Player.vy = 1
+            end if
+            return 1
+        else
+            if fallingDown then
+                Player.y = FallContactPointY - SPRITE_H
+            else
+                Player.y = FallContactPointY + 1
+            end if
+            Player.vy = 0
+            if Player.moved = 0 then
+                Player.vx = 0
+            end if
+            return 0
+        end if
+    end if
     
     Player.y += Player.vy
     if CheckPlayerFloorHit() = 0 then
@@ -5817,8 +5883,38 @@ function Player_Fall() as integer
     
 end function
 
-function Player_Move (dx as double, canFlip as integer = 1) as integer
+function Player_Move_Classic (dx as double, canFlip as integer = 1) as integer
+    
+    if dx = 0 then
+        return 0
+    end if
+    
+    Player.moved = 1
+    
+    if (Player.vx = 0) and (Player.state <> PlayerStates.Jumping) then
+        Player.lower.initLoop(ClassicLower.run0, ClassicLower.run1, abs(dx/7.5)*3)
+    end if
+    Player.vx   = dx
+    Player.x    = Player.x + dx
+    Player.lani = Player.lower.transformed
+    
+    Player._flip = iif(dx > 0, 0, 1)
+    
+    if CheckPlayerWallHit() then
+        Player.x = WallContactPointX + iif(dx > 0, -SPRITE_W, 0)
+        Player.vx = 0
+        return 0
+    end if
+    
+    return 1
+    
+end function
 
+function Player_Move (dx as double, canFlip as integer = 1) as integer
+    
+    if CLASSICMODE then
+        return Player_Move_Classic(dx, canFlip)
+    end if
     if Player.hasFlag(PlayerFlags.Crouching) or (Player.state = PlayerStates.LookingUp) or (Player.state = PlayerStates.Blocked) then
         return 0
     end if
@@ -6406,6 +6502,32 @@ sub Player_InitUpper (intervalStart as double=0.0)
     crouching = Player.hasFlag(PlayerFlags.Crouching)
     shooting  = Player.is_shooting
     
+    if CLASSICMODE then
+        if shooting = 0 then
+            select case Player.weapon
+            case ItemIds.Shotgun   : first = ClassicUpper.SgHold
+            case ItemIds.Handgun   : first = ClassicUpper.HgHold
+            case ItemIds.MachineGun: first = ClassicUpper.MgHold
+            case ItemIds.Magnum    : first = ClassicUpper.MaHold
+            case ItemIds.Fist      : first = ClassicUpper.Stand
+            end select
+            last    = first
+            seconds = 0
+        else
+            select case Player.weapon
+            case ItemIds.Shotgun   : first = ClassicUpper.SgShoot0: last = ClassicUpper.SgShoot1: seconds = 0.6667
+            case ItemIds.Handgun   : first = ClassicUpper.HgShoot0: last = ClassicUpper.HgShoot1: seconds = 0.1750
+            case ItemIds.MachineGun: first = ClassicUpper.MgShoot0: last = ClassicUpper.MgShoot1: seconds = 0.0833
+            case ItemIds.Magnum    : first = ClassicUpper.MaShoot0: last = ClassicUpper.MaShoot1: seconds = 0.3000
+            case ItemIds.Fist      : first = ClassicUpper.Punch: last = first: seconds = 0.1111
+            end select
+        end if
+        Player.upper.initNoLoop(first, last, seconds, intervalStart)
+        Player.upper.offset = 0
+        Player.uani = Player.upper.transformed
+        exit sub
+    end if
+    
     if crouching then
         select case Player.weapon
         case ItemIds.Shotgun   : offset = iif(shooting, 0, 0)
@@ -6752,7 +6874,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
             end if
         loop
         
-        if Player.state <> PlayerStates.Jumping then
+        if (Player.state <> PlayerStates.Jumping) and (CLASSICMODE = 0) then
             SetPlayerState( PlayerStates.Blocked )
             Player.lAni = int(iif(Player.hasFlag(PlayerFlags.Crouching), LowerSprites.FsCrouch, LowerSprites.FsPunch))
         end if
@@ -6870,7 +6992,7 @@ sub Game_ShutDown
     
 end sub
 
-sub LD2_LightingToggle (id as integer)
+sub Lighting_Toggle (id as integer)
     
     select case id
     case 0
@@ -6883,7 +7005,7 @@ sub LD2_LightingToggle (id as integer)
     
 end sub
 
-sub LD2_LightingSetEnabled (id as integer, enabled as integer)
+sub Lighting_SetEnabled (id as integer, enabled as integer)
     
     select case id
     case 0
@@ -6896,7 +7018,7 @@ sub LD2_LightingSetEnabled (id as integer, enabled as integer)
     
 end sub
 
-function LD2_LightingIsEnabled (id as integer) as integer
+function Lighting_IsEnabled (id as integer) as integer
     
     select case id
     case 0
@@ -7411,7 +7533,7 @@ sub elementsSetAlphaMod(a as double)
 end sub
 
 sub elementsPutSprite(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
-    LD2_put x, y, spriteId, spriteSetId, doFlip, 1, w, h, angle
+    Sprites_put x, y, spriteId, spriteSetId, doFlip, 1, w, h, angle
 end sub
 
 sub elementsSpriteMetrics(spriteId as integer, spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)

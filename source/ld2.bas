@@ -127,6 +127,9 @@
     dim shared TESTMODE as integer
     dim shared CLASSICMODE as integer
     
+    dim shared SCREEN_W as integer = 320
+    dim shared SCREEN_H as integer = 180
+    
     Start
     END
 
@@ -280,7 +283,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
         
         RenderScene RenderSceneFlags.NotPutToScreen
         if chatBox then
-            LD2_putFixed chatBoxLft, chatBoxTop, chatBox+frame, idScene, renderPose.getFlip()
+            Sprites_putFixed chatBoxLft, chatBoxTop, chatBox+frame, idScene, renderPose.getFlip()
         end if
         LD2_RefreshScreen
         
@@ -310,7 +313,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     
     while SceneKeyTextJump()
         PullEvents: RenderScene RenderSceneFlags.NotPutToScreen
-        if chatBox then LD2_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
+        if chatBox then Sprites_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
         LD2_RefreshScreen
     wend
 
@@ -320,7 +323,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
         PullEvents
         RenderScene RenderSceneFlags.NotPutToScreen
         if chatBox then
-            LD2_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
+            Sprites_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
         end if
         LD2_RefreshScreen
         if (timer - timestamp) >= 0.15 then
@@ -332,7 +335,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
             LD2_WriteText caption
             RenderScene RenderSceneFlags.NotPutToScreen
             if chatBox then
-                LD2_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
+                Sprites_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
             end if
             LD2_RefreshScreen
             timestamp = timer
@@ -342,7 +345,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     
     while SceneKeyTextJump()
         PullEvents: RenderScene RenderSceneFlags.NotPutToScreen
-        if chatBox then LD2_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
+        if chatBox then Sprites_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
         LD2_RefreshScreen
     wend
     
@@ -770,28 +773,50 @@ sub LoadSounds ()
     
     AddSound Sounds.titleSelect, "use-medikit.wav"
     
-    AddSound Sounds.pickup , "item-pickup.wav"
-    AddSound Sounds.drop   , "item-drop.wav"
-    
-    AddSound Sounds.blood1 , "splice/blood1.wav"
-    AddSound Sounds.blood2 , "splice/blood0.wav"
-    AddSound Sounds.splatter, "splice/bloodexplode2.wav"
-    
-    AddSound Sounds.doorup     , "door-up.wav"
-    AddSound Sounds.doordown   , "door-down.wav"
-    
-    AddSound Sounds.shotgun    , "shoot-shotgun.wav"
-    AddSound Sounds.handgun    , "shoot-handgun.wav"
-    AddSound Sounds.machinegun , "shoot-machinegun.wav"
-    AddSound Sounds.magnum     , "shoot-magnum.wav"
-    AddSound Sounds.outofammo  , "shoot-noammo.wav"
-    AddSound Sounds.reload     , "shoot-reload.wav"
-    AddSound Sounds.equip      , "shoot-reload.wav"
+    if CLASSICMODE then
+        AddSound Sounds.pickup , "orig/pickup.ogg"
+        AddSound Sounds.drop   , "item-drop.wav"
+        
+        AddSound Sounds.doorup     , "orig/doorup.ogg"
+        AddSound Sounds.doordown   , "orig/doordown.ogg"
+        
+        AddSound Sounds.shotgun    , "orig/shotgun.ogg"
+        AddSound Sounds.handgun    , "orig/pistol.ogg"
+        AddSound Sounds.machinegun , "orig/mgun.ogg"
+        AddSound Sounds.magnum     , "orig/deagle.ogg"
+        AddSound Sounds.outofammo  , "orig/equip.ogg"
+        AddSound Sounds.reload     , "orig/equip.ogg"
+        AddSound Sounds.equip      , "orig/equip.ogg"
+        
+        AddSound Sounds.blood1 , "orig/blood1.ogg"
+        AddSound Sounds.blood2 , "orig/blood2.ogg"
+        
+        AddSound Sounds.punch    , "orig/punch.ogg"
+    else
+        AddSound Sounds.pickup , "item-pickup.wav"
+        AddSound Sounds.drop   , "item-drop.wav"
+        
+        AddSound Sounds.doorup     , "door-up.wav"
+        AddSound Sounds.doordown   , "door-down.wav"
+        
+        AddSound Sounds.shotgun    , "shoot-shotgun.wav"
+        AddSound Sounds.handgun    , "shoot-handgun.wav"
+        AddSound Sounds.machinegun , "shoot-machinegun.wav"
+        AddSound Sounds.magnum     , "shoot-magnum.wav"
+        AddSound Sounds.outofammo  , "shoot-noammo.wav"
+        AddSound Sounds.reload     , "shoot-reload.wav"
+        AddSound Sounds.equip      , "shoot-reload.wav"
+        
+        AddSound Sounds.blood1 , "splice/blood1.wav"
+        AddSound Sounds.blood2 , "splice/blood0.wav"
+        AddSound Sounds.splatter, "splice/bloodexplode2.wav"
+        
+        AddSound Sounds.punch    , "larry-punch.wav"
+    end if
     
     AddSound Sounds.footstep , "larry-step.wav"
     AddSound Sounds.jump     , "larry-jump.wav"
     AddSound Sounds.land     , "larry-land.wav"
-    AddSound Sounds.punch    , "larry-punch.wav"
     AddSound Sounds.larryHurt, "larry-hurt.wav"
     AddSound Sounds.larryDie , "larry-die.wav"
     
@@ -852,20 +877,22 @@ sub LoadMusic ()
 
     AddMusic Tracks.Wind1     , "../msplice/wind0.wav" , 1
     AddMusic Tracks.Wind2     , "../msplice/wind1.wav" , 1
-    AddMusic Tracks.Ambient1  , "musicbox.ogg", 1
-    AddMusic Tracks.Ambient2  , "gameover.ogg", 1
-    AddMusic Tracks.Ambient3  , "motives.ogg" , 1
+    AddMusic Tracks.MusicBox  , "musicbox.ogg", 1
+    AddMusic Tracks.Scent     , "scent.ogg", 1
+    AddMusic Tracks.Motives   , "motives.ogg" , 1
+    AddMusic Tracks.Strings   , "strings.ogg" , 1
+    AddMusic Tracks.Breezeway , "breezeway.ogg" , 1
     AddMusic Tracks.SmallRoom1, "../msplice/smallroom0.wav", 1
     AddMusic Tracks.SmallRoom2, "../msplice/smallroom1.wav", 1
     
     AddMusic Tracks.Portal, "portal.ogg"             , 1
-    AddMusic Tracks.Truth , "../msplice/thetruth.wav", 1
+    AddMusic Tracks.Captured , "../msplice/thetruth.wav", 1
 
     AddMusic Tracks.BossClassic     , "../orig/boss.ogg"      , 1
     AddMusic Tracks.EndingClassic   , "../2002/sfx/ending.mod", 0
     AddMusic Tracks.IntroClassic    , "../orig/intro.ogg"     , 0
     AddMusic Tracks.ThemeClassic    , "../2002/sfx/intro.mod" , 0
-    AddMusic Tracks.WanderingClassic, "../orig/creepy,ogg"    , 1
+    AddMusic Tracks.WanderingClassic, "../orig/creepy.ogg"    , 1
     
     '// need to update SDL_Mixer for mp3 support
     '// also, linking with newer DLLs causes game to crash before initialization error handling (no error message)
@@ -986,35 +1013,40 @@ end sub
 
 function GetFloorMusicId(roomId as integer) as integer
     
-    dim roomTracks(4) as integer
-    dim trackId as integer
+    dim roomsFile as string
+    dim floorNo as integer
+    dim filename as string
+    dim label as string
+    dim track as string
+    dim file as integer
     
-    roomTracks(0) = Tracks.Ambient1
-    roomTracks(1) = Tracks.Ambient2
-    roomTracks(2) = Tracks.Ambient3
-    roomTracks(3) = Tracks.Wandering
-    roomTracks(4) = Tracks.Portal
+    if CLASSICMODE then
+        return Tracks.WanderingClassic
+    end if
     
-    select case roomId
-    case Rooms.LarrysOffice
-        trackId = Tracks.Wandering
-    case Rooms.SkyRoom, Rooms.VentControl
-        trackId = Tracks.Wind1
-    case Rooms.Rooftop
-        trackId = Tracks.Wind2
-    'case Rooms.DebriefRoom
-    '    trackId = Tracks.SmallRoom1
-    case Rooms.LowerStorage, Rooms.UpperStorage
-        trackId = Tracks.Ambient3
-    case Rooms.DebriefRoom, Rooms.MeetingRoom
-        trackId = Tracks.Ambient1
-    case Rooms.ResearchLab
-        trackId = Tracks.Portal
-    case else
-        trackId = roomTracks(int(roomId mod (ubound(roomTracks)+1)))
-    end select
+    roomsFile = GetRoomsFile()
     
-    return trackId
+    file = freefile
+    open DATA_DIR+roomsFile for input as file
+    do while not eof(file)
+        input #file, floorNo
+        input #file, filename
+        input #file, label
+        input #file, track
+        if floorNo = roomId then
+            select case track
+            case "wandering": return Tracks.Wandering
+            case "musicbox" : return Tracks.MusicBox
+            case "motives"  : return Tracks.Motives
+            case "scent"    : return Tracks.Scent
+            case "portal"   : return Tracks.Portal
+            case "strings"  : return Tracks.Strings
+            case "breezeway": return Tracks.Breezeway
+            end select
+        end if
+    loop
+    
+    return Tracks.Wandering
     
 end function
 
@@ -1064,6 +1096,9 @@ SUB Main
     dim consoleStart as double
     dim consoleDialog as ElementType
     dim e as ElementType
+    
+    SCREEN_W = Screen_GetWidth()
+    SCREEN_H = Screen_GetHeight()
     
     Element_Init @consoleDialog, "", 31
     consoleDialog.y = SCREEN_H-FONT_H*4
@@ -1141,8 +1176,12 @@ SUB Main
             Rooms_DoBasement player
     end select
     
+    if Game_hasFlag(GameFlags.StatusScreen) then
+        Game_unsetFlag GameFlags.StatusScreen
+        showStatusScreen = iif(showStatusScreen=0,1,0)
+    end if
     if showStatusScreen then
-        showStatusScreen = iif(StatusScreen(showConsole)=0,1,0)
+        showStatusScreen = iif(StatusScreen_Classic(showConsole)=0,1,0) 'iif(StatusScreen(showConsole)=0,1,0)
         if showStatusScreen = 0 then
             resetClocks = 1
         end if
@@ -1150,7 +1189,7 @@ SUB Main
     
     if Game_hasFlag(GameFlags.ElevatorMenu) then
         Game_unsetFlag GameFlags.ElevatorMenu
-        showElevatorMenu = 1
+        showElevatorMenu = iif(showElevatorMenu=0,1,0)
     end if
     if showElevatorMenu then
         showElevatorMenu = iif(EStatusScreen(Player_GetCurrentRoom, toRoomId, toRoomName)=0,1,0)
@@ -1439,7 +1478,7 @@ sub RenderPoses ()
         do while sprite <> 0
             x = pose->getX() + sprite->x
             y = pose->getY() + sprite->y
-            LD2_put x, y, sprite->idx, pose->getSpriteSetId(), iif(sprite->is_flipped, 1, pose->getFlip())
+            Sprites_put x, y, sprite->idx, pose->getSpriteSetId(), iif(sprite->is_flipped, 1, pose->getFlip())
             sprite = frame->getNextSprite()
         loop
 	next n
@@ -1459,7 +1498,7 @@ sub RenderOnePose (pose as PoseType ptr)
     do while sprite <> 0
         x = pose->getX() + sprite->x
         y = pose->getY() + sprite->y
-        LD2_put x, y, sprite->idx, pose->getSpriteSetId(), iif(sprite->is_flipped, 1, pose->getFlip())
+        Sprites_put x, y, sprite->idx, pose->getSpriteSetId(), iif(sprite->is_flipped, 1, pose->getFlip())
         sprite = frame->getNextSprite()
     loop
     
@@ -2026,6 +2065,16 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
     
     '* non-shortcuts
     select case comm
+    case "status"
+        Game_setFlag GameFlags.StatusScreen
+    case "equip"
+        select case args(0)
+        case "nothing"   , "fist", "0": DoAction ActionIds.Equip, ItemIds.Fist
+        case "shotgun"   , "sg"  , "1": LD2_UseItem ItemIds.Shotgun
+        case "handgun"   , "hg"  , "2": LD2_UseItem ItemIds.Handgun
+        case "machinegun", "mg"  , "3": LD2_UseItem ItemIds.MachineGun
+        case "magnum"    , "ma"  , "4": LD2_UseItem ItemIds.Magnum
+        end select
     case "fps"
     case "list"
         response = "Top-level commands are: player|rooms|inventory\ \mobs|elevator|music|sound|scene|light|gravity"
@@ -2430,22 +2479,22 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
         case "fg"
             id = 1
         case "status"
-            response  = "Background lighting is "+iif(LD2_LightingIsEnabled(0), "enabled", "disabled")
+            response  = "Background lighting is "+iif(Lighting_IsEnabled(0), "enabled", "disabled")
             response += "\ \"
-            response += "Foreground lighting is "+iif(LD2_LightingIsEnabled(1), "enabled", "disabled")
+            response += "Foreground lighting is "+iif(Lighting_IsEnabled(1), "enabled", "disabled")
         case else
             response = "!Invalid Light Id\ \Must be one of (BG/FG/status)"
         end select
         if len(response) = 0 then
             select case args(1)
                 case "status"
-                    response = iif(id=0,"Background","Foreground")+" lighting is "+iif(LD2_LightingIsEnabled(id), "enabled", "disabled")
+                    response = iif(id=0,"Background","Foreground")+" lighting is "+iif(Lighting_IsEnabled(id), "enabled", "disabled")
                 case "toggle"
-                    LD2_LightingToggle(id)
+                    Lighting_Toggle(id)
                 case "on"
-                    LD2_LightingSetEnabled(id, 1)
+                    Lighting_SetEnabled(id, 1)
                 case "off"
-                    LD2_LightingSetEnabled(id, 0)
+                    Lighting_SetEnabled(id, 0)
                 case else
                     response = "!Not a valid light command\ \Must be one of (on/off/toggle/status)"
             end select
@@ -2768,8 +2817,9 @@ sub NewGame
         
         Player_SetItemQty ItemIds.SceneIntro, 1
         Player_SetItemQty ItemIds.SceneJanitor, 1
-        'Player_SetItemQty ItemIds.SceneElevator, 1
-        'Player_SetItemQty ItemIds.SceneWeapons1, 1
+        Player_SetItemQty ItemIds.SceneJanitorDies, 1
+        Player_SetItemQty ItemIds.SceneElevator, 1
+        Player_SetItemQty ItemIds.SceneWeapons1, 1
         'Player_SetItemQty ItemIds.SceneSteveGone, 1
         'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
         'LD2_PlayMusic mscWANDERING
@@ -2911,7 +2961,7 @@ sub LD2_BeforeUseItem (byval id as integer)
     
 end sub
 
-sub LD2_UseItem (byval id as integer, byref qty as integer, byref exitMenu as integer)
+sub LD2_UseItem (byval id as integer, byref qty as integer = 0, byref exitMenu as integer = 0)
     
     dim leftover as integer
     dim success as integer
@@ -3393,3 +3443,9 @@ sub GenerateSky()
     LD2_GenerateSky
     
 end sub
+
+function ScreenGetWidth() as integer
+    
+    return SCREEN_W
+    
+end function

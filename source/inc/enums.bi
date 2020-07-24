@@ -269,6 +269,29 @@ enum FullBodySprites
     TurnToWall    = 77
 end enum
 
+enum ClassicUpper
+    stand = 26
+    punch = 27
+    sgHold = 1
+    mgHold = 8
+    hgHold = 11
+    maHold = 14
+    sgShoot0 = 2
+    sgShoot1 = 7
+    mgShoot0 = 9
+    mgShoot1 = 10
+    hgShoot0 = 12
+    hgShoot1 = 13
+    maShoot0 = 15
+    maShoot1 = 17
+end enum
+enum ClassicLower
+    stand = 21
+    run0 = 22
+    run1 = 25
+    jump = 23
+end enum
+
 enum MobSprites
     Blobmine0       = 7
     Blobmine1       = 10
@@ -481,16 +504,16 @@ enum Tracks
     '// rooms
     Wind1
     Wind2
-    Ambient1
-    Ambient2
-    Ambient3
-    Ambient4
-    Ambient5
+    MusicBox
+    Scent
+    Motives
+    Strings
+    Breezeway
     SmallRoom1
     SmallRoom2
     '// scenes
     Portal
-    Truth
+    Captured
     '// 2002
     BossClassic
     EndingClassic
@@ -692,6 +715,8 @@ enum ScreenModes
     Screen13
     WideScreen
     WideZoom
+    MaxZoom
+    Zoom256
 end enum
 
 enum CharacterIds
@@ -772,7 +797,7 @@ enum Guides
     SceneWeapons1    =  400
     SceneWeapons2    =  420
     SceneWeapons3    =   80
-    SceneSteveGone   =  300
+    SceneSteveGone   =  205 '300
 end enum
 
 '======================
