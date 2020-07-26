@@ -12,33 +12,40 @@
 declare sub Drop (item AS InventoryType)
 declare sub BuildStatusWindow (heading AS STRING, elementWindow as ElementType ptr, elementHeading as ElementType ptr, elementBorder as ElementType ptr)
 declare function Look (item AS InventoryType, skipInput as integer = 0) as integer
+declare function Look_Classic (item AS InventoryType, skipInput as integer = 0) as integer
 declare sub Mix (item0 AS InventoryType, item1 AS InventoryType)
 declare function CanMix (itemId as integer) as integer
 declare function ShowResponse (response as string = "", textColor as integer = -1, skipInput as integer = 0) as integer
 declare function UseItem (item AS InventoryType) as integer
 declare sub GetInventoryRowsCols(byref rows as integer, byref cols as integer)
 
+declare sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0, mixItemWith as InventoryType ptr = 0)
+declare sub RenderClassicScreen (action as integer = -1, mixItem as InventoryType ptr = 0, mixItemWith as InventoryType ptr = 0)
+
 dim shared SCREEN_W as integer
 dim shared SCREEN_H as integer
 
-dim shared selectedInventorySlot as integer
+dim shared SHARED_SPRITES as VideoSprites ptr
+
+dim shared SELECTED_INVENTORY_SLOT as integer
 
 dim shared BeforeUseItemCallback as sub(byval id as integer)
 dim shared UseItemCallback as sub(byval id as integer, byref qty as integer, byref exitMenu as integer)
 dim shared LookItemCallback as sub(id as integer, byref description as string)
 
-const STATUS_WINDOW_HEIGHT_MIN = 96
-const STATUS_WINDOW_HEIGHT_MED = 120
-const STATUS_WINDOW_HEIGHT_MAX = 180 'SCREEN_H
+dim shared STATUS_WINDOW_HEIGHT_MIN as integer
+dim shared STATUS_WINDOW_HEIGHT_MED as integer
+dim shared STATUS_WINDOW_HEIGHT_MAX as integer
 
 dim shared STATUS_INVENTORY_SIZE as integer = 8
-dim shared STATUS_WINDOW_HEIGHT as integer = STATUS_WINDOW_HEIGHT_MIN
+dim shared STATUS_WINDOW_HEIGHT as integer
 dim shared STATUS_TEMP_HEIGHT as integer
 dim shared LOOK_ITEM_ID as integer = -1
 
 dim shared ROOMS_FILE as string
 
 dim shared DEBUGMODE as integer
+dim shared CLASSICMODE as integer
 
 const DATA_DIR = "data/"
 const STATUS_DIALOG_ALPHA = 0.75
@@ -89,8 +96,25 @@ end sub
 function STATUS_InitInventory() as integer
     
     DEBUGMODE = iif(Game_hasFlag(GameFlags.DebugMode), 1, 0)
+    CLASSICMODE = iif(Game_hasFlag(GameFlags.ClassicMode), 1, 0)
     SCREEN_W = Screen_GetWidth()
     SCREEN_H = Screen_GetHeight()
+    
+    if CLASSICMODE then
+        STATUS_WINDOW_HEIGHT_MIN = 100
+        STATUS_WINDOW_HEIGHT_MED = 124
+        STATUS_WINDOW_HEIGHT_MAX = SCREEN_H
+    else
+        STATUS_WINDOW_HEIGHT_MIN = 96
+        STATUS_WINDOW_HEIGHT_MED = 120
+        STATUS_WINDOW_HEIGHT_MAX = SCREEN_H
+    end if
+    
+    STATUS_WINDOW_HEIGHT = STATUS_WINDOW_HEIGHT_MIN
+    
+    if CLASSICMODE then
+        Inventory_SetDataDir DATA_DIR+"2002/"
+    end if
     
     return Inventory_Init(24, 12)
     
@@ -99,6 +123,42 @@ end function
 sub STATUS_SetInventorySize(size as integer)
     
     STATUS_INVENTORY_SIZE = size
+    
+end sub
+
+sub BuildClassicWindow (dialog as ElementType ptr, headingText as string = "", dividerText as string = "")
+    
+    static dialogBorder as ElementType
+    static heading as ElementType
+    static headingDivider as ElementType
+    dim fontH as integer
+    
+    fontH = FONT_H+1
+    
+    Element_Init dialog, "", 31
+    dialog->w = SCREEN_W
+    dialog->padding_y = 4
+    dialog->h = STATUS_WINDOW_HEIGHT-dialog->padding_y*2
+    dialog->background = 68
+    
+    Element_Init @dialogBorder, string(53, "*")
+    dialogBorder.y = dialog->h+dialog->padding_y*2-fontH
+    dialogBorder.text_height = 1
+    dialogBorder.background = 68
+    
+    Element_Init @heading, headingText
+    heading.parent = dialog
+    heading.x = 4
+    
+    Element_Init @headingDivider, dividerText
+    headingDivider.parent = dialog
+    headingDivider.x = 4
+    headingDivider.y = fontH
+    
+    Elements_Add dialog
+    Elements_Add @dialogBorder
+    Elements_Add @heading
+    Elements_Add @headingDivider
     
 end sub
 
@@ -175,6 +235,72 @@ end sub
 sub STATUS_SetRoomsFile(filename as string)
     
     ROOMS_FILE = filename
+    
+end sub
+
+sub RenderClassicScreen (action as integer = -1, mixItem as InventoryType ptr = 0, mixItemWith as InventoryType ptr = 0)
+    
+    static dialog as ElementType
+    static labelInventory as ElementType
+    static inventoryDivider as ElementType
+    static menuActions as ElementType
+    static labelItems(7) as ElementType
+    
+    dim item as InventoryType
+    
+    dim fontH as integer
+    dim i as integer
+    
+    dim lft as integer
+    lft = 200
+    fontH = FONT_H+1
+    
+    Elements_Clear
+    BuildClassicWindow @dialog, "STATUS SCREEN", "============="
+    
+    '*******************************************************************
+    '* INVENTORY
+    '*******************************************************************
+    Element_Init @labelInventory, "INVENTORY"
+    labelInventory.parent = @dialog
+    labelInventory.x = lft + int((9*FONT_W)*0.5)
+    
+    Element_Init @inventoryDivider, "=================="
+    inventoryDivider.parent = @dialog
+    inventoryDivider.x = lft
+    inventoryDivider.y = fontH
+    
+    '*******************************************************************
+    '* INVENTORY ITEMS
+    '*******************************************************************
+    for i = 0 to 7
+        Inventory_GetItemBySlot(item, i)
+        Element_Init @labelItems(i), iif(i=SELECTED_INVENTORY_SLOT,"->","  ")+item.shortName
+        labelItems(i).parent = @dialog
+        labelItems(i).x = lft-FONT_W*2
+        labelItems(i).y = 16+i*fontH
+    next i
+    
+    '*******************************************************************
+    '* ACTIONS MENU
+    '*******************************************************************
+    if action > -1 then
+        Element_Init @menuActions, "  USE     LOOK    MIX     DROP"
+        menuActions.text[action*8] = asc("-")
+        menuActions.text[action*8+1] = asc(">")
+        menuActions.parent = @dialog
+        menuActions.x = menuActions.parent->w - FONT_W * len(menuActions.text)
+        menuActions.y = menuActions.parent->h+menuActions.parent->padding_y - fontH * 2 - 2
+    end if
+    
+    Elements_Add @labelInventory
+    Elements_Add @inventoryDivider
+    for i = 0 to 7
+        Elements_Add @labelItems(i)
+    next i
+    if action > -1 then
+        Elements_Add @menuActions
+    end if
     
 end sub
 
@@ -353,7 +479,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     if mixItem <> 0 then
         dim subname as string
         dim objname as string
-        Inventory_GetItemBySlot(item, selectedInventorySlot)
+        Inventory_GetItemBySlot(item, SELECTED_INVENTORY_SLOT)
         subname = trim(mixItem->shortName)
         if mixItemWith <> 0 then
             objname = trim(mixItemWith->shortName)
@@ -512,7 +638,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
             labelItems(i).sprite = item.id
             labelItems(i).sprite_set_id = idOBJCRP
             
-            if i = selectedInventorySlot then
+            if i = SELECTED_INVENTORY_SLOT then
                 selected = item
                 labelItemName.text = trim(item.shortName)
                 labelItems(i).background = ITEM_SELECTED_BG
@@ -586,6 +712,127 @@ SUB Drop (item AS InventoryType)
     ShowResponse message, STATUS_COLOR_DENIED
     
 END SUB
+
+function EStatusScreen_Classic (byval currentRoomId as integer, byref selectedRoomId as integer, byref selectedRoomName as string, byval skipInput as integer = 0) as integer
+    
+    static dialog as ElementType
+    static description as ElementType
+    static selectionArrow as ElementType
+    
+    static menuNumbers() as ElementType
+    static menuLabels() as ElementType
+    static floors() AS FloorInfoType
+    static floorsMin as integer
+    static floorsMax as integer
+    static numLabels as integer
+    
+    static selection as integer
+    static state as integer
+    
+    dim ElevatorFile as integer
+    dim fontH as integer
+    dim i as integer
+    
+    fontH = FONT_H+1
+    
+    Elements_Clear
+    BuildClassicWindow @dialog, "Elevator - Select Floor - Secret CIA Building", string(52, "-")
+    
+    select case state
+    case DialogStates.closed
+        state = DialogStates.ready
+        LD2_PlaySound Sounds.uiMenu
+        '*******************************************************************
+        '* LOAD FLOORS DATA
+        '*******************************************************************
+        redim floors(0) as FloorInfoType
+        ElevatorFile = freefile
+        open DATA_DIR+ROOMS_FILE for input as ElevatorFile
+        do while not eof(ElevatorFile)
+            input #ElevatorFile, floors(0).floorNo
+            input #ElevatorFile, floors(0).filename
+            input #ElevatorFile, floors(0).label
+            input #ElevatorFile, floors(0).allowed
+            numLabels += 1
+        loop
+        
+        redim preserve floors(numLabels) as FloorInfoType
+        redim preserve menuNumbers(numLabels) as ElementType
+        redim preserve menuLabels(numLabels) as ElementType
+        
+        seek #ElevatorFile, 1
+        for i = 0 to numLabels-1
+            input #ElevatorFile, floors(i).floorNo
+            input #ElevatorFile, floors(i).filename
+            input #ElevatorFile, floors(i).label
+            input #ElevatorFile, floors(i).allowed
+            if floors(i).floorNo > floorsMax then floorsMax = floors(i).floorNo
+            if floors(i).floorNo < floorsMin then floorsMin = floors(i).floorNo
+        next i
+        close ElevatorFile
+    end select
+    
+    dim row as integer
+    dim col as integer
+    dim top as integer
+    dim lft as integer
+    
+    top = 16
+    i = 0
+    for col = 0 to 1
+        lft = iif(col=0,14,175)
+        for row = 0 to 11
+            Element_Init @menuNumbers(i), iif(floors(i).floorNo<10," ","")+str(floors(i).floorNo)
+            menuNumbers(i).parent = @dialog
+            menuNumbers(i).x = lft
+            menuNumbers(i).y = top+row*fontH
+            Element_Init @menuLabels(i), "- "+floors(i).label
+            menuLabels(i).parent = @dialog
+            menuLabels(i).x = menuNumbers(i).x+FONT_W*2+7
+            menuLabels(i).y = menuNumbers(i).y
+            if (floors(i).floorNo = floorsMin) or (floors(i).floorNo = floorsMax) then
+                menuNumbers(i).text = iif(floors(i).floorNo<10," ","")+floors(i).label
+                menuLabels(i).text = ""
+            end if
+            Elements_Add @menuNumbers(i)
+            Elements_Add @menuLabels(i)
+            i += 1
+        next row
+    next col
+    Element_Init @selectionArrow, "->"
+    selectionArrow.parent = @dialog
+    selectionArrow.x = iif(selection > 11, 160, 1)
+    selectionArrow.y = top+(selection mod 12)*fontH
+    
+    Elements_Add @selectionArrow
+    
+    Elements_Render
+    
+    if keypress(KEY_TAB) then
+        state = DialogStates.closed
+        LD2_PlaySound Sounds.uiMenu
+        return 1
+    end if
+    if keypress(KEY_UP) then
+        if selection > 0 then
+            selection -= 1
+        end if
+    end if
+    if keypress(KEY_DOWN) then
+        if selection < 23 then
+            selection += 1
+        end if
+    end if
+    if keypress(KEY_ENTER) then
+        selectedRoomId = floors(selection).floorNo
+        return 1
+    end if
+    
+    selectedRoomId = currentRoomId
+    
+    return 0
+    
+end function
 
 function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as integer, byref selectedRoomName as string, byval skipInput as integer = 0) as integer
 	
@@ -831,7 +1078,55 @@ function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as 
     
 end function
 
-function Look (item AS InventoryType, skipInput as integer = 0) as integer
+function Look_Classic (item as InventoryType, skipInput as integer = 0) as integer
+    
+    static dialog as ElementType
+    static description as ElementType
+    
+    dim desc as string
+    dim fontH as integer
+    
+    fontH = FONT_H+1
+    
+    '***************************************************************
+    '* FILTER DESCRIPTION
+    '***************************************************************
+    desc = trim(Inventory_LoadDescription(item.id))
+    if LookItemCallback <> 0 then
+        LookItemCallback(item.id, desc)
+    end if
+    if len(desc) = 0 then
+        desc = "No desc found for item id " + str(item.id)
+    end if
+    
+    '*******************************************************************
+    '* DIALOG WINDOW
+    '*******************************************************************
+    Elements_Clear
+    BuildClassicWindow @dialog, item.longName
+    
+    '*******************************************************************
+    '* DESCRIPTION
+    '*******************************************************************
+    Element_Init @description, desc
+    description.parent = @dialog
+    description.w = description.parent->w-8
+    description.y = 4+fontH*2
+    description.text_height = 1.4
+    description.x = 4
+    
+    Elements_Add @description
+    Elements_Render
+    
+    if keypress(KEY_ENTER) or keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseLB() or mouseRB() or mouseMB() then
+        return 1
+    end if
+    
+    return 0
+    
+end function
+
+function Look (item as InventoryType, skipInput as integer = 0) as integer
 	
     static container as ElementType
     static dialog as ElementType
@@ -1453,82 +1748,119 @@ end sub
 
 function StatusScreen_Classic(skipInput as integer = 0) as integer
     
-    static dialog as ElementType
-    static dialogBorder as ElementType
-    static labelStatusScreen as ElementType
-    static labelInventory as ElementType
-    static inventoryDivider as ElementType
-    static menuActions as ElementType
-    static labelItems(7) as ElementType
-    dim fontH as integer
-    dim i as integer
+    static lookItem as InventoryType
+    static mixItem as InventoryType
     
-    dim lft as integer
-    dim top as integer
-    lft = 200
-    top = 4
-    fontH = FONT_H+1
+    static selection as integer
+    static action as integer = -1
+    static state as integer
+    static mixMode as integer
     
-    Element_Init @dialog, "", 31
-    dialog.w = SCREEN_W
-    dialog.h = STATUS_WINDOW_HEIGHT
-    dialog.background = 68
+    dim selected as InventoryType
+    SELECTED_INVENTORY_SLOT = selection
+    Inventory_GetItemBySlot(selected, SELECTED_INVENTORY_SLOT)
     
-    '*******************************************************************
-    '* INVENTORY
-    '*******************************************************************
-    Element_Init @labelStatusScreen, "STATUS SCREEN\============="
-    labelStatusScreen.parent = @dialog
-    labelStatusScreen.x = 4
-    labelStatusScreen.y = 4
+    select case state
+    case DialogStates.closed
+        state = DialogStates.ready
+        LD2_PlaySound Sounds.uiMenu
+        STATUS_RefreshInventory
+        lookItem.id = -1
+        action = -1
+        if LOOK_ITEM_ID > -1 then
+            Inventory_PopulateItem(lookItem, LOOK_ITEM_ID)
+        end if
+    end select
     
-    Element_Init @labelInventory, "INVENTORY"
-    labelInventory.parent = @dialog
-    labelInventory.x = lft + int((9*FONT_W)*0.5)
-    labelInventory.y = top
+    if lookItem.id > -1 then
+        if Look_Classic(lookItem, skipInput) then
+            lookItem.id = -1
+            if LOOK_ITEM_ID > -1 then
+                LOOK_ITEM_ID = -1
+                state = DialogStates.closing
+                return StatusScreen(skipInput)
+            end if
+        else
+            return 0
+        end if
+    end if
     
-    Element_Init @inventoryDivider, "=================="
-    inventoryDivider.parent = @dialog
-    inventoryDivider.x = lft
-    inventoryDivider.y = top+fontH
-    
-    Element_Init @dialogBorder, string(53, "*")
-    dialogBorder.parent = @dialog
-    dialogBorder.x = 0
-    dialogBorder.y = dialogBorder.parent->h-fontH
-    
-    '*******************************************************************
-    '* INVENTORY ITEMS
-    '*******************************************************************
-    for i = 0 to 7
-        Element_Init @labelItems(i), "  NOTHING"
-        labelItems(i).parent = @dialog
-        labelItems(i).x = lft-FONT_W*2
-        labelItems(i).y = 20+i*fontH
-    next i
-    
-    '*******************************************************************
-    '* ACTIONS MENU
-    '*******************************************************************
-    Element_Init @menuActions, "  USE     LOOK     MIX     DROP"
-    menuActions.parent = @dialog
-    menuActions.x = menuActions.parent->w - FONT_W * len(menuActions.text)
-    menuActions.y = menuActions.parent->h - fontH * 2
-    
-    Elements_Clear
-    Elements_Add @dialog
-    Elements_Add @dialogBorder
-    Elements_Add @labelStatusScreen
-    Elements_Add @labelInventory
-    Elements_Add @inventoryDivider
-    for i = 0 to 7
-        Elements_Add @labelItems(i)
-    next i
-    Elements_Add @menuActions
-    
+    RenderClassicScreen action, iif(mixMode, @mixItem, 0)
     Elements_Render
     
-    return iif(keypress(KEY_TAB),1,0)
+    '*******************************************************************
+    '* INPUT START
+    '*******************************************************************
+    if keypress(KEY_UP) or keypress(KEY_KP_8) then
+        if selection > 0 then
+            selection -= 1
+            LD2_PlaySound Sounds.uiArrows
+        else
+            LD2_PlaySound Sounds.uiInvalid
+        end if
+    end if
+    if keypress(KEY_DOWN) or keypress(KEY_KP_2) then
+        if selection < STATUS_INVENTORY_SIZE-1 then
+            selection += 1
+            LD2_PlaySound Sounds.uiArrows
+        else
+            LD2_PlaySound Sounds.uiInvalid
+        end if
+    end if
+    if action > -1 then
+        if keypress(KEY_LEFT) or keypress(KEY_KP_4) or keypress(KEY_A) then
+            if action > 0 then
+                action -= 1
+                LD2_PlaySound Sounds.uiArrows
+            else
+                LD2_PlaySound Sounds.uiInvalid
+            end if
+        end if
+        if keypress(KEY_RIGHT) or keypress(KEY_KP_8) or keypress(KEY_D) then
+            if action < 3 then
+                action += 1
+                LD2_PlaySound Sounds.uiArrows
+            else
+                LD2_PlaySound Sounds.uiInvalid
+            end if
+        end if
+    end if
+    if keypress(KEY_ENTER) or keypress(KEY_KP_ENTER) then
+        if mixMode then
+            Mix mixItem, selected
+            mixMode = 0
+            action = -1
+        elseif action > -1 then
+            select case action
+            case 0 '* USE
+                if UseItem(selected) then
+                    state = DialogStates.closing
+                end if
+            case 1 '* LOOK
+                lookItem = selected
+            case 2  '* MIX
+                if canMix(selected.id) then
+                    mixMode = 1
+                    mixItem = selected
+                    LD2_PlaySound Sounds.uiSubmenu
+                end if
+            case 3  '* Drop
+                Drop selected
+            end select
+            action = -1
+        else
+            '* item selection
+            action = 0
+            LD2_PlaySound Sounds.uiSubmenu
+        end if
+    end if
+    if keypress(KEY_TAB) then
+        state = DialogStates.closed
+        LD2_PlaySound Sounds.uiMenu
+        return 1
+    end if
+    
+    return 0
     
 end function
 
@@ -1608,8 +1940,8 @@ function StatusScreen(skipInput as integer = 0) as integer
     case DialogStates.init
         state = DialogStates.ready
         STATUS_RefreshInventory
-        row = int(selectedInventorySlot / numCols)
-        col = selectedInventorySlot-row*numCols
+        row = int(SELECTED_INVENTORY_SLOT / numCols)
+        col = SELECTED_INVENTORY_SLOT-row*numCols
         LookItem.id = -1
         action = -1
         if LOOK_ITEM_ID > -1 then
@@ -1645,8 +1977,8 @@ function StatusScreen(skipInput as integer = 0) as integer
         return 0
     end if
     
-    selectedInventorySlot = row*numCols+col
-    Inventory_GetItemBySlot(selected, selectedInventorySlot)
+    SELECTED_INVENTORY_SLOT = row*numCols+col
+    Inventory_GetItemBySlot(selected, SELECTED_INVENTORY_SLOT)
     
     IF keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseRB() or mouseMB() THEN
         IF action > -1 THEN
@@ -2343,6 +2675,267 @@ function STATUS_DialogExitGame(message as string, playOpenSound as integer = 1) 
     Elements_Clear
     
     if selections(selection) <> OptionIds.ExitGame then
+        e = Easing_doEaseInOut(-1)
+        do
+            pixels = int((1-e) * size)
+            dialog.x = halfX - pixels * modw
+            dialog.y = halfY - pixels * modh
+            dialog.w = pixels * modw * 2
+            dialog.h = pixels * modh * 2
+            LD2_CopyBuffer 2, 1
+            Element_Render @dialog
+            LD2_RefreshScreen
+            PullEvents
+            e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
+        loop while pixels > 1
+    end if
+    
+    LD2_CopyBuffer 2, 1
+    LD2_RefreshScreen
+    LD2_RestoreBuffer 2
+    
+    return selections(selection)
+    
+end function
+
+private sub elementsPutSprite(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
+    dim dest as SDL_RECT
+    dest.x = x
+    dest.y = y
+    dest.w = iif(w > -1, w, SPRITE_W)
+    dest.h = iif(h > -1, h, SPRITE_H)
+    if SHARED_SPRITES <> 0 then
+        SHARED_SPRITES->putToScreenEx x, y, spriteId, doFlip, angle, 0, @dest
+    end if
+end sub
+
+private sub elementsSpriteMetrics(spriteId as integer, spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+    if SHARED_SPRITES <> 0 then
+        SHARED_SPRITES->getMetrics spriteId, x, y, w, h
+    end if
+end sub
+
+function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as integer
+    
+    dim e as double
+    dim pixels as integer
+    dim halfX as integer
+    dim halfY as integer
+    dim size as integer
+    dim maxw as integer
+    dim mx as integer
+    dim my as integer
+    dim w as integer
+    dim n as integer
+    dim x as integer
+    dim y as integer
+    
+    dim sprites(2) as VideoSprites
+    
+    LD2_InitSprites "", @sprites(0), 320, 200: sprites(0).loadBmp DATA_DIR+"launcher/remastered.bmp"
+    LD2_InitSprites "", @sprites(1), 320, 200: sprites(1).loadBmp DATA_DIR+"launcher/classic.bmp"
+    LD2_InitSprites "", @sprites(2), 320, 200: sprites(2).loadBmp DATA_DIR+"launcher/enhanced.bmp"
+    
+    Elements_SetSpritePutCallback @elementsPutSprite
+    Elements_SetSpriteMetricsCallback @elementsSpriteMetrics
+    
+    dim dialog as ElementType
+    dim title as ElementType
+    dim options(2) as ElementType
+    dim description as ElementType
+    dim thumbnail as ElementType
+    
+    dim selections(2) as integer
+    dim selection as integer
+    dim escapeSelection as integer
+    
+    dim res_x as integer
+    dim res_y as integer
+    LD2_GetWindowSize res_x, res_y
+    
+    dim fontW as integer
+    dim fontH as integer
+    
+    fontW = Elements_GetFontWidthWithSpacing()
+    fontH = Elements_GetFontHeightWithSpacing()
+    
+    Element_Init @dialog
+    Element_Init @title, message, 31
+    Element_Init @options(0), "Remastered (2020)", 31', ElementFlags.CenterX
+    Element_Init @options(1), "Classic    (2002)", 31', ElementFlags.CenterX
+    Element_Init @options(2), "Classic Enhanced ", 31', ElementFlags.CenterX
+    Element_Init @description
+    
+    dialog.background = STATUS_DIALOG_COLOR
+    dialog.background_alpha = STATUS_DIALOG_ALPHA
+    dialog.border_size = 1
+    dialog.border_color = 15
+    title.text_height = 2.0
+    
+    halfX = int(SCREEN_W*0.5)
+    halfY = int(SCREEN_H*0.5)
+    
+    size = int(SCREEN_H*0.375)
+    
+    dim modw as double: modw = 1.6
+    dim modh as double: modh = 0.8+ubound(options)*0.1
+    
+    if playOpenSound then
+        LD2_PlaySound Sounds.uiMenu
+    end if
+	
+	LD2_SaveBuffer 2
+	LD2_CopyBuffer 1, 2
+	
+    Easing_doEaseInOut(-1)
+	do
+        e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
+        pixels = int(e * size)
+        dialog.x = halfX - pixels * modw
+        dialog.y = halfY - pixels * modh
+        dialog.w = pixels * modw * 2
+        dialog.h = pixels * modh * 2
+        LD2_CopyBuffer 2, 1
+        Element_Render @dialog
+        LD2_RefreshScreen
+        PullEvents
+	loop while e < 1
+    
+    dim top as integer
+    top = int(dialog.h*0.3333)
+    pixels = size
+    dialog.x = halfX - pixels * modw
+    dialog.y = halfY - pixels * modh
+    dialog.w = pixels * modw * 2
+    dialog.h = pixels * modh * 2
+    title.x = fontW
+    title.y = fontH
+    for n = 0 to 2
+        options(n).x = fontW
+        options(n).padding_x = fontW
+        options(n).padding_y = 7
+        options(n).y  = top + n*int(fontH*3.5) - options(n).padding_y
+        options(n).text_height = 1
+        w = Element_GetTextWidth(@options(n)) 
+        if w > maxw then maxw = w
+    next n
+    for n = 0 to 2
+        options(n).w = maxw
+    next n
+    
+    description.parent = @dialog
+    description.padding_x = fontW
+    description.x = maxw + options(0).x + options(0).padding_x*2
+    description.y = options(0).y
+    description.w = dialog.w - description.x - description.padding_x*2
+    description.text_height = 1.8
+    
+    Elements_Clear
+    Elements_Add @dialog
+    Elements_Add @title, @dialog
+    for n = 0 to 2
+        Elements_Add @options(n), @dialog
+    next n
+    
+    selections(0) = OptionIds.Remastered
+    selections(1) = OptionIds.Classic
+    selections(2) = OptionIds.Enhanced
+    selection = 0: escapeSelection = 0
+    
+    dim descs(2) as string
+    descs(0) = "The new version of the game. Play this if you're not sure what to pick."
+    descs(1) = "The original game from 2002. Intended to be as close to the original as possible."
+    descs(2) = "This original game but with some extra sounds and tweaks added."
+    Elements_Add @description
+    
+    Element_Init @thumbnail
+    thumbnail.parent = @dialog
+    thumbnail.padding_x = description.padding_x
+    thumbnail.x = description.x
+    thumbnail.y = options(2).y
+    thumbnail.w = description.w
+    thumbnail.h = description.w*0.625
+    Elements_Add @thumbnail
+    
+    description.y -= fontH*2.5
+    thumbnail.y -= fontH*2.5
+    
+    do
+        for n = 0 to 2
+            if selection = n then
+                options(n).background = OPTION_ACTIVE_BG
+                options(n).text_color = OPTION_ACTIVE_COLOR
+            else
+                options(n).background = OPTION_INACTIVE_BG
+                options(n).text_color = OPTION_INACTIVE_COLOR
+            end if
+        next n
+        LD2_CopyBuffer 2, 1
+        Elements_Render
+		LD2_RefreshScreen
+        PullEvents
+        if QuitEvent() then exit do
+        
+        if MouseMoved() then
+            mx = int(mouseX()*(SCREEN_W/res_x))
+            my = int(mouseY()*(SCREEN_H/res_Y))
+            for n = 0 to 2
+                x = options(n).render_visible_x
+                y = options(n).render_visible_y
+                if  (mx >= x) and (mx <= x+options(n).render_outer_w) _
+                and (my >= y) and (my <= y+options(n).render_outer_h) then
+                    if selection <> n then
+                        selection = n
+                        LD2_PlaySound Sounds.uiArrows
+                    end if
+                    exit for
+                end if
+            next n
+            if n = 3 then
+                selection = -1
+                description.text = ""
+            else
+                description.text = descs(n)
+                thumbnail.sprite_set_id = 0
+                thumbnail.sprite = 0
+                SHARED_SPRITES = @sprites(n)
+            end if
+        end if
+        if mouseLB() and selection <> -1 then
+            LD2_PlaySound Sounds.uiSelect
+            exit do
+        end if
+        
+        if keypress(KEY_ENTER) then
+            LD2_PlaySound Sounds.uiSelect
+            exit do
+        end if
+        if keypress(KEY_DOWN) then
+            selection += 1
+            if selection > ubound(options) then
+                selection = ubound(options): LD2_PlaySound Sounds.uiInvalid
+            else
+                LD2_PlaySound Sounds.uiArrows
+            end if
+        end if
+        if keypress(KEY_UP) then
+            selection -= 1
+            if selection < 0 then
+                selection = 0: LD2_PlaySound Sounds.uiInvalid
+            else
+                LD2_PlaySound Sounds.uiArrows
+            end if
+        end if
+        if keypress(KEY_ESCAPE) then
+            selection = escapeSelection
+            LD2_PlaySound Sounds.uiCancel
+            exit do
+        end if
+    loop
+    
+    Elements_Clear
+    
+    if (selections(selection) <> OptionIds.ExitGame) and (QuitEvent() = 0) then
         e = Easing_doEaseInOut(-1)
         do
             pixels = int((1-e) * size)

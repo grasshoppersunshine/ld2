@@ -67,6 +67,7 @@
 '* PRIVATE METHODS
 '***********************************************************************
     declare sub Start ()
+    declare sub LoadUiSounds ()
     declare sub LoadSounds ()
     declare sub Main ()
     declare sub NewGame ()
@@ -126,9 +127,12 @@
     dim shared DEBUGMODE as integer
     dim shared TESTMODE as integer
     dim shared CLASSICMODE as integer
+    dim shared ENHANCEDMODE as integer
     
-    dim shared SCREEN_W as integer = 320
-    dim shared SCREEN_H as integer = 180
+    dim shared SCREEN_W as integer
+    dim shared SCREEN_H as integer
+    dim shared SCREENSHOT_W as integer
+    dim shared SCREENSHOT_H as integer
     
     Start
     END
@@ -758,9 +762,7 @@ sub AddMusic (id as integer, filepath as string, loopmusic as integer)
     
 end sub
 
-sub LoadSounds ()
-    
-    AddSound Sounds.dialog , "scenechar.wav"
+sub LoadUiSounds
     
     AddSound Sounds.uiMenu   , "ui-menu.wav"
     AddSound Sounds.uiSubmenu, "ui-submenu.wav"
@@ -770,6 +772,12 @@ sub LoadSounds ()
     AddSound Sounds.uiInvalid, "ui-invalid.wav"
     AddSound Sounds.uiCancel , "ui-cancel.wav"
     AddSound Sounds.uiMix    , "ui-mix.wav"
+    
+end sub
+
+sub LoadSounds
+    
+    AddSound Sounds.dialog , "scenechar.wav"
     
     AddSound Sounds.titleSelect, "use-medikit.wav"
     
@@ -792,6 +800,17 @@ sub LoadSounds ()
         AddSound Sounds.blood2 , "orig/blood2.ogg"
         
         AddSound Sounds.punch    , "orig/punch.ogg"
+        
+        AddSound Sounds.gruntLaugh  , "orig/laugh.ogg"
+        AddSound Sounds.gruntMgShoot, "orig/mgun.ogg"
+        AddSound Sounds.gruntHgShoot, "orig/pistol.ogg"
+        '***************************************************************
+        '* ENHANCED MODE
+        '***************************************************************
+        if ENHANCEDMODE then
+            AddSound Sounds.footstep , "larry-step.wav"
+            AddSound Sounds.jump     , "enhanced/jump.wav"
+        end if
     else
         AddSound Sounds.pickup , "item-pickup.wav"
         AddSound Sounds.drop   , "item-drop.wav"
@@ -812,52 +831,48 @@ sub LoadSounds ()
         AddSound Sounds.splatter, "splice/bloodexplode2.wav"
         
         AddSound Sounds.punch    , "larry-punch.wav"
+        
+        AddSound Sounds.gruntLaugh  , "grunt-laugh.wav"
+        AddSound Sounds.gruntMgShoot, "shoot-machinegun.wav"
+        AddSound Sounds.gruntHgShoot, "shoot-handgun.wav"
+        '***************************************************************
+        '* NEW
+        '***************************************************************
+        AddSound Sounds.footstep , "larry-step.wav"
+        AddSound Sounds.jump     , "larry-jump.wav"
+        AddSound Sounds.land     , "larry-land.wav"
+        AddSound Sounds.larryHurt, "larry-hurt.wav"
+        AddSound Sounds.larryDie , "larry-die.wav"
+        
+        AddSound Sounds.rockHurt, "rock-jump.wav"
+        AddSound Sounds.rockJump, "rock-jump.wav"
+        AddSound Sounds.rockLand, "rock-land.wav"
+        AddSound Sounds.rockDie , "rock-die.wav"
+        
+        AddSound Sounds.keypadInput  , "kp-input.wav"
+        AddSound Sounds.keypadGranted, "kp-granted.wav"
+        AddSound Sounds.keypadDenied , "kp-denied.wav"
+        
+        AddSound Sounds.gruntHurt0  , "splice/alienhurt0.ogg"
+        AddSound Sounds.gruntHurt1  , "splice/alienhurt1.ogg"
+        AddSound Sounds.gruntHurt2  , "grunt-hurt.wav"
+        AddSound Sounds.gruntDie    , "splice/fuck.wav"
+        
+        AddSound Sounds.useMedikit  , "use-medikit.wav"
+        AddSound Sounds.useExtraLife, "use-extralife.wav"
+        
+        AddSound Sounds.boom, "boom.wav"
+        AddSound Sounds.quad, "quad.wav"
+        AddSound Sounds.titleStart , "start.wav"
+        AddSound Sounds.lightSwitch, "lightswitch.wav"
+        AddSound Sounds.NoScream  , "scene-no.wav"
+        AddSound Sounds.rumble, "rumble.wav", 1
+        AddSound Sounds.squishy, "splice/squishy.wav"
+        AddSound Sounds.lookMetal, "look-metal.wav"
+        AddSound Sounds.radioBeep, "radio-beep.wav"
+        AddSound Sounds.radioStatic, "radio-static.wav"
+        AddSound Sounds.tick, "tick.wav"
     end if
-    
-    AddSound Sounds.footstep , "larry-step.wav"
-    AddSound Sounds.jump     , "larry-jump.wav"
-    AddSound Sounds.land     , "larry-land.wav"
-    AddSound Sounds.larryHurt, "larry-hurt.wav"
-    AddSound Sounds.larryDie , "larry-die.wav"
-    
-    AddSound Sounds.gruntLaugh  , "grunt-laugh.wav"
-    AddSound Sounds.gruntHurt0  , "splice/alienhurt0.ogg"
-    AddSound Sounds.gruntHurt1  , "splice/alienhurt1.ogg"
-    AddSound Sounds.gruntHurt2  , "grunt-hurt.wav"
-    AddSound Sounds.gruntDie    , "splice/fuck.wav"
-    AddSound Sounds.gruntMgShoot, "shoot-machinegun.wav"
-    AddSound Sounds.gruntHgShoot, "shoot-handgun.wav"
-    
-    AddSound Sounds.rockHurt, "rock-jump.wav"
-    AddSound Sounds.rockJump, "rock-jump.wav"
-    AddSound Sounds.rockLand, "rock-land.wav"
-    AddSound Sounds.rockDie , "rock-die.wav"
-    
-    AddSound Sounds.keypadInput  , "kp-input.wav"
-    AddSound Sounds.keypadGranted, "kp-granted.wav"
-    AddSound Sounds.keypadDenied , "kp-denied.wav"
-    
-    AddSound Sounds.useMedikit  , "use-medikit.wav"
-    AddSound Sounds.useExtraLife, "use-extralife.wav"
-    
-    AddSound Sounds.boom, "boom.wav"
-    AddSound Sounds.quad, "quad.wav"
-    AddSound Sounds.titleStart , "start.wav"
-    
-    AddSound Sounds.lightSwitch, "lightswitch.wav"
-    
-    AddSound Sounds.NoScream  , "scene-no.wav"
-    
-    AddSound Sounds.rumble, "rumble.wav", 1
-    
-    AddSound Sounds.squishy, "splice/squishy.wav"
-    
-    AddSound Sounds.lookMetal, "look-metal.wav"
-    
-    AddSound Sounds.radioBeep, "radio-beep.wav"
-    AddSound Sounds.radioStatic, "radio-static.wav"
-    
-    AddSound Sounds.tick, "tick.wav"
     
 end sub
 
@@ -922,8 +937,8 @@ sub DoAction(actionId as integer, itemId as integer = 0, prime as integer = 0)
         alreadyRan = 0
     end if
     
-    runVal = 1.12
-    jumpVal = 1.5
+    runVal  = iif(CLASSICMODE, 1.0, 1.12)
+    jumpVal = iif(CLASSICMODE, 1.3, 1.50)
     if Player_HasItem(ItemIds.PoweredArmor) then
         runVal = 1.45
         jumpVal = 1.85 '2.2
@@ -1034,7 +1049,7 @@ function GetFloorMusicId(roomId as integer) as integer
         input #file, label
         input #file, track
         if floorNo = roomId then
-            select case track
+            select case trim(lcase(track))
             case "wandering": return Tracks.Wandering
             case "musicbox" : return Tracks.MusicBox
             case "motives"  : return Tracks.Motives
@@ -1099,6 +1114,8 @@ SUB Main
     
     SCREEN_W = Screen_GetWidth()
     SCREEN_H = Screen_GetHeight()
+    SCREENSHOT_W = SCREEN_W
+    SCREENSHOT_H = SCREEN_H
     
     Element_Init @consoleDialog, "", 31
     consoleDialog.y = SCREEN_H-FONT_H*4
@@ -1181,7 +1198,11 @@ SUB Main
         showStatusScreen = iif(showStatusScreen=0,1,0)
     end if
     if showStatusScreen then
-        showStatusScreen = iif(StatusScreen_Classic(showConsole)=0,1,0) 'iif(StatusScreen(showConsole)=0,1,0)
+        if CLASSICMODE then
+            showStatusScreen = iif(StatusScreen_Classic(showConsole)=0,1,0) 'iif(StatusScreen(showConsole)=0,1,0)
+        else
+            showStatusScreen = iif(StatusScreen(showConsole)=0,1,0)
+        end if
         if showStatusScreen = 0 then
             resetClocks = 1
         end if
@@ -1192,11 +1213,19 @@ SUB Main
         showElevatorMenu = iif(showElevatorMenu=0,1,0)
     end if
     if showElevatorMenu then
-        showElevatorMenu = iif(EStatusScreen(Player_GetCurrentRoom, toRoomId, toRoomName)=0,1,0)
+        if CLASSICMODE then
+            showElevatorMenu = iif(EStatusScreen_Classic(Player_GetCurrentRoom, toRoomId, toRoomName)=0,1,0)
+        else
+            showElevatorMenu = iif(EStatusScreen(Player_GetCurrentRoom, toRoomId, toRoomName)=0,1,0)
+        end if
         if showElevatorMenu = 0 then
             resetClocks = 1
             if (toRoomId <> Player_GetCurrentRoom()) then
-                LoadMapWithElevatorIntermission toRoomId, toRoomName
+                if CLASSICMODE then
+                    Map_Load RoomToFilename(toRoomId)
+                else
+                    LoadMapWithElevatorIntermission toRoomId, toRoomName
+                end if
             else
                 Player_Unhide
             end if
@@ -2677,6 +2706,19 @@ SUB SetAllowedEntities (codeString AS STRING)
 	
 END SUB
 
+sub Launch
+    
+    select case STATUS_DialogLaunch("Larry the Dinosaur II\\Select Version")
+    case OptionIds.Remastered
+    case OptionIds.Classic
+        Game_setFlag GameFlags.ClassicMode
+    case OptionIds.Enhanced
+        Game_setFlag GameFlags.ClassicMode
+        Game_setFlag GameFlags.EnhancedMode
+    end select
+    
+end sub
+
 sub Start
     
     dim TitleOpening as sub
@@ -2691,10 +2733,30 @@ sub Start
     STATUS_SetLookItemCallback @LD2_LookItem
     
     Game_Init
+    'SDL_SetRelativeMouseMode(1)
     
-    TESTMODE    = iif(Game_hasFlag(GameFlags.TestMode)   , 1, 0)
-    DEBUGMODE   = iif(Game_hasFlag(GameFlags.DebugMode)  , 1, 0)
-    CLASSICMODE = iif(Game_hasFlag(GameFlags.ClassicMode), 1, 0)
+    if STATUS_InitInventory() then
+        STATUS_DialogOk "Error intializing inventory!"
+        Game_Shutdown
+        end
+    end if
+    
+    LoadUiSounds
+    GenerateSky
+    LD2_CopyBuffer 2, 1
+    Launch
+    
+    if QuitEvent() then
+        Game_shutdown
+        end
+    end if
+    
+    Game_LoadAssets
+    
+    TESTMODE     = iif(Game_hasFlag(GameFlags.TestMode)    , 1, 0)
+    DEBUGMODE    = iif(Game_hasFlag(GameFlags.DebugMode)   , 1, 0)
+    CLASSICMODE  = iif(Game_hasFlag(GameFlags.ClassicMode) , 1, 0)
+    ENHANCEDMODE = iif(Game_hasFlag(GameFlags.EnhancedMode), 1, 0)
     
     LD2_SetMusicMaxVolume 1.0
     LD2_SetSoundMaxVolume 0.5
@@ -2706,11 +2768,7 @@ sub Start
     Game_SetSessionFile SESSION_FILE
     Mobs_SetBeforeKillCallback @BeforeMobKill
     
-    if STATUS_InitInventory() then
-        STATUS_DialogOk "Error intializing inventory!"
-        Game_Shutdown
-        end
-    end if
+    STATUS_SetRoomsFile GetRoomsFile()
     
     if Boot_HasCommandArg("continue") then
         Game_SetFlag LOADGAME
@@ -2823,7 +2881,9 @@ sub NewGame
         'Player_SetItemQty ItemIds.SceneSteveGone, 1
         'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
         'LD2_PlayMusic mscWANDERING
-        LD2_AddToStatus(ItemIds.WalkieTalkie, 1)
+        if CLASSICMODE = 0 then
+            LD2_AddToStatus(ItemIds.WalkieTalkie, 1)
+        end if
         if Boot_HasCommandArg("noelevator") = 0 then
             'LD2_AddToStatus(ItemIds.ElevatorMenu, 1)
         end if
@@ -3449,3 +3509,163 @@ function ScreenGetWidth() as integer
     return SCREEN_W
     
 end function
+
+dim shared Primary(12) as integer
+dim shared Secondary(12) as integer
+dim shared Tertiary(12) as integer
+
+Primary  (Inputs._Pause ) = KEY_ESCAPE
+Secondary(Inputs._Pause ) = KEY_ESCAPE
+Tertiary (Inputs._Pause ) = KEY_KP_MINUS
+
+Primary  (Inputs._Up     ) = KEY_UP
+Primary  (Inputs._Left   ) = KEY_LEFT
+Primary  (Inputs._Right  ) = KEY_RIGHT
+Primary  (Inputs._Down   ) = KEY_DOWN
+Secondary(Inputs._Up   ) = KEY_W
+Secondary(Inputs._Left ) = KEY_A
+Secondary(Inputs._Right) = KEY_D
+Secondary(Inputs._Down ) = KEY_S
+Tertiary (Inputs._Up   ) = KEY_KP_8
+Tertiary (Inputs._Left ) = KEY_KP_4
+Tertiary (Inputs._Right) = KEY_KP_6
+Tertiary (Inputs._Down ) = KEY_KP_2
+
+Primary  (Inputs._Strafe) = KEY_LSHIFT
+Secondary(Inputs._Strafe) = KEY_RSHIFT
+Tertiary (Inputs._Strafe) = KEY_KP_5
+
+Primary  (Inputs._Fire  ) = KEY_LCTRL
+Secondary(Inputs._Fire  ) = KEY_ENTER
+Tertiary (Inputs._Fire  ) = KEY_KP_ENTER
+Primary  (Inputs._Jump  ) = KEY_LALT
+Secondary(Inputs._Jump  ) = KEY_SPACE
+Tertiary (Inputs._Jump  ) = KEY_KP_0
+
+Primary  (Inputs._Inventory ) = KEY_TAB
+Secondary(Inputs._Inventory ) = KEY_E
+Tertiary (Inputs._Inventory ) = KEY_KP_PLUS
+Primary  (Inputs._MenuSelect) = KEY_ENTER
+Secondary(Inputs._MenuSelect) = KEY_SPACE
+Tertiary (Inputs._MenuSelect) = KEY_KP_ENTER
+Primary  (Inputs._MenuGoBack) = KEY_ESCAPE
+Secondary(Inputs._MenuGoBack) = KEY_TAB
+Tertiary (Inputs._MenuGoBack) = KEY_BACKSPACE
+
+dim shared joystick as SDL_Joystick ptr
+dim shared haptic as SDL_Haptic ptr
+
+sub InputInit
+    
+    SDL_Init( SDL_INIT_JOYSTICK or SDL_INIT_HAPTIC )
+    
+    
+    SDL_JoystickEventState( SDL_ENABLE )
+    joystick = SDL_JoystickOpen(0)
+    haptic = SDL_HapticOpen(0)
+    
+    if SDL_HapticRumbleInit(haptic) <> 0 then
+        SDL_HapticClose(haptic)
+        haptic = 0
+    end if
+    
+end sub
+
+function InputDown(code as integer) as integer
+    
+    select case code
+    case KEY_CTRL
+        return keyboard(KEY_LCTRL) or keyboard(KEY_RCTRL)
+    case KEY_ALT
+        return keyboard(KEY_LALT) or keyboard(KEY_RALT)
+    case KEY_SHIFT
+        return keyboard(KEY_LSHIFT) or keyboard(KEY_RSHIFT)
+    case else
+        return keyboard(code)
+    end select
+    
+end function
+
+function InputPress(code as integer) as integer
+    
+    select case code
+    case KEY_CTRL
+        return keypress(KEY_LCTRL) or keypress(KEY_RCTRL)
+    case KEY_ALT
+        return keypress(KEY_LALT) or keypress(KEY_RALT)
+    case KEY_SHIFT
+        return keypress(KEY_LSHIFT) or keypress(KEY_RSHIFT)
+    case else
+        return keypress(code)
+    end select
+    
+end function
+
+function GameInput(inputEnum as integer) as integer
+    
+    select case inputEnum
+    case Inputs._Strafe
+        return InputDown(Primary(inputEnum)) _
+            or InputDown(Secondary(inputEnum)) _
+            or InputDown(Tertiary(inputEnum))
+    case else
+        return InputPress(Primary(inputEnum)) _
+            or InputPress(Secondary(inputEnum)) _
+            or InputPress(Tertiary(inputEnum))
+    end select
+    
+end function
+
+sub something
+    
+    dim returnInput as integer
+    dim joy_hat as integer
+    dim joy_lr as integer
+    dim joy_ud as integer
+    dim joy_b0 as integer
+    dim joy_b1 as integer
+    dim joy_b2 as integer
+    dim joy_b3 as integer
+    dim joy_b4 as integer
+    dim joy_b5 as integer
+    dim joy_start as integer
+    
+    if joystick then
+		SDL_JoystickUpdate
+		joy_hat   = SDL_JoystickGetHat(joystick, 0)
+		joy_lr    = SDL_JoystickGetAxis(joystick, 0) / &h8000
+		joy_ud    = SDL_JoystickGetAxis(joystick, 1) / &h8000
+		joy_b0    = SDL_JoystickGetButton(joystick, 0)
+		joy_b1    = SDL_JoystickGetButton(joystick, 1)
+		joy_b2    = SDL_JoystickGetButton(joystick, 2)
+		joy_b3    = SDL_JoystickGetButton(joystick, 3)
+		joy_b4    = SDL_JoystickGetButton(joystick, 4)
+		joy_b5    = SDL_JoystickGetButton(joystick, 5)
+		joy_start = SDL_JoystickGetButton(joystick, 7)
+	end if
+	
+	returnInput = 0
+	
+	if joy_b0 then returnInput = 1 '*returnInput or GameInputFlags.b0
+	if joy_b1 then returnInput = 1 '*returnInput or GameInputFlags.b1
+	if joy_b2 then returnInput = 1 '*returnInput or GameInputFlags.b2
+	if joy_b3 then returnInput = 1 '*returnInput or GameInputFlags.b3
+	if joy_b4 then returnInput = 1 '*returnInput or GameInputFlags.b4
+	if joy_b5 then returnInput = 1 '*returnInput or GameInputFlags.b5
+	if joy_start then returnInput = 1 '*returnInput or GameInputFlags.start
+	
+	
+	if (joy_lr > 0.30) or (joy_hat and SDL_HAT_RIGHT) then
+		returnInput = 1 '*returnInput or GameInputFlags.right
+	end if
+	if (joy_lr < -0.30) or (joy_hat and SDL_HAT_LEFT) then
+		returnInput = 1 '*returnInput or GameInputFlags.left
+	end if
+	if (joy_ud < -0.30) or (joy_hat and SDL_HAT_UP) then
+		returnInput = 1 '*returnInput or GameInputFlags.up
+	end if
+	if (joy_ud > 0.30) or (joy_hat and SDL_HAT_DOWN) then
+		returnInput = 1 '*returnInput or GameInputFlags.down
+	end if
+    
+end sub

@@ -203,10 +203,12 @@ declare function Mobs_Api (args as string) as string
 declare sub Mobs_Add (x as integer, y as integer, id as integer, nextState as integer = 0)
 declare sub Mobs_Remove (mob as Mobile)
 declare sub Mobs_GetFirstOfType (mob as Mobile, id as integer)
+declare sub Mobs_Generate_Classic (forceNumMobs as integer = 0, forceMobType as integer = 0)
 declare sub Mobs_Generate  (forceNumMobs as integer = 0, forceMobType as integer = 0)
 declare sub Mobs_Animate (resetClocks as integer = 0)
 declare sub Mobs_DoMob(mob as Mobile)
 declare sub Mobs_Draw ()
+declare sub Mobs_DrawBossBar ()
 declare sub Mobs_Kill (mob as Mobile)
 declare sub Mobs_KillAll ()
 declare sub Mobs_Clear ()
@@ -260,6 +262,7 @@ declare sub Player_Hurt(damage as integer, contactX as integer, contactY as inte
 declare sub Player_InitUpper (intervalStart as double=0.0)
 
 declare sub Game_Init ()
+declare sub Game_LoadAssets ()
 declare function Game_HasFlag (flag as integer) as integer
 declare function Game_NotFlag (flag as integer) as integer
 declare sub Game_SetFlag (flag as integer)

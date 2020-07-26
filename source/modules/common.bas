@@ -6,6 +6,7 @@
 
 dim shared EventQuit as integer
 dim shared EventKeyDown as integer
+dim shared EventMouseMotion as integer
 dim shared EventMouseWheelY as integer
 dim shared EventMouseState as long
 dim shared EventMouseX as integer
@@ -253,6 +254,14 @@ function GetTextInputCursor() as integer
     
 end function
 
+function MouseMoved() as integer
+    return EventMouseMotion
+end function
+
+function QuitEvent() as integer
+    return EventQuit
+end function
+
 sub PullEvents()
     
     static newMouseWheelY as integer
@@ -262,6 +271,8 @@ sub PullEvents()
     dim event as SDL_Event
     dim code as integer
     dim x as integer
+    
+    EventMouseMotion = 0
     
     if ReceivingTextInput then
         text = InputText
@@ -277,6 +288,8 @@ sub PullEvents()
             EventKeydown = 0
             code = event.key.keysym.scancode
             keysoff[code] = 1
+        case SDL_MOUSEMOTION
+            EventMouseMotion = 1
         case SDL_MOUSEWHEEL
             newMouseWheelY += event.wheel.y
         case SDL_TEXTINPUT

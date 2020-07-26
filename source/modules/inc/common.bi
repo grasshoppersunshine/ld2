@@ -13,6 +13,8 @@ DECLARE FUNCTION WaitSecondsUntilKey (seconds AS DOUBLE) as integer
 DECLARE FUNCTION WaitSecondsUntilKeyup (seconds AS DOUBLE, keycode as integer) as integer
 declare sub WaitForKeydown (code as integer = -1)
 declare sub WaitForKeyup (code as integer = -1)
+declare function MouseMoved() as integer
+declare function QuitEvent() as integer
 declare sub PullEvents ()
 declare function mouseX() as integer
 declare function mouseY() as integer

@@ -12,7 +12,7 @@ FLASHLIGHTNOBAT, "This should brighten up a dark area pretty well...\but is has 
 MYSTERYMEAT    , "White processed mystery meat.\Processed meat usually has certain mysterious\chemicals in it that try to simulate the taste of\meat, which fail to succeed."
 CHEMICAL409    , "A strong kitchen cleaner.\The warning label says to keep this away from processed foods.\Seems ironic for a *kitchen* cleaner."
 CHEMICAL410    , "A strong acidic chemical with a PH value of 0.0\I didn't even know such number existed in the PH\scale. This can probably eat away anything."
-JANITORNOTE    , "Notice to all maintenance personell.\"
+JANITORNOTE    , "Notice to all maintence personell.\\Even though it's not inside the building, the rooftop still needs maintence every week. Since us Janitors don't have code-yellow access, but still need access to the rooftop, they gave us a 4-digit passcode for access. It is"
 BATTERIES      , "Looks like they are in good condition."
 FLASHLIGHT     , "This should brighten up a dark area pretty well."
 GREENCARD      , "Allows access to doors with green trims.\It's not much, but it gets you around."
@@ -25,4 +25,4 @@ PISTOL         , "Weak, but still good for shooting at things.\Fire-Power: 1\Fir
 DESERTEAGLE    , "This handgun packs a punch.\Fire-Power: 5\ Firing-Rate: Slow"
 WALKIETALKIE   , "A two-way radio. I can use this to contact Barney."
 EXTRALIFE      , "Gives me an extra life if I use it."
-
+INSTRUCTIONS   , "FILE: help.txt"

@@ -20,9 +20,9 @@ function Video.init(cols as integer, rows as integer, fullscreen as integer, tit
     end if
     
     if fullscreen then
-        this._window = SDL_CreateWindow( title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP)
+        this._window = SDL_CreateWindow( title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP or SDL_WINDOW_INPUT_GRABBED)
     else
-        this._window = SDL_CreateWindow( title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, cols, rows, SDL_WINDOW_SHOWN)
+        this._window = SDL_CreateWindow( title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, cols*2, rows*2, SDL_WINDOW_SHOWN or SDL_WINDOW_MAXIMIZED or SDL_WINDOW_RESIZABLE)
     end if
 
     this._renderer = SDL_CreateRenderer( this._window, -1, SDL_RENDERER_PRESENTVSYNC )
@@ -39,6 +39,12 @@ end function
 sub Video.shutdown()
     
     SDL_DestroyWindow(this._window)
+    
+end sub
+
+sub Video.getWindowSize(byref w as integer, byref h as integer)
+    
+    SDL_GetWindowSize(this._window, @w, @h)
     
 end sub
 

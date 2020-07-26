@@ -92,6 +92,9 @@ declare function Element_GetParentH(e as ElementType ptr) as integer
 declare function Element_GetClipTop(e as ElementType ptr, first as integer = 1) as integer
 declare function Element_GetClipBtm(e as ElementType ptr, first as integer = 1) as integer
 
+declare sub Elements_SetSpritePutCallback(callback as sub(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0))
+declare sub Elements_SetSpriteMetricsCallback(callback as sub(byval spriteId as integer, byval spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer))
+
 declare sub Elements_Clear()
 declare sub Elements_Add(e as ElementType ptr, parent as ElementType ptr = 0)
 declare sub Elements_Render()

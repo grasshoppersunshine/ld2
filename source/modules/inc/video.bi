@@ -21,6 +21,7 @@ public:
     declare function getErrorMsg() as string
     declare function init(cols as integer, rows as integer, fullscreen as integer, title as string) as integer
     declare sub shutdown()
+    declare sub getWindowSize(byref w as integer, byref h as integer)
     declare sub setPalette(p as Palette256 ptr)
     declare function getRenderer() as SDL_Renderer ptr
     declare function getData() as SDL_Texture ptr

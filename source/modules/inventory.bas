@@ -25,7 +25,13 @@ dim shared UseItemQty as integer
 dim shared UseItemMessage as string
 dim shared UseItemDiscard as integer
 
-const DATA_DIR = "data/"
+dim shared DATA_DIR as string
+
+sub Inventory_SetDataDir(path as string)
+    
+    DATA_DIR = path
+    
+end sub
 
 function Inventory_Add (id as integer, qty as integer, max as integer = -1, slot as integer = -1) as integer
     
@@ -197,6 +203,8 @@ end function
 FUNCTION Inventory_Init (size AS INTEGER, sizeVisible as integer = -1) as integer
     
     DIM i AS INTEGER
+    
+    DATA_DIR = iif(DATA_DIR="","data/",DATA_DIR)
     
     if sizeVisible = -1 then
         sizeVisible = size

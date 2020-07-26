@@ -28,6 +28,8 @@ const CLASSIC_SCREEN_DELAY = 0.2
 
 dim shared SCREEN_W as integer
 dim shared SCREEN_H as integer
+dim shared SCREENSHOT_W as integer
+dim shared SCREENSHOT_H as integer
 
 SUB TITLE_EndDemo
 
@@ -281,6 +283,8 @@ sub TITLE_Intro_Classic
     
     SCREEN_W = Screen_GetWidth()
     SCREEN_H = Screen_GetHeight()
+    SCREENSHOT_W = SCREEN_W
+    SCREENSHOT_H = SCREEN_H
   
     LD2_cls: LD2_cls 1, 0
     LD2_StopMusic
@@ -348,6 +352,8 @@ SUB TITLE_Intro
     
     SCREEN_W = Screen_GetWidth()
     SCREEN_H = Screen_GetHeight()
+    SCREENSHOT_W = SCREEN_W
+    SCREENSHOT_H = SCREEN_H
 
     LD2_cls 0, 0
     ContinueAfterSeconds(2.0, 0)
@@ -519,6 +525,8 @@ sub TITLE_ShowCredits
     
     SCREEN_W = Screen_GetWidth()
     SCREEN_H = Screen_GetHeight()
+    SCREENSHOT_W = SCREEN_W
+    SCREENSHOT_H = SCREEN_H
 
     LD2_cls
     LD2_CLS 1, 0
@@ -596,6 +604,8 @@ SUB TITLE_Ad
     
     SCREEN_W = Screen_GetWidth()
     SCREEN_H = Screen_GetHeight()
+    SCREENSHOT_W = SCREEN_W
+    SCREENSHOT_H = SCREEN_H
   
   textColor = 57
   backColor = 48
@@ -670,6 +680,8 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
     
     SCREEN_W = Screen_GetWidth()
     SCREEN_H = Screen_GetHeight()
+    SCREENSHOT_W = SCREEN_W
+    SCREENSHOT_H = SCREEN_H
     
     barSize = 0 'int(SPRITE_H*1.5)
     
@@ -900,6 +912,8 @@ SUB TITLE_AdTwo
     
     SCREEN_W = Screen_GetWidth()
     SCREEN_H = Screen_GetHeight()
+    SCREENSHOT_W = SCREEN_W
+    SCREENSHOT_H = SCREEN_H
   
   textColor = 40
   backColor = 32

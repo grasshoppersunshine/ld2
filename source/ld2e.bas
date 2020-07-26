@@ -355,6 +355,7 @@
     dim shared TESTMODE as integer
     dim shared DEBUGMODE as integer
     dim shared CLASSICMODE as integer
+    dim shared ENHANCEDMODE as integer
     dim shared NOSOUND as integer
     
     dim shared SceneCaption as string
@@ -953,6 +954,8 @@ sub Game_Init
             Game_setFlag GameFlags.DebugMode
         case "classic"
             Game_setFlag GameFlags.ClassicMode
+        case "enhanced"
+            Game_setFlag GameFlags.EnhancedMode
         case "nosound", "ns"
             Game_setFlag GameFlags.NoSound
         case "skip"
@@ -969,10 +972,11 @@ sub Game_Init
         i += 1
     loop
     
-    TESTMODE    = iif(Game_hasFlag(GameFlags.TestMode)   , 1, 0)
-    DEBUGMODE   = iif(Game_hasFlag(GameFlags.DebugMode)  , 1, 0)
-    CLASSICMODE = iif(Game_hasFlag(GameFlags.ClassicMode), 1, 0)
-    NOSOUND     = iif(Game_hasFlag(GameFlags.NoSound)    , 1, 0)
+    TESTMODE     = iif(Game_hasFlag(GameFlags.TestMode)    , 1, 0)
+    DEBUGMODE    = iif(Game_hasFlag(GameFlags.DebugMode)   , 1, 0)
+    CLASSICMODE  = iif(Game_hasFlag(GameFlags.ClassicMode) , 1, 0)
+    ENHANCEDMODE = iif(Game_hasFlag(GameFlags.EnhancedMode), 1, 0)
+    NOSOUND      = iif(Game_hasFlag(GameFlags.NoSound)     , 1, 0)
     
     if DEBUGMODE then
         LogDebug "!debugstart!"
@@ -990,6 +994,103 @@ sub Game_Init
     print "Initializing system... ("+GetCommonInfo()+")"
     if InitCommon() <> 0 then
         print "INIT ERROR! "+GetCommonErrorMsg()
+    end if
+    
+    WaitSeconds 0.3333
+    
+    if SessionSaveFile = "" then
+        SessionSaveFile = "session.ld2"
+    end if
+    
+    if NOSOUND = 0 then
+        
+        print "Initializing sound...  ("+LD2_GetSoundInfo()+")"
+        WaitSeconds 0.3333
+        
+        if LD2_InitSound(1) <> 0 then
+            print "SOUND ERROR! "+LD2_GetSoundErrorMsg()
+            end
+        end if
+        
+    else
+        LD2_InitSound 0
+    end if
+    
+    '///////////////////////////////////////////////////////////////////
+    dim res_x as integer, res_y as integer
+    screeninfo res_x, res_y
+    SCREEN_W = 352
+    SCREEN_H = 352*(res_y/res_x)
+    
+    print "Initializing video...  ("+LD2_GetVideoInfo()+")"
+    
+    if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, 0) <> 0 then
+        print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
+        end
+    else
+        LD2_cls 1, 0
+        LD2_cls 2, 0
+    end if
+    
+    PaletteFile = DATA_DIR+"gfx/gradient.pal"
+    FontFile = DATA_DIR+"gfx/font.put"
+    
+    LD2_LoadPalette PaletteFile
+    
+    Font_Init FONT_W, FONT_H
+    Font_Load FontFile
+    
+    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
+    Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
+    Elements_LoadFontMetrics FontFile
+    
+    if DEBUGMODE then
+        LogDebug __FUNCTION__+" SUCCESS"
+    end if
+    
+end sub
+
+sub Game_LoadAssets
+    
+    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
+    Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
+    Elements_LoadFontMetrics FontFile
+    
+    TESTMODE     = iif(Game_hasFlag(GameFlags.TestMode)    , 1, 0)
+    DEBUGMODE    = iif(Game_hasFlag(GameFlags.DebugMode)   , 1, 0)
+    CLASSICMODE  = iif(Game_hasFlag(GameFlags.ClassicMode) , 1, 0)
+    ENHANCEDMODE = iif(Game_hasFlag(GameFlags.EnhancedMode), 1, 0)
+    NOSOUND      = iif(Game_hasFlag(GameFlags.NoSound)     , 1, 0)
+    
+    if CLASSICMODE then
+        SCREEN_MODE = ScreenModes.Classic
+    end if
+    
+    SCREEN_FULL = 1
+    select case SCREEN_MODE
+    case ScreenModes.Classic, ScreenModes.Screen13
+        SCREEN_W = 320
+        SCREEN_H = 200
+    case ScreenModes.WideScreen
+        SCREEN_W = 352
+        SCREEN_H = 198
+    case ScreenModes.Zoom256
+        SCREEN_W = 256
+        SCREEN_H = 144
+    case ScreenModes.MaxZoom
+        SCREEN_W = 224
+        SCREEN_H = 126
+    case else '* wide zoom
+        SCREEN_W = 320
+        SCREEN_H = 180
+    end select
+    
+    if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL) <> 0 then
+        print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
+        end
+    else
+        LD2_cls 1, 0
+        LD2_cls 2, 0
     end if
     
     WaitSeconds 0.3333
@@ -1036,59 +1137,6 @@ sub Game_Init
     CanSaveMap = 0
     MobsWereLoaded = 0
     '///////////////////////////////////////////////////////////////////
-    if SessionSaveFile = "" then
-        SessionSaveFile = "session.ld2"
-    end if
-    
-    if NOSOUND = 0 then
-        
-        print "Initializing sound...  ("+LD2_GetSoundInfo()+")"
-        WaitSeconds 0.3333
-        
-        if LD2_InitSound(1) <> 0 then
-            print "SOUND ERROR! "+LD2_GetSoundErrorMsg()
-            end
-        end if
-        
-    else
-        LD2_InitSound 0
-    end if
-    
-    '///////////////////////////////////////////////////////////////////
-    
-    print "Initializing video...  ("+LD2_GetVideoInfo()+")"
-    
-    if CLASSICMODE then
-        SCREEN_MODE = ScreenModes.Classic
-    end if
-    
-    SCREEN_FULL = 1
-    select case SCREEN_MODE
-    case ScreenModes.Classic, ScreenModes.Screen13
-        SCREEN_W = 320
-        SCREEN_H = 200
-    case ScreenModes.WideScreen
-        SCREEN_W = 352
-        SCREEN_H = 198
-    case ScreenModes.Zoom256
-        SCREEN_W = 256
-        SCREEN_H = 144
-    case ScreenModes.MaxZoom
-        SCREEN_W = 224
-        SCREEN_H = 126
-    case else '* wide zoom
-        SCREEN_W = 320
-        SCREEN_H = 180
-    end select
-    
-    if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL) <> 0 then
-        print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
-        end
-    else
-        LD2_cls 1, 0
-        LD2_cls 2, 0
-    end if
-    WaitSeconds 0.3333
     
     PaletteFile = DATA_DIR+"gfx/gradient.pal"
     if CLASSICMODE then
@@ -1131,10 +1179,10 @@ sub Game_Init
     Sprites_Load ObjectsFile, idOBJCRP
     Sprites_Load BossFile   , idBOSS
     
-    LD2_InitLayer DATA_DIR+"gfx/mountains.bmp", @LayerMountains, SpriteFlags.Transparent
-    LD2_InitLayer DATA_DIR+"gfx/foliage.bmp", @LayerFoliage, SpriteFlags.Transparent
-    LD2_InitLayer DATA_DIR+"gfx/grass.bmp", @LayerGrass, SpriteFlags.Transparent
-    LD2_InitLayer DATA_DIR+"gfx/clouds.bmp", @LayerClouds, SpriteFlags.Transparent
+    'LD2_InitLayer DATA_DIR+"gfx/mountains.bmp", @LayerMountains, SpriteFlags.Transparent
+    'LD2_InitLayer DATA_DIR+"gfx/foliage.bmp", @LayerFoliage, SpriteFlags.Transparent
+    'LD2_InitLayer DATA_DIR+"gfx/grass.bmp", @LayerGrass, SpriteFlags.Transparent
+    'LD2_InitLayer DATA_DIR+"gfx/clouds.bmp", @LayerClouds, SpriteFlags.Transparent
     
     '///////////////////////////////////////////////////////////////////
     
@@ -1150,10 +1198,6 @@ sub Game_Init
     Mobs.AddType MobIds.GruntHg
     Mobs.AddType MobIds.BlobMine
     Mobs.AddType MobIds.JellyBlob
-    
-    if DEBUGMODE then
-        LogDebug __FUNCTION__+" SUCCESS"
-    end if
     
 end sub
 
@@ -1454,19 +1498,29 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
     '    next i
     'end if
     
-    if RoomPhase < Inventory(ItemIds.Phase) then
-    end if
-    if (MobsWereLoaded = 0) and (skipMobs = 0) then
-        select case Inventory(ItemIds.CurrentRoom)
-        case Rooms.Rooftop, Rooms.PortalRoom, Rooms.WeaponsLocker, Rooms.Lobby, Rooms.Basement, Rooms.VentControl, Rooms.Unknown
-        case else
-            Mobs_Generate
-        end select
-    end if
-    
-    if Inventory(ItemIds.CurrentRoom) = 5 then
-        Mobs_Add 0, 0, MobIds.TrapRoom
-        Switches_Add 2, 2
+    if CLASSICMODE then
+        if skipMobs = 0 then
+            select case Inventory(ItemIds.CurrentRoom)
+            case Rooms.Rooftop, Rooms.WeaponsLocker, Rooms.Basement, Rooms.VentControl, Rooms.Unknown, Rooms.PortalRoom, Rooms.Lobby
+            case else
+                Mobs_Generate_Classic
+            end select
+        end if
+    else
+        if RoomPhase < Inventory(ItemIds.Phase) then
+        end if
+        if (MobsWereLoaded = 0) and (skipMobs = 0) then
+            select case Inventory(ItemIds.CurrentRoom)
+            case Rooms.Rooftop, Rooms.PortalRoom, Rooms.WeaponsLocker, Rooms.Lobby, Rooms.Basement, Rooms.VentControl, Rooms.Unknown
+            case else
+                Mobs_Generate
+            end select
+        end if
+        
+        if Inventory(ItemIds.CurrentRoom) = 5 then
+            Mobs_Add 0, 0, MobIds.TrapRoom
+            Switches_Add 2, 2
+        end if
     end if
     
 end sub
@@ -2818,6 +2872,7 @@ sub LD2_RenderFrame (flags as integer = 0)
         Elevators_Draw
     end if
     Mobs_Draw
+    Mobs_DrawBossBar
     Player_Draw
     Doors_Draw
     
@@ -3097,46 +3152,51 @@ sub Map_UpdateShift (skipEase as integer = 0)
     dim halfW as integer
     dim range as integer
     
-    if focus = -1 then focus = XShift
-    
-    easeSpeed = 0.4
-    
-    halfW = int(SCREEN_W*0.5)
-    range = 8'int(0.0625 * SCREEN_W)
-    
-    if (direction <> Player._flip) or (skipEase = 1) then
-        direction = Player._flip
-        e = 0
-        clock = timer
-    end if
-    if skipEase then
-        focus = Player.x
-    end if
-    
-    if e = 0 then
-        anchor = focus
-        target = Player.x+2.5+iif(Player._flip=0,range,-range)
+    if CLASSICMODE then
+        XShift = int(Player.x-SCREEN_W*0.5)
     else
-        movement = Player.x+2.5+iif(Player._flip=0,range,-range)-target
-        anchor += movement
-        target += movement
-        if movement <> 0 then
-            easeSpeed *= 0.5
-        end if
-    end if
-    
-    timediff = (timer-clock)
-    if timediff > 0.01 then
-        timediff *= (timediff/0.01)
-        e += timediff*easeSpeed
-        if e > 1 then e = 1
-        clock = timer
         
-        d = (1-e)*(1-e)*(1-e)
-        focus = anchor+(target-anchor)*(1-d)
+        if focus = -1 then focus = XShift
+        
+        easeSpeed = 0.4
+        
+        halfW = int(SCREEN_W*0.5)
+        range = 8'int(0.0625 * SCREEN_W)
+        
+        if (direction <> Player._flip) or (skipEase = 1) then
+            direction = Player._flip
+            e = 0
+            clock = timer
+        end if
+        if skipEase then
+            focus = Player.x
+        end if
+        
+        if e = 0 then
+            anchor = focus
+            target = Player.x+2.5+iif(Player._flip=0,range,-range)
+        else
+            movement = Player.x+2.5+iif(Player._flip=0,range,-range)-target
+            anchor += movement
+            target += movement
+            if movement <> 0 then
+                easeSpeed *= 0.5
+            end if
+        end if
+        
+        timediff = (timer-clock)
+        if timediff > 0.01 then
+            timediff *= (timediff/0.01)
+            e += timediff*easeSpeed
+            if e > 1 then e = 1
+            clock = timer
+            
+            d = (1-e)*(1-e)*(1-e)
+            focus = anchor+(target-anchor)*(1-d)
+        end if
+        
+        XShift = focus-halfW
     end if
-    
-    XShift = focus-halfW
     
     dim XShiftMax as integer
     
@@ -3874,6 +3934,43 @@ sub Mobs_Clear ()
     
 end sub
 
+sub Mobs_Generate_Classic (forceNumMobs as integer = 0, forceMobType as integer = 0)
+    
+    dim elevator as ElevatorType
+    dim x as integer, y as integer
+    dim n as integer
+    dim i as integer
+    
+    elevator = Elevators(0)
+    FOR i = 1 TO 40
+        x = INT(200 * RND(1)) + 1
+        y = INT(12 * RND(1)) + 1
+        IF x * 16 - 16 < elevator.x - 80 THEN
+            IF TileMap(x, y) > 0 AND TileMap(x, y) < 80 THEN
+                DO
+                    IF TileMap(x, y+1) > 0 AND TileMap(x, y+1) < 80 THEN
+                        y = y + 1
+                    ELSE
+                        EXIT DO
+                    END IF
+                LOOP
+                DO
+                    n = INT(5 * RND(1))
+                LOOP UNTIL n <> 3
+                select case n
+                case 0: n = MobIds.Rockmonster
+                case 1: n = MobIds.GruntMg
+                case 2: n = MobIds.GruntHg
+                case 3: n = MobIds.Blobmine
+                case 4: n = MobIds.JellyBlob
+                end select
+                Mobs_Add x * 16, y * 16, n
+            END IF
+        END IF
+    NEXT i
+    
+end sub
+
 sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
     
     dim x as integer, y as integer
@@ -4036,10 +4133,40 @@ end function
 sub Mobs_Animate_Rockmonster(mob as Mobile)
     
     dim animationSpeed as double
-    dim f as double
     dim mapX as integer, mapY as integer
     dim canGoLeft as integer, canGoRight as integer
-    f = 1 'DELAYMOD
+    
+    if CLASSICMODE then
+        select case mob.state
+        case MobStates.Spawn
+            mob.setQty MobItems.Hp, 8
+            mob.setQty MobItems.Weight, 1
+            mob.frameCounter = 1
+            mob.setState MobStates.Go
+        case MobStates.Go
+            mob.frameCounter += 0.1
+            IF mob.frameCounter > 6 THEN mob.frameCounter = 1
+                   
+            IF mob.hasFlag(MobFlags.Hit) THEN
+                mob.unsetFlag(MobFlags.Hit)
+                mob.frameCounter = 6
+            ELSE
+                IF mob.x < Player.x THEN mob.x = mob.x + .5: mob._flip = 0
+                IF mob.x > Player.x THEN mob.x = mob.x - .5: mob._flip = 1
+            END IF
+
+            IF mob.x + 7 >= Player.x AND mob.x + 7 <= Player.x + 15 THEN
+                IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
+                    IF INT(10 * RND(1)) + 1 = 1 THEN
+                        LD2_PlaySound Sounds.blood2
+                    END IF
+                    Inventory(ItemIds.Hp) -= 1
+                    Guts_Add GutsIds.BloodSprite, mob.x + 7, mob.y + 8, 1
+                END IF
+            END IF
+        end select
+        exit sub
+    end if
     
     if mob.hasFlag(MobFlags.Hit) and (mob.state <> MobStates.Spawn) then
         mob.unsetFlag(MobFlags.Hit)
@@ -4106,17 +4233,17 @@ sub Mobs_Animate_Rockmonster(mob as Mobile)
             canGoLeft = 0
         end if
         if canGoLeft and canGoRight then
-            mob.vx = iif(roll(2)=1, f*0.5, f*-0.5)
+            mob.vx = iif(roll(2)=1, 0.5, -0.5)
         elseif canGoLeft then
-            mob.vx = f *-0.5
+            mob.vx = -0.5
             if mob.hasFlag(MobFlags.ShotFromLeft) then
-                mob.vx = f *-1.0
+                mob.vx = -1.0
                 animationSpeed = 1/16
             end if
         elseif canGoRight then
-            mob.vx = f * 0.5
+            mob.vx = 0.5
             if mob.hasFlag(MobFlags.ShotFromRight) then
-                mob.vx = f * 1.0
+                mob.vx = 1.0
                 animationSpeed = 1/16
             end if
         else
@@ -4628,8 +4755,43 @@ end sub
 
 sub Mobs_Animate_Jellyblob(mob as Mobile)
     
-    dim f as double
-    f = 1 'DELAYMOD
+    if CLASSICMODE then
+        select case mob.state
+        case MobStates.Spawn
+            mob.setQty MobItems.Hp, 14
+            mob.setQty MobItems.Weight, 1
+            mob.frameCounter = 11
+            mob.setState MobStates.Go
+        case MobStates.Go
+
+            IF mob.hasFlag(MobFlags.Hit) THEN
+                mob.unsetFlag(MobFlags.Hit)
+                mob.frameCounter = 19
+            ELSE
+                mob.frameCounter += 0.1
+                IF mob.frameCounter > 15 THEN mob.frameCounter = 11
+
+                IF ABS(mob.x - Player.x) < 100 THEN
+                    IF mob.x < Player.x THEN
+                        mob.x += 0.8: mob._flip = 0
+                    ELSE
+                        mob.x -= 0.8: mob._flip = 1
+                    END IF
+                END IF
+            END IF
+           
+            IF mob.x + 7 >= Player.x AND mob.x + 7 <= Player.x + 15 THEN
+              IF mob.y + 10 >= Player.y AND mob.y + 10 <= Player.y + 15 THEN
+                IF INT(10 * RND(1)) + 1 = 1 THEN
+                    LD2_PlaySound Sounds.blood1
+                END IF
+                Inventory(ItemIds.Hp) -= 1
+                Guts_Add GutsIds.BloodSprite, mob.x + 7, mob.y + 8, 1
+              END IF
+            END IF
+        end select
+        exit sub
+    end if
     
     if mob.hasFlag(MobFlags.Hit) and (mob.state <> MobStates.Spawn) then
         mob.unsetFlag(MobFlags.Hit)
@@ -4674,8 +4836,8 @@ sub Mobs_Animate_Jellyblob(mob as Mobile)
         
     case MobStates.Go
         
-        if mob.x < Player.x then mob.vx = f* 0.7
-        if mob.x > Player.x then mob.vx = f*-0.7
+        if mob.x < Player.x then mob.vx = 0.7
+        if mob.x > Player.x then mob.vx = -0.7
         mob.setAnimation MobSprites.Jellyblob0, MobSprites.JellyBlob1, 0.1
         mob.setState MobStates.Going, 4*rnd(1)+1
         
@@ -4685,9 +4847,9 @@ sub Mobs_Animate_Jellyblob(mob as Mobile)
         
         if abs(mob.x - Player.x) < 100 then
             if mob.x < Player.x then
-                mob.vx = f* 0.7: mob._flip = 0
+                mob.vx = 0.7: mob._flip = 0
             else
-                mob.vx = f*-0.7: mob._flip = 1
+                mob.vx = -0.7: mob._flip = 1
             end if
         end if
         static plasmaTimer as double
@@ -5316,6 +5478,17 @@ sub Mobs_Draw()
     dim claws as integer
     dim foot as integer
     dim ang as double
+    if CLASSICMODE then
+        Mobs.resetNext
+        do while Mobs.canGetNext()
+            Mobs.getNext mob
+            x = int(mob.x - XShift)
+            y = int(mob.y - YShift)
+            sprite = mob.frameCounter
+            SpritesMobs.putToScreenEx(x, y, sprite, mob._flip)
+        loop
+        exit sub
+    end if
     Mobs.resetNext
     do while Mobs.canGetNext()
         Mobs.getNext mob
@@ -5433,6 +5606,14 @@ sub Mobs_Draw()
             SpritesMobs.putToScreenEx(x, y, sprite, mob._flip)
         end select
     loop
+end sub
+
+sub Mobs_DrawBossBar
+    
+    dim mob as Mobile
+    dim id as integer
+    dim x as integer
+    
     if BossBarId then
         for x = 1 to 3
             SpritesLight.putToScreen(SCREEN_W-x*SPRITE_W-3, SCREEN_H-SPRITE_H*1.25, 2)
@@ -5448,6 +5629,7 @@ sub Mobs_Draw()
         end select
         Font_putText SCREEN_W-SPRITE_W*2, SCREEN_H-SPRITE_H, str(mob.getQty(MobItems.Hp)), 1
     end if
+    
 end sub
 
 function Mobs_GetCount() as integer
@@ -5885,6 +6067,8 @@ end function
 
 function Player_Move_Classic (dx as double, canFlip as integer = 1) as integer
     
+    static footstep as integer
+    
     if dx = 0 then
         return 0
     end if
@@ -5897,6 +6081,16 @@ function Player_Move_Classic (dx as double, canFlip as integer = 1) as integer
     Player.vx   = dx
     Player.x    = Player.x + dx
     Player.lani = Player.lower.transformed
+    
+    if ENHANCEDMODE then
+        if (Player.lani = ClassicLower.run0 + 2) and (footstep = 0) then
+            LD2_PlaySound Sounds.footstep
+            footstep = 1
+        end if
+        if (Player.lani < ClassicLower.run0 + 2) and (footstep = 1) then
+            footstep = 0
+        end if
+    end if
     
     Player._flip = iif(dx > 0, 0, 1)
     
@@ -6901,28 +7095,43 @@ function Player_GetCollisionBox() as BoxType
     dim w as integer
     dim h as integer
     
-    x = iif(Player._flip = 0, 2, 9)
-    w = 5
-    if Player.hasFlag(PlayerFlags.Crouching) then
-        y = 4
-        h = 12
+    if CLASSICMODE then
+        box.w = SPRITE_W
+        box.h = SPRITE_H
+        box.top = int(Player.y)
+        box.btm = int(Player.y)+SPRITE_H-1
+        box.lft = int(Player.x)
+        box.rgt = int(Player.x)+SPRITE_W-1
+        box.padTop = 0
+        box.padBtm = 0
+        box.padLft = 0
+        box.padRgt = 0
+        box.midX = int(Player.x+SPRITE_W*0.4999)
+        box.midY = int(Player.y+SPRITE_H*0.4999)
     else
-        y = 0
-        h = 16
+        x = iif(Player._flip = 0, 2, 9)
+        w = 5
+        if Player.hasFlag(PlayerFlags.Crouching) then
+            y = 4
+            h = 12
+        else
+            y = 0
+            h = 16
+        end if
+        
+        box.w = w
+        box.h = h
+        box.top = int(Player.y) + y
+        box.btm = box.top + h - 1
+        box.lft = int(Player.x) + x
+        box.rgt = box.lft + w - 1
+        box.padTop = y
+        box.padBtm = SPRITE_H-(y+h)
+        box.padLft = x
+        box.padRgt = SPRITE_W-(x+w)
+        box.midX = int(Player.x+2.5)
+        box.midY = int(Player.y+8.0)
     end if
-    
-    box.w = w
-    box.h = h
-    box.top = int(Player.y) + y
-    box.btm = box.top + h - 1
-    box.lft = int(Player.x) + x
-    box.rgt = box.lft + w - 1
-    box.padTop = y
-    box.padBtm = SPRITE_H-(y+h)
-    box.padLft = x
-    box.padRgt = SPRITE_W-(x+w)
-    box.midX = int(Player.x+2.5)
-    box.midY = int(Player.y+8.0)
     
     return box
     
@@ -7512,11 +7721,11 @@ function decodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) a
     
 end function
 
-sub elementsPutFont(x as integer, y as integer, charVal as integer)
+private sub elementsPutFont(x as integer, y as integer, charVal as integer)
     Font_put x, y, charVal, 1
 end sub
 
-sub elementsFill(x as integer, y as integer, w as integer, h as integer, fillColor as integer, fillAlpha as double = 1.0)
+private sub elementsFill(x as integer, y as integer, w as integer, h as integer, fillColor as integer, fillAlpha as double = 1.0)
     if fillAlpha = 1.0 then
         LD2_fill x, y, w, h, fillColor, 1
     else
@@ -7524,19 +7733,19 @@ sub elementsFill(x as integer, y as integer, w as integer, h as integer, fillCol
     end if
 end sub
 
-sub elementsSetFontColor(fontColor as integer)
+private sub elementsSetFontColor(fontColor as integer)
     Font_SetColor fontColor
 end sub
 
-sub elementsSetAlphaMod(a as double)
+private sub elementsSetAlphaMod(a as double)
     Font_SetAlpha a
 end sub
 
-sub elementsPutSprite(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
+private sub elementsPutSprite(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
     Sprites_put x, y, spriteId, spriteSetId, doFlip, 1, w, h, angle
 end sub
 
-sub elementsSpriteMetrics(spriteId as integer, spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+private sub elementsSpriteMetrics(spriteId as integer, spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
     dim sprites as VideoSprites ptr
     sprites = Sprites_GetSpriteSet(spriteSetId)
     if sprites <> 0 then

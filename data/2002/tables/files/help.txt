@@ -1,0 +1,102 @@
+Table of Contents
+________________________________
+* Press 1-9 to skip to section,
+  or up/down to scroll text
+
+1. @Movement
+2. @Actions
+3. @Inventory Screen
+4. @Actions Menu
+5. @Actions Summary
+6. @Elevator (How to Use)
+7. @Elevator (Menu)
+8. @Save Game
+9. @Misc
+
+* Press ALT to maximize/minimze
+  window
+
+
+________________________________
+1. Movement
+________________________________
+* Run            @Left/Right
+* Jump           @Alt/Space
+
+
+________________________________
+2. Actions
+________________________________
+* Punch/Shoot    @Ctrl/LMB
+* Pickup Item    @Down
+
+
+________________________________
+3. Inventory Screen
+________________________________
+* View/Open      @Tab
+* Browse Items   @Arrow Keys
+* View Actions   @Enter
+
+
+________________________________
+4. Actions Menu
+________________________________
+* Change Action  @Left/Right
+* Select Action  @Enter/Spc
+
+
+________________________________
+5. Actions Summary
+________________________________
+* Use
+  - Try to use item
+  - Equip (if weapon)
+  - Load (if ammo)
+
+* Look
+  - View description of item
+
+* Mix
+  - Combine with another item
+    (if possible)
+
+* Drop
+  - Discard item (falls to floor)
+
+
+________________________________
+6. Elevator (How to Use)
+________________________________
+* Press TAB at elevator doors
+  - Elevator menu will appear
+
+
+________________________________
+7. Elevator (Menu)
+________________________________
+* Choose Floor   @Up/Down
+* Select Floor   @Enter
+* Exit Menu      @Tab
+
+
+________________________________
+8. Save Game
+________________________________
+* No "Save Game" ability in
+  original version.
+* Must complete game before
+  losing all lives.
+  - 
+
+________________________________
+9. Misc
+________________________________
+Find extra lives to extend the
+game. They are items that can be
+picked up and appear as a small
+icon of Larry's head.
+
+Once picked up, use it from the
+inventory menu to add the extra
+life.

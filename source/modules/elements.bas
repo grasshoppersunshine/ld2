@@ -653,7 +653,11 @@ sub Element_Render(e as ElementType ptr)
             for i = 1 to len(_word)
                 ch = mid(_word, i, 1)
                 if fy >= e->render_visible_y then
-                    putToScreen(int(fx)-FontCharMargins(fontVal(ch)), fy, fontVal(ch))
+                    if e->text_is_monospace then
+                        putToScreen(int(fx), fy, fontVal(ch))
+                    else
+                        putToScreen(int(fx)-FontCharMargins(fontVal(ch)), fy, fontVal(ch))
+                    end if
                 end if
                 fx += iif(e->text_is_monospace, FONT_W, FontCharWidths(fontVal(ch)))+e->render_text_spacing
             next i

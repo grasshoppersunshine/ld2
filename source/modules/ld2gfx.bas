@@ -70,6 +70,12 @@ function LD2_InitVideo(title as string, scrn_w as integer, scrn_h as integer, fu
     
 end function
 
+sub LD2_GetWindowSize(byref w as integer, byref h as integer)
+    
+    VideoHandle.getWindowSize w, h
+    
+end sub
+
 sub LD2_SetSpritesColor(sprites as VideoSprites ptr, c as integer)
     
     sprites->setColorMod(RGBpal.red(c), RGBpal.grn(c), RGBpal.blu(c))

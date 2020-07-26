@@ -708,6 +708,7 @@ enum GameFlags
     TestMode     = &h800000
     DebugMode    = &h1000000
     ClassicMode  = &h2000000
+    EnhancedMode = &h4000000
 end enum
 
 enum ScreenModes
@@ -763,6 +764,9 @@ enum OptionIds
     BackToGame = 2
     HowToPlay = 3
     ExitGame = 4
+    Remastered = 5
+    Classic = 6
+    Enhanced = 7
 end enum
 
 enum ChatBoxes
@@ -800,6 +804,20 @@ enum Guides
     SceneSteveGone   =  205 '300
 end enum
 
+enum Inputs
+    _Pause = 0
+    _Up
+    _Left
+    _Right
+    _Down
+    _Fire
+    _Jump
+    _Inventory
+    _MenuSelect
+    _MenuGoBack
+    _Strafe
+end enum
+
 '======================
 '= SCENE MODES
 '======================
@@ -822,6 +840,6 @@ end enum
     const SPRITE_H = 16
     const FONT_W = 6
     const FONT_H = 5
-    const SCREENSHOT_W = 1920 '960
-    const SCREENSHOT_H = 1080 '540
+    'const SCREENSHOT_W = 320 '1920 '960
+    'const SCREENSHOT_H = 200 '1080 '540
 #endif
