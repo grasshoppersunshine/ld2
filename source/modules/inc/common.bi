@@ -23,6 +23,9 @@ declare function mouseRelY() as integer
 declare function mouseLB() as integer
 declare function mouseRB() as integer
 declare function mouseMB() as integer
+declare function newMouseLB() as integer
+declare function newMouseRB() as integer
+declare function newMouseMB() as integer
 declare function mouseWheelY() as integer
 declare function mouseWheelUp() as integer
 declare function mouseWheelDown() as integer

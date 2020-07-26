@@ -79,14 +79,12 @@
         this.landTime = 0
         this.actionStartTime = 0
         this.weapon = 0
-        this.is_shooting = 0
         this.is_visible = 1
         this.is_lookingdown = 0
         this.flags = 0
         this._flip = 0
         this.lAni = 0
         this.uAni = 0
-        this.moved = 0
         
     end sub
     
@@ -208,8 +206,6 @@
     '*******************************************************************
     const MAPW = 201
     const MAPH =  13
-    const DOOROPENSPEED  =  0.08 '* classic mode is .05
-    const DOORCLOSESPEED = -0.04 '* classic mode is .05
     const ELEVATOROPENSPEED  =  0.02
     const ELEVATORCLOSESPEED = -0.02
     
@@ -388,6 +384,9 @@
     dim shared SCREEN_H as integer
     dim shared SCREEN_FULL as integer
     dim shared SCREEN_MODE as integer
+    
+    dim shared DOOROPENSPEED as double
+    dim shared DOORCLOSESPEED as double
     
     '*******************************************************************
     '* COLLISION VARS
@@ -985,18 +984,18 @@ sub Game_Init
     
     randomize timer
     
-    print "Larry the Dinosaur II v1.1.170"
+    'print "Larry the Dinosaur II v1.1.170"
     
-    if CLASSICMODE then
-        print "STARTING CLASSIC (2002) MODE"
-    end if
+    'if CLASSICMODE then
+    '    print "STARTING CLASSIC (2002) MODE"
+    'end if
     
-    print "Initializing system... ("+GetCommonInfo()+")"
+    'print "Initializing system... ("+GetCommonInfo()+")"
     if InitCommon() <> 0 then
         print "INIT ERROR! "+GetCommonErrorMsg()
     end if
     
-    WaitSeconds 0.3333
+    'WaitSeconds 0.3333
     
     if SessionSaveFile = "" then
         SessionSaveFile = "session.ld2"
@@ -1004,8 +1003,8 @@ sub Game_Init
     
     if NOSOUND = 0 then
         
-        print "Initializing sound...  ("+LD2_GetSoundInfo()+")"
-        WaitSeconds 0.3333
+        'print "Initializing sound...  ("+LD2_GetSoundInfo()+")"
+        'WaitSeconds 0.3333
         
         if LD2_InitSound(1) <> 0 then
             print "SOUND ERROR! "+LD2_GetSoundErrorMsg()
@@ -1022,7 +1021,7 @@ sub Game_Init
     SCREEN_W = 300
     SCREEN_H = 300*(res_y/res_x)
     
-    print "Initializing video...  ("+LD2_GetVideoInfo()+")"
+    'print "Initializing video...  ("+LD2_GetVideoInfo()+")"
     
     if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, 0) <> 0 then
         print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
@@ -1162,6 +1161,14 @@ sub Game_LoadAssets
     CanSaveMap = 0
     MobsWereLoaded = 0
     '///////////////////////////////////////////////////////////////////
+    
+    if CLASSICMODE then
+        DOOROPENSPEED  =  0.05
+        DOORCLOSESPEED = -0.05
+    else
+        DOOROPENSPEED  =  0.08
+        DOORCLOSESPEED = -0.04
+    end if
     
     PaletteFile = DATA_DIR+"gfx/gradient.pal"
     if CLASSICMODE then
@@ -2739,7 +2746,7 @@ sub MapLightFG_Draw
     tilesAcross = int((SCREEN_W / SPRITE_W)+.99)+1
     tilesDown   = int((SCREEN_H / SPRITE_H)+.99)+1
     
-    playerIsLit = Player.is_shooting and (Player.weapon <> ItemIds.Fist) and (Player.upper.interval < 0.2)
+    playerIsLit = Player.hasFlag(PlayerFlags.Shooting) and (Player.weapon <> ItemIds.Fist) and (Player.upper.interval < 0.2)
     yp = ypStart: mapY = mapYstart
     for y = 0 to tilesDown-1
         xp = xpStart
@@ -3373,7 +3380,7 @@ end sub
 
 function MapItems_Pickup () as integer
     
-    Player.setFlag(PlayerFlags.StillCrouching)
+    Player.setFlag(PlayerFlags.Uncrouching)
     if Player.state = PlayerStates.Blocked then '* state for crouched and blocked???
         return 0
     end if
@@ -5720,20 +5727,21 @@ sub Player_Animate()
     if falling then
         Player.lower.initNoLoop(ClassicLower.Jump, ClassicLower.Jump, 0)
         Player.lani = Player.lower.transformed
-    elseif (Player.moved = 0) and (Player.vx = 0) then
+    elseif (Player.notFlag(PlayerFlags.moved)) and (Player.vx = 0) then
         Player.lower.initNoLoop(ClassicLower.Stand, ClassicLower.Stand, 0)
         Player.lani = Player.lower.transformed
     end if
     
-    Player.moved = 0
+    Player.unsetFlag PlayerFlags.moved
+    Player.unsetFlag PlayerFlags.UpStairs
     
     dim crouching as integer
     crouching = Player.hasFlag(PlayerFlags.Crouching)
     
-    if Player.is_shooting then
+    if Player.hasFlag(PlayerFlags.Shooting) then
         Player.uani = Player.upper.transformed
         if Player.upper.interval = 1 then
-            Player.is_shooting = 0
+            Player.unsetFlag PlayerFlags.Shooting
             Player_InitUpper
         end if
     else
@@ -5743,7 +5751,7 @@ sub Player_Animate()
         end if
     end if
     
-    if Player.hasFlag(PlayerFlags.StillCrouching) then
+    if Player.hasFlag(PlayerFlags.Uncrouching) then
         crouchClock = timer
     elseif crouchClock > 0 then
         if (timer - crouchClock) > 0.07 then
@@ -5752,7 +5760,7 @@ sub Player_Animate()
             Player_InitUpper Player.upper.interval
         end if
     end if
-    Player.unsetFlag(PlayerFlags.StillCrouching)
+    Player.unsetFlag(PlayerFlags.Uncrouching)
     
     select case Player.state
         case PlayerStates.Standing
@@ -5825,7 +5833,7 @@ sub Player_Draw()
         end select
         SpritesLarry.putToScreenEx(px+offset, py, Player.upper.transformed, Player._flip)
         if Player.weapon = ItemIds.Magnum then
-            if Player.is_shooting then
+            if Player.hasFlag(PlayerFlags.Shooting) then
                 SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaCrouchShootLeft0+(Player.upper.transformed-MaCrouchShoot0), Player._flip)
             else
                 SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaCrouchLeft, Player._flip)
@@ -5840,7 +5848,7 @@ sub Player_Draw()
             SpritesLarry.putToScreenEx(px, py, FullBodySprites.TurnToWall+idx, Player._flip)
         case else
             if Player.is_lookingdown and (Player.weapon = ItemIds.Handgun) then
-                if Player.is_shooting then
+                if Player.hasFlag(PlayerFlags.Shooting) then
                     SpritesLarry.putToScreenEx(px, py, 56+int(Player.uAni-12), Player._flip)
                 else
                     SpritesLarry.putToScreenEx(px, py, 55, Player._flip)
@@ -5850,7 +5858,7 @@ sub Player_Draw()
                 lx = px: ly = py
                 select case Player.weapon
                 case ItemIds.Fist
-                    if (Player.vy = 0) and Player.is_shooting then
+                    if (Player.vy = 0) and Player.hasFlag(PlayerFlags.Shooting) then
                         lx += iif(Player._flip = 0, 4, -4)
                     end if
                 end select
@@ -5858,7 +5866,7 @@ sub Player_Draw()
                     lx += iif(Player._flip = 0, -2, 2)
                 end if
                 if (Player.weapon = ItemIds.Fist) and (Player.state = PlayerStates.Jumping) then
-                    if Player.is_shooting then
+                    if Player.hasFlag(PlayerFlags.Shooting) then
                         SpritesLarry.putToScreenEx(lx, ly, iif(Player.vy > -0.5 and Player.vy < 0.5, FullBodySprites.FsJumpPunch0, FullBodySprites.FsJumpPunch1), Player._flip)
                     else
                         SpritesLarry.putToScreenEx(lx, ly, iif(Player.vy > -0.5 and Player.vy < 0.5, FullBodySprites.FsJump0, FullBodySprites.FsJump1), Player._flip)
@@ -5869,7 +5877,7 @@ sub Player_Draw()
                     SpritesLarry.putToScreenEx(lx, ly, lan, Player._flip)
                     SpritesLarry.putToScreenEx(px+offset, py, Player.upper.transformed, Player._flip)
                     if Player.weapon = ItemIds.Magnum then
-                        if Player.is_shooting then
+                        if Player.hasFlag(PlayerFlags.Shooting) then
                             SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaShootLeft0+(Player.upper.transformed-UpperSprites.MaShoot0), Player._flip)
                         else
                             SpritesLarry.putToScreenEx(px+iif(Player._flip=0,2,-2), py, UpperSprites.MaHoldLeft, Player._flip)
@@ -5996,7 +6004,7 @@ function Player_Fall() as integer
                 Player.y = FallContactPointY + 1
             end if
             Player.vy = 0
-            if Player.moved = 0 then
+            if Player.notFlag(PlayerFlags.moved) then
                 Player.vx = 0
             end if
             return 0
@@ -6010,7 +6018,7 @@ function Player_Fall() as integer
             Player.lAni = iif(Player.vy < -0.5, 48, 49)
         elseif Player.weapon = ItemIds.Handgun then
             Player.lAni = 67 '66
-            if Player.is_shooting = 0 then
+            if Player.notFlag(PlayerFlags.Shooting) then
                 Player.uAni = 68
             end if
         else
@@ -6065,7 +6073,7 @@ function Player_Fall() as integer
         end if
         Player.vy = 0
         Player.is_lookingdown = 0
-        if Player.moved = 0 then
+        if Player.notFlag(PlayerFlags.Moved) then
             Player.vx = 0
         end if
     end if
@@ -6100,7 +6108,7 @@ function Player_Move_Classic (dx as double, canFlip as integer = 1) as integer
         return 0
     end if
     
-    Player.moved = 1
+    Player.setFlag PlayerFlags.Moved
     
     if (Player.vx = 0) and (Player.state <> PlayerStates.Jumping) then
         Player.lower.initLoop(ClassicLower.run0, ClassicLower.run1, abs(dx/7.5)*3)
@@ -6154,7 +6162,7 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     dim box as BoxType
     
     success = 1
-    Player.moved = 1
+    Player.setFlag PlayerFlags.Moved
 
     if canFlip then
         Player_SetFlip(iif(dx > 0, 0, 1))
@@ -6431,6 +6439,8 @@ function Player_LookUp () as integer
     
     if (Player.state = PlayerStates.Jumping) or (Player.state = PlayerStates.EnteringElevator) then
         return 0
+    elseif Player.vx <> 0 then
+        Player.setFlag PlayerFlags.UpStairs
     else
         if Player.state <> PlayerStates.LookingUp then
             Player.actionStartTime = timer
@@ -6721,7 +6731,7 @@ sub Player_InitUpper (intervalStart as double=0.0)
     dim shooting as integer
     
     crouching = Player.hasFlag(PlayerFlags.Crouching)
-    shooting  = Player.is_shooting
+    shooting  = Player.hasFlag(PlayerFlags.Shooting)
     
     if CLASSICMODE then
         if shooting = 0 then
@@ -6863,7 +6873,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     
     mobtop = iif(mob.id=MobIds.Blobmine,7,0)
 
-    if Player.is_shooting then return 0
+    if Player.hasFlag(PlayerFlags.Shooting) then return 0
     
     timeSinceLastShot = (timer - timestamp)
     noammo  = (Player.weapon <> ItemIds.Fist) and (InvSlots(WeaponSlot).qty = 0)
@@ -6936,7 +6946,7 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     
     if noammo then return -1
     
-    Player.is_shooting = 1 '* must be set before call to Player_InitUpper
+    Player.setFlag(PlayerFlags.Shooting) '* must be set before call to Player_InitUpper
     Player_InitUpper
     
     damageMod = iif(Inventory(ItemIds.DamageMod) > 0, Inventory(ItemIds.DamageMod), 1)

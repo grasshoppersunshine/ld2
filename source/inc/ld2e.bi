@@ -31,7 +31,6 @@ type PlayerType
     landTime as double
     actionStartTime as double
     weapon as integer
-    is_shooting as integer
     is_visible as integer
     is_lookingdown as integer
     flags as integer
@@ -40,7 +39,6 @@ type PlayerType
     uAni as integer
     upper as IntervalType
     lower as IntervalType
-    moved as integer
     declare sub init()
     declare function hasFlag(flag as integer) as integer
     declare function notFlag(flag as integer) as integer

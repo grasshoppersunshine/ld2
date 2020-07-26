@@ -269,6 +269,7 @@ sub Element_Init(e as ElementType ptr, text as string = "", text_color as intege
     e->y = 0
     e->w = -1
     e->h = -1
+    e->disabled = 0
     e->padding_x = 0
     e->padding_y = 0
     e->border_size = 0

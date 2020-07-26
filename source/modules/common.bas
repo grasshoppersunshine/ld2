@@ -17,6 +17,9 @@ dim shared EventMouseRelY as integer
 dim shared EventMouseLB as integer
 dim shared EventMouseRB as integer
 dim shared EventMouseMB as integer
+dim shared EventNewMouseLB as integer
+dim shared EventNewMouseRB as integer
+dim shared EventNewMouseMB as integer
 dim shared CommonErrorMsg as string
 dim shared InputText as string
 dim shared InputTextCursor as integer
@@ -268,6 +271,9 @@ sub PullEvents()
     static oldMouseWheelY as integer
     static text as string
     static cursor as integer
+    static mouseupLB as integer
+    static mouseupRB as integer
+    static mouseupMB as integer
     dim event as SDL_Event
     dim code as integer
     dim x as integer
@@ -308,6 +314,14 @@ sub PullEvents()
     EventMouseWheelY   = oldMouseWheelY - newMouseWheelY
     oldMouseWheelY     = newMouseWheelY
     
+    EventNewMouseLB = iif(EventMouseLB and mouseupLB, 1, 0)
+    EventNewMouseRB = iif(EventMouseRB and mouseupRB, 1, 0)
+    EventNewMouseMB = iif(EventMouseMB and mouseupMB, 1, 0)
+    
+    mouseupLB = (EventMouseLB = 0)
+    mouseupRB = (EventMouseRB = 0)
+    mouseupMB = (EventMouseMB = 0)
+    
     LD2_Sound_Update
     
     if ReceivingTextInput then
@@ -336,61 +350,45 @@ sub PullEvents()
 end sub
 
 function mouseX() as integer
-    
     return EventMouseX
-    
 end function
-
 function mouseY() as integer
-    
     return EventMouseY
-    
 end function
 
 function mouseRelX() as integer
-    
     return EventMouseRelX
-    
 end function
-
 function mouseRelY() as integer
-    
     return EventMouseRelY
-    
 end function
 
 function mouseLB() as integer
-    
     return EventMouseLB
-    
 end function
-
 function mouseRB() as integer
-    
     return EventMouseRB
-    
+end function
+function mouseMB() as integer
+    return EventMouseMB
 end function
 
-function mouseMB() as integer
-    
-    return EventMouseMB
-    
+function newMouseLB() as integer
+    return EventNewMouseLB
+end function
+function newMouseRB() as integer
+    return EventNewMouseRB
+end function
+function newMouseMB() as integer
+    return EventNewMouseMB
 end function
 
 function mouseWheelY() as integer
-    
     return EventMouseWheelY
-    
 end function
-
 function mouseWheelUp() as integer
-    
     return (EventMouseWheelY < 0)
-    
 end function
-
 function mouseWheelDown() as integer
-    
     return (EventMouseWheelY > 0)
-    
 end function

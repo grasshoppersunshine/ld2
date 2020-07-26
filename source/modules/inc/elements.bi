@@ -6,6 +6,7 @@ type ElementType
     y as integer
     w as integer
     h as integer
+    disabled as integer
     padding_x as integer
     padding_y as integer
     border_size as integer

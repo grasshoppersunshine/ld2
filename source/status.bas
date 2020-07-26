@@ -46,6 +46,8 @@ dim shared ROOMS_FILE as string
 
 dim shared DEBUGMODE as integer
 dim shared CLASSICMODE as integer
+dim shared ENHANCEDMODE as integer
+dim shared TESTMODE as integer
 
 const DATA_DIR = "data/"
 const STATUS_DIALOG_ALPHA = 0.75
@@ -2741,13 +2743,15 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     
     dim dialog as ElementType
     dim title as ElementType
-    dim options(2) as ElementType
+    dim labels(2) as ElementType
+    dim options(4) as ElementType
+    dim backgrounds(4) as integer
     dim description as ElementType
     dim thumbnail as ElementType
     
-    dim selections(2) as integer
+    dim selections(4) as integer
     dim selection as integer
-    dim escapeSelection as integer
+    dim refresh as integer
     
     dim res_x as integer
     dim res_y as integer
@@ -2759,11 +2763,25 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     fontW = Elements_GetFontWidthWithSpacing()
     fontH = Elements_GetFontHeightWithSpacing()
     
+    dim radioOn as string
+    dim radioOff as string
+    dim checked as string
+    dim unchecked as string
+    radioOn   = "[*] "
+    radioOff  = "[_] "
+    checked   = "[*] "
+    unchecked = "[_] "
+    
     Element_Init @dialog
     Element_Init @title, message, 31
-    Element_Init @options(0), "Remastered (2020)", 31', ElementFlags.CenterX
-    Element_Init @options(1), "Classic    (2002)", 31', ElementFlags.CenterX
-    Element_Init @options(2), "Classic Enhanced ", 31', ElementFlags.CenterX
+    Element_Init @labels(0), "Select Version", 31
+    Element_Init @labels(1), "Launch Options", 31
+    Element_Init @labels(2), "v1.1.193", 31
+    Element_Init @options(0), radioOn  +"Remastered", 31
+    Element_Init @options(1), radioOff +"Classic"   , 31
+    Element_Init @options(2), radioOff +"Enhanced"  , 31
+    Element_Init @options(3), unchecked+"Test Mode" , 31
+    Element_Init @options(4), "Play Game", 31, ElementFlags.CenterText
     Element_Init @description
     
     dialog.background = STATUS_DIALOG_COLOR
@@ -2771,6 +2789,10 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     dialog.border_size = 1
     dialog.border_color = 15
     title.text_height = 2.0
+    
+    labels(0).parent = @dialog
+    labels(1).parent = @dialog
+    labels(2).parent = @dialog
     
     halfX = int(SCREEN_W*0.5)
     halfY = int(SCREEN_H*0.5)
@@ -2781,7 +2803,7 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     dim modh as double: modh = SCREEN_H/SCREEN_W
     
     if playOpenSound then
-        LD2_PlaySound Sounds.uiMenu
+        LD2_PlaySound Sounds.uiMix
     end if
 	
 	LD2_SaveBuffer 2
@@ -2810,66 +2832,112 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     dialog.h = pixels * modh * 2
     title.x = fontW
     title.y = fontH
-    for n = 0 to 2
+    for n = 0 to ubound(options)
         options(n).x = fontW
         options(n).padding_x = fontW
         options(n).padding_y = 7
-        options(n).y  = top + n*int(fontH*3.5) - options(n).padding_y
+        options(n).y = fontH*2.5 + n*int(fontH*3.5)
         options(n).text_height = 1
         w = Element_GetTextWidth(@options(n)) 
         if w > maxw then maxw = w
+        backgrounds(n) = OPTION_ACTIVE_BG
     next n
-    for n = 0 to 2
+    for n = 0 to ubound(options)
         options(n).w = maxw
     next n
+    options(3).y += fontH*2.0
+    backgrounds(4) = 54
+    
+    labels(0).x = fontW
+    labels(0).y = fontH
+    labels(1).x = fontW
+    labels(1).y = options(3).y-fontH*1.5
+    labels(2).x = dialog.w-Element_GetTextWidth(@labels(2))-fontW
+    labels(2).y = fontH
     
     description.parent = @dialog
     description.padding_x = fontW
-    description.x = maxw + options(0).x + options(0).padding_x*2
-    description.y = options(0).y
+    description.x = maxw+options(0).x+options(0).padding_x*2+fontW*1.5
+    description.y = options(0).y+fontH
     description.w = dialog.w - description.x - description.padding_x*2
     description.text_height = 1.8
     
     Elements_Clear
     Elements_Add @dialog
     Elements_Add @title, @dialog
-    for n = 0 to 2
+    for n = 0 to ubound(options)
+        if options(n).disabled then continue for
         Elements_Add @options(n), @dialog
     next n
+    Elements_Add @labels(0)
+    Elements_Add @labels(1)
+    Elements_Add @labels(2)
     
     selections(0) = OptionIds.Remastered
     selections(1) = OptionIds.Classic
     selections(2) = OptionIds.Enhanced
-    selection = 0: escapeSelection = 0
+    selections(3) = OptionIds.ToggleTestMode
+    selections(4) = OptionIds.PlayGame
+    selection = 0
     
-    dim descs(2) as string
-    descs(0) = "The new version of the game. Play this if you're not sure what to pick."
-    descs(1) = "The original game from 2002. Intended to be as close to the original as possible."
-    descs(2) = "This original game but with some extra sounds and tweaks added."
+    dim descs(3) as string
+    descs(0) = "Remastered (2020)\\The new version of the game. The feature presentation."
+    descs(1) = "Classic (2002)\\Intended to be as close to the original as possible."
+    descs(2) = "Classic (Enhanced)\\The original game with some extra sounds and features."
+    descs(3) = "Test Mode\\Skip title and intro sequences. Cheats enabled."
     Elements_Add @description
     
     Element_Init @thumbnail
     thumbnail.parent = @dialog
     thumbnail.padding_x = description.padding_x
     thumbnail.w = 160 'description.w
-    thumbnail.h = 95'description.w*0.5625
+    thumbnail.h = 95 'description.w*0.5625
     thumbnail.x = description.x
     thumbnail.y = dialog.h-thumbnail.h-fontH*1.5
     Elements_Add @thumbnail
     
-    description.y -= fontH*2.5
+    options(4).parent = @dialog
+    options(4).background = backgrounds(4)
+    options(4).w = maxw
+    options(4).padding_x = fontW
+    options(4).padding_y = 11
+    options(4).x = fontW
+    options(4).y = thumbnail.y+thumbnail.h-options(4).padding_y*2-fontH+1
+    options(4).text_height = 1
     
+    'description.y -= fontH*2.5
     
+    title.x = description.x+description.padding_x
+    
+    refresh = 1
     do
-        for n = 0 to 2
+        for n = 0 to ubound(options)
+            if options(n).disabled then continue for
             if selection = n then
-                options(n).background = OPTION_ACTIVE_BG
+                options(n).background = backgrounds(n)+2
                 options(n).text_color = OPTION_ACTIVE_COLOR
             else
-                options(n).background = OPTION_INACTIVE_BG
-                options(n).text_color = OPTION_INACTIVE_COLOR
+                options(n).background = backgrounds(n)
+                options(n).text_color = OPTION_ACTIVE_COLOR
             end if
         next n
+        if refresh then
+            refresh = 0
+            if selection > -1 and selection <= ubound(descs) then
+                description.text = descs(selection)
+                if selection <= ubound(sprites) then
+                    thumbnail.sprite_set_id = 0
+                    thumbnail.sprite = 0
+                    SHARED_SPRITES = @sprites(selection)
+                end if
+            else
+                description.text = "Selected\\"
+                description.text += iif(CLASSICMODE,iif(ENHANCEDMODE,"Classic (Enhanced)","Classic (2002)"),"Remastered (2020)")
+                description.text += "\Test Mode "+iif(TESTMODE,"On","Off")
+                SHARED_SPRITES = @sprites(CLASSICMODE)
+            end if
+            if selection > -1 then LD2_PlaySound Sounds.uiArrows
+        end if
         LD2_CopyBuffer 2, 1
         Elements_Render
 		LD2_RefreshScreen
@@ -2879,44 +2947,64 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
         if MouseMoved() then
             mx = int(mouseX()*(SCREEN_W/res_x))
             my = int(mouseY()*(SCREEN_H/res_Y))
-            for n = 0 to 2
+            for n = 0 to ubound(options)
+                if options(n).disabled then continue for
                 x = options(n).render_visible_x
                 y = options(n).render_visible_y
                 if  (mx >= x) and (mx <= x+options(n).render_outer_w) _
                 and (my >= y) and (my <= y+options(n).render_outer_h) then
                     if selection <> n then
                         selection = n
-                        LD2_PlaySound Sounds.uiArrows
+                        refresh = 1
                     end if
                     exit for
                 end if
             next n
-            if n = 3 then
-                selection = -1
-                description.text = ""
-                thumbnail.sprite_set_id = -1
-            else
-                description.text = descs(n)
-                thumbnail.sprite_set_id = 0
-                thumbnail.sprite = 0
-                SHARED_SPRITES = @sprites(n)
+            if n > ubound(options) then
+                if selection <> -1 then
+                    selection = -1
+                    refresh = 1
+                end if
             end if
         end if
-        if mouseLB() and selection <> -1 then
-            LD2_PlaySound Sounds.uiSelect
-            exit do
-        end if
-        
-        if keypress(KEY_ENTER) then
-            LD2_PlaySound Sounds.uiSelect
-            exit do
+        if (newMouseLB() or keypress(KEY_ENTER)) and selection <> -1 then
+            select case selections(selection)
+            case OptionIds.Remastered
+                LD2_PlaySound iif(CLASSICMODE or ENHANCEDMODE,Sounds.uiToggle,Sounds.dialog)
+                CLASSICMODE  = 0
+                ENHANCEDMODE = 0
+                options(0).text = iif(CLASSICMODE,radioOff,radioOn)+"Remastered"
+                options(1).text = iif(CLASSICMODE and (ENHANCEDMODE=0),radioOn,radioOff)+"Classic"
+                options(2).text = iif(ENHANCEDMODE,radioOn,radioOff)+"Enhanced"
+            case OptionIds.Classic
+                LD2_PlaySound iif((CLASSICMODE=0) or ENHANCEDMODE,Sounds.uiToggle,Sounds.dialog)
+                CLASSICMODE  = 1
+                ENHANCEDMODE = 0
+                options(0).text = iif(CLASSICMODE,radioOff,radioOn)+"Remastered"
+                options(1).text = iif(CLASSICMODE and (ENHANCEDMODE=0),radioOn,radioOff)+"Classic"
+                options(2).text = iif(ENHANCEDMODE,radioOn,radioOff)+"Enhanced"
+            case OptionIds.Enhanced
+                LD2_PlaySound iif((CLASSICMODE=0) or (ENHANCEDMODE=0),Sounds.uiToggle,Sounds.dialog)
+                CLASSICMODE  = 1
+                ENHANCEDMODE = 1
+                options(0).text = iif(CLASSICMODE,radioOff,radioOn)+"Remastered"
+                options(1).text = iif(CLASSICMODE and (ENHANCEDMODE=0),radioOn,radioOff)+"Classic"
+                options(2).text = iif(ENHANCEDMODE,radioOn,radioOff)+"Enhanced"
+            case OptionIds.ToggleTestMode
+                TESTMODE = iif(TESTMODE=0,1,0)
+                options(selection).text = iif(TESTMODE,checked,unchecked)+"Test Mode" 
+                LD2_PlaySound Sounds.uiToggle
+            case else
+                LD2_PlaySound Sounds.uiSelect
+                exit do
+            end select
         end if
         if keypress(KEY_DOWN) then
             selection += 1
             if selection > ubound(options) then
                 selection = ubound(options): LD2_PlaySound Sounds.uiInvalid
             else
-                LD2_PlaySound Sounds.uiArrows
+                refresh = 1
             end if
         end if
         if keypress(KEY_UP) then
@@ -2924,11 +3012,11 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
             if selection < 0 then
                 selection = 0: LD2_PlaySound Sounds.uiInvalid
             else
-                LD2_PlaySound Sounds.uiArrows
+                refresh = 1
             end if
         end if
         if keypress(KEY_ESCAPE) then
-            selection = escapeSelection
+            Game_setFlag GameFlags.ExitGame
             LD2_PlaySound Sounds.uiCancel
             exit do
         end if
@@ -2950,6 +3038,9 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
             PullEvents
             e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
         loop while pixels > 1
+        if CLASSICMODE then Game_setFlag GameFlags.ClassicMode
+        if ENHANCEDMODE then Game_setFlag GameFlags.EnhancedMode
+        if TESTMODE then Game_setFlag GameFlags.TestMode
     end if
     
     LD2_CopyBuffer 2, 1

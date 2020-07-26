@@ -423,10 +423,13 @@ enum MobFlags
 end enum
 
 enum PlayerFlags
-    Blocked   = &h01
-    Falling   = &h02
-    Crouching = &h04
-    StillCrouching = &h08
+    Blocked     = &h01
+    Falling     = &h02
+    Crouching   = &h04
+    Uncrouching = &h08
+    UpStairs    = &h10
+    Moved       = &h20
+    Shooting    = &h40
 end enum
 
 enum MobItems
@@ -545,6 +548,7 @@ enum Sounds
     uiCancel
     uiInvalid
     uiMix
+    uiToggle
     useExtraLife
     useMedikit
     '// actions
@@ -761,12 +765,14 @@ end enum
 enum OptionIds
     No = 0
     Yes = 1
-    BackToGame = 2
-    HowToPlay = 3
-    ExitGame = 4
-    Remastered = 5
-    Classic = 6
-    Enhanced = 7
+    BackToGame
+    HowToPlay
+    ExitGame
+    Remastered
+    Classic
+    Enhanced
+    ToggleTestMode
+    PlayGame
 end enum
 
 enum ChatBoxes

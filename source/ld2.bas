@@ -772,12 +772,13 @@ sub LoadUiSounds
     AddSound Sounds.uiInvalid, "ui-invalid.wav"
     AddSound Sounds.uiCancel , "ui-cancel.wav"
     AddSound Sounds.uiMix    , "ui-mix.wav"
+    AddSound Sounds.uiToggle , "ui-toggle.wav"
+    
+    AddSound Sounds.dialog , "scenechar.wav"
     
 end sub
 
 sub LoadSounds
-    
-    AddSound Sounds.dialog , "scenechar.wav"
     
     AddSound Sounds.titleSelect, "use-medikit.wav"
     
@@ -2708,7 +2709,7 @@ END SUB
 
 sub Launch
     
-    select case STATUS_DialogLaunch("Larry the Dinosaur II\\Select Version")
+    select case STATUS_DialogLaunch("Larry the Dinosaur II")
     case OptionIds.Remastered
     case OptionIds.Classic
         Game_setFlag GameFlags.ClassicMode
@@ -2744,12 +2745,18 @@ sub Start
     LoadUiSounds
     Launch
     
-    if QuitEvent() then
+    if Game_hasFlag(GameFlags.ExitGame) or QuitEvent() then
         Game_shutdown
         end
     end if
     
     Game_LoadAssets
+    
+    if STATUS_InitInventory() then
+        STATUS_DialogOk "Error intializing inventory!"
+        Game_Shutdown
+        end
+    end if
     
     TESTMODE     = iif(Game_hasFlag(GameFlags.TestMode)    , 1, 0)
     DEBUGMODE    = iif(Game_hasFlag(GameFlags.DebugMode)   , 1, 0)
