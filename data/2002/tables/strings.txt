@@ -1,22 +1,1309 @@
-INTRO
-    
-    Nearing The End of The Cretaceous Period...
-    Dinosaurs were well evolved and highly civilized.
-    Then, Aliens came to conquer the world.
-    They were stopped.
-    All thanks to two dinosaurs, Larry and Steve.
-    Delta Code Presents
-    Larry The Dinosaur II
-    ...
-    One Year Later
-    
-CREDITS
-    
-    Programming :  Joe King
-    Graphics    :  Joe King
-    Story       :  Joe King
-    Level Design:  Joe King
-    Sound       :  Various Resources
-    Music       :  Joe King & Various Resources
-    Testing     :  Joe King
-    
+blLD2E    
+O"RP
+O"RP
+O"RP
+O"RP
+O"RP
+O"RP
+O"RP
+O"RP
+O"RP
+RPRP
+O"RP
+RPRP
+O"RP
+O"RP
+O"RP
+O"RP
+O"RP
+RPRP
+O"RP
+RPRP
+O"RP
+O"RP
+O"RP
+O"RP
+O"RP
+blLD2     
+blLD2STAT 
+O";F
+blTITLE   
+blDS4QBPP 
+8&~	
+O"#F
+O"#F
+O"#F
+J#XR
+hZ_R
+ 84t
+QRrK
+%X^_QR
+ uDPQR
+u)SWP
+>J t
+>J%u
+>J$t
+IVXZY
+>J$u
+&>Jt!
+tTGG
+-NudYAt
+u&Bu
+MM|/
+PMT/
+XZ[RP
+d$PR
+t9It
+Wt,Q
+.$Y_
+<=t	< t
+I< u
+!rr[
+< tU<=tQ
+PQRVW3
+J_^ZYX]
+G	@u$3
+&M[S
+&MYr
+^]YZ[
+[[RQ
+M:X]
+u$QVW
+_^Yu
+u7YS
+QVWQP+
+8Qr!^
+]XZY
+&Mr"
+N:6 Nv
+u!JH:
+_[OOu
+$NV0V
+<&t 
+Q<#u
+)<!u
+!*"3"
+ =NOEMS
+=.5u
+=SRu
+}<=POu
+=SDu
+=DCu
+=SCu
+=BRu
+=BTu	
+=FLu
+=IBu
+=SAu
+=EPu
+s ,0<	w
+!PSQRVW
+_^ZY[X
+PSQRVW
+|Q_^ZY[X
+g[g[g[g[g[g[g[g[g[g[g[g[g[g[g[KYBD
+SCRN
+CONS
+COM1
+COM2
+LPT1
+LPT2
+LPT3
+PIPE
+G-@:
+w"<.u
+O<*t
+{7< r
+7QVW
+&?&C&
+[>';'
+x@^]
+Y[RP
+SQRW
+_ZY[
+<	v*@
+^_].
+bVW2
+SQRV
+^ZY[
+n-u-|-
+0N t
+Y[Xr
+I<Xt
+tL<Eu
+*<Fu(
+.N|/
+Ct.Ct!Ct
+62I^
+>3z3
+zL{x{
+|0|V|
+`3z3
+zL{x{
+|0|V|
+Q3z3
+zM40{L{x{
+|-|T|
+Q3z3
+zM4;{L{x{
+7u7!}
+X3z3
+zL{x{
+|0|V|
+X3z3
+zM4;{L{x{
+7u7!}
+J	t-
+6}O,
+qOUVW
+>tO+u
+_^]X
+_^]X
+{Ow3
+|Ow'
+{Or3PQ
+bLYX
+;6~Ls
+u	:.|Lv
+;>~Lu
+;6~Lt
+VEt%MR
+;>~Lu
+.bLW
+6jLV
+&}LZ
+.bL_WV
+mL6"
+4IX6
+>5IR
+<)=k=
+<)=k=
+zL{x{
+|0|V|
+<!=k=
+>7>R>a>
+   $$$(((---222888???
+'?--?1-?6-?:-??-??-:?-6?-1?--?1-?6-?:-??-:?-6?-1?--?--?1-?6-?:-??-:?-6?-1?
+qOUVW
+>tO<u
+6pLE
+6pLE
+6cL3
+;>~Lt
+6cL3
+>dLS3
+6jL]
+cOT<
+eOy<
+<@H@Q@
+_^]X
+pA|A
+OLuX
+IVuP
+PAt$
+OLu"
+=VGt
+=EGu
+>5NA
+UOKA
+=N B
+t'PRS
+PI[ZXr
+OO:C
+QO^C
+OZY:
+Ow=:6
+Ow7R
+NIRI
+SQRVW
+_^ZY[
+JI9\
+PSQRW
+_ZY[X
+4GGI
+PSQRV
+lO^ZY[X
+SQRVW
+_^ZY[
+6NI3
+PVCt 
+_ZY^X
+t"@t-
+t	At"
+PSQVW
+_^Y[X
+t+VS
+PQVW
+_^YX
+t1QV
+&;6\Ir#&;6`Iw
+;>hIt$
+>hI;>fIr
+>`I+
+<_^X
+\Ir	;
+\Ir	;
+>^I+
+>hI;>dIt
+>fI_^X
+>fIG3
+PSQVW
+>fI_^Y[X
+PSQW3
+_Y[X
+PSQRW
+_ZY[X
+4NPW
+>hI;>dIt
+PSQVW
+jI8P
+_^Y[X
+jI_ZY
+6dI+
+6dIX
+6fI;6dIt
+6dIZ_Y
+RSV&
+6dI&;6hIv
+;6hIr
+PSQRW
+_ZY[X
+PSQR
+ZY[X
+WQSP
+X[Y_]
+[lVTY
+V@YLYTY
+>9Zt
+ZN u
+ZN u	
+<!s3
+t,P,
+Y#YPSQRP
+ZY[X
+:6 N
+$!< u
+QVWQP+
+.rIU
+ZN@t
+VP, 
+tL<	tE<
+SQRVW
+_^ZY[
+5NR6
+'SQPR
+>5NP
+2Nt"
+2NY[
+>5NA
+PSQR3
+ZY[X
+PSQR
+ZY[X
+~J&:
+:&rOu
+:.tOu
+ZXPQ
+:.tOt
+ZN@t
+PSQR
+OZY[X
+J$0<0u
+RQSP
+X[YZ<
+QRVP
+X^ZY
+B^Y[
+PSQR
+ZY[X
+PSQR<
+!ZY[X
+SQR3
+JZY[
+!ZY[
+OYrF<
+&rO:
+:>tOu
+>5NUVW
+ZN&u)
+PSQRV
+^ZY[X
+In	Um
+3nPSQR
+ZY[X
+PQVW
+_^YX
+QRVW
+K_^ZY
+KKC;
+J<0r
+PSQR
+ZY[X
+6 NJ
+:& Nu
+SQVW
+_^Y[
+F[F[F[^Q
+qF[F[
+qF[F[
+<Bu>
+<Iu7
+<Nu0
+g[.[4[
+[XSP
+PSQR3
+ZY[X
+SQW3
+WVRQS
+[YZ^_
+VSQR
+ZY[^
+OPSVBB
+cL_X
+6bLS
+.bLs
+dL]Z
+6bLS
+&bLs
+dL]Z
+.bLP
+"LXu
+&bLs
+.bLP
+"LXu
+.bLs
+;6~Ls
+u	:.|Lv
+w;>~Lu
+;6~Lt
+;>~Lu
+.bLW
+6jLV
+.bL_WV
+dL2/"
+dL&2/"
+& %G
+&2%"
+&0%G
+&0%G
+&25"
+;>~LtY
+;>~Lt%
+:.|Lw
+:.|Lv
+:.}Ls
+.bLU3
+tg;>
+:.}Lt[w
+:.}Lr
+.bLZ
+OEKu
+.BLKu
+6nL+
+.BLKu
+.BLKu
+7NLO
+SQRV
+`LP3
+^ZY[
+PSQR
+PLuK
+RL9G
+ZY[u
+<LEO>PS3
+6dLSP2
+tLZ3
+J#u&
+>tO+u
+0UVW
+qOUVW
+>tO+t
+>tO2u
+89:;<=>?
+{OA;
+OYr'
+OY[r
+ ;!<"=#>$?%@&A'B(C)D*
+B0C.D E
+F!G"H#I
+J$K%L&M2N1O
+_^]u
+mUVW
+SQVr
+EuY[;
+RNc"
+nOyU
+-M/(
+`JTN
+^JkN
+FK,K
+9>0M
+J#_^
+J#_^
+6`QHt
+6`Q3
+Q@Ky
+WVS3
+O";V
+O";V
+toN<Dt@<Et3
+t_<+t
+<-uWN
+NN<+t
++>~N
+NAu"
+t	<+t
+;6tNs#
+Au&X
+AkU'9
+?S;uD
+zc%C1
+7>*P
+?rO=@
+MSEM87
+gfw...GW:
+NO87=
+VSQRW
+_ZY[^
+_ZY[^
+WVQS
+[Y^_
+eBPU
+;$m[ 
+ow{8
+vp>[
+WVRQS
+WVRQS
+[YZ^_
+~/UR
+URQ2
+tSr)
+URVW
+Y[_^
+I|at+
+X@PR
+ZX@PR
+X@PR
+%ZGBR
+X@PR
+<<FMSG>>
+Syntax error
+RETURN without GOSUB
+Out of DATA
+Illegal function call
+Overflow
+Out of memory
+Subscript out of range
+Duplicate definition
+Division by zero
+Type mismatch
+Out of string space
+String formula too complex
+No RESUME
+RESUME without error
+Device timeout
+Device fault
+Out of paper
+CASE ELSE expected
+Variable required
+FIELD overflow
+Internal error
+Bad file name or number
+File not found
+Bad file mode
+File already open
+FIELD statement active
+Device I/O error
+File already exists
+Bad record length
+Disk full
+Input past end of file
+Bad record number
+Bad file name
+Too many files
+Device unavailable
+Communication-buffer overflow
+Permission denied
+Disk not ready
+Disk-media error
+Advanced feature unavailable
+Rename across disks
+Path/File access error
+Path not found
+Unprintable error
+Redo from start
+Bytes free
+Random-number seed (-32768 to 32767)
+Hit any key to return to system
+ in 
+ of 
+line 
+module 
+ at address 
+*Break*
+String space corrupt
+Error in EXE file
+STOP
+Out of stack space
+No line number in 
+Requires DOS 2.10 or later
+Error during run-time initialization
+Out of memory
+DOS memory-arena error
+Far heap corrupt
+R6000
+- stack overflow
+R6002
+- floating point not loaded
+R6003
+- integer divide by 0
+R6008
+- not enough space for arguments
+R6009
+- not enough space for environment
+R6012
+- illegal near pointer use
+R6013
+- illegal far pointer use
+R6014
+- control-BREAK encountered
+R6015
+- unexpected interrupt
+run-time error 
+	gfx\gradient.pal
+	gfx\font1.put
+	Please run SETUP
+	Loading...Please Wait...
+sfx/creepy.mp3
+sfx/intro.mp3
+sfx/ending.mod
+sfx/boss.mp3
+sfx/intro.mod
+sfx/uhoh.mp3
+sfx/shotgun.mp3
+sfx/mgun.mp3
+sfx/pistol.mp3
+sfx/deagle.mp3
+sfx/blood1.mp3
+sfx/blood2.mp3
+sfx/doordown.mp3
+sfx/doorup.mp3
+sfx/punch.mp3
+sfx/equip.mp3
+sfx/pickup.mp3
+sfx/laugh.mp3
+gfx\warning.bmp
+gfx\logo.bmp
+gfx\title.bmp
+gfx\ld2light.put
+gfx\ld2tiles.put
+gfx\enemies.put
+gfx\larry2.put
+gfx\ld2guts.put
+gfx\ld2scene.put
+gfx\objects.put
+gfx\boss1.put
+gfx\back1.bsv
+bth.ld2
+rooms\
+[LD2L-V0.45]
+ERROR: INVALID FILE
+Game Over
+Lives Left:
+7th.LD2
+I@$_
+HEALTH:
+AMMO  :
+AMMO  : INF
+LIVES:
+Quitting...
+E91D00E93C
+00001E31C08ED8BE24000E07BF1400FCA5A58CC38EC0BF2400B85600FAAB<
+89D8ABFB1FCB1E31C08EC0BF2400BE14000E1FFCFAA5A5FB1FCBFB9C5053<
+51521E560657E460B401A8807404B400247FD0E088C3B700B0002E031E12<
+002E8E1E100086E08907E4610C82E661247FE661B020E6205F075E1F5A59
+5B589DCF
+14th.ld2
+Hmmm...
+I better find steve before I leave...
+Larry Heads Back To The Weapons Locker
+7th.LD2
+Enter in the 4-digit Code:
+ : Access Granted.
+ : Invalid Code!!
+Well Steve, that was a good game of chess.
+Only because you won.
+Woudln't think so if I won.
+Are you jealous Steve?
+Uh...
+No...infact I think your the one who's jealous.
+But I'm the guy who won.-
+Your jealous because you didn't lose like me.
+Alright...
+That's enough from you.
+Yeah, I guess so.
+Well, I gotta get going.
+Smell ya later.
+Yep...
+Hey, you got a quarter?
+No, but...%
+If you kick it, you get one for free.
+Well, I couldn't agree more.
+Steve Drinks The Cola!
+1 Minute Later
+Larry...
+I don't feel so good.
+There's something in the cola...
+ow...
+Steve!
+I gotta get help!
+The Journey Begins...
+Again!!
+Hey!
+What?
+You a doctor?
+Why yes....
+I use this mop to suck diseases out of people. 
+This is NO time to be sarcastic!-
+My buddy got sick from something in the cola.
+He needs help./
+Well, I was only being sarcastic about the mop.
+I am a doctor.
+Seriously?
+Well...
+I used to be one.
+Good enough.
+He needs help fast.
+Come on!
+They Rush To Steve!
+So...
+Something in the cola eh?
+Apparently.
+Ok, let's see what I can do with him.
+come on!
+hurry up and open elevator!
+barney!
+Why hello there.
+thanks man...
+I owe you
+Actually, you do...
+twenty bucks from losing that game of pool...
+...last night.
+Oh yeah...
+I was gonna get that to you...	
+...but...
+Just forget about it.
+if we get out of here alive...
+then you owe me twenty.
+Are there more?
+Oh yeah.
+The building's full of them.
+Why?
+I'll explain later.
+We gotta get to the weapons locker.
+come on.
+7th.ld2
+Here we are...
+the weapons locker...
+Oh, and here, take this.
+That's a blue access card.
+come on Larry...
+we gotta get you a weapon.
+wow!
+I feel like I'm in The Matrix.
+Ok Larry, listen up.../
+This floor is where all the weapons are stored.
+Grab whatever weapons you feel like.
+Make sure you pack ammo too.
+Be careful though...!
+You can only pack so much ammo...
+so don't go trigger happy and lose all of it.
+Ok, I gotcha.
+Ok...
+Now here's the problem...
+All the phones are dead.-
+Something's disconnected the main phone line.
+So we can't call for help.
+darn!
+We can't access the Lobby to get out of here...
+Because the access level for that floor has...
+been set to code-red.
+And the maximum access I have is code-blue.
+I just gave you an extra code-blue card.-
+That'll give you access to doors and rooms...
+that require blue acess and anything lower...
+which the only thing lower is green..."
+and everybody has access to green.
+Cool!
+meanwhile, this weapons locker dosen't have much.
+The room behind me has alot more...
+but...!
+it requires code-yellow access...
+We need to split up and see if we can find...
+a code-yellow access card.
+Oh, and here's something else.
+A walky-talky...
+That's for us to keep in touch.
+Well, duh.
+Ok Larry...
+Let's move out.
+20th.ld2
+Woah...
+Where I am?
+Your alive!
+Yep.
+What do you remember?
+uh...
+I was in a dark room...
+and?
+I was going to do something...
+then something hit my head...
+and I woke up here.
+Strange...*
+I woke up here too after I drank the cola.
+Do you know about the aliens?
+What?!#
+The buildings been invaded by them.
+Not more aliens!
+I'm afraid so.
+but where are we?
+I don't know.
+I don't recognize this part of the building...
+if we are in the building.
+hmm...
+I still have my walky-talky.
+Barney...come in...
+are you there? over...	
+hehehe...
+huh?
+this building's mine now.
+what?!
+it's too bad for you, larry./
+I was thinking of letting you in on the deal...
+but I knew you would be too stubborn.
+ what deal?0
+ The aliens have technology far superior to us....
+H it's only a matter of time before the earth... 
+z is taken over and ruled by then.-
+ so they contacted us for helping them make...
+ that happen faster.
+ Barney! You trader!
+!I told you I would tell you what was going on.+
+2!What did you do to help the aliens, barney!
+b!Me and some friends built a portal for them....
+!A portal that directly leads from our world...#
+!to theirs, and their world to ours.
+!Your mad!
+!Mad!
+"I'll tell you what's mad...
+$"Mad is believing that we can stop these...)
+R"high-tech aliens from invaded our planet.
+"Our planet?!
+"You've betrayed this planet.
+"I saved it is what.
+"Now, since I've got you trapped in there...
+"there's no one that can stop me now.
+ #What do we do?(
+2#First, we should find a way out of here.
+^#You can't.
+l#what?
+v#I've searched everywhere...
+#There's no way out...
+#Hmm...
+#The vent's open.&
+#Larry and Steve Crawl through the vent
+#Steve.+
+$I thought you said you looked everywhere...
+2$I thought I did...
+H$Whatever...
+X$Room 7 is the weapon's locker.+
+z$Here's a copy of a code-yellow access card.
+$And that'll give you access to doors...
+$with yellow, green, and blue trims.
+$Oh...
+%Okay...
+%Here's something I found...
+4%Look's like it's half of a card.	
+X%Thanks...
+f%We've got to find the code-red access card...
+%before barney does.
+%He needs it for something...0
+%And I'm guessing he wants it for the room above.	
+&Let's go.
+&It sure is nice to have some fresh air again.
+D&Poor Steve...
+V&...sigh... 
+d&...he's in a better place now...$
+&...probably with his friend, matt...
+&many stories ended tonight...
+&...but mine lives on...
+&THE END
+'Huh!
+'Hello, Larry...
+"'Larry!
+,'It's a trap!
+<'Thanks, steve...
+P'but it's kinda late for that.
+r'I see you managed to escape and find a red card.#
+'Glad to see that you found one too.
+'Steve also found one.
+'Plus 1 for me.
+'Talk about the timing.
+(It's a shame I was here first.%
+6(Now I can finally reopen this portal.
+`(Reopen?
+l(Well, larry...,
+~(That's how they got here in the first place.
+(Now...
+(It's time to die!
+(Barney! That was uncalled for!+
+(It dosen't matter if it was uncalled for...
+$)You two looked too much alike...
+H)I couldn't take it anymore!
+h)That's it barney!
+~)I'm gonna save you, Larry...-
+)Your going to live to see this alien world...
+)that you've been fighting for so long.
+)Why didn't you kill me before?
+*I kinda locked myself out...&
+<*So I needed help finding access cards.	
+f*Anyway...
+t*Open the portal to the jungle area.
+*Are you mad?!
+*You just can't open up a portal to the middle...
+*of the jungle!
+*Oh shutup!	
++Geez man!
++Stop killing!
+"+You are mad!
+2+You shutup!
+B+Or I'll kill you too!
+\+Let's open this portal...
+z+The Portal Opens...
++Barney, come in.
++Yea, Larry, I'm here, over.
++I've found a code-yellow access card.
++Great!+
++Okay, meet me in the weapon's locker, over.
+*,I copy that.
+:,Huh?
+B,Where's steve?
+T,Woah!
+^,Some type of crystalized alien goo is in the way.
+,I'll need to find some type of chemical to...
+,break down this goo.
+,Hey barney.
+,Glad to see your still alive.
+-Why ofcourse...
+$-I'm always alive.
+:-Atleast this time it's for a good thing.!
+f-Like the code-yellow access card.
+-Let me have it so I can make a copy.
+-Wait a minute.*
+-How do I know if you'll use this for good?
+-or evil?
+.Give me the card, Larry.
+.Mmmm...
+(.Okay.
+2.Now copying...
+D.Hey...
+N.Isn't that illegal?
+f.Here's your card back.$
+.Now let's head into the back room...
+.and grab some stuff.
+.Look what I got!
+.That's not fair.
+.I found the yellow card...&
+/so I should be entitled to first pick.
+0/Well, tuff luck kid.
+H/Kid?%
+P/Meanwhile, our next job is to find...
+z/a code-red access card.
+/Are you crazy?/
+/It was hard enough trying to find a yellow one.
+/And you copied it before we went in so you...
+0could go rush in and have the first pick.
+<0I knew you'd use the card for evil.
+d0You evil man!
+v0Oh stop wining, Larry.
+0Now, let's find that red card.
+0Tst!&
+0I knew he would use the card for evil.
+0Oh well...-
+0There should be lots of cool weapons in here.
+$1ELEVATOR - SELECT FLOOR - SECRET CIA BUILDING
+1Rooftop   
+122 - Sky Room
+121 - Unknown
+120 - Unknown
+119 - Research Labratory
+118 - Debriefing Room
+217 - Office
+216 - Office
+"215 - Office
+2214 - Office
+B213 - Storage Room
+X212 - Ventilation Control
+t211 - Office
+210 - Office
+2 9 - Office
+2 8 - Office
+2 7 - Weapon's Locker
+2 6 - Storage Room
+2 5 - Meeting Room
+2 4 - Recreation Room
+3 3 - Lunch Room
+$3 2 - Restrooms
+63 1 - Lobby
+D3 Basement 5
+3th.ld2
+3NOTHING
+3An extra space to store an item.
+3MEDIKIT +50j
+3Restores 50 health.
+3MEDIKIT +100
+4Restores 100 health.
+4GRENADE
+(4An explosive device.
+@4SHELLS#
+J4Shotgun shells. Ammo for a shotgun.
+r4Amount: 20
+4BULLETSK
+4Bullets. Useful for many guns.
+4Amount: 50%
+4Can be used with: Pistol, Machine-Gun
+4DESERT EAGLE AMMO
+4Ammo for the desert eagle.
+5Amount: 12
+(5MYSTERY MEAT
+85White processed mystery meat.--
+Z5Processed meat usually has certain mysterious
+5chemicals in it that try to simulate the taste of
+5meat, which fail to succeed.
+5CHEMICAL 4090
+5A useless chemical as of now, but if it is mixed4
+&6with some other chemical, it can form a strong acid.4
+^6The instructions which specify which chemical to mix3
+6it with are faded and worn out; however, there is a
+6warning that isn't faded out which says to keep
+7processed foods a safe distance from it.
+.7CHEMICAL 410.
+>7A strong acidic chemical with a PH value of 0.0
+p7I didn't even know such number existed in the PH+
+7scale. This can probably eat away anything.
+7Janitor Note"
+7Notice to all maintence personell.-
+8Even though it's not inside the building, thed)
+<8rooftop still needs maintence every week.
+j8Since us Janitors don't have code-yellow access,/
+8but still need access to the rooftop, they gave
+8us a 4-digit passcode for access. It is9
+9Batteriesq&
+9Looks like they are in good condition.
+<9Flashlight2
+J9This should brighten up a dark area pretty well...
+9but it has no batteries.
+9CODE-GREEN ACCESS CARD)
+9Allows access for doors with green trims.:&
+9It's not much, but it gets you around.
+:CODE-BLUE ACCESS CARD
+(:Allows access for doors with blue and green trims.
+^:CODE-YELLOW ACCESS CARD#.
+z:Allows access for doors with yellow, blue, and
+:green trims.
+:CODE-RED ACCESS CARD/
+:Allows access for doors with red, yellow, blue,
+;and green trims. That's pretty much every door in
+>;the building.
+P;SHOTGUN7
+\;The good old shotgun.F
+v;Fire-Power : 3
+;Firing-Rate: Slow
+;MACHINE-GUN
+;Weak, but fires very fast.
+;Fire-Power : 2
+;Firing-Rate: Fast
+;PISTOL,
+;Weak, but still good for shooting at things.
+.<Fire-Power : 1
+@<Firing-Rate: Medium
+X<DESERT EAGLE
+h<This pistol packs a punch.
+<Fire-Power : 5
+<White Card-
+<Allows access only to doors with white trims.
+<1/2 White Card 1,
+<Would allow access to doors with white trims
+=if I had the other piece.
+:=1/2 White Card 2
+N=Extra Life#
+\=Gives me an extra life if I use it.
+=Mixed two items: Now have CHEMICAL 410.
+=Mixed two items: Now have a working FlashLight$
+=Mixed two items: Now have WHITE CARD
+>I cannot mix these two items
+,>nothing
+8>  USE     LOOK    MIX     DROP
+^>I can't use nothing
+v>Used Medikit +50
+>Used Medikit +100
+>Loaded shells
+>Don't have shotgun
+>Loaded bullets 
+>Don't have pistol or machine gun
+>Loaded Desert Eagle Ammo
+?Don't have Desert Eagle
+6?I can't use this*
+J?It is used automatically when near a door.
+x?I cannot use this.
+?It has no batteries.
+?Used flashlight.
+?Clunk!!
+?I should get closer to the dark.%
+?I should only use this in dark areas.
+@Shotgun is equipped
+,@Machine-gun is equipped
+H@Pistol is equipped
+^@Desert Eagle is equipped.
+|@Used Chemical 410
+@I need to get closer to the goo
+@I can't use this here
+@Used Extra Life
+@STATUS SCREEN
+Ainventory
+,Afirst aid +50
+>Afirst aid +100
+PAhand grenade
+`Ashotgun shells
+rAbullets
+~Adeagle bullets
+Amystery meat
+Achemical 409
+Achemical 410
+AJanitor's note
+AGreen Card	
+ABlue Card
+AYellow Card
+ARed Card
+BShotgun
+BMachine Gun
+&BPistol
+0BDesert Eagle
+DBgfx\gradient.pal2
+XBLarry The Dinosaur II - October, 2002 - Delta Code
+BProgramming   :  Joe King
+BGraphics      :  Joe King
+BStory
+:  Joe King
+BLevel Design  :  Joe King
+CSound3
+:  Various Resources-
+0CMusic
+:  Joe King & Various Resources
+bCTesting       :  Caleb Chamberlain, Steven Burr
+CSpecial Thanks:  Chris Chadwick, Chris Adams
+CPress Space To Continue
+CNearing The End of The Creatacious Period...1
+DDinosaurs were well evolved and highly civilized.L'
+HDThen, Aliens came to conquer the world.
+tDThey were stopped.-
+DAll thanks to two dinosaurs, Larry and Steve.
+DDelta Code Presents
+DLarry The Dinosaur II(
+D...O
+DOne Year Later
+ESOUNDSYS\DS4QB.QBW
+*ESOUNDSYS\DS4QB.VCW
+@ESOUNDSYS\DS4QB.QBS
+VESOUNDSYS\DS4QB.VCS
+ESOUNDSYS.CFG
+ESOUNDSYS\DS4QBXX.EXE
+ESOUNDSYS\START.EXE
+ESOUNDSYS\BASS.DLL
+ESOUNDSYS\OGG.DLL
+ESOUNDSYS\VORBIS.DLL
+FCD SOUNDSYS >NUL
+FSTART.EXE DS4QBXX.EXE >NUL	
+8FCD.. >NUL
+NF..\\
+VFMP3x
+^FOGG
+<DIR> 5YGY
+KO[j[O[.[.[.["+,:;<=>[]|
+;<=>?@ABCDHKMPR:EF8
+*6COMSPEC=\COMMAND.COM
+LPT1LPT2LPT3LPT4
+~]~]~]~]
+~]~]
+~]~]~]~]~]~]~]
+~]~]~]
+~]~]~]~]~]~]~]~]~]~]
+~]~]~]~]
+~]~]~]
+~]~]~]~]
+~]~]~]~]
+~]~]~]
+5YGY
+.BAS
+.EXE
+~]~]
+AJ~]~]~]~]~]P
+~]~]
+6h6h
+cotan
+LPT 
+log10
+0" S
+Q;C_FILE_INFO
+QQ&C
+s+s+RB
+!Packed file is corrupt
+/	=	o	
+ 5 G M W 
+!/!O!Y!p!v!
+"#"-"3"J"P"Z"s"
+#6#<#F#_#
+#!$A$G$h$n$
+':'H'N'f'}'
+(D(s(
+)>)L)R)
+*A*O*U*
++!+2+<+L+]+g+
+,$,),^,r,
+-0-L-`-z-
+/!/E/Z/_/~/
+0)0>0C0b0w0|0
+1:1G1X1
+2*2V2f2w2
+3#3-3P3^3j3o3
+3!4L4
+5%5B5
+7&7/7C7
+8A8g8n8u8z8
+<B<h<
+===O=t=
+>!>I>c>
+>%?m?z?
+@!@y@
+AFAWAaA
+A3CHCYC
+D7DVDrD
+E!E,E3EmE
+F8FMF
+GGGtG
+H I-IsI
+I,J8J
+N[NhNoN
+O*OLOgO}O
+O7PDPKPePpPwP
+Q(QCQrQ
+R	S$S
+S	T8TeT
+U4VXV~V
+VGWYW|W
+Y6YeY
+Z(ZQZ
+]B]b]s]v^
+^ _O_|_
+a*a_a
+a_bkbpb
+c+c<cLc]c
+d\dld
+e&e/e<eFeeene{e
+fLfUfbflf
+h-h6hShzh
+h0iEi
+i$jcj
+j)kPk
+l'mgmum8nwn
+sss{s
+s	t>tDtst
+u$uFu
+z/z7z
+~H~P~
+	$	1	:	C	P	Y	b	o	x	
+5 u 
+ *!_!z!
+"8#m#
+%%&e&
+(-(I(Y(i(
+)&)/)<)E)N)[)d)m)z)
+*'*R*[*d*q*z*
++!+*+3+@+I+R+_+h+q+~+
+,&,3,<,E,R,[,d,q,z,
+-+-4-=-J-S-\-i-r-{-
+.#.,.5.B.K.T.a.j.s.
+/)/./s/
+0#010o0
+1#1,151B1K1T1a1j1s1
+2$2-2:2C2L2Y2b2k2x2
+2+3X3
+4#414;4E4U4q4
+5=5j5
+5%6H6k6p6
+74797w7
+7!8N8q8v8
+9K9_9
+:#:i:
+:%;O;o;z;
+<!<8<R<[<r<
+=	= =:=C=Z=t=}=
+>">+>E>d>n>
+?-?7?Q?p?z?
+@9@C@]@|@
+A&AEAOAiA
+B2BQB[BrB
+C@CbC
+D4ESE]E
+F4FAFZFgF
+G&G?GLGYGrG
+H&H3H@HMHfHsH
+I!I:IGI`ImIzI
+J,J9JFJSJlJyJ
+K,K9KRK_KlK
+L4LXL|L
+M$M<MTMgMpMyM
+O,OCORO
+P%P3P?PDPRP_PmP
+Q,QPQnQ
+SASpS
+T6TMTvT
+U:UcU
+VHVQV
+X$XAX^XfXoX
+ZEZPZoZ
+[2[<[
+\+\I\`\
+\I]`]u]
+^2^k^|^
+_&_/_4_B_\_q_
+`$`=`P`^`
+a>aUa
+bLbgb
+c0cnc
+c3dPd
+eNeee
+f-f6fMfgfpf
+f	g5gag
+h=hih
+iEiqi
+i!jMjyj
+j"k,kFk[kdk
+l1l9lyl
+l	m#m,mCm]mfm}m
+n+nEnNnen
+o"o:oMoRo`oioxo
+p2pEpXpkp~p
+q+qJqYqcq
+q;rpr
+r sRs
+v.v;vDvPvcvpvyv
+y-yMyVy[y`yeyzy
+z>zGzLzQzVzdzrz
+{&{/{;{H{Q{]{
+|'|3|B|K|T|
+}6}B}G}L}x}
+~*~J~S~X~]~b~p~
+#'#5#N#
+9_;A@
+0!0{
