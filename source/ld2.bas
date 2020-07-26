@@ -906,7 +906,7 @@ sub LoadMusic ()
     AddMusic Tracks.BossClassic     , "../orig/boss.ogg"      , 1
     AddMusic Tracks.EndingClassic   , "../2002/sfx/ending.mod", 0
     AddMusic Tracks.IntroClassic    , "../orig/intro.ogg"     , 0
-    AddMusic Tracks.ThemeClassic    , "../2002/sfx/intro.mod" , 0
+    AddMusic Tracks.ThemeClassic    , "theme.ogg"             , 0
     AddMusic Tracks.WanderingClassic, "../orig/creepy.ogg"    , 1
     
     '// need to update SDL_Mixer for mp3 support
@@ -2742,8 +2742,6 @@ sub Start
     end if
     
     LoadUiSounds
-    GenerateSky
-    LD2_CopyBuffer 2, 1
     Launch
     
     if QuitEvent() then

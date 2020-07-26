@@ -1019,8 +1019,8 @@ sub Game_Init
     '///////////////////////////////////////////////////////////////////
     dim res_x as integer, res_y as integer
     screeninfo res_x, res_y
-    SCREEN_W = 352
-    SCREEN_H = 352*(res_y/res_x)
+    SCREEN_W = 300
+    SCREEN_H = 300*(res_y/res_x)
     
     print "Initializing video...  ("+LD2_GetVideoInfo()+")"
     
@@ -1052,9 +1052,7 @@ end sub
 
 sub Game_LoadAssets
     
-    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
-    Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
-    Elements_LoadFontMetrics FontFile
+    dim systemOut as ElementType
     
     TESTMODE     = iif(Game_hasFlag(GameFlags.TestMode)    , 1, 0)
     DEBUGMODE    = iif(Game_hasFlag(GameFlags.DebugMode)   , 1, 0)
@@ -1093,6 +1091,33 @@ sub Game_LoadAssets
         LD2_cls 2, 0
     end if
     
+    FontFile = DATA_DIR+"gfx/font.put"
+    Font_Init FONT_W, FONT_H
+    Font_Load FontFile
+    
+    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
+    Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
+    Elements_LoadFontMetrics FontFile
+    
+    Element_Init @systemOut
+    systemOut.x = 0
+    systemOut.y = 0
+    systemOut.text_height = 1.8
+    
+    systemOut.text += "Larry the Dinosaur II v1.1.193\": Element_Render @systemOut: LD2_RefreshScreen
+    WaitSeconds 0.3333
+    
+    if ENHANCEDMODE then
+        systemOut.text += "STARTING CLASSIC (ENHANCED) MODE\": Element_Render @systemOut: LD2_RefreshScreen
+        WaitSeconds 0.3333
+    elseif CLASSICMODE then
+        systemOut.text += "STARTING CLASSIC (2002) MODE\": Element_Render @systemOut: LD2_RefreshScreen
+        WaitSeconds 0.3333
+    end if
+    
+    systemOut.text +=  "Initializing system...\\"
+    systemOut.text +=  GetCommonInfo()+"\\"
+    Element_Render @systemOut: LD2_RefreshScreen
     WaitSeconds 0.3333
     
     if CLASSICMODE then
@@ -1149,7 +1174,8 @@ sub Game_LoadAssets
     
     '///////////////////////////////////////////////////////////////////
     
-    print "Loading sprites..."
+    systemOut.text += "Loading sprites...\": Element_Render @systemOut: LD2_RefreshScreen
+    'print "Loading sprites..."
     WaitSeconds 0.3333
     
     Font_Init FONT_W, FONT_H
@@ -1188,7 +1214,8 @@ sub Game_LoadAssets
     
     Mobs.Init
     
-    print "Starting game..."
+    systemOut.text += "Starting game...\": Element_Render @systemOut: LD2_RefreshScreen
+    'print "Starting game..."
     WaitSeconds 0.3333
     LD2_cls
     

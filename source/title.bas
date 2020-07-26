@@ -848,6 +848,10 @@ END SUB
 
 SUB TITLE_Goodbye
     
+    if GameHasFlag(GameFlags.ClassicMode) then
+        exit sub
+    end if
+    
     dim e as ElementType
     dim chances(7) as integer
     dim goodbyes(7) as string

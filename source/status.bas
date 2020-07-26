@@ -2775,10 +2775,10 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     halfX = int(SCREEN_W*0.5)
     halfY = int(SCREEN_H*0.5)
     
-    size = int(SCREEN_H*0.375)
+    size = SCREEN_W*0.49
     
-    dim modw as double: modw = 1.6
-    dim modh as double: modh = 0.8+ubound(options)*0.1
+    dim modw as double: modw = 1.0
+    dim modh as double: modh = SCREEN_H/SCREEN_W
     
     if playOpenSound then
         LD2_PlaySound Sounds.uiMenu
@@ -2851,14 +2851,14 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     Element_Init @thumbnail
     thumbnail.parent = @dialog
     thumbnail.padding_x = description.padding_x
+    thumbnail.w = 160 'description.w
+    thumbnail.h = 95'description.w*0.5625
     thumbnail.x = description.x
-    thumbnail.y = options(2).y
-    thumbnail.w = description.w
-    thumbnail.h = description.w*0.625
+    thumbnail.y = dialog.h-thumbnail.h-fontH*1.5
     Elements_Add @thumbnail
     
     description.y -= fontH*2.5
-    thumbnail.y -= fontH*2.5
+    
     
     do
         for n = 0 to 2
@@ -2894,6 +2894,7 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
             if n = 3 then
                 selection = -1
                 description.text = ""
+                thumbnail.sprite_set_id = -1
             else
                 description.text = descs(n)
                 thumbnail.sprite_set_id = 0
