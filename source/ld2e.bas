@@ -5814,7 +5814,7 @@ sub Player_Draw()
     end if
     
     px = int(Player.x - XShift): py = int(Player.y - YShift)
-    lan = int(Player.lAni): uan = int(Player.uAni)
+    lan = Player.lower.transformed: uan = Player.upper.transformed
     offset = iif(Player._flip=0,Player.upper.offset,Player.upper.offset*-1)
     
     if CLASSICMODE then
@@ -5865,7 +5865,7 @@ sub Player_Draw()
                 if (Player.vy <> 0) or (lan <> LowerSprites.Stand) then
                     lx += iif(Player._flip = 0, -2, 2)
                 end if
-                if (Player.weapon = ItemIds.Fist) and (Player.state = PlayerStates.Jumping) then
+                if (Player.weapon = ItemIds.Fist) and ((Player.state = PlayerStates.Jumping) or Player.hasFlag(PlayerFlags.Falling)) then
                     if Player.hasFlag(PlayerFlags.Shooting) then
                         SpritesLarry.putToScreenEx(lx, ly, iif(Player.vy > -0.5 and Player.vy < 0.5, FullBodySprites.FsJumpPunch0, FullBodySprites.FsJumpPunch1), Player._flip)
                     else
@@ -5874,7 +5874,11 @@ sub Player_Draw()
                 elseif (Player.weapon = ItemIds.Fist) and (Player.vx <> 0) then
                     SpritesLarry.putToScreenEx(lx, ly, lan, Player._flip)
                 else
-                    SpritesLarry.putToScreenEx(lx, ly, lan, Player._flip)
+                    if (Player.state = PlayerStates.Jumping) or Player.hasFlag(PlayerFlags.Falling) then
+                        SpritesLarry.putToScreenEx(lx+iif(Player._flip=0,1,-1), ly, iif(Player.vy < 0, LowerSprites.Jump, LowerSprites.Jump+1), Player._flip)
+                    else
+                        SpritesLarry.putToScreenEx(lx, ly, lan, Player._flip)
+                    end if
                     SpritesLarry.putToScreenEx(px+offset, py, Player.upper.transformed, Player._flip)
                     if Player.weapon = ItemIds.Magnum then
                         if Player.hasFlag(PlayerFlags.Shooting) then
@@ -5932,6 +5936,7 @@ function Player_Jump (amount as double, is_repeat as integer = 0) as integer
     END IF
 
     SetPlayerState( PlayerStates.Jumping )
+    Player.setFlag(PlayerFlags.Falling)
 
     return success
     
@@ -6013,6 +6018,7 @@ function Player_Fall() as integer
     
     Player.y += Player.vy
     if CheckPlayerFloorHit() = 0 then
+        Player.setFlag(PlayerFlags.Falling)
         isFalling = 1
         if Player.weapon = ItemIds.Fist then
             Player.lAni = iif(Player.vy < -0.5, 48, 49)
@@ -6029,6 +6035,7 @@ function Player_Fall() as integer
             Player.vy = 9
         end if
     else
+        Player.unsetFlag(PlayerFlags.Falling)
         if Player.vy > 7 then
             Inventory(ItemIds.Hp) = 0
         elseif Player.vy > 5 then
@@ -6052,7 +6059,7 @@ function Player_Fall() as integer
                 Guts_Add GutsIds.Blood, int(x+(radius*2*rnd(1)-radius)), int(y+(radius*2*rnd(1)-radius)),  1, 6*rnd(1)-3
             next n
         end if
-        if isFalling then
+        if isFalling and fallingDown then
             isFalling = 0
             if Player.weapon = ItemIds.Fist then
                 Player.lAni = 42
@@ -6062,6 +6069,7 @@ function Player_Fall() as integer
             else
                 Player.lAni = 24
             end if
+            Player_InitLower
         end if
         if fallingDown then
             Player.y = FallContactPointY - (box.h+box.padTop)
@@ -6222,7 +6230,8 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
     if hitWall = 0 then
     if Player.weapon = ItemIds.Fist then
         if Player.vx = 0 then
-            Player.lower.initLoop(FullBodySprites.FsRun0, FullBodySprites.FsRun1, abs(dx/7.5)*4)
+            Player.vx = dx
+            Player_InitLower
         end if
         Player.vx   = dx
         Player.x    = Player.x + dx
@@ -6237,7 +6246,8 @@ function Player_Move (dx as double, canFlip as integer = 1) as integer
         end if
     else
         if Player.vx = 0 then
-            Player.lower.initLoop(LowerSprites.Run0, LowerSprites.Run1, abs(dx/7.5)*2)
+            Player.vx = dx
+            Player_InitLower
         end if
         Player.vx   = dx
         Player.x    = Player.x + dx
@@ -6678,6 +6688,7 @@ function Player_SetWeapon (itemId as integer) as integer
     next i
     
     Player_InitUpper
+    Player_InitLower
     
     return 1
     
@@ -6729,9 +6740,11 @@ sub Player_InitUpper (intervalStart as double=0.0)
     dim last as integer
     dim crouching as integer
     dim shooting as integer
+    dim falling as integer
     
     crouching = Player.hasFlag(PlayerFlags.Crouching)
     shooting  = Player.hasFlag(PlayerFlags.Shooting)
+    falling   = Player.hasFlag(PlayerFlags.Falling)
     
     if CLASSICMODE then
         if shooting = 0 then
@@ -6838,6 +6851,28 @@ sub Player_InitUpper (intervalStart as double=0.0)
     Player.upper.initNoLoop(first, last, seconds, intervalStart)
     Player.upper.offset = offset
     Player.uani = Player.upper.transformed
+    
+end sub
+
+sub Player_InitLower (intervalStart as double=0.0)
+    
+    dim dx as double
+    
+    if Player.hasFlag(PlayerFlags.Falling) then
+        Player.lower.initNoLoop(ClassicLower.Jump, ClassicLower.Jump, 0)
+        Player.lani = Player.lower.transformed
+    elseif (Player.notFlag(PlayerFlags.moved)) and (Player.vx = 0) then
+        Player.lower.initNoLoop(ClassicLower.Stand, ClassicLower.Stand, 0)
+        Player.lani = Player.lower.transformed
+    else
+        dx = Player.vx
+        if Player.weapon = ItemIds.Fist then
+            Player.lower.initLoop(FullBodySprites.FsRun0, FullBodySprites.FsRun1, abs(dx/7.5)*4, intervalStart)
+        else
+            Player.lower.initLoop(LowerSprites.Run0, LowerSprites.Run1, abs(dx/7.5)*2, intervalStart)
+        endif
+    end if
+    Player.lani = Player.lower.transformed
     
 end sub
 

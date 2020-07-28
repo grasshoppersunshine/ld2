@@ -246,7 +246,7 @@ end type
 
     const DATA_DIR = "data/"
     
-    const CLASSICMODE = 1
+    const CLASSICMODE = 0'1
 
   Init
   

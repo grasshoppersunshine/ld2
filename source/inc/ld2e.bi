@@ -258,6 +258,7 @@ declare function Player_GetGotItem() as integer
 declare sub Player_DoAction ()
 declare sub Player_Hurt(damage as integer, contactX as integer, contactY as integer)
 declare sub Player_InitUpper (intervalStart as double=0.0)
+declare sub Player_InitLower (intervalStart as double=0.0)
 
 declare sub Game_Init ()
 declare sub Game_LoadAssets ()

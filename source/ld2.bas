@@ -840,7 +840,7 @@ sub LoadSounds
         '* NEW
         '***************************************************************
         AddSound Sounds.footstep , "larry-step.wav"
-        AddSound Sounds.jump     , "larry-jump.wav"
+        AddSound Sounds.jump     , "enhanced/jump.wav" '"larry-jump.wav"
         AddSound Sounds.land     , "larry-land.wav"
         AddSound Sounds.larryHurt, "larry-hurt.wav"
         AddSound Sounds.larryDie , "larry-die.wav"
@@ -897,6 +897,7 @@ sub LoadMusic ()
     AddMusic Tracks.Scent     , "scent.ogg", 1
     AddMusic Tracks.Motives   , "motives.ogg" , 1
     AddMusic Tracks.Strings   , "strings.ogg" , 1
+    AddMusic Tracks.Compromise, "compromise.ogg" , 1
     AddMusic Tracks.Breezeway , "breezeway.ogg" , 1
     AddMusic Tracks.SmallRoom1, "../msplice/smallroom0.wav", 1
     AddMusic Tracks.SmallRoom2, "../msplice/smallroom1.wav", 1
@@ -1051,13 +1052,14 @@ function GetFloorMusicId(roomId as integer) as integer
         input #file, track
         if floorNo = roomId then
             select case trim(lcase(track))
-            case "wandering": return Tracks.Wandering
-            case "musicbox" : return Tracks.MusicBox
-            case "motives"  : return Tracks.Motives
-            case "scent"    : return Tracks.Scent
-            case "portal"   : return Tracks.Portal
-            case "strings"  : return Tracks.Strings
-            case "breezeway": return Tracks.Breezeway
+            case "wandering" : return Tracks.Wandering
+            case "musicbox"  : return Tracks.MusicBox
+            case "motives"   : return Tracks.Motives
+            case "scent"     : return Tracks.Scent
+            case "portal"    : return Tracks.Portal
+            case "strings"   : return Tracks.Strings
+            case "compromise": return Tracks.Compromise
+            case "breezeway" : return Tracks.Breezeway
             end select
         end if
     loop
@@ -1415,7 +1417,8 @@ SUB Main
     if Game_hasFlag(PLAYERDIED) then
         if deadTimer = 0 then
             deadTimer = timer
-            LD2_StopMusic
+            LD2_PlayMusic Tracks.YouDied
+            'LD2_StopMusic
         end if
         if (timer - deadTimer) > 3.0 then
             Game_unsetFlag(PLAYERDIED)
@@ -3318,7 +3321,7 @@ sub YouDied ()
     dim w as double, h as double
     x = 0: y = 0
     w = SCREEN_W: h = SCREEN_H
-    while (timer-startTime) < 6.0*200/SCREEN_H
+    while (timer-startTime) < 1.0*200/SCREEN_H
         PullEvents
         if (((timer-startTime) <= 4.15) and ((timer-delay) > 0.07)) or _
            (((timer-startTime)  > 4.15) and ((timer-delay) > 0.05)) then

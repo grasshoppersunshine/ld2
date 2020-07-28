@@ -450,6 +450,29 @@ SCENE-RADIO-01
     
 END
 
+SCENE-RADIO-04
+    
+    LARRY_RADIO
+    Barney, come in. Over.
+    
+    BARNEY_RADIO
+    Larry? I'm here. Over.
+    
+    LARRY_RADIO
+    Tell me about level 4.
+    
+    BARNEY_RADIO
+    Terra Delta?
+    ... That's where some field and technical training is done.
+    The scientists appealed to have some portions sectioned off for lab experiments.
+    
+    LARRY_RADIO
+    I copy that.
+    
+    #RADIO_STATIC
+    
+END
+
 SCENE-STEVE-GONE
     
     LARRY

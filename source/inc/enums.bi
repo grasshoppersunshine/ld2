@@ -512,6 +512,7 @@ enum Tracks
     Motives
     Strings
     Breezeway
+    Compromise
     SmallRoom1
     SmallRoom2
     '// scenes
