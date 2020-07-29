@@ -667,6 +667,7 @@ function CheckPlayerFloorHit as integer
                 contactY = mapY * SPRITE_H
                 exit for
             end if
+            if (m = 40) or (m = 41) then m = 10
             if (m >= 10) and (m <= 25) then
                 floorHeight = m - 10
                 ymod = (y and 15)
@@ -676,7 +677,8 @@ function CheckPlayerFloorHit as integer
                     exit for
                 end if
             end if
-            if m = 30 then
+            m = FloorMap(mapX, mapY)
+            if (m = 30 or m = 40) then
                 ymod = (y and 15)
                 xmod = 15-(x and 15)
                 if ymod >= xmod then 'and ymod <= (xmod+pvy) then
@@ -685,7 +687,7 @@ function CheckPlayerFloorHit as integer
                     exit for
                 end if
             end if
-            if m = 31 then
+            if (m = 31 or m = 41) then
                 ymod = (y and 15)
                 xmod = (x and 15)
                 if ymod >= xmod then 'and ymod <= (xmod+pvy) then
@@ -741,6 +743,8 @@ end function
 function CheckPlayerWallHit() as integer
     
     dim pointsToCheck(1) as PointType
+    static grabTimer as double
+    dim canGrab as integer
     dim mapX as integer
     dim mapY as integer
     dim xmod as integer
@@ -749,11 +753,20 @@ function CheckPlayerWallHit() as integer
     dim x as integer
     dim y as integer
     dim m as integer
+    dim a as integer
+    dim b as integer
     dim n as integer
     dim pvx as integer
     
+    if (timer-grabTimer) > 0.5 then
+        grabTimer = 0
+    end if
+    
+    LD2_SetNotice iif(Player.hasFlag(PlayerFlags.UpStairs),"YES","NO")
+    
     box = Player_GetCollisionBox()
     pvx = abs(int(Player.vx))+1
+    canGrab = 0
     
     if Player.vx >= 0 then
         
@@ -773,37 +786,76 @@ function CheckPlayerWallHit() as integer
         mapX = int(x / SPRITE_W)
         mapY = int(y / SPRITE_H)
         m = FloorMap(mapX, mapY)
+        if (n = 0) and (grabTimer = 0) then
+            a = FloorMap(mapX, mapY)
+            if (a = 0) and ((y and 15) > 7) and (Player.vy > 0) then
+                canGrab = 1
+            end if
+        end if
         if m = 1 then
             WallContactMapX = mapX
             WallContactMapY = mapY
             WallContactPointX = mapX * SPRITE_W + iif(Player.vx < 0, SPRITE_W-1, 0)
             WallContactPointY = y
+            if canGrab then
+                grabTimer = timer
+                Player.vy = -1
+                Player.y += Player.vy
+                LD2_PlaySound Sounds.larryBoost
+            end if
             return 1
         end if
+        b = FloorMap(mapX, mapY+1)
         if n = 1 then '// only check bottom
-            if (m = 30) and (Player.vx > 0) then
-                ymod = (y and 15)
-                xmod = 15-(x and 15)
-                if ymod >= xmod then ' and ymod <= (xmod+pvx) then
+            if (m = 30 or m = 40) and (Player.vx > 0) and ((b = 0) or Player.hasFlag(PlayerFlags.UpStairs)) then
+                ymod = 15-(y and 15)
+                xmod = (x and 15)
+                if xmod >= ymod then
                     WallContactMapX = mapX
                     WallContactMapY = mapY
-                    WallContactPointX = x
-                    WallContactPointY = mapY * SPRITE_H + xmod
+                    WallContactPointX = mapX * SPRITE_W + xmod
+                    WallContactPointY = mapY * SPRITE_H + (15-xmod)
+                    'Player.x = WallContactPointX - box.w - box.padLft
                     Player.y = WallContactPointY - SPRITE_H
                     return 0
                 end if
+                'ymod = (y and 15)
+                'xmod = 15-(x and 15)
+                'if ymod >= xmod then ' and ymod <= (xmod+pvx) then
+                '    WallContactMapX = mapX
+                '    WallContactMapY = mapY
+                '    WallContactPointX = x
+                '    WallContactPointY = mapY * SPRITE_H + xmod
+                '    'if Player.hasFlag(PlayerFlags.UpStairs) then
+                '    '    Player.y = WallContactPointY - SPRITE_H
+                '    'end if
+                '    return 0
+                'end if
             end if
-            if (m = 31) and (Player.vx < 0) then
+            if (m = 31 or m = 41) and (Player.vx < 0) and ((b = 0) or Player.hasFlag(PlayerFlags.UpStairs)) then
                 ymod = (y and 15)
                 xmod = (x and 15)
-                if ymod >= xmod then 'and ymod <= (xmod+pvx) then
+                if xmod <= ymod then
                     WallContactMapX = mapX
                     WallContactMapY = mapY
-                    WallContactPointX = x
+                    WallContactPointX = mapX * SPRITE_W + xmod
                     WallContactPointY = mapY * SPRITE_H + xmod
+                    'Player.x = WallContactPointX - box.padLft
                     Player.y = WallContactPointY - SPRITE_H
                     return 0
                 end if
+                'ymod = (y and 15)
+                'xmod = (x and 15)
+                'if ymod >= xmod then 'and ymod <= (xmod+pvx) then
+                '    WallContactMapX = mapX
+                '    WallContactMapY = mapY
+                '    WallContactPointX = x
+                '    WallContactPointY = mapY * SPRITE_H + xmod
+                '    'if Player.hasFlag(PlayerFlags.UpStairs) then
+                '    '    Player.y = WallContactPointY - SPRITE_H
+                '    'end if
+                '    return 0
+                'end if
             end if
         end if
     next n
@@ -959,6 +1011,8 @@ sub Game_Init
             Game_setFlag GameFlags.NoSound
         case "skip"
             Game_setFlag GameFlags.SkipOpening
+        case "nolaunch"
+            Game_setFlag GameFlags.NoLauncher
         case "widescreen", "wide"
             SCREEN_MODE = ScreenModes.WideScreen
         case "screen13", "13"
@@ -1486,14 +1540,20 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
                 FloorMap(x, y) = 1
             case TileIds.ColaTopLeft, TileIds.ColaTopRIght
                 FloorMap(x, y) = 15
-            case 162, 164, 166, 168, 171, 173, 175, 225, 227
+            case 162, 164, 166, 168, 171, 173, 225, 227
                 FloorMap(x, y) = 30 '* stairs slope-up (left low / right high)
-            case 163, 165, 167, 169, 172, 174, 176, 226, 228
+            case 163, 165, 167, 169, 172, 174, 226, 228
                 FloorMap(x, y) = 31 '* stairs slope-down
+            case 175 '* up-right with top plank
+                FloorMap(x, y) = 40
+            case 176 '* up-left with top plank
+                FloorMap(x, y) = 41
             case TileIds.CardboardBox, 170, 179
                 FloorMap(x, y) = 10
-            case 120, 145, 160, 161, 177, 178
+            case 120, 145, 177, 178
                 FloorMap(x, y) = 0
+            'case 160, 161
+            '    FloorMap(x, y) = 1
             case 188, 197
                 FloorMap(x, y) = 17 '* paper stacks
             end select

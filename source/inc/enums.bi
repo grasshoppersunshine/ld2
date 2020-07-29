@@ -577,6 +577,7 @@ enum Sounds
     rockDie
     larryHurt
     larryDie
+    larryBoost
     '// enemies
     gruntLaugh
     gruntHgShoot
@@ -714,6 +715,7 @@ enum GameFlags
     DebugMode    = &h1000000
     ClassicMode  = &h2000000
     EnhancedMode = &h4000000
+    NoLauncher   = &h8000000
 end enum
 
 enum ScreenModes

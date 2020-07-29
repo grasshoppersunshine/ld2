@@ -2777,10 +2777,10 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     Element_Init @labels(0), "Select Version", 31
     Element_Init @labels(1), "Launch Options", 31
     Element_Init @labels(2), "v1.1.193", 31
-    Element_Init @options(0), radioOn  +"Remastered", 31
-    Element_Init @options(1), radioOff +"Classic"   , 31
-    Element_Init @options(2), radioOff +"Enhanced"  , 31
-    Element_Init @options(3), unchecked+"Test Mode" , 31
+    Element_Init @options(0), iif(Game_notFlag(GameFlags.ClassicMode) and Game_notFlag(GameFlags.EnhancedMode),radioOn,radioOff)  +"Remastered", 31
+    Element_Init @options(1), iif(Game_hasFlag(GameFlags.ClassicMode) and Game_notFlag(GameFlags.EnhancedMode),radioOn,radioOff) +"Classic"   , 31
+    Element_Init @options(2), iif(Game_hasFlag(GameFlags.EnhancedMode),radioOn,radioOff) +"Enhanced"  , 31
+    Element_Init @options(3), iif(Game_hasFlag(GameFlags.TestMode),checked,unchecked)+"Test Mode" , 31
     Element_Init @options(4), "Play Game", 31, ElementFlags.CenterText
     Element_Init @description
     

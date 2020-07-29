@@ -839,11 +839,12 @@ sub LoadSounds
         '***************************************************************
         '* NEW
         '***************************************************************
-        AddSound Sounds.footstep , "larry-step.wav"
-        AddSound Sounds.jump     , "enhanced/jump.wav" '"larry-jump.wav"
-        AddSound Sounds.land     , "larry-land.wav"
-        AddSound Sounds.larryHurt, "larry-hurt.wav"
-        AddSound Sounds.larryDie , "larry-die.wav"
+        AddSound Sounds.footstep  , "larry-step.wav"
+        AddSound Sounds.jump      , "enhanced/jump.wav" '"larry-jump.wav"
+        AddSound Sounds.land      , "larry-land.wav"
+        AddSound Sounds.larryHurt , "larry-hurt.wav"
+        AddSound Sounds.larryDie  , "larry-die.wav"
+        AddSound Sounds.larryBoost, "larry-boost.wav"
         
         AddSound Sounds.rockHurt, "rock-jump.wav"
         AddSound Sounds.rockJump, "rock-jump.wav"
@@ -1430,6 +1431,7 @@ SUB Main
         continue do
     end if
     
+    IF keyboard(KEY_UP   ) or keyboard(KEY_W    ) then doAction ActionIds.LookUp '* MUST do this before run left/right
     if keyboard(KEY_LSHIFT) or keyboard(KEY_KP_0) then
         if keyboard(KEY_RIGHT) or keyboard(KEY_D) then doAction ActionIds.StrafeRight
         if keyboard(KEY_LEFT ) or keyboard(KEY_A) then doAction ActionIds.StrafeLeft
@@ -1437,7 +1439,6 @@ SUB Main
         if keyboard(KEY_RIGHT) or keyboard(KEY_D) then doAction ActionIds.RunRight
         if keyboard(KEY_LEFT ) or keyboard(KEY_A) then doAction ActionIds.RunLeft
     end if
-	IF keyboard(KEY_UP   ) or keyboard(KEY_W    ) then doAction ActionIds.LookUp
     IF keyboard(KEY_LCTRL) or keyboard(KEY_RCTRL) or keyboard(KEY_Q    ) or mouseLB() then
         doAction iif(newShot, ActionIds.Shoot, ActionIds.ShootRepeat)
         newShot = 0
@@ -2746,7 +2747,9 @@ sub Start
     end if
     
     LoadUiSounds
-    Launch
+    if Game_notFlag(GameFlags.NoLauncher) then
+        Launch
+    end if
     
     if Game_hasFlag(GameFlags.ExitGame) or QuitEvent() then
         Game_shutdown
