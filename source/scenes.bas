@@ -674,6 +674,7 @@ function Scene5Go() as integer
     LD2_SetSceneMode LETTERBOX
     
     AddTempSound Sounds.snarl   , "splice/snarl.wav"
+    AddTempSound Sounds.impact  , "esm/impact.wav"
 
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
     LarryPose.x = Guides.SceneElevator: LarryPose.y =  112
@@ -830,6 +831,7 @@ function Scene5Go() as integer
     
     LD2_PlaySound Sounds.snarl
     LD2_PlaySound Sounds.splatter
+    LD2_PlaySound Sounds.impact
     LD2_PlaySound Sounds.rockDie
     
     Shakes_Add 0.2, SPRITE_W*1.0

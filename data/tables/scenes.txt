@@ -10,32 +10,45 @@ SCENE-1A
     Well, Steve, that was one good game of chess.
 
     STEVE
-    ...
     Only because you won.
     Wouldn't think so if I won.
 
     LARRY
-    Are you jealous Steve?
+    Are you jealous, Steve?
 
     STEVE
-    Uh...
-    No...
-    In fact... I think it is you who is the jealous one.
+    Uh... No...
+    In fact... I think you are the jealous one.
 
     LARRY
-    Yeah, but... I am the winner.
+    Ok, but... I didn't lose.
     ... so...
 
     STEVE
-    You're jealous because you didn't lose like me.
+    That's just your perspective...
+    ... it's all relative.
 
     LARRY
     ...
-    Alright! That's enough outta' you.
-
+    You admitted that I won.
+    
     STEVE
-    Yeah, I guess so.
+    We both won.
+    But you both lost and won.
+    Trust me... it's a quantum physics thing.
+    
+    LARRY
+    ...
+    Yeah... that's not how quantum physics works.
+    
+    STEVE
+    ...
     Well... I should get going.
+    
+    LARRY
+    Uh huh...
+    
+    STEVE
     Smell ya later.
 
     LARRY
@@ -91,16 +104,25 @@ END
 
 SCENE-1B
     
+    LARRY
+    Steve...
+    
     STEVE [ WAIT 0.25, FACE LEFT, WAIT 0.50 ]
-    "D" Cola, eh?
+    Yeah, Larry?
     
     LARRY
-    You know it.
-    When you're thirsty... go for the "D".
-    ... "D" Cola.
+    Before you go...
+    Thanks, again, for meeting me at my office here.
+    I've been so busy lately, it's been hard to find time for friends and family.
+    Heh...
+    ... being delegated to paperwork after saving the world seems...
+    ... about as crazy as anything else these days.
     
     STEVE
-    Ha! Stupid commercial.
+    I hear ya', saur!
+    Happy to catch-up on current events and play a game of anxiety-inducing chess.
+    
+    STEVE
     I am thirsty, though.
     ... You got a quarter?
 

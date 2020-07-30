@@ -8,6 +8,7 @@ enum TileIds
     ColaTopLeft          = 5
     ColaTopRight         = 6
     Crate                = 95
+    DoorBackground       = 18
     DoorGreen            = 90
     DoorBlue             = 91
     DoorYellow           = 92
@@ -43,12 +44,16 @@ enum TileIds
     RadiationSuitTorn    = 66
     RadiationSuitBloody  = 67
     RoofKeypad           = 49
-    SaveMachineA0        = 146
-    SaveMachineA1        = 147
-    SaveMachineB0        = 148
-    SaveMachineB1        = 149
-    SaveMachineC0        = 250
-    SaveMachineC1        = 251
+    SaveVendingTopLft0   = 144
+    SaveVendingTopRgt0   = 145
+    SaveVendingBtmLft0   = 146
+    SaveVendingBtmRgt0   = 147
+    SaveVendingBtmLft1   = 148
+    SaveVendingBtmRgt1   = 149
+    SaveVendingTopLft2   = 248
+    SaveVendingTopRgt2   = 249
+    SaveVendingBtmLft2   = 250
+    SaveVendingBtmRgt2   = 251
     Sink                 = 117
     SpinningFan          = 3
     ToxicGas             = 61
@@ -564,6 +569,7 @@ enum Sounds
     '// doors
     doorup
     doordown
+    doorClick
     '// blood
     blood1
     blood2
@@ -597,6 +603,7 @@ enum Sounds
     slurp
     scream
     '// scene 5
+    impact
     splatter
     snarl
     '// portal scene
@@ -716,6 +723,7 @@ enum GameFlags
     ClassicMode  = &h2000000
     EnhancedMode = &h4000000
     NoLauncher   = &h8000000
+    NoBackground = &h10000000
 end enum
 
 enum ScreenModes
@@ -775,6 +783,7 @@ enum OptionIds
     Classic
     Enhanced
     ToggleTestMode
+    ToggleBackground
     PlayGame
 end enum
 

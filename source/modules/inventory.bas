@@ -100,7 +100,7 @@ function Inventory_AddQty (slot as integer, qty as integer) as integer
     
     if (slot >= 0) and (slot < InventorySize) then
         InventoryItems(slot).qty = InventoryItems(slot).qty + qty
-        if (InventoryItems(slot).max >= -1) and (InventoryItems(slot).qty > InventoryItems(slot).max) then
+        if (InventoryItems(slot).max > -1) and (InventoryItems(slot).qty > InventoryItems(slot).max) then
             InventoryItems(slot).qty = InventoryItems(slot).max
         end if
     else
@@ -196,7 +196,7 @@ end function
 
 function Inventory_GetSize () as integer
     
-    return InventorySize
+    return VisibleSize
     
 end function
 

@@ -859,18 +859,18 @@ SUB TITLE_Goodbye
     dim d7 as integer
     dim n as integer
     
-    chances(0) = 20: goodbyes(0) = "GOODBYE"
-    chances(1) =  2: goodbyes(1) = "SMELL YA LATER"
-    chances(2) =  2: goodbyes(2) = "PLAY A GOOD GAME OF CHESS"
+    chances(0) = 80: goodbyes(0) = "GOODBYE"
+    chances(1) =  4: goodbyes(1) = "SMELL YA LATER"
+    chances(2) =  4: goodbyes(2) = "PLAY A GOOD GAME OF CHESS"
     chances(3) =  1: goodbyes(3) = "MOTHER OF GOD"
     chances(4) =  1: goodbyes(4) = "SAVE YOURSELF FROM HELL"
     chances(5) =  1: goodbyes(5) = "REALITY IS MUCH WORSE"
     chances(6) =  1: goodbyes(6) = "LIBERA TE TUTAMET EX INFERIS"
-    chances(7) =  2: goodbyes(7) = "CAN'T WIN THEM ALL"
+    chances(7) =  4: goodbyes(7) = "CAN'T WIN THEM ALL"
     
     do
         d7  = iif(GameHasFlag(RECENTDEATH),int(8*rnd(1)),int(7*rnd(1)))
-        d20 = int(20*rnd(1))
+        d20 = int(80*rnd(1))
         if d20 < chances(d7) then
             n = d7
             exit do

@@ -60,7 +60,7 @@ declare function EStatusScreen (byval currentRoomId as integer, byref selectedRo
 declare function EStatusScreen_Classic (byval currentRoomId as integer, byref selectedRoomId as integer, byref selectedRoomName as string, byval skipInput as integer = 0) as integer
 declare function StatusScreen (skipInput as integer = 0) as integer
 declare function StatusScreen_Classic(skipInput as integer = 0) as integer
-declare function STATUS_InitInventory() as integer
+declare function STATUS_Init() as integer
 declare sub STATUS_SetInventorySize(size as integer)
 declare sub STATUS_RefreshInventory()
 declare sub STATUS_SetBeforeUseItemCallback(callback as sub(byval id as integer))

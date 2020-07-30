@@ -762,8 +762,6 @@ function CheckPlayerWallHit() as integer
         grabTimer = 0
     end if
     
-    LD2_SetNotice iif(Player.hasFlag(PlayerFlags.UpStairs),"YES","NO")
-    
     box = Player_GetCollisionBox()
     pvx = abs(int(Player.vx))+1
     canGrab = 0
@@ -890,6 +888,9 @@ function CheckMobWallHit (mob AS Mobile) as integer
   
 end function
 
+sub ClipVector(vx as double, vy as double, ox as double, oy as double)
+end sub
+
 sub LD2_Drop (slot as integer)
     
     dim n as integer
@@ -1013,6 +1014,8 @@ sub Game_Init
             Game_setFlag GameFlags.SkipOpening
         case "nolaunch"
             Game_setFlag GameFlags.NoLauncher
+        case "nobackground", "nobg"
+            Game_setFlag GameFlags.NoBackground
         case "widescreen", "wide"
             SCREEN_MODE = ScreenModes.WideScreen
         case "screen13", "13"
@@ -1266,10 +1269,12 @@ sub Game_LoadAssets
     Sprites_Load ObjectsFile, idOBJCRP
     Sprites_Load BossFile   , idBOSS
     
-    'LD2_InitLayer DATA_DIR+"gfx/mountains.bmp", @LayerMountains, SpriteFlags.Transparent
-    'LD2_InitLayer DATA_DIR+"gfx/foliage.bmp", @LayerFoliage, SpriteFlags.Transparent
-    'LD2_InitLayer DATA_DIR+"gfx/grass.bmp", @LayerGrass, SpriteFlags.Transparent
-    'LD2_InitLayer DATA_DIR+"gfx/clouds.bmp", @LayerClouds, SpriteFlags.Transparent
+    if Game_notFlag(GameFlags.NoBackground) then
+        LD2_InitLayer DATA_DIR+"gfx/mountains.bmp", @LayerMountains, SpriteFlags.Transparent
+        LD2_InitLayer DATA_DIR+"gfx/foliage.bmp", @LayerFoliage, SpriteFlags.Transparent
+        LD2_InitLayer DATA_DIR+"gfx/grass.bmp", @LayerGrass, SpriteFlags.Transparent
+        LD2_InitLayer DATA_DIR+"gfx/clouds.bmp", @LayerClouds, SpriteFlags.Transparent
+    end if
     
     '///////////////////////////////////////////////////////////////////
     
@@ -1372,8 +1377,6 @@ sub LD2_RenderBackground(height as double)
     dim y as integer
     dim h as integer
     static xmod as double
-    
-    exit sub
     
     xmod += 0.1
     if xmod >= 320 then xmod = 0
@@ -1538,7 +1541,9 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
                 Switches_Add x, y
             case 80 to 109, 122, 125, 133, 141, 143, 185
                 FloorMap(x, y) = 1
-            case TileIds.ColaTopLeft, TileIds.ColaTopRIght
+            case TileIds.ColaTopLeft, TileIds.ColaTopRight, _
+                 TileIds.SaveVendingTopLft0, TileIds.SaveVendingTopRgt0, _
+                 TileIds.SaveVendingTopLft2, TileIds.SaveVendingTopRgt2
                 FloorMap(x, y) = 15
             case 162, 164, 166, 168, 171, 173, 225, 227
                 FloorMap(x, y) = 30 '* stairs slope-up (left low / right high)
@@ -2937,7 +2942,9 @@ sub LD2_RenderFrame (flags as integer = 0)
     dim pushShift as double
     
     LD2_CopyBuffer 2, 1
-    LD2_RenderBackground int((Inventory(ItemIds.CurrentRoom)+1)/24)
+    if Game_notFlag(GameFlags.NoBackground) then
+        LD2_RenderBackground (Inventory(ItemIds.CurrentRoom)+1)/24
+    end if
     LD2_SetTargetBuffer 1
     
     pushShift = XShift
@@ -3007,6 +3014,12 @@ end sub
 sub Game_UnsetFlag (flag as integer)
     
     GameFlagsHolder = (GameFlagsHolder or flag) xor flag
+    
+end sub
+
+sub Game_ToggleFlag (flag as integer)
+    
+    GameFlagsHolder = (GameFlagsHolder xor flag)
     
 end sub
 
@@ -4950,7 +4963,7 @@ sub Mobs_Animate_Jellyblob(mob as Mobile)
         
         if abs(mob.x-Player.x) < 100 then
             if (timer - plasmaTimer) > 1.0 then
-                Guts_Add GutsIds.Plasma, mob.x+7, mob.y+7, 1, 2
+                'Guts_Add GutsIds.Plasma, mob.x+7, mob.y+7, 1, 2
                 plasmaTimer = timer
             end if
         end if
@@ -5772,7 +5785,6 @@ sub Player_Animate()
     if (Inventory(ItemIds.Hp) <= 0) and Game_notFlag(PLAYERDIED) then
         Game_SetFlag PLAYERDIED
         LD2_PlaySound Sounds.splatter
-        LD2_PlaySound Sounds.larryDie
         x = Player.x+7: y = Player.y+7
         radius = 16
         Guts_Add GutsIds.Gibs, x, y, 3+int(4*rnd(1))
@@ -6596,12 +6608,21 @@ sub Player_DoAction ()
             LD2_PlaySound Sounds.lightSwitch
             exit sub
         end if
+    next i
+    
+    for i = 0 to 3
+        mapX = int(points(i).x/SPRITE_W)
+        mapY = int(points(i).y/SPRITE_H)
         tile = TileMap(mapX, mapY)
         select case tile
-        case TileIds.SaveMachineA0, TileIds.SaveMachineA1, _
-             TileIds.SaveMachineB0, TileIds.SaveMachineB1, _
-             TileIds.SaveMachineC0, TileIds.SaveMachineC1 
+        case TileIds.SaveVendingBtmLft0, TileIds.SaveVendingBtmRgt0, _
+             TileIds.SaveVendingBtmLft1, TileIds.SaveVendingBtmRgt1, _
+             TileIds.SaveVendingBtmLft2, TileIds.SaveVendingBtmRgt2
             Game_SetFlag(SAVEGAME)
+            exit sub
+        case TileIds.DoorBackground
+            GameRevealText = "It's locked."
+            LD2_PlaySound Sounds.doorClick
             exit sub
         case 159
             GameRevealText = "Load-bearing column."
@@ -6941,6 +6962,102 @@ function Player_ShootRepeat() as integer
     return Player_Shoot(1)
     
 end function
+
+function Slopes_Collide(id as integer, x as double, y as double, vx as double) as integer
+    
+    select case id
+    case 0
+        return -1
+    case 1
+        '* xxxx
+        '* xxxx
+        '* xxxx
+        '* xxxx
+        return iif(vx > 0, 0, 1)
+    case 10 to 20
+        return -1
+    case 30, 40
+        '*    x
+        '*   xx
+        '*  xxx
+        '* xxxx
+        if (y >= (1-x)) then
+            return 1-y
+        else
+            return -1
+        end if
+    case 31, 41
+        '* x
+        '* xx
+        '* xxx
+        '* xxxx
+        if (y >= x) then
+            return y
+        else
+            return -1
+        end if
+    case 32
+        '*   xx
+        '*   xx
+        '* xxxx
+        '* xxxx
+    case 33
+        '* xx
+        '* xx
+        '* xxxx
+        '* xxxx
+    end select
+    
+end function
+
+sub Damage_Shoot(fromX as double, fromY as double, vx as double, vy as double)
+    
+    dim mob as Mobile
+    dim xintersect as double
+    dim xstep as double
+    dim xoff as double
+    dim yoff as double
+    dim toX as double
+    dim x as double
+    dim pixelslft as integer
+    dim pixelsrgt as integer
+    dim mapX as integer
+    dim mapY as integer
+    dim m as integer
+
+    pixelslft = int(fromX - XShift)
+    pixelsrgt = int(SCREEN_W - pixelslft)
+    
+    fromX = toUnitX(fromX)
+    fromY = toUnitY(fromY)
+    
+    toX   = fromX + iif(vx > 0, toUnitX(pixelsrgt), -toUnitX(pixelslft))
+    xstep = iif(vx > 0, 1, -1)
+    
+    mapY = int(fromY)
+    yoff = fromY-int(fromY)
+    for x = fromX to toX step xstep
+        
+        mapX = int(x)
+        xoff = x-int(x)
+        m = FloorMap(mapX, mapY)
+        xintersect = Slopes_Collide(m, xoff, yoff, 0)
+        if xintersect > -1 then
+        end if
+        
+    next x
+    
+    Mobs.resetNext
+    do while Mobs.canGetNext()
+        Mobs.getNext mob
+        'if contactX > mob.x and contactX < (mob.x + 15) and contactY > (mob.y+mobtop) and contactY < (mob.y + 15) then
+        '    mob.setFlag MobFlags.Hit
+        '    mob.setFlag MobFlags.ShotFromLeft
+        '    exit do
+        'end if
+    loop
+    
+end sub
 
 function Player_Shoot(is_repeat as integer = 0) as integer
 

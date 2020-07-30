@@ -266,6 +266,7 @@ declare function Game_HasFlag (flag as integer) as integer
 declare function Game_NotFlag (flag as integer) as integer
 declare sub Game_SetFlag (flag as integer)
 declare sub Game_UnsetFlag (flag as integer)
+declare sub Game_ToggleFlag (flag as integer)
 declare sub Game_Save(filename as string)
 declare function Game_SaveCopy (srcfile as string, dstfile as string) as integer
 declare function Game_Load(filename as string, roomId as integer = -1) as integer

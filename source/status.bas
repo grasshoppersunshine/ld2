@@ -95,12 +95,12 @@ sub STATUS_SetLookItemCallback(callback as sub(id as integer, byref description 
     
 end sub
 
-function STATUS_InitInventory() as integer
+function STATUS_Init() as integer
     
-    DEBUGMODE = iif(Game_hasFlag(GameFlags.DebugMode), 1, 0)
+    DEBUGMODE   = iif(Game_hasFlag(GameFlags.DebugMode  ), 1, 0)
     CLASSICMODE = iif(Game_hasFlag(GameFlags.ClassicMode), 1, 0)
-    SCREEN_W = Screen_GetWidth()
-    SCREEN_H = Screen_GetHeight()
+    SCREEN_W    = Screen_GetWidth()
+    SCREEN_H    = Screen_GetHeight()
     
     if CLASSICMODE then
         STATUS_WINDOW_HEIGHT_MIN = 100
@@ -2744,12 +2744,12 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     dim dialog as ElementType
     dim title as ElementType
     dim labels(2) as ElementType
-    dim options(4) as ElementType
-    dim backgrounds(4) as integer
+    dim options(5) as ElementType
+    dim backgrounds(5) as integer
     dim description as ElementType
     dim thumbnail as ElementType
     
-    dim selections(4) as integer
+    dim selections(5) as integer
     dim selection as integer
     dim refresh as integer
     
@@ -2781,8 +2781,11 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     Element_Init @options(1), iif(Game_hasFlag(GameFlags.ClassicMode) and Game_notFlag(GameFlags.EnhancedMode),radioOn,radioOff) +"Classic"   , 31
     Element_Init @options(2), iif(Game_hasFlag(GameFlags.EnhancedMode),radioOn,radioOff) +"Enhanced"  , 31
     Element_Init @options(3), iif(Game_hasFlag(GameFlags.TestMode),checked,unchecked)+"Test Mode" , 31
-    Element_Init @options(4), "Play Game", 31, ElementFlags.CenterText
+    Element_Init @options(4), iif(Game_hasFlag(GameFlags.NoBackground)=0,checked,unchecked)+"Background" , 31
+    Element_Init @options(5), "Play Game", 31, ElementFlags.CenterText
     Element_Init @description
+    
+    options(2).disabled = 1
     
     dialog.background = STATUS_DIALOG_COLOR
     dialog.background_alpha = STATUS_DIALOG_ALPHA
@@ -2845,8 +2848,9 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     for n = 0 to ubound(options)
         options(n).w = maxw
     next n
-    options(3).y += fontH*2.0
-    backgrounds(4) = 54
+    options(3).y -= fontH*1.0
+    options(4).y -= fontH*1.0
+    backgrounds(5) = 54
     
     labels(0).x = fontW
     labels(0).y = fontH
@@ -2877,14 +2881,16 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     selections(1) = OptionIds.Classic
     selections(2) = OptionIds.Enhanced
     selections(3) = OptionIds.ToggleTestMode
-    selections(4) = OptionIds.PlayGame
+    selections(4) = OptionIds.ToggleBackground
+    selections(5) = OptionIds.PlayGame
     selection = 0
     
-    dim descs(3) as string
+    dim descs(4) as string
     descs(0) = "Remastered (2020)\\The new version of the game. The feature presentation."
     descs(1) = "Classic (2002)\\Intended to be as close to the original as possible."
     descs(2) = "Classic (Enhanced)\\The original game with some extra sounds and features."
     descs(3) = "Test Mode\\Skip title and intro sequences. Cheats enabled."
+    descs(4) = "Dynamic Background\\Multi-layered background (mountains, clouds, etc.)."
     Elements_Add @description
     
     Element_Init @thumbnail
@@ -2896,14 +2902,14 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     thumbnail.y = dialog.h-thumbnail.h-fontH*1.5
     Elements_Add @thumbnail
     
-    options(4).parent = @dialog
-    options(4).background = backgrounds(4)
-    options(4).w = maxw
-    options(4).padding_x = fontW
-    options(4).padding_y = 11
-    options(4).x = fontW
-    options(4).y = thumbnail.y+thumbnail.h-options(4).padding_y*2-fontH+1
-    options(4).text_height = 1
+    options(5).parent = @dialog
+    options(5).background = backgrounds(4)
+    options(5).w = maxw
+    options(5).padding_x = fontW
+    options(5).padding_y = 11
+    options(5).x = fontW
+    options(5).y = thumbnail.y+thumbnail.h-options(4).padding_y*2-fontH+1
+    options(5).text_height = 1
     
     'description.y -= fontH*2.5
     
@@ -2993,6 +2999,10 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
             case OptionIds.ToggleTestMode
                 TESTMODE = iif(TESTMODE=0,1,0)
                 options(selection).text = iif(TESTMODE,checked,unchecked)+"Test Mode" 
+                LD2_PlaySound Sounds.uiToggle
+            case OptionIds.ToggleBackground
+                Game_toggleFlag(GameFlags.NoBackground)
+                options(selection).text = iif(Game_hasFlag(GameFlags.NoBackground)=0,checked,unchecked)+"Background" 
                 LD2_PlaySound Sounds.uiToggle
             case else
                 LD2_PlaySound Sounds.uiSelect

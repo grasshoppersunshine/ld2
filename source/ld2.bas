@@ -839,6 +839,7 @@ sub LoadSounds
         '***************************************************************
         '* NEW
         '***************************************************************
+        AddSound Sounds.doorClick , "esm/locked.wav"
         AddSound Sounds.footstep  , "larry-step.wav"
         AddSound Sounds.jump      , "enhanced/jump.wav" '"larry-jump.wav"
         AddSound Sounds.land      , "larry-land.wav"
@@ -863,7 +864,7 @@ sub LoadSounds
         AddSound Sounds.useMedikit  , "use-medikit.wav"
         AddSound Sounds.useExtraLife, "use-extralife.wav"
         
-        AddSound Sounds.boom, "boom.wav"
+        AddSound Sounds.boom, "esm/boom.wav"
         AddSound Sounds.quad, "quad.wav"
         AddSound Sounds.titleStart , "start.wav"
         AddSound Sounds.lightSwitch, "lightswitch.wav"
@@ -1088,12 +1089,16 @@ SUB Main
     dim resetClocks as integer
     dim selection as integer
     dim paused as integer
+    dim musicId as integer
+    dim newMusicId as integer
     dim i as integer
     dim n as integer
     
     dim showElevatorMenu as integer
     dim toRoomId as integer
     dim toRoomName as string
+    
+    dim deadSound as integer
     
     CustomActions(1).actionId = ActionIds.Equip
     CustomActions(1).itemId   = ItemIds.Fist
@@ -1149,7 +1154,11 @@ SUB Main
         SceneRefreshMobs
         Player_Unhide
         Player_SetFlip 1
-        LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
+        newMusicId = GetFloorMusicId(Player_GetCurrentRoom())
+        if newMusicId <> musicId then
+            LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
+        end if
+        musicId = newMusicId
         Map_SetXShift Player_GetX() - SCREEN_W*0.5
 	end if
     
@@ -1225,6 +1234,7 @@ SUB Main
         if showElevatorMenu = 0 then
             resetClocks = 1
             if (toRoomId <> Player_GetCurrentRoom()) then
+                musicId = 0
                 if CLASSICMODE then
                     Map_Load RoomToFilename(toRoomId)
                 else
@@ -1418,15 +1428,29 @@ SUB Main
     if Game_hasFlag(PLAYERDIED) then
         if deadTimer = 0 then
             deadTimer = timer
-            LD2_PlayMusic Tracks.YouDied
-            'LD2_StopMusic
+            LD2_PlayMusic Tracks.Uhoh
         end if
-        if (timer - deadTimer) > 3.0 then
+        WaitSeconds(0.06)
+        if ((timer - deadTimer) > 0.15) and (deadSound = 0) then
+            deadSound = 1
+            LD2_PlaySound iif(int(2*rnd(1)),Sounds.larryDie,Sounds.NoScream)
+        end if
+        if (timer - deadTimer) > 7.0 then
+            deadSound = 0
             Game_unsetFlag(PLAYERDIED)
             deadTimer = 0
-            YouDied
-            Game_Reset
-            if ContinueGame = 0 then exit do
+            if STATUS_DialogYesNo("Load Game?") = OptionIds.Yes then
+                LD2_FadeOut 2
+                Game_Reset
+                if ContinueGame() = 0 then exit do
+            else
+                Game_setFlag GameFlags.ExitGame
+                LD2_FadeOut 2
+                WaitSeconds 0.8
+                YouDied
+                WaitSeconds 0.7
+                exit do
+            end if
         end if
         continue do
     end if
@@ -2740,7 +2764,7 @@ sub Start
     Game_Init
     'SDL_SetRelativeMouseMode(1)
     
-    if STATUS_InitInventory() then
+    if STATUS_Init() then
         STATUS_DialogOk "Error intializing inventory!"
         Game_Shutdown
         end
@@ -2758,7 +2782,7 @@ sub Start
     
     Game_LoadAssets
     
-    if STATUS_InitInventory() then
+    if STATUS_Init() then
         STATUS_DialogOk "Error intializing inventory!"
         Game_Shutdown
         end
@@ -2889,7 +2913,7 @@ sub NewGame
         Player_SetItemQty ItemIds.SceneJanitorDies, 1
         Player_SetItemQty ItemIds.SceneElevator, 1
         Player_SetItemQty ItemIds.SceneWeapons1, 1
-        'Player_SetItemQty ItemIds.SceneSteveGone, 1
+        Player_SetItemQty ItemIds.SceneSteveGone, 1
         'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
         'LD2_PlayMusic mscWANDERING
         if CLASSICMODE = 0 then
@@ -2906,10 +2930,8 @@ sub NewGame
             LD2_AddToStatus(ItemIds.Shotgun, Maxes.Shotgun)
             LD2_AddToStatus(ItemIds.MachineGun, Maxes.MachineGun)
             LD2_AddToStatus(ItemIds.Magnum, Maxes.Magnum)
-            'LD2_AddToStatus(ItemIds.Medikit100, 1)
-            LD2_AddToStatus(ItemIds.Flashlight, 1)
-            LD2_AddToStatus(ItemIds.JanitorNote, 1)
-            LD2_AddToStatus(ItemIds.MysteryMeat, 1)
+            LD2_AddToStatus(ItemIds.Medikit50, Maxes.Medikit50)
+            LD2_AddToStatus(ItemIds.Medikit100, Maxes.Medikit100)
         end if
         Boot_ReadyCommandArgs
         while Boot_HasNextCommandArg()
@@ -3299,7 +3321,7 @@ sub YouDied ()
     
     LD2_cls 1, 0
 	
-    Element_Init @title, "You Died", 31
+    Element_Init @title, "Game Over", 31
     title.y = SCREEN_H*0.3
     title.is_centered_x = 1
     title.text_spacing = spacing
@@ -3324,7 +3346,7 @@ sub YouDied ()
     dim w as double, h as double
     x = 0: y = 0
     w = SCREEN_W: h = SCREEN_H
-    while (timer-startTime) < 1.0*200/SCREEN_H
+    while (timer-startTime) < 6.0*200/SCREEN_H
         PullEvents
         if (((timer-startTime) <= 4.15) and ((timer-delay) > 0.07)) or _
            (((timer-startTime)  > 4.15) and ((timer-delay) > 0.05)) then
