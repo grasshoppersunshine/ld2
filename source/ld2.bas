@@ -1157,7 +1157,7 @@ SUB Main
             LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
         end if
         musicId = newMusicId
-        Map_SetXShift Player_GetX() - SCREEN_W*0.5
+        Map_UpdateShift 1
 	end if
     
     PullEvents
