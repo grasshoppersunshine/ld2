@@ -4,6 +4,8 @@ source/lib/
 source/var/
 
 data/editor
+data/save
+data/screenshots
 data/sound/bak
 data/sound/maybe
 data/sound/recorded
