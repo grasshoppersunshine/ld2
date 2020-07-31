@@ -893,16 +893,13 @@ sub LoadMusic ()
     AddMusic Tracks.Wandering , "creepy.ogg" , 1
     AddMusic Tracks.YouDied   , "youdied.ogg", 0
 
-    AddMusic Tracks.Wind1     , "../msplice/wind0.wav" , 1
-    AddMusic Tracks.Wind2     , "../msplice/wind1.wav" , 1
     AddMusic Tracks.MusicBox  , "musicbox.ogg", 1
     AddMusic Tracks.Scent     , "scent.ogg", 1
     AddMusic Tracks.Motives   , "motives.ogg" , 1
     AddMusic Tracks.Strings   , "strings.ogg" , 1
     AddMusic Tracks.Compromise, "compromise.ogg" , 1
+    AddMusic Tracks.Lobby     , "lobby1.ogg" , 1
     AddMusic Tracks.Breezeway , "breezeway.ogg" , 1
-    AddMusic Tracks.SmallRoom1, "../msplice/smallroom0.wav", 1
-    AddMusic Tracks.SmallRoom2, "../msplice/smallroom1.wav", 1
     
     AddMusic Tracks.Portal, "portal.ogg"             , 1
     AddMusic Tracks.Captured , "../msplice/thetruth.wav", 1
@@ -1061,6 +1058,7 @@ function GetFloorMusicId(roomId as integer) as integer
             case "portal"    : return Tracks.Portal
             case "strings"   : return Tracks.Strings
             case "compromise": return Tracks.Compromise
+            case "lobby"     : return Tracks.Lobby
             case "breezeway" : return Tracks.Breezeway
             end select
         end if

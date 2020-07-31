@@ -11,7 +11,7 @@
 00, ""        , "-------------------", ""
 14, "14th.ld2", "Larry's Office     ", "wandering"
 13, "13th.ld2", "Storage Space      ", "motives"
-12, "12th.ld2", "Mechanical         ", "breezeway"
+12, "12th.ld2", "Mechanical         ", "lobby"
 00, ""        , "-------------------", ""
 11, "11th.ld2", "Administrative I   ", "wandering"
 10, "10th.ld2", "Barney's Office    ", "musicbox"

@@ -196,6 +196,11 @@
         screenshake as double
     end type
     
+    type DivisionType
+        x0 as double
+        x1 as double
+    end type
+    
     type InvSlotType
         itemId as integer
         qty as integer
@@ -315,6 +320,7 @@
     dim shared Flashes    (MAXFLASHES) as FlashType
     dim shared Shakes     (MAXSHAKES) as ShakeType
     dim shared Sectors    (MAXSECTORS) as SectorType
+    dim shared Divisions  (MAXDIVISIONS) as DivisionType
     dim shared NumItems as integer
     dim shared NumDoors as integer
     dim shared NumElevators as integer
@@ -325,6 +331,7 @@
     dim shared NumFlashes as integer
     dim shared NumShakes as integer
     dim shared NumSectors as integer
+    dim shared NumDivisions as integer
     dim shared XShift as double
     dim shared YShift as double
     dim shared Mobs as MobileCollection
@@ -1213,6 +1220,7 @@ sub Game_LoadAssets
     NumTeleports = 0
     NumFlashes = 0
     NumSectors = 0
+    NumDivisions = 0
     NumInvSlots = MAXINVSLOTS
     '///////////////////////////////////////////////////////////////////
     CanSaveMap = 0
@@ -1478,9 +1486,11 @@ end sub
 
 sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
     
+    dim closestX as integer
     dim tile as integer
     dim x as integer
     dim y as integer
+    dim n as integer
     dim i as integer
     dim j as integer
     
@@ -1494,6 +1504,7 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
     NumSwitches = 0
     NumTeleports = 0
     NumFlashes = 0
+    NumDivisions = 0
     MobsWereLoaded = 0
     BossBarId = 0
     
@@ -1510,6 +1521,17 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
             Items(i).qty = AmmoBoxQtys.MachineGun
         case ItemIds.MaAmmo, ItemIds.Magnum
             Items(i).qty = AmmoBoxQtys.Magnum
+        case ItemIds.DivisionLft
+            n = NumDivisions: NumDivisions += 1
+            closestX = MAPW*SPRITE_W
+            for j = 0 to NumItems-1
+                if i = j then continue for
+                if (Divisions(j).x0 > Items(i).x) and (Divisions(j).x0 < closestX) then
+                    closestX = Divisions(j).x0
+                end if
+            next j
+            Divisions(n).x0 = Items(i).x
+            Divisions(n).x1 = closestX
         end select
     next i
     
@@ -3305,14 +3327,22 @@ sub Map_UpdateShift (skipEase as integer = 0)
         XShift = focus-halfW
     end if
     
+    dim XShiftMin as integer
     dim XShiftMax as integer
     
-    XShiftMax = iif(Player.x < 100*SPRITE_W, 100*SPRITE_W-SCREEN_W, MAPW*SPRITE_W-SCREEN_W)
+    XShiftMin = 0
+    XShiftMax = MAPW*SPRITE_W-SCREEN_W
+    dim n as integer
+    for n = 0 to NumDivisions-1
+        if (Player.x >= Divisions(n).x0) and (Player.x <= Divisions(n).x1) then
+            xShiftMin = Divisions(n).x0
+            XShiftMax = Divisions(n).x1 - SCREEN_W
+        end if
+    next n
+    XShiftMax = MAPW*SPRITE_W-SCREEN_W 'iif(Player.x < 100*SPRITE_W, 100*SPRITE_W-SCREEN_W, MAPW*SPRITE_W-SCREEN_W)
     
-    if XShift < 0 then XShift = 0
+    if XShift < XShiftMin then XShift = XShiftMin
     if XShift > XShiftMax then XShift = XShiftMax
-    
-    if (Player.x > 100*SPRITE_W) and (Player.x >= xShiftMax) then XShift = xShiftMax '* lock shift for staircase area
     
     if SCREEN_H < 200 then
         Map_UpdateShiftY
@@ -7874,6 +7904,7 @@ sub Game_Reset()
     NumFlashes = 0
     NumShakes = 0
     NumSectors = 0
+    NumDivisions = 0
     NumInvSlots = MAXINVSLOTS
     '///////////////////////////////////////////////////////////////////
     CanSaveMap = 0

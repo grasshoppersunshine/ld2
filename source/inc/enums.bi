@@ -164,6 +164,8 @@ enum ItemIds
     JanitorData          = 122
     InvSize              = 123
     '=======================================
+    DivisionLft          = 48
+    DivisionRgt          = 49
     SwapSrcA0            = 50
     SwapSrcA1            = 51
     SwapDstA             = 52
@@ -510,16 +512,13 @@ enum Tracks
     Wandering
     YouDied
     '// rooms
-    Wind1
-    Wind2
     MusicBox
     Scent
     Motives
     Strings
     Breezeway
     Compromise
-    SmallRoom1
-    SmallRoom2
+    Lobby
     '// scenes
     Portal
     Captured
