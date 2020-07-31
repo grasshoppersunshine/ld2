@@ -1486,13 +1486,15 @@ end sub
 
 sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
     
-    dim closestX as integer
     dim tile as integer
+    dim x0 as integer
+    dim x1 as integer
     dim x as integer
     dim y as integer
     dim n as integer
     dim i as integer
     dim j as integer
+    dim k as integer
     
     '// CLEAR KEYPAD ACCESS
     Inventory(TEMPAUTH) = 0
@@ -1521,17 +1523,6 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
             Items(i).qty = AmmoBoxQtys.MachineGun
         case ItemIds.MaAmmo, ItemIds.Magnum
             Items(i).qty = AmmoBoxQtys.Magnum
-        case ItemIds.DivisionLft
-            n = NumDivisions: NumDivisions += 1
-            closestX = MAPW*SPRITE_W
-            for j = 0 to NumItems-1
-                if i = j then continue for
-                if (Divisions(j).x0 > Items(i).x) and (Divisions(j).x0 < closestX) then
-                    closestX = Divisions(j).x0
-                end if
-            next j
-            Divisions(n).x0 = Items(i).x
-            Divisions(n).x1 = closestX
         end select
     next i
     
@@ -1610,6 +1601,25 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
         case ItemIds.SpinningGear, ItemIds.SpinningGear+1
             Items(i).canPickup = 0
             FloorMap(int(Items(i).x/SPRITE_W), int(Items(i).y/SPRITE_H)) = 1
+        case ItemIds.DivisionLft, ItemIds.DivisionRgt
+            if NumDivisions = 0 then
+                Divisions(0).x0 = 0: Divisions(0).x1 = MAPW*SPRITE_W
+                NumDivisions += 1
+            end if
+            x0 = iif(Items(i).id=ItemIds.DivisionLft,Items(i).x,Items(i).x+SPRITE_W)
+            x1 = MAPW*SPRITE_W
+            k = -1
+            for j = 0 to NumDivisions-1
+                if (x0 > Divisions(j).x0) and (x0 < Divisions(j).x1) then
+                    if Divisions(j).x1 <= x1 then
+                        x1 = Divisions(j).x1
+                        k = j
+                    end if
+                end if
+            next j
+            n = NumDivisions: NumDivisions += 1
+            Divisions(n).x0 = x0: Divisions(n).x1 = x1
+            if k > -1 then Divisions(k).x1 = x0
         end select
     next i
     
@@ -3339,7 +3349,6 @@ sub Map_UpdateShift (skipEase as integer = 0)
             XShiftMax = Divisions(n).x1 - SCREEN_W
         end if
     next n
-    XShiftMax = MAPW*SPRITE_W-SCREEN_W 'iif(Player.x < 100*SPRITE_W, 100*SPRITE_W-SCREEN_W, MAPW*SPRITE_W-SCREEN_W)
     
     if XShift < XShiftMin then XShift = XShiftMin
     if XShift > XShiftMax then XShift = XShiftMax
