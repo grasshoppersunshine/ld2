@@ -1060,6 +1060,7 @@ function GetFloorMusicId(roomId as integer) as integer
             case "compromise": return Tracks.Compromise
             case "lobby"     : return Tracks.Lobby
             case "breezeway" : return Tracks.Breezeway
+            case "ending"    : return Tracks.Ending
             end select
         end if
     loop
@@ -2910,6 +2911,7 @@ sub NewGame
         Player_SetItemQty ItemIds.SceneJanitor, 1
         Player_SetItemQty ItemIds.SceneJanitorDies, 1
         Player_SetItemQty ItemIds.SceneElevator, 1
+        Player_SetItemQty ItemIds.SceneElevator2, 1
         Player_SetItemQty ItemIds.SceneWeapons1, 1
         Player_SetItemQty ItemIds.SceneSteveGone, 1
         'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
@@ -3420,6 +3422,7 @@ sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
     
     LD2_FadeOut 3
     Map_Load str(toRoomId)+"th.ld2"
+    Map_UpdateShift 1
     Player_Hide
     LD2_PlayMusic Tracks.Elevator
     Element_Init @eMessage, elevatorText, 31

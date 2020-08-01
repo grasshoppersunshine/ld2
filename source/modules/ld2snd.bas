@@ -1,5 +1,6 @@
 #include once "inc/sdlsnd.bi"
 #include once "inc/ld2snd.bi"
+#include once "inc/common.bi" '* for logging
 
 DIM SHARED LD2musicList(64) AS LD2MusicData
 DIM SHARED LD2musicListCount AS INTEGER
@@ -11,6 +12,13 @@ dim shared MusicId as integer
 dim shared SoundErrorMsg as string
 dim shared MaxMusicVolume as double = 1.0
 dim shared MaxSoundVolume as double = 1.0
+dim shared DEBUGMODE as integer
+
+sub LD2SND_EnableDebugMode
+    
+    DEBUGMODE = 1
+    
+end sub
 
 function LD2_GetSoundInfo() as string
     
@@ -36,6 +44,8 @@ end function
 
 function LD2_InitSound (enabled AS INTEGER) as integer
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(enabled)
+    
     SoundErrorMsg = ""
     LD2soundEnabled = enabled
     if LD2soundEnabled then
@@ -50,6 +60,8 @@ function LD2_InitSound (enabled AS INTEGER) as integer
 end function
 
 SUB LD2_AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, str(id), filepath, str(loopmusic)
 	
 	DIM i AS INTEGER
 	
@@ -66,6 +78,8 @@ END SUB
 
 SUB LD2_AddSound (id as integer, filename as string, loops as integer=0, volume as double=1.0)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(id), filename, str(loops), str(volume)
+    
     dim maxChannels as integer
     
     maxChannels = 4
@@ -78,6 +92,8 @@ END SUB
 
 sub LD2_FreeSound (id as integer)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(id)
+    
     if LD2soundEnabled = 0 then return
     
     SOUND_FreeSound id
@@ -85,7 +101,9 @@ sub LD2_FreeSound (id as integer)
 end sub
 
 function LD2_FadeInMusic (seconds as double = 3.0) as integer
-
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, str(seconds)
+    
 	static clock as double = 0
     static warp as double = 1
     static volume as double = 0
@@ -116,6 +134,8 @@ function LD2_FadeInMusic (seconds as double = 3.0) as integer
 end function
 
 function LD2_FadeOutMusic (seconds as double = 3.0) as integer
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, str(seconds)
 
 	static clock as double = 0
     static warp as double = 1
@@ -193,11 +213,15 @@ end function
 
 function LD2_GetMusicId() as integer
     
+    if DEBUGMODE then LogDebug __FUNCTION__
+    
     return MusicId
     
 end function
 
 function LD2_GetMusicFile() as string
+    
+    if DEBUGMODE then LogDebug __FUNCTION__
     
     dim i as integer
     for i = 0 to LD2musicListCount - 1
@@ -212,11 +236,14 @@ end function
 
 SUB LD2_SetMusic (id AS INTEGER)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(id)
     LD2_LoadMusic id
     
 END SUB
 
 sub LD2_LoadMusic (id as integer)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, str(id)
 
     dim found as integer
 	dim i as integer
@@ -240,7 +267,9 @@ sub LD2_LoadMusic (id as integer)
 end sub
 
 sub LD2_PlayMusic (id as integer = 0)
-
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, str(id)
+    
     if LD2soundEnabled then
         if id > 0 then
             LD2_SetMusic id
@@ -259,6 +288,8 @@ SUB LD2_PlaySound (id AS INTEGER)
 END SUB
 
 SUB LD2_ReleaseSound
+    
+    if DEBUGMODE then LogDebug __FUNCTION__
 
     IF LD2soundEnabled THEN
         SOUND_Release
@@ -267,7 +298,9 @@ SUB LD2_ReleaseSound
 END SUB
 
 SUB LD2_StopMusic
-
+    
+    if DEBUGMODE then LogDebug __FUNCTION__
+    
     IF LD2soundEnabled THEN
         SOUND_StopMusic
     END IF
@@ -276,6 +309,8 @@ END SUB
 
 sub LD2_StopSound (id as integer)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(id)
+    
     if LD2soundEnabled then
         SOUND_StopSound id
     end if
@@ -283,6 +318,8 @@ sub LD2_StopSound (id as integer)
 end sub
 
 SUB LD2_PauseMusic
+    
+    if DEBUGMODE then LogDebug __FUNCTION__
 
     IF LD2soundEnabled THEN
         SOUND_PauseMusic
@@ -291,7 +328,9 @@ SUB LD2_PauseMusic
 END SUB
 
 SUB LD2_ContinueMusic
-
+    
+    if DEBUGMODE then LogDebug __FUNCTION__
+    
     IF LD2soundEnabled THEN
         SOUND_ResumeMusic
     END IF

@@ -992,6 +992,8 @@ end function
 
 sub Game_Init
     
+    if DEBUGMODE then LogDebug __FUNCTION__
+    
     dim arg as string
     dim i as integer
     
@@ -1048,33 +1050,23 @@ sub Game_Init
     
     randomize timer
     
-    'print "Larry the Dinosaur II v1.1.170"
-    
-    'if CLASSICMODE then
-    '    print "STARTING CLASSIC (2002) MODE"
-    'end if
-    
-    'print "Initializing system... ("+GetCommonInfo()+")"
+    if DEBUGMODE then LogDebug "InitCommon"
     if InitCommon() <> 0 then
         print "INIT ERROR! "+GetCommonErrorMsg()
     end if
-    
-    'WaitSeconds 0.3333
     
     if SessionSaveFile = "" then
         SessionSaveFile = "session.ld2"
     end if
     
+    if DEBUGMODE then
+        LD2SND_EnableDebugMode
+    end if
     if NOSOUND = 0 then
-        
-        'print "Initializing sound...  ("+LD2_GetSoundInfo()+")"
-        'WaitSeconds 0.3333
-        
         if LD2_InitSound(1) <> 0 then
             print "SOUND ERROR! "+LD2_GetSoundErrorMsg()
             end
         end if
-        
     else
         LD2_InitSound 0
     end if
@@ -1085,8 +1077,9 @@ sub Game_Init
     SCREEN_W = 300
     SCREEN_H = 300*(res_y/res_x)
     
-    'print "Initializing video...  ("+LD2_GetVideoInfo()+")"
-    
+    if DEBUGMODE then
+        LD2GFX_EnableDebugMode
+    end if
     if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, 0) <> 0 then
         print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
         end
@@ -1114,6 +1107,8 @@ sub Game_Init
 end sub
 
 sub Game_LoadAssets
+    
+    if DEBUGMODE then LogDebug __FUNCTION__
     
     dim systemOut as ElementType
     
@@ -1195,7 +1190,7 @@ sub Game_LoadAssets
         FontFile    = DATA_DIR+"2002/gfx/font1.put"
     else
         LarryFile   = DATA_DIR+"gfx/larry2.put"
-        TilesFile   = DATA_DIR+"gfx/ld2tiles.put"
+        TilesFile   = DATA_DIR+"gfx/tiles.bmp"
         LightFile   = DATA_DIR+"gfx/ld2light.put"
         MobsFile    = DATA_DIR+"gfx/mobs.put"
         GutsFile    = DATA_DIR+"gfx/ld2guts.put"
@@ -1380,6 +1375,8 @@ SUB LD2_GenerateSky()
 END SUB
 
 sub LD2_RenderBackground(height as double)
+    
+    exit sub
     
     dim x as integer
     dim y as integer
@@ -3229,6 +3226,9 @@ sub Map_UpdateShiftY (skipEase as integer = 0)
             'easeSpeedY *= 0.5
         'end if
     end if
+    if skipEase then
+        focus = Player.y
+    end if
     
     timediff = (timer-clock)
     if timediff > 0.01 then
@@ -3248,18 +3248,10 @@ sub Map_UpdateShiftY (skipEase as integer = 0)
         if Player.y > midline+16 then e = 0
     end if
     
-    select case SCREEN_MODE
-    case ScreenModes.MaxZoom
-        YShift = midline-36
-        if skipEase then
-            YShift = midline-36
-        end if
-    case else
-        YShift = (midline-36)+focus
-        if skipEase then
-            YShift = (midline-36)+target
-        end if
-    end select
+    YShift = (midline-36)+focus
+    if skipEase then
+        YShift = (midline-36)+target
+    end if
     
     dim YShiftMax as integer
     
@@ -3354,7 +3346,7 @@ sub Map_UpdateShift (skipEase as integer = 0)
     if XShift > XShiftMax then XShift = XShiftMax
     
     if SCREEN_H < 200 then
-        Map_UpdateShiftY
+        Map_UpdateShiftY skipEase
     end if
     
 end sub
@@ -4137,7 +4129,7 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
         next x
     next y
     
-    numMobs = int(numFloors / 10)
+    numMobs = int(numFloors / 20)
     
     if forceNumMobs > 0 then
         numMobs = forceNumMobs
@@ -4160,13 +4152,13 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
             select case n
             case 0 to 14
                 mobType = MobIds.Rockmonster
-            case 20 to 49
+            case 20 to 52
                 mobType = MobIds.GruntMg
-            case 50 to 79
+            case 53 to 85
                 mobType = MobIds.GruntHg
-            case 15 to 19, 80 to 89
+            case 15 to 19, 86 to 89
                 mobType = MobIds.BlobMine
-            case 90 to 99
+            case 96 to 99
                 mobType = MobIds.JellyBlob
             end select
         end if
@@ -7535,21 +7527,6 @@ sub LD2_WriteText (text as string)
 
 end sub
 
-sub LogDebug(message as string, p0 as string = "", p1 as string = "", p2 as string = "", p3 as string = "")
-    
-    dim params as string
-    
-    if len(p0) then params += p0
-    if len(p1) then params += iif(len(params), ", ", "") + p1
-    if len(p2) then params += iif(len(params), ", ", "") + p2
-    if len(p3) then params += iif(len(params), ", ", "") + p3
-    if len(p0) or len(p1) or len(p2) or len(p3) then
-        params = " ( "+params+" ) "
-    end if
-    logtofile "debug.log", message+params
-    
-end sub
-
 type FileHeader
     version as string*8
     numRooms as ubyte
@@ -7618,11 +7595,15 @@ end type
 
 function Game_SaveCopy (srcfile as string, dstfile as string) as integer
     
+    if DEBUGMODE then LogDebug __FUNCTION__, srcfile, dstfile
+    
     return FileCopy(DATA_DIR+"save/"+srcfile, DATA_DIR+"save/"+dstfile)
     
 end function
 
 sub Game_Save (filename as string)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, filename
     
     dim pdata as PlayerFileData
     dim roomdata as RoomFileData
@@ -7768,6 +7749,8 @@ end sub
 
 function Game_Load (filename as string, roomId as integer = -1) as integer
     
+    if DEBUGMODE then LogDebug __FUNCTION__, filename, str(roomId)
+    
     dim pdata as PlayerFileData
     dim roomdata as RoomFileData
     dim header as FileHeader
@@ -7894,6 +7877,8 @@ function Game_Load (filename as string, roomId as integer = -1) as integer
 end function
 
 sub Game_Reset()
+    
+    if DEBUGMODE then LogDebug __FUNCTION__
     
     dim n as integer
     

@@ -97,7 +97,12 @@ end sub
 
 function STATUS_Init() as integer
     
+    dim result as integer
+    
     DEBUGMODE   = iif(Game_hasFlag(GameFlags.DebugMode  ), 1, 0)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__
+    
     CLASSICMODE = iif(Game_hasFlag(GameFlags.ClassicMode), 1, 0)
     SCREEN_W    = Screen_GetWidth()
     SCREEN_H    = Screen_GetHeight()
@@ -118,7 +123,9 @@ function STATUS_Init() as integer
         Inventory_SetDataDir DATA_DIR+"2002/"
     end if
     
-    return Inventory_Init(24, 12)
+    result = Inventory_Init(24, 12)
+    
+    return result
     
 end function
 
@@ -1007,14 +1014,16 @@ function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as 
         '*******************************************************************
     end select
     
-    if roomId <= 9 then
-        listFloors.y = -(9-roomId)*fontH
-    end if
     for i = 0 to numLabels-1
         if (roomId = floors(i).floorNo) and len(trim(floors(i).filename)) then
             menuNumbers(i).background = 19: menuNumbers(i).text_color = 188
             menuLabels(i).background = 70: menuLabels(i).text_color = 31
             roomName = floors(i).label
+            listFloors.y = int(numLabels*0.35)*fontH-menuLabels(i).y
+            if listFloors.y > 0 then listFloors.y = 0
+            if listFloors.h + listFloors.y < listFloors.parent->h then
+                listFloors.y = listFloors.parent->h - listFloors.h - (listFloors.parent->h mod fontH)
+            end if
         else
             menuNumbers(i).background = 177
             menuLabels(i).background = -1

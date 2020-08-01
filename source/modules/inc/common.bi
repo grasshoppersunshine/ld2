@@ -8,6 +8,7 @@ declare sub FreeCommon()
 declare function keyboard(code as integer) as integer
 declare function keypress(code as integer) as integer
 declare sub logtofile(filename as string, message as string)
+declare sub LogDebug(message as string, p0 as string = "", p1 as string = "", p2 as string = "", p3 as string = "", p4 as string = "")
 DECLARE SUB WaitSeconds (seconds AS DOUBLE)
 DECLARE FUNCTION WaitSecondsUntilKey (seconds AS DOUBLE) as integer
 DECLARE FUNCTION WaitSecondsUntilKeyup (seconds AS DOUBLE, keycode as integer) as integer

@@ -103,40 +103,68 @@ end function
 
 sub logtofile(filename as string, message as string)
     
+    static startTime as double
     static lastTime as double
-    static lastMem as long
+    static logFile as integer
+    dim elapsed as double
+    dim mem as long
     dim timeStr as string
-    dim logFile as integer
+    dim memStr as string
     
+    mem = fre(-1)
     if lastTime = 0 then
-        lastTime = timer
-        message  = date+" "+time+" START LOG SESSION"
+        startTime = timer
+        lastTime  = startTime
+        message   = date+" "+time+" START LOG SESSION"
         
         if dir("var", fbDirectory) <> "var" then
             mkdir "var"
         end if
         
-        logFile = freefile
-        open "var/"+filename for append as logFile
-            write #logFile, string(72, "=")
-            write #logFile, "= "+space(70)
-            write #logFile, "= "+message
-            write #logFile, "= "+space(70)
-            write #logFile, string(72, "=")
-        close logFile
-    ELSE
-        timeStr  = left(str(timer-lastTime), 8)
-        lastTime = timer
-        if left(timeStr, 1) = "." then
-            timeStr = "0"+timeStr
-        end if
-        message  = timeStr+space(12-len(timeStr))+message
+        memStr = str(mem)+" AVAILABLE MEMORY"
         
         logFile = freefile
         open "var/"+filename for append as logFile
-            write #logFile, message
-        close logFile
+            print #logFile, string(72, "=")
+            print #logFile, space(72)
+            print #logFile, "  "+message
+            print #logFile, "  "+memStr
+            print #logFile, space(72)
+            print #logFile, string(72, "=")
+        'close logFile
+    else
+        memstr  = str(mem)
+        message = memstr+space(13-len(memstr))+message
+        
+        elapsed = timer-lastTime
+        timestr = left(str(elapsed), 8)
+        message = timestr+space(11-len(timestr))+message
+        
+        elapsed  = timer-startTime
+        timestr  = left(str(elapsed), 8)
+        message  = timestr+space(11-len(timestr))+message
+        
+        lastTime = timer
+        
+        logFile = freefile
+        print #logFile, message
     end if
+    
+end sub
+
+sub LogDebug(message as string, p0 as string = "", p1 as string = "", p2 as string = "", p3 as string = "", p4 as string = "")
+    
+    dim params as string
+    
+    if len(p0) then params += p0
+    if len(p1) then params += iif(len(params), ", ", "") + p1
+    if len(p2) then params += iif(len(params), ", ", "") + p2
+    if len(p3) then params += iif(len(params), ", ", "") + p3
+    if len(p4) then params += iif(len(params), ", ", "") + p4
+    if len(p0) or len(p1) or len(p2) or len(p3) or len(p4) then
+        params = " ( "+params+" ) "
+    end if
+    logtofile "debug.log", message+params
     
 end sub
 

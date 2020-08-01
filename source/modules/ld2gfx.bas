@@ -23,7 +23,15 @@ dim shared SCREEN_H as integer
 dim shared FONT_W as integer
 dim shared FONT_H as integer
 
+dim shared DEBUGMODE as integer
+
 const DATA_DIR = "data/"
+
+sub LD2GFX_EnableDebugMode
+    
+    DEBUGMODE = 1
+    
+end sub
 
 function LD2_GetVideoInfo() as string
     
@@ -49,6 +57,8 @@ end function
 
 function LD2_InitVideo(title as string, scrn_w as integer, scrn_h as integer, fullscreen as integer = 0) as integer
     
+    if DEBUGMODE then LogDebug __FUNCTION__, title, str(scrn_w), str(scrn_h), str(fullscreen)
+    
     VideoErrorMessage = ""
     if VideoHandle.init(scrn_w, scrn_h, fullscreen, title) <> 0 then
         VideoErrorMessage = VideoHandle.getErrorMsg()
@@ -72,17 +82,23 @@ end function
 
 sub LD2_GetWindowSize(byref w as integer, byref h as integer)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(w), str(h)
+    
     VideoHandle.getWindowSize w, h
     
 end sub
 
 sub LD2_SetSpritesColor(sprites as VideoSprites ptr, c as integer)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(sprites), str(c)
+    
     sprites->setColorMod(RGBpal.red(c), RGBpal.grn(c), RGBpal.blu(c))
     
 end sub
 
 sub LD2_LoadPalette (filename as string, alter as integer = 1)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, filename, str(alter)
     
     RGBPal.loadPalette filename
     VideoHandle.setPalette(@RGBPal)
@@ -106,6 +122,8 @@ end sub
 
 sub LD2_CreateLightPalette(pal as Palette256 ptr)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(pal)
+    
     dim i as integer
     dim n as integer
     dim vals(15) as integer
@@ -121,6 +139,8 @@ end sub
 
 sub LD2_SetTargetBuffer(bufferNum as integer)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(bufferNum)
+    
     if bufferNum = 0 then
         VideoHandle.setAsTarget()
     else
@@ -130,6 +150,8 @@ sub LD2_SetTargetBuffer(bufferNum as integer)
 end sub
 
 sub LD2_cls (bufferNum as integer = 0, col as integer = 0)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, str(bufferNum), str(col)
     
     if bufferNum = 0 then
         VideoHandle.clearScreen(col)
@@ -155,6 +177,8 @@ end sub
 
 sub LD2_LoadBitmap (filename as string, bufferNum as integer, convert as integer)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, filename, str(bufferNum), str(convert)
+    
     if bufferNum = 0 then
         VideoHandle.loadBmp(filename)
     else
@@ -175,6 +199,8 @@ end sub
 
 sub LD2_InitSprites(filename as string, sprites as VideoSprites ptr, w as integer, h as integer, flags as integer = 0)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, filename, str(sprites), str(w), str(h), str(flags)
+    
     sprites->init( @VideoHandle, w, h )
     if (flags and SpriteFlags.UseWhitePalette) then
         sprites->setPalette(@WhitePalette)
@@ -185,12 +211,19 @@ sub LD2_InitSprites(filename as string, sprites as VideoSprites ptr, w as intege
         sprites->setTransparentColor(0)
     end if
     if len(filename) then
-        sprites->load(filename, iif(flags and SpriteFlags.Crop, 1, 0))
+        if lcase(right(filename, 4)) = ".bmp" then
+            sprites->loadBMP filename
+            sprites->dice w, h
+        else
+            sprites->load(filename, iif(flags and SpriteFlags.Crop, 1, 0))
+        end if
     end if
     
 end sub
 
 sub LD2_InitLayer(filename as string, sprites as VideoSprites ptr, flags as integer = 0)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, filename, str(sprites), str(flags)
     
     sprites->init( @VideoHandle )
     if (flags and SpriteFlags.UseWhitePalette) then
@@ -304,6 +337,8 @@ END SUB
 
 SUB LD2_FadeOut (speed AS INTEGER, col as integer = 0)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(speed), str(col)
+    
     dim a as integer
     
     speed *= 4
@@ -322,6 +357,8 @@ END SUB
 
 SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(speed), str(col)
+    
     dim a as integer
     
     speed *= 4
@@ -339,6 +376,8 @@ SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)
 END SUB
 
 SUB LD2_FadeInWhileNoKey (speed AS INTEGER, col as integer = 0)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, str(speed), str(col)
     
     dim a as integer
     
@@ -418,6 +457,8 @@ end function
 
 SUB LD2_SaveBuffer (bufferNum AS INTEGER)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(bufferNum)
+    
     if bufferNum = 0 then
         VideoHandle.saveBmp DATA_DIR+"gfx/tmp.bmp"
     else
@@ -427,6 +468,8 @@ SUB LD2_SaveBuffer (bufferNum AS INTEGER)
 END SUB
 
 SUB LD2_RestoreBuffer (bufferNum AS INTEGER)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, str(bufferNum)
     
     if bufferNum = 0 then
         VideoHandle.loadBmp DATA_DIR+"gfx/tmp.bmp"
@@ -438,12 +481,16 @@ END SUB
 
 sub Font_Init(fontw as integer, fonth as integer)
     
+    if DEBUGMODE then LogDebug __FUNCTION__, str(fontw), str(fonth)
+    
     FONT_W = fontw
     FONT_H = fonth
     
 end sub
 
 sub Font_Load(filename as string, useWhitePalette as integer = 1)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, filename, str(useWhitePalette)
     
     if useWhitePalette then
         LD2_InitSprites filename, @SpritesFont, 6, 5, SpriteFlags.Transparent or SpriteFlags.UseWhitePalette
@@ -499,6 +546,8 @@ sub Font_putTextCol (x as integer, y as integer, text as string, col as integer,
 end sub
 
 sub Screenshot_Take(byref filename as string = "", xscale as double = 1.0, yscale as double = 1.0)
+    
+    if DEBUGMODE then LogDebug __FUNCTION__, filename, str(xscale), str(yscale)
     
     dim datetime as string
     dim count as integer

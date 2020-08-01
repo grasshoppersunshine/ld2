@@ -7,6 +7,7 @@ TYPE LD2musicData
 	loopmusic AS INTEGER
 END TYPE
 
+declare sub LD2SND_EnableDebugMode
 declare function LD2_GetSoundInfo() as string
 declare function LD2_GetSoundErrorMsg() as string
 declare function LD2_InitSound (enabled as integer) as integer

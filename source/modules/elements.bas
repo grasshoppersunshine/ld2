@@ -522,20 +522,7 @@ sub Element_Render(e as ElementType ptr)
     
     Element_RenderPrepare e
     
-    'if e->render_x + e->render_outer_w < 0 then exit sub
-    'if e->render_y + e->render_outer_h < 0 then exit sub
-    
     if e->border_size > 0 then
-
-        'lft = e->render_visible_x
-        'top = e->render_visible_y
-        'rgt = lft+e->render_visible_w+e->padding_x*2+e->border_size
-        'btm = top+e->render_visible_h+e->padding_y*2+e->border_size
-        '
-        'fill lft, top, e->render_outer_w, e->border_size, e->border_color
-        'fill lft, top, e->border_size, e->render_outer_h, e->border_color
-        'fill rgt, top, e->border_size, e->render_outer_h, e->border_color
-        'fill lft, btm, e->render_outer_w, e->border_size, e->border_color
         
         lft = e->render_x
         top = e->render_y
@@ -547,9 +534,6 @@ sub Element_Render(e as ElementType ptr)
         fill rgt, top, e->border_size, e->render_outer_h, e->border_color
         fill lft, btm, e->render_outer_w, e->border_size, e->border_color
         
-        'fill lft, top+int(e->render_outer_h*0.5), e->render_outer_w, e->border_size, e->border_color
-        'fill lft+int(e->render_outer_w*0.5), top, e->border_size, e->render_outer_h, e->border_color
-
     end if
 
     if e->background >= 0 then

@@ -293,8 +293,6 @@ declare sub Sprites_Load (filename as string, spriteSetId as integer)
 declare sub Sprites_put (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0, isFixed as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
 declare sub Sprites_putFixed (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0)
 
-declare sub LogDebug(message as string, p0 as string = "", p1 as string = "", p2 as string = "", p3 as string = "")
-
 declare function LD2_AddToStatus (item as integer, qty as integer, slot as integer = -1) as integer
 declare function LD2_AddToStatusIfExists (item as integer, qty as integer) as integer
 declare sub LD2_ClearInventorySlot (slot as integer)

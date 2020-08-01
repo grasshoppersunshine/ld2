@@ -3,6 +3,7 @@
 
 #include once "videosprites.bi"
 
+declare sub LD2GFX_EnableDebugMode
 declare function LD2_GetVideoInfo() as string
 declare function LD2_GetVideoErrorMsg() as string
 declare function LD2_InitVideo(title as string, scrn_w as integer, scrn_h as integer, fullscreen as integer = 0) as integer
@@ -50,7 +51,7 @@ declare function Screen_GetHeight() as integer
 declare sub Screenshot_Take(byref filename as string = "", xscale as double = 1.0, yscale as double = 1.0)
 
 enum SpriteFlags
-    Transparent = &h01
+    Transparent     = &h01
     UseWhitePalette = &h02
-    Crop = &h04
+    Crop            = &h04
 end enum

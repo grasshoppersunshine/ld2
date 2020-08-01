@@ -178,6 +178,7 @@ function doArgs(args as ArgsType, pathToFbc as string, title as string = "", reb
         commandLine = pathToFbc+" "+args.getArgString()
         if fileChanged then
             dim rv as integer
+            'print "Running: "+commandLine
             if shell(commandLine) = 1 then
                 print "ERROR while running fbc with: "+commandLine
                 print "Exiting"
@@ -259,6 +260,7 @@ dim modulesUpdated as integer
 args.init
 args.add "modules/common.bas"      , "-lib -x lib/libcommon.a"      , "lib/libcommon.a"
 args.add "modules/easing.bas"      , "-lib -x lib/libeasing.a"      , "lib/libeasing.a"
+args.add "modules/interval.bas"    , "-lib -x lib/libinterval.a"    , "lib/libinterval.a"
 args.add "modules/mobs.bas"        , "-lib -x lib/libmobs.a"        , "lib/libmobs.a"
 args.add "modules/poses.bas"       , "-lib -x lib/libposes.a"       , "lib/libposes.a"
 args.add "modules/inventory.bas"   , "-lib -x lib/libinventory.a"   , "lib/libinventory.a"
