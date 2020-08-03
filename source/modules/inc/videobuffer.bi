@@ -9,7 +9,7 @@ type VideoBuffer
 private:
     _w as integer
     _h as integer
-    _data as SDL_Texture ptr
+    _texture as SDL_Texture ptr
     _renderer as SDL_Renderer ptr
     _palette as palette256 ptr
 public:
@@ -17,12 +17,11 @@ public:
     declare sub setPalette(p as Palette256 ptr)
     declare sub loadBmp(filename as string)
     declare sub saveBmp(filename as string, xscale as double = 1.0, yscale as double = 1.0)
-    declare sub setAsTarget()
     declare sub putToScreen(src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)
+    declare sub putPixel(x as integer, y as integer, colr as integer)
+    declare sub fillScreen(colr as integer, a255 as integer = &hff)
+    declare sub fill(x as integer, y as integer, w as integer, h as integer, colr as integer, a255 as integer = &hff)
+    declare sub outline(x as integer, y as integer, w as integer, h as integer, colr as integer, a255 as integer = &hff)
     declare sub copy(buffer as VideoBuffer ptr, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)
-    declare sub clearScreen(col as integer)
-    declare sub putPixel(x as integer, y as integer, col as integer)
-    declare sub fill(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
-    declare sub outline(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
-    declare sub fillScreen(col as integer, aph as integer = &hff)
+    declare sub setAsTarget()
 end type

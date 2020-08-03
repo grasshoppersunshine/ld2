@@ -24,10 +24,9 @@ end function
 sub VideoBuffer.init(v as Video ptr)
     
     this._renderer = v->getRenderer()
-    this._w = v->getCols()
-    this._h = v->getRows()
-    this._data = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this._w, this._h)
-    SDL_SetTextureBlendMode( this._data, SDL_BLENDMODE_BLEND )
+    v->getScreenSize this._w, this._h
+    this._texture = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this._w, this._h)
+    SDL_SetTextureBlendMode( this._texture, SDL_BLENDMODE_BLEND )
     
 end sub
 
@@ -39,59 +38,40 @@ end sub
 
 sub VideoBuffer.setAsTarget()
     
-    SDL_SetRenderTarget( this._renderer, this._data )
+    SDL_SetRenderTarget( this._renderer, this._texture )
     
 end sub
 
 sub VideoBuffer.putToScreen(src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)
     
     SDL_SetRenderTarget( this._renderer, NULL )
-    SDL_RenderCopy( this._renderer, this._data, src, dst )
+    SDL_RenderCopy( this._renderer, this._texture, src, dst )
     
 end sub
 
 sub VideoBuffer.copy(buffer as VideoBuffer ptr, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)
     
     buffer->setAsTarget()
-    SDL_RenderCopy( this._renderer, this._data, src, dst )
+    SDL_RenderCopy( this._renderer, this._texture, src, dst )
     
 end sub
 
-sub VideoBuffer.clearScreen(col as integer)
-    
-    dim r as integer, g as integer, b as integer
-    if this._palette <> 0 then
-        r = this._palette->red(col)
-        g = this._palette->grn(col)
-        b = this._palette->blu(col)
-    else
-        r = rgb_r(col)
-        g = rgb_g(col)
-        b = rgb_b(col)
-    end if
-    
-    this.setAsTarget()
-    SDL_SetRenderDrawColor( this._renderer, r, g, b, SDL_ALPHA_OPAQUE )
-	SDL_RenderFillRect( this._renderer, NULL )
-    
-end sub
-
-sub VideoBuffer.putPixel(x as integer, y as integer, col as integer)
+sub VideoBuffer.putPixel(x as integer, y as integer, colr as integer)
     
     dim r as integer, g as integer, b as integer, a as integer
     if this._palette <> 0 then
-        r = this._palette->red(col)
-        g = this._palette->grn(col)
-        b = this._palette->blu(col)
-        a = this._palette->getAlpha(col)
+        r = this._palette->red(colr)
+        g = this._palette->grn(colr)
+        b = this._palette->blu(colr)
+        a = this._palette->getAlpha(colr)
     else
-        r = rgb_r(col)
-        g = rgb_g(col)
-        b = rgb_b(col)
+        r = rgb_r(colr)
+        g = rgb_g(colr)
+        b = rgb_b(colr)
         a = 255
     end if
     
-    SDL_SetRenderTarget( this._renderer, this._data )
+    SDL_SetRenderTarget( this._renderer, this._texture )
     SDL_SetRenderDrawColor( this._renderer, r, g, b, a )
     SDL_RenderDrawPoint( this._renderer, x, y )
     
@@ -105,7 +85,7 @@ sub VideoBuffer.loadBmp(filename as string)
     imageSurface = SDL_LoadBMP(filename)
     if imageSurface <> NULL then
         imageTexture = SDL_CreateTextureFromSurface( this._renderer, imageSurface )
-        SDL_SetRenderTarget( this._renderer, this._data )
+        SDL_SetRenderTarget( this._renderer, this._texture )
         SDL_RenderCopy( this._renderer, imageTexture, NULL, NULL )
         SDL_FreeSurface(imageSurface)
         SDL_DestroyTexture(imageTexture)
@@ -123,14 +103,14 @@ sub VideoBuffer.saveBmp(filename as string, xscale as double = 1.0, yscale as do
     w = int(this._w * xscale)
     h = int(this._h * yscale)
     if (w = this._w) and (h = this._h) then
-        surface = SDL_CreateSurfaceFromTexture(this._renderer, this._data)
+        surface = SDL_CreateSurfaceFromTexture(this._renderer, this._texture)
         SDL_SaveBMP(surface, filename)
         SDL_FreeSurface(surface)
     else
         texture = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, h)
         SDL_SetTextureBlendMode( texture, SDL_BLENDMODE_BLEND )
         SDL_SetRenderTarget( this._renderer, texture )
-        SDL_RenderCopy( this._renderer, this._data, 0, 0)
+        SDL_RenderCopy( this._renderer, this._texture, 0, 0)
         surface = SDL_CreateSurfaceFromTexture(this._renderer, texture)
         SDL_SaveBMP(surface, filename)
         SDL_FreeSurface(surface)
@@ -139,56 +119,56 @@ sub VideoBuffer.saveBmp(filename as string, xscale as double = 1.0, yscale as do
     
 end sub
 
-sub VideoBuffer.fillScreen(col as integer, aph as integer = &hff)
+sub VideoBuffer.fillScreen(colr as integer, a255 as integer = &hff)
     
-    this.fill(0, 0, this._w, this._h, col, aph)
+    this.fill(0, 0, this._w, this._h, colr, a255)
     
 end sub
 
-sub VideoBuffer.fill(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
+sub VideoBuffer.fill(x as integer, y as integer, w as integer, h as integer, colr as integer, a255 as integer = &hff)
     
     dim rect as SDL_Rect
     dim r as integer, g as integer, b as integer
 
     if this._palette <> 0 then
-        r = this._palette->red(col)
-        g = this._palette->grn(col)
-        b = this._palette->blu(col)
+        r = this._palette->red(colr)
+        g = this._palette->grn(colr)
+        b = this._palette->blu(colr)
     else
-        r = rgb_r(col)
-        g = rgb_g(col)
-        b = rgb_b(col)
+        r = rgb_r(colr)
+        g = rgb_g(colr)
+        b = rgb_b(colr)
     end if
     
     rect.x = x: rect.y = y
     rect.w = w: rect.h = h
     
     this.setAsTarget()
-    SDL_SetRenderDrawColor( this._renderer, r, g, b, aph )
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, a255 )
 	SDL_RenderFillRect( this._renderer, @rect )
 
 end sub
 
-sub VideoBuffer.outline(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
+sub VideoBuffer.outline(x as integer, y as integer, w as integer, h as integer, colr as integer, a255 as integer = &hff)
     
     dim rect as SDL_Rect
     dim r as integer, g as integer, b as integer
 
     if this._palette <> 0 then
-        r = this._palette->red(col)
-        g = this._palette->grn(col)
-        b = this._palette->blu(col)
+        r = this._palette->red(colr)
+        g = this._palette->grn(colr)
+        b = this._palette->blu(colr)
     else
-        r = rgb_r(col)
-        g = rgb_g(col)
-        b = rgb_b(col)
+        r = rgb_r(colr)
+        g = rgb_g(colr)
+        b = rgb_b(colr)
     end if
     
     rect.x = x: rect.y = y
     rect.w = w: rect.h = h
     
     this.setAsTarget()
-    SDL_SetRenderDrawColor( this._renderer, r, g, b, aph )
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, a255 )
 	SDL_RenderDrawRect( this._renderer, @rect )
 
 end sub

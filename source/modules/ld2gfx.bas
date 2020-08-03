@@ -55,12 +55,12 @@ function LD2_GetVideoErrorMsg() as string
     
 end function
 
-function LD2_InitVideo(title as string, scrn_w as integer, scrn_h as integer, fullscreen as integer = 0) as integer
+function LD2_InitVideo(window_title as string, scrn_w as integer, scrn_h as integer, fullscreen as integer = 0) as integer
     
-    if DEBUGMODE then LogDebug __FUNCTION__, title, str(scrn_w), str(scrn_h), str(fullscreen)
+    if DEBUGMODE then LogDebug __FUNCTION__, window_title, str(scrn_w), str(scrn_h), str(fullscreen)
     
     VideoErrorMessage = ""
-    if VideoHandle.init(scrn_w, scrn_h, fullscreen, title) <> 0 then
+    if VideoHandle.init(window_title, scrn_w, scrn_h, fullscreen) <> 0 then
         VideoErrorMessage = VideoHandle.getErrorMsg()
         return 1
     end if
@@ -100,7 +100,7 @@ sub LD2_LoadPalette (filename as string, alter as integer = 1)
     
     if DEBUGMODE then LogDebug __FUNCTION__, filename, str(alter)
     
-    RGBPal.loadPalette filename
+    RGBPal.loadPixelPlus filename
     VideoHandle.setPalette(@RGBPal)
     VideoBuffers(0).setPalette(@RGBPal)
     VideoBuffers(1).setPalette(@RGBPal)
@@ -139,7 +139,7 @@ end sub
 
 sub LD2_SetTargetBuffer(bufferNum as integer)
     
-    if DEBUGMODE then LogDebug __FUNCTION__, str(bufferNum)
+    if DEBUGMODE = 3 then LogDebug __FUNCTION__, str(bufferNum)
     
     if bufferNum = 0 then
         VideoHandle.setAsTarget()
@@ -149,15 +149,15 @@ sub LD2_SetTargetBuffer(bufferNum as integer)
     
 end sub
 
-sub LD2_cls (bufferNum as integer = 0, col as integer = 0)
+sub LD2_cls (bufferNum as integer = 0, colr as integer = 0)
     
-    if DEBUGMODE then LogDebug __FUNCTION__, str(bufferNum), str(col)
+    if DEBUGMODE then LogDebug __FUNCTION__, str(bufferNum), str(colr)
     
     if bufferNum = 0 then
-        VideoHandle.clearScreen(col)
+        VideoHandle.clearScreen(colr)
         VideoHandle.update()
     else
-        VideoBuffers(bufferNum-1).clearScreen(col)
+        VideoBuffers(bufferNum-1).fillScreen(colr)
     end if
     
 end sub
@@ -201,21 +201,24 @@ sub LD2_InitSprites(filename as string, sprites as VideoSprites ptr, w as intege
     
     if DEBUGMODE then LogDebug __FUNCTION__, filename, str(sprites), str(w), str(h), str(flags)
     
-    sprites->init( @VideoHandle, w, h )
+    sprites->init( @VideoHandle )
     if (flags and SpriteFlags.UseWhitePalette) then
         sprites->setPalette(@WhitePalette)
     else
         sprites->setPalette(@RGBPal)
+    end if
+    if (flags and SpriteFlags.TransMagenta) then
+        sprites->setTransparentColor(0)
+        RGBPal.setRGBA(0, 255, 0, 255)
     end if
     if (flags and SpriteFlags.Transparent) then
         sprites->setTransparentColor(0)
     end if
     if len(filename) then
         if lcase(right(filename, 4)) = ".bmp" then
-            sprites->loadBMP filename
-            sprites->dice w, h
+            sprites->loadBMP(filename, w, h, iif(flags and SpriteFlags.Crop, 1, 0))
         else
-            sprites->load(filename, iif(flags and SpriteFlags.Crop, 1, 0))
+            sprites->loadBsv(filename, w, h, iif(flags and SpriteFlags.Crop, 1, 0))
         end if
     end if
     
@@ -497,7 +500,12 @@ sub Font_Load(filename as string, useWhitePalette as integer = 1)
     else
         LD2_InitSprites filename, @SpritesFont, 6, 5, SpriteFlags.Transparent
     end if
+    SpritesFont.saveBmp lcase(left(filename, len(filename)-4))+".bmp"
     
+end sub
+
+sub Font_Metrics(byval sprite_id as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+    SpritesFont.getMetrics sprite_id, x, y, w, h
 end sub
 
 sub Font_SetColor(fontColor as integer)

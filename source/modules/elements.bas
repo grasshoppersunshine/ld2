@@ -6,10 +6,12 @@
 declare sub fill(x as integer, y as integer, w as integer, h as integer, fillColor as integer, a as double = 1.0)
 declare sub setAlphaMod(a as double)
 declare sub setFontColor(fontColor as integer)
-declare sub putToScreen(x as integer, y as integer, charVal as integer)
+declare sub putToScreen(x as integer, y as integer, charId as integer)
+declare sub getFontMetrics(byval charId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
 declare sub putSprite(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
 declare sub getSpriteMetrics(spriteId as integer, spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
 declare function FontVal(ch as string) as integer
+declare sub BuildFontMetrics()
 '***********************************************************************
 '* END PRIVATE METHODS
 '***********************************************************************
@@ -39,7 +41,8 @@ dim shared DEFAULT_LINE_SPACING as double = 1.4
 '***********************************************************************
 '* PRIVATE CALLBACK VARS
 '***********************************************************************
-dim shared CallbackFontPut as sub(x as integer, y as integer, charVal as integer)
+dim shared CallbackFontPut as sub(x as integer, y as integer, charId as integer)
+dim shared CallbackFontMetrics as sub(byval charId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
 dim shared CallbackFill as sub(x as integer, y as integer, w as integer, h as integer, fillColor as integer, a as double = 1.0)
 dim shared CallbackSetFontColor as sub(fontColor as integer)
 dim shared CallbackSetAlphaMod as sub(a as double)
@@ -50,31 +53,6 @@ dim shared CallbackSpriteMetrics as sub(byval spriteId as integer, byval spriteS
 '***********************************************************************
 
 const NEW_LINE = chr(10)
-
-'***********************************************************************
-'* CALLBACK SETTERS
-'***********************************************************************
-sub Elements_SetFontPutCallback(callback as sub(x as integer, y as integer, charVal as integer))
-    CallbackFontPut = callback
-end sub
-sub Elements_SetFillCallback(callback as sub(x as integer, y as integer, w as integer, h as integer, fillColor as integer, a as double = 1.0))
-    CallbackFill = callback
-end sub
-sub Elements_SetFontColorCallback(callback as sub(fontColor as integer))
-    CallbackSetFontColor = callback
-end sub
-sub Elements_SetAlphaModCallback(callback as sub(a as double))
-    CallbackSetAlphaMod = callback
-end sub
-sub Elements_SetSpritePutCallback(callback as sub(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0))
-    CallbackSpritePut = callback
-end sub
-sub Elements_SetSpriteMetricsCallback(callback as sub(byval spriteId as integer, byval spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer))
-    CallbackSpriteMetrics = callback
-end sub
-'***********************************************************************
-'* END CALLBACK SETTERS
-'***********************************************************************
 
 '***********************************************************************
 '* CALLBACK CALLERS
@@ -100,6 +78,17 @@ end sub
 sub putToScreen(x as integer, y as integer, charVal as integer)
     if CallbackFontPut <> 0 then
         CallbackFontPut(x, y, charVal)
+    end if
+end sub
+
+sub getFontMetrics(byval charId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+    if CallbackFontMetrics <> 0 then
+        CallbackFontMetrics(charId, x, y, w, h)
+    else
+        x = 0
+        y = 0
+        w = FONT_W
+        h = FONT_H
     end if
 end sub
 
@@ -132,7 +121,8 @@ sub Elements_Init( _
     cbPut as sub(x as integer, y as integer, charVal as integer), _
     cbFill as sub(x as integer, y as integer, w as integer, h as integer, fillColor as integer, a as double = 1.0), _
     cbSetFontColor as sub(fontColor as integer), _
-    cbSetAlphaMod as sub(a as double) _
+    cbSetAlphaMod as sub(a as double), _
+    cbFontMetrics as sub(byval charId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer) = 0 _
 )
     
     SCREEN_W = scrnw
@@ -143,6 +133,9 @@ sub Elements_Init( _
     CallbackFill = cbFill
     CallbackSetFontColor = cbSetFontColor
     CallbackSetAlphaMod = cbSetAlphaMod
+    CallbackFontMetrics = cbFontMetrics
+    
+    BuildFontMetrics
     
 end sub
 
@@ -938,58 +931,25 @@ sub Elements_Restore()
     
 end sub
 
-sub Elements_LoadFontMetrics(filename as string)
+sub BuildFontMetrics()
     
-    type HeaderType
-        a as ubyte
-        b as ubyte
-        c as ubyte
-        d as ubyte
-        e as ubyte
-        f as ubyte
-        g as ubyte
-    end type
+    dim as integer x, y, w, h
     
-    dim header as HeaderType
-    dim x as integer, y as integer
-    dim n as integer
-    dim u as ushort
-    dim c as ubyte
-    
-    dim leftMost as integer
-    dim rightMost as integer
-    dim charWidth as integer
-    
-    n = 0
-    open filename for binary as #1
-        get #1, , header
-        while not eof(1)
-            get #1, , u '- sprite width
-            get #1, , u '- sprite height
-            leftMost = 5
-            rightMost = 0
-            for y = 0 to 4 '- FONT_H
-                for x = 0 to 5 '- FONT_W
-                    get #1, , c
-                    if (c > 0) and (x > rightMost) then
-                        rightMost = x
-                    end if
-                    if (c > 0) and (x < leftMost) then
-                        leftMost = x
-                    end if
-                next x
-            next y
-            if leftMost <= rightMost then
-                charWidth = (rightMost - leftMost) + 1
-            else
-                charWidth = int(FONT_W * 0.75) '- assume space
-            end if
-            if n = 64 then charWidth = FONT_W: rightMost = -1 '* "|"
-            FontCharWidths(n) = charWidth
-            FontCharMargins(n) = iif(leftMost <= rightMost, leftMost, 0)
-            n += 1
-        wend
-    close #1
+    dim n as integer = 0
+    do
+        w = -1
+        getFontMetrics n, x, y, w, h
+        if w = -1 then
+            exit do
+        end if
+        if n = 64 then '* "|"
+            w = FONT_W
+            x = 0
+        end if
+        FontCharWidths(n) = w+x
+        FontCharMargins(n) = x
+        n += 1
+    loop while n < ubound(FontCharWidths)
     
 end sub
 

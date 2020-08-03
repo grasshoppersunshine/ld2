@@ -1037,6 +1037,10 @@ sub Game_Init
         i += 1
     loop
     
+    '*******************************************************************
+    Game_setFlag GameFlags.NoBackground
+    '*******************************************************************
+    
     TESTMODE     = iif(Game_hasFlag(GameFlags.TestMode)    , 1, 0)
     DEBUGMODE    = iif(Game_hasFlag(GameFlags.DebugMode)   , 1, 0)
     CLASSICMODE  = iif(Game_hasFlag(GameFlags.ClassicMode) , 1, 0)
@@ -1088,17 +1092,16 @@ sub Game_Init
         LD2_cls 2, 0
     end if
     
-    PaletteFile = DATA_DIR+"gfx/gradient.pal"
-    FontFile = DATA_DIR+"gfx/font.put"
+    PaletteFile = DATA_DIR+"gfx/palettes/gradient.pal"
+    FontFile = DATA_DIR+"gfx/sprites/font.bmp"
     
     LD2_LoadPalette PaletteFile
     
     Font_Init FONT_W, FONT_H
     Font_Load FontFile
     
-    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
+    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod, @Font_Metrics
     Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
-    Elements_LoadFontMetrics FontFile
     
     if DEBUGMODE then
         LogDebug __FUNCTION__+" SUCCESS"
@@ -1149,13 +1152,12 @@ sub Game_LoadAssets
         LD2_cls 2, 0
     end if
     
-    FontFile = DATA_DIR+"gfx/font.put"
+    FontFile = DATA_DIR+"gfx/sprites/font.bmp"
     Font_Init FONT_W, FONT_H
     Font_Load FontFile
     
-    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
+    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod, @Font_Metrics
     Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
-    Elements_LoadFontMetrics FontFile
     
     Element_Init @systemOut
     systemOut.x = 0
@@ -1189,15 +1191,15 @@ sub Game_LoadAssets
         BossFile    = DATA_DIR+"2002/gfx/boss1.put"
         FontFile    = DATA_DIR+"2002/gfx/font1.put"
     else
-        LarryFile   = DATA_DIR+"gfx/larry2.put"
-        TilesFile   = DATA_DIR+"gfx/tiles.bmp"
-        LightFile   = DATA_DIR+"gfx/ld2light.put"
-        MobsFile    = DATA_DIR+"gfx/mobs.put"
-        GutsFile    = DATA_DIR+"gfx/ld2guts.put"
-        SceneFile   = DATA_DIR+"gfx/ld2scene.put"
-        ObjectsFile = DATA_DIR+"gfx/objects.put"
-        BossFile    = DATA_DIR+"gfx/boss1.put"
-        FontFile    = DATA_DIR+"gfx/font.put"
+        LarryFile   = DATA_DIR+"gfx/sprites/larry2.bmp"
+        TilesFile   = DATA_DIR+"gfx/sprites/ld2tiles.bmp"
+        LightFile   = DATA_DIR+"gfx/sprites/ld2light.bmp"
+        MobsFile    = DATA_DIR+"gfx/sprites/mobs.bmp"
+        GutsFile    = DATA_DIR+"gfx/sprites/ld2guts.bmp"
+        SceneFile   = DATA_DIR+"gfx/sprites/ld2scene.bmp"
+        ObjectsFile = DATA_DIR+"gfx/sprites/objects.bmp"
+        BossFile    = DATA_DIR+"gfx/sprites/boss1.bmp"
+        FontFile    = DATA_DIR+"gfx/sprites/font.bmp"
     end if
     
     '///////////////////////////////////////////////////////////////////
@@ -1230,7 +1232,7 @@ sub Game_LoadAssets
         DOORCLOSESPEED = -0.04
     end if
     
-    PaletteFile = DATA_DIR+"gfx/gradient.pal"
+    PaletteFile = DATA_DIR+"gfx/palettes/gradient.pal"
     if CLASSICMODE then
         LD2_LoadPalette PaletteFile, 0
     else
@@ -1252,9 +1254,8 @@ sub Game_LoadAssets
         Font_Load FontFile
     end if
     
-    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
+    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod, @Font_Metrics
     Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
-    Elements_LoadFontMetrics FontFile
     
     if CLASSICMODE then
         Elements_SetDefaultTextSpacing 1.0
@@ -1375,8 +1376,6 @@ SUB LD2_GenerateSky()
 END SUB
 
 sub LD2_RenderBackground(height as double)
-    
-    exit sub
     
     dim x as integer
     dim y as integer
@@ -2009,6 +2008,16 @@ function Sprites_GetSpriteSet(id as integer) as VideoSprites ptr
     
 end function
 
+sub Sprites_BsvToBmp (filename as string, spriteSetId as integer)
+    
+    dim sprites as VideoSprites ptr
+    
+    sprites = Sprites_GetSpriteSet(spriteSetId)
+    LD2_InitSprites filename, sprites, SPRITE_W, SPRITE_H, SpriteFlags.TransMagenta
+    sprites->saveBmp lcase(left(filename, len(filename)-4))+".bmp"
+    
+end sub
+
 sub Sprites_Load (filename as string, spriteSetId as integer)
     
     if DEBUGMODE then LogDebug __FUNCTION__, filename, str(spriteSetId)
@@ -2023,8 +2032,7 @@ sub Sprites_Load (filename as string, spriteSetId as integer)
             LD2_InitSprites filename, sprites, SPRITE_W, SPRITE_H
         case idLIGHT
             LD2_InitSprites filename, sprites, SPRITE_W, SPRITE_H
-            sprites->setPalette(@LightPalette)
-            sprites->load(filename)
+            sprites->convertPalette(@LightPalette)
         case idOBJCRP
             LD2_InitSprites filename, sprites, SPRITE_W, SPRITE_H, SpriteFlags.Transparent or SpriteFlags.Crop
         case else

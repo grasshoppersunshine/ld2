@@ -131,7 +131,7 @@ sub logtofile(filename as string, message as string)
             print #logFile, "  "+memStr
             print #logFile, space(72)
             print #logFile, string(72, "=")
-        'close logFile
+        close logFile
     else
         memstr  = str(mem)
         message = memstr+space(13-len(memstr))+message
@@ -147,7 +147,9 @@ sub logtofile(filename as string, message as string)
         lastTime = timer
         
         logFile = freefile
-        print #logFile, message
+        open "var/"+filename for append as logFile
+            print #logFile, message
+        close #1
     end if
     
 end sub

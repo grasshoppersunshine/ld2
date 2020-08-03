@@ -11,7 +11,7 @@ declare sub LD2_GetWindowSize(byref w as integer, byref h as integer)
 declare sub LD2_LoadPalette(filename as string, alter as integer = 1)
 declare sub LD2_CreateLightPalette(pal as Palette256 ptr)
 declare sub LD2_SetTargetBuffer(bufferNum as integer)
-declare sub LD2_cls (bufferNum as integer = 0, col as integer = 0)
+declare sub LD2_cls (bufferNum as integer = 0, colr as integer = 0)
 declare sub LD2_InitSprites(filename as string, sprites as VideoSprites ptr, w as integer, h as integer, flags as integer = 0)
 declare sub LD2_InitLayer(filename as string, sprites as VideoSprites ptr, flags as integer = 0)
 DECLARE SUB LD2_fill (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
@@ -39,6 +39,7 @@ DECLARE SUB LD2_LoadBitmap (filename AS STRING, BufferNum AS INTEGER, Convert AS
 
 declare sub Font_Init(fontw as integer, fonth as integer)
 declare sub Font_Load(filename as string, useWhitePalette as integer = 1)
+declare sub Font_Metrics(byval sprite_id as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
 declare sub Font_SetColor(fontColor as integer)
 declare sub Font_SetAlpha(a as double)
 declare sub Font_put(x as integer, y as integer, sprite as integer, bufferNum as integer)
@@ -54,4 +55,5 @@ enum SpriteFlags
     Transparent     = &h01
     UseWhitePalette = &h02
     Crop            = &h04
+    TransMagenta    = &h08
 end enum

@@ -1,30 +1,54 @@
 #include once "inc/videosprites.bi"
 
-sub VideoSprites.init(v as Video ptr, w as integer = 0, h as integer = 0)
+sub VideoSprites.init(v as Video ptr)
     
     this._renderer = v->getRenderer()
-    this._w = w
-    this._h = h
-    this._centerX = int(w/2)-1
-    this._centerY = int(h/2)-1
-    this._transparentColor = -1
+    this._texture  = 0
+    this._surface  = 0
+    this._palette  = 0
+    this._canvas_w = 0
+    this._canvas_h = 0
+    this._w = 0
+    this._h = 0
+    this._center_x = 0
+    this._center_y = 0
+    this._transparent_index = -1
     this._count = 0
-    this._sp = -1
-    this._spMax = ubound(this._pushed)
+    
+end sub
+
+sub VideoSprites.release()
+    
+    if this._texture <> 0 then
+        SDL_DestroyTexture(this._texture)
+        this._texture = 0
+    end if
+    if this._surface <> 0 then
+        SDL_FreeSurface(this._surface)
+        this._surface = 0
+    end if
+    if this._pixels <> 0 then
+        deallocate(this._pixels)
+        this._pixels = 0
+    end if
+    if this._pixel_format <> 0 then
+        SDL_FreeFormat(this._pixel_format)
+        this._pixel_format = 0
+    end if
     
 end sub
 
 sub VideoSprites.setCenter(x as integer, y as integer)
     
-    this._centerX = x
-    this._centerY = y
+    this._center_x = x
+    this._center_y = y
     
 end sub
 
 sub VideoSprites.resetCenter()
     
-    this._centerX = int(this._w/2)-1
-    this._centerY = int(this._h/2)-1
+    this._center_x = int(this._w*0.5)-1
+    this._center_y = int(this._h*0.5)-1
     
 end sub
 
@@ -36,11 +60,31 @@ end sub
 
 sub VideoSprites.setAsTarget()
     
-    SDL_SetRenderTarget( this._renderer, this._texture )
+    if SDL_SetRenderTarget( this._renderer, this._texture ) <> 0 then
+        print *SDL_GetError()
+        end
+    end if
     
 end sub
 
-sub VideoSprites.load(filename as string, crop as integer = 0)
+type DimensionsType
+    _w as ushort
+    _h as ushort
+    declare property w() as integer
+    declare property h() as integer
+    declare property area() as integer
+end type
+property DimensionsType.w() as integer
+    return (this._w shr 3)
+end property
+property DimensionsType.h() as integer
+    return this._h
+end property
+property DimensionsType.area() as integer
+    return this.w * this.h
+end property
+
+sub VideoSprites.loadBsv(filename as string, w as integer, h as integer, crop as integer = 0)
     
     type HeaderType
         a as ubyte
@@ -53,68 +97,128 @@ sub VideoSprites.load(filename as string, crop as integer = 0)
     end type
     
     dim header as HeaderType
+    dim dimensions as DimensionsType
     dim filesize as integer
-    dim numSprites as integer
-    dim as integer across, down
+    dim count as integer
     dim as integer offx, offy
     dim as integer x, y
-    dim as integer n
     dim as ubyte r, g, b, a
+    dim as ubyte c
     
-    dim uw as ushort
-    dim uh as ushort
-    dim c as ubyte
-    
-    SDL_SetRenderTarget( this._renderer, this._texture )
+    w = iif(w > 0, w, this._w)
+    h = iif(h > 0, h, this._h)
     
     offx = 0: offy = 0
-    n = 0
     
     open filename for binary as #1
-        filesize = lof(1)
-        numSprites = int((filesize-7)/(this._w*this._h+4))
-        redim this._sprites(numSprites) as SDL_Rect
-        across = int(sqr(numSprites)+0.9999)*this._w
-        down   = int(sqr(numSprites)+0.9999)*this._h
-        this._texture = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, across, down)
-        SDL_SetTextureBlendMode( this._texture, SDL_BLENDMODE_BLEND )
-        SDL_SetRenderTarget( this._renderer, this._texture )
+        get #1, , header
+        count = 0
+        while not eof(1)
+            get #1, , dimensions
+            for y = 0 to dimensions.h-1
+                for x = 0 to dimensions.w-1
+                    get #1, , c
+                next x
+            next y
+            count += 1
+        wend
+    close #1
+    
+    this._canvas_w = 12 * w
+    this._canvas_h = int(count/12+0.9999) * h
+    this._w = iif(w > 0, w, this._canvas_w)
+    this._h = iif(h > 0, h, this._canvas_h)
+    
+    this._texture = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this._canvas_w, this._canvas_h)
+    this._pixel_format = SDL_AllocFormat( SDL_PIXELFORMAT_ARGB8888 )
+    
+    this.setAsTarget
+    SDL_SetRenderDrawBlendMode( this._renderer, SDL_BLENDMODE_NONE )
+    
+    open filename for binary as #1
         get #1, , header
         while not eof(1)
-            get #1, , uw
-            get #1, , uh
-            for y = 0 to this._h-1
-                for x = 0 to this._w-1
+            get #1, , dimensions
+            if (offx + dimensions.w) > this._canvas_w then
+                offx = 0
+                offy += this._h
+            end if
+            for y = 0 to dimensions.h-1
+                for x = 0 to dimensions.w-1
                     get #1, , c
                     r = this._palette->red(c)
                     g = this._palette->grn(c)
                     b = this._palette->blu(c)
-                    a = iif(c = this._transparentColor, 0, this._palette->getAlpha(c))
+                    a = iif(c = this._transparent_index, 0, this._palette->getAlpha(c))
                     SDL_SetRenderDrawColor( this._renderer, r, g, b, a )
                     SDL_RenderDrawPoint( this._renderer, offx+x, offy+y )
                 next x
             next y
-            this._sprites(n).x = offx
-            this._sprites(n).y = offy
-            this._sprites(n).w = this._w
-            this._sprites(n).h = this._h
-            n += 1
-            offx += this._w
-            if offx = across then
-                offx = 0
-                offy += this._h
-            end if
+            offx += dimensions.w
         wend
     close #1
     
-    this._count = numSprites
-    this.buildMetrics crop
+    SDL_SetTextureBlendMode( this._texture, SDL_BLENDMODE_BLEND )
     
-    SDL_SetRenderTarget( this._renderer, NULL )
+    this.dice
+    this._buildMetrics crop
     
 end sub
 
-sub VideoSprites.dice(w as integer, h as integer)
+sub VideoSprites.loadBmp(filename as string, w as integer = 0, h as integer = 0, crop as integer = 0)
+    
+    dim imageSurface as SDL_Surface ptr
+    dim fmt as uinteger
+    
+    imageSurface = SDL_LoadBMP(filename)
+    if imageSurface <> NULL then
+        this._canvas_w = imageSurface->w
+        this._canvas_h = imageSurface->h
+        SDL_SetColorKey( imageSurface, SDL_TRUE, SDL_MapRGB(imageSurface->format, 255, 0, 255) )
+        this._texture = SDL_CreateTextureFromSurface( this._renderer, imageSurface )
+        SDL_FreeSurface(imageSurface)
+    end if
+    
+    SDL_QueryTexture( this._texture, @fmt, 0, 0, 0 )
+    this._pixel_format = SDL_AllocFormat( fmt )
+    
+    w = iif(w > 0, w, this._w)
+    h = iif(h > 0, h, this._h)
+    this._w = iif(w > 0, w, this._canvas_w)
+    this._h = iif(h > 0, h, this._canvas_h)
+    
+    this.dice
+    this._buildMetrics crop
+    
+end sub
+
+sub VideoSprites.saveBmp(filename as string, xscale as double = 1.0, yscale as double = 1.0)
+    
+    dim surface as SDL_Surface ptr
+    dim texture as SDL_Texture ptr
+    dim w as integer
+    dim h as integer
+    
+    w = int(this._canvas_w * xscale)
+    h = int(this._canvas_h * yscale)
+    if (w = this._canvas_w) and (h = this._canvas_h) then
+        this._textureToSurface this._texture, surface
+        SDL_SaveBMP(surface, filename)
+        SDL_FreeSurface(surface)
+    else
+        texture = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, h)
+        SDL_SetTextureBlendMode( texture, SDL_BLENDMODE_BLEND )
+        SDL_SetRenderTarget( this._renderer, texture )
+        SDL_RenderCopy( this._renderer, this._texture, 0, 0)
+        this._textureToSurface texture, surface
+        SDL_SaveBMP(surface, filename)
+        SDL_FreeSurface(surface)
+        SDL_DestroyTexture(texture)
+    end if
+    
+end sub
+
+sub VideoSprites.dice(w as integer = 0, h as integer = 0)
     
     dim across as integer
     dim count as integer
@@ -123,8 +227,11 @@ sub VideoSprites.dice(w as integer, h as integer)
     dim y as integer
     dim n as integer
     
-    across = int(this._w / w)
-    down   = int(this._h / h)
+    w = iif(w > 0, w, this._w)
+    h = iif(h > 0, h, this._h)
+    
+    across = int((this._canvas_w / w) + 0.9999)
+    down   = int((this._canvas_h / h) + 0.9999)
     
     count = across*down
     
@@ -147,64 +254,61 @@ sub VideoSprites.dice(w as integer, h as integer)
     
 end sub
 
-sub VideoSprites.loadBmp(filename as string)
+sub VideoSprites._erase(sprite_id as integer, quad as integer = 0)
     
-    dim imageSurface as SDL_Surface ptr
-    
-    imageSurface = SDL_LoadBMP(filename)
-    if imageSurface <> NULL then
-        this._w = imageSurface->w
-        this._h = imageSurface->h
-        SDL_SetColorKey( imageSurface, SDL_TRUE, SDL_MapRGB(imageSurface->format, 0, 0, 0) )
-        this._texture = SDL_CreateTextureFromSurface( this._renderer, imageSurface )
-        SDL_FreeSurface(imageSurface)
-    end if
-    
-end sub
-
-sub VideoSprites.pushTarget()
-    
-    if this._sp < this._spMax then
-        this._sp  += 1
-        this._pushed(this._sp) = SDL_GetRenderTarget( this._renderer )
-    end if
-    
-end sub
-
-sub VideoSprites.popTarget()
-    
-    if this._sp > -1 then
-        SDL_SetRenderTarget( this._renderer, this._pushed(this._sp) )
-        this._sp -= 1
-    end if
-    
-end sub
-
-sub VideoSprites.buildMetrics (crop as integer = 0)
-    
-    dim as SDL_Surface ptr surface
-    dim as SDL_Rect ptr sprite
-    dim as integer ptr pixels
-    dim as integer top, lft, rgt, btm
+    dim blendMode as SDL_BlendMode
     dim as ubyte r, g, b, a
-    dim as integer x, y, n, c
+    
+    SDL_GetRenderDrawBlendMode( this._renderer, @blendMode )
+    SDL_GetRenderDrawColor( this._renderer, @r, @g, @b, @a )
+    
+    SDL_SetRenderDrawBlendMode( this._renderer, SDL_BLENDMODE_NONE )
+    SDL_SetRenderDrawColor( this._renderer, rgb_r(quad), rgb_g(quad), rgb_b(quad), rgb_a(quad) )
+    SDL_RenderFillRect( this._renderer, @this._sprites(sprite_id) )
+    
+    SDL_SetRenderDrawBlendMode( this._renderer, blendMode )
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, a )
+    
+end sub
+
+sub VideoSprites._buildMetrics(crop as integer = 0)
+    
+    dim as SDL_Texture ptr texture
+    dim as SDL_Rect ptr sprite
+    dim as uinteger fmt, c
+    dim as integer top, lft, rgt, btm
+    dim as integer w, h, bpp, accss
+    dim as integer x, y, n
+    dim as ubyte r, g, b, a
+    
+    this._center_x = int(this._w*0.5)-1
+    this._center_y = int(this._h*0.5)-1
     
     redim this._metrics(this._count) as VideoSpritesMetrics
     
-    this.textureToSurface surface
-    pixels = cast(integer ptr, surface->pixels)
+    SDL_QueryTexture( this._texture, @fmt, @accss, @w, @h )
+    if accss <> SDL_TEXTUREACCESS_TARGET then
+        texture = SDL_CreateTexture( this._renderer, fmt, SDL_TEXTUREACCESS_TARGET, w, h )
+        SDL_SetTextureBlendMode( texture, SDL_BLENDMODE_BLEND )
+        SDL_SetRenderTarget( this._renderer, texture )
+        SDL_RenderCopy( this._renderer, this._texture, NULL, NULL )
+        SDL_DestroyTexture(this._texture)
+        this._texture = texture
+    end if
     
-    this.pushTarget
+    this._textureToSurface this._texture, this._surface
+    
+    if this._surface = 0 then exit sub
+    
     this.setAsTarget
-    
     for n = 0 to this._count-1
         sprite = @this._sprites(n)
         top = -1: btm = -1
         lft = -1: rgt = -1
         for y = 0 to this._h-1
             for x = 0 to this._w-1
-                c = this.getPixel(surface, pixels, sprite->x+x, sprite->y+y)
-                if c > 0 then
+                c = this._getPixel(sprite->x+x, sprite->y+y)
+                if c <> 0 then 'this._palette->getColor(this._transparent_index) then
                     if (lft = -1) or (x < lft) then lft = x
                     if (rgt = -1) or (x > rgt) then rgt = x
                     if top = -1 then top = y
@@ -212,15 +316,16 @@ sub VideoSprites.buildMetrics (crop as integer = 0)
                 end if
             next x
         next y
+        top = iif(top > -1, top, 0)
+        btm = iif(btm > -1, btm, this._h-1)
+        lft = iif(lft > -1, lft, 0)
+        rgt = iif(rgt > -1, rgt, this._w-1)
         if crop then
-            SDL_SetRenderDrawColor( this._renderer, 0, 0, 0, 0 )
-            SDL_SetRenderDrawBlendMode( this._renderer, SDL_BLENDMODE_NONE )
-            SDL_RenderFillRect( this._renderer, sprite )
-            SDL_SetRenderDrawBlendMode( this._renderer, SDL_BLENDMODE_BLEND )
+            this._erase n
             for y = top to btm
                 for x = lft to rgt
-                    c = this.getPixel(surface, pixels, sprite->x+x, sprite->y+y)
-                    SDL_GetRGBA(c, surface->format, @r, @g, @b, @a)
+                    c = this._getPixel(sprite->x+x, sprite->y+y)
+                    SDL_GetRGBA(c, this._surface->format, @r, @g, @b, @a)
                     SDL_SetRenderDrawColor( this._renderer, r, g, b, 255 )
                     SDL_RenderDrawPoint( this._renderer, sprite->x+x-lft, sprite->y+y-top )
                 next x
@@ -228,57 +333,104 @@ sub VideoSprites.buildMetrics (crop as integer = 0)
             btm -= top: rgt -= lft
             top = 0: lft = 0
         end if
-        this._metrics(n).top = iif(top > -1, top, 0)
-        this._metrics(n).btm = iif(btm > -1, btm, this._h-1)
-        this._metrics(n).lft = iif(lft > -1, lft, 0)
-        this._metrics(n).rgt = iif(rgt > -1, rgt, this._w-1)
+        this._metrics(n).top = top
+        this._metrics(n).btm = btm
+        this._metrics(n).lft = lft
+        this._metrics(n).rgt = rgt
     next n
     
-    SDL_FreeSurface( surface )
-    this.popTarget
+    SDL_FreeSurface( this._surface )
     
 end sub
 
-sub VideoSprites.textureToSurface(byref surface as SDL_Surface ptr)
+sub VideoSprites.convertPalette(p as Palette256 ptr)
+    
+    dim as integer ptr pixels
+    dim as uinteger bytes
+    dim as integer pitch
+    dim as integer colorIndex, match, colr, n
+    dim as ubyte r, g, b, a
+    
+    this._textureToPixels(this._texture, pixels, bytes, pitch)
+    for n = 0 to (bytes shr 2)-1
+        colr = pixels[n]
+        SDL_GetRGBA(colr, this._pixel_format, @r, @g, @b, @a)
+        colorIndex = this._palette->match(r, g, b)
+        if colorIndex > -1 then
+            pixels[n] = p->getColor(colorIndex)
+        end if
+    next n
+    
+    SDL_UpdateTexture(this._texture, 0, pixels, pitch)
+    
+    deallocate(pixels)
+    
+    this._palette = p
+    
+end sub
 
-	dim as integer w, h, bpp
+sub VideoSprites._textureToPixels(byval texture as SDL_Texture ptr, byref pixels as any ptr, byref size_in_bytes as uinteger, byref pitch as integer)
+    
+    dim as uinteger fmt
+    dim as integer bpp, w, h
+    
+    SDL_QueryTexture( this._texture, @fmt, 0, @w, @h )
+    bpp = SDL_BYTESPERPIXEL(fmt)
+    pitch = w * bpp
+    
+    size_in_bytes = w*h*bpp
+    pixels = allocate(size_in_bytes): if pixels = 0 then exit sub
+    
+    this.setAsTarget
+    if SDL_RenderReadPixels( this._renderer, 0, fmt, pixels, pitch) <> 0 then
+        print *SDL_GetError()
+        end
+    end if
+    
+end sub
+
+sub VideoSprites._textureToSurface(byval texture as SDL_Texture ptr, byref surface as SDL_Surface ptr)
+
+    dim as integer w, h, bpp, accss
 	dim as uinteger fmt, rmask, gmask, bmask, amask
 	
-	SDL_QueryTexture( this._texture, @fmt, NULL, @w, @h )
-	SDL_PixelFormatEnumToMasks( SDL_PIXELFORMAT_ARGB8888, @bpp, @rmask, @gmask, @bmask, @amask )
+    SDL_QueryTexture( iif(texture <> 0, texture, this._texture), @fmt, @accss, @w, @h )
+	SDL_PixelFormatEnumToMasks( fmt, @bpp, @rmask, @gmask, @bmask, @amask )
 	
+    if accss <> SDL_TEXTUREACCESS_TARGET then
+        exit sub
+    end if
+    
     surface = SDL_CreateRGBSurface(0, w, h, bpp, rmask, gmask, bmask, amask)
     
-    this.pushTarget
     this.setAsTarget
     SDL_LockSurface( surface )
-    if SDL_RenderReadPixels( this._renderer, NULL, 0, surface->pixels, surface->pitch) <> 0 then
-        print SDL_GetError()
+    if SDL_RenderReadPixels( this._renderer, NULL, surface->format->format, surface->pixels, surface->pitch) <> 0 then
+        print *SDL_GetError()
         end
     end if
 	SDL_UnlockSurface( surface )
-	this.popTarget
-
+    
 end sub
 
-function VideoSprites.getPixel(surface as SDL_Surface ptr, pixels as integer ptr, x as integer, y as integer) as integer
+function VideoSprites._getPixel(x as integer, y as integer) as uinteger
     
-    dim as integer pitch, row
-    dim as ubyte r, g, b, a
+    dim as integer pitch
     
-    if (surface <> 0) and (pixels <> 0) then
-        pitch = (surface->pitch shr 2)
-        row   = y*pitch
-        return *(pixels+row+x)
-    else
-        return 0
+    if this._surface <> 0 then
+        if this._surface->pixels <> 0 then
+            pitch = (this._surface->pitch shr 2)
+            return cast(uinteger ptr, this._surface->pixels)[x+y*pitch]
+        end if
     end if
+    
+    return 0
     
 end function
 
-sub VideoSprites.setTransparentColor(c as integer)
+sub VideoSprites.setTransparentColor(index as integer)
     
-    this._transparentColor = c
+    this._transparent_index = index
     
 end sub
 
@@ -293,12 +445,12 @@ sub VideoSprites.putToScreen(x as integer, y as integer, spriteNum as integer = 
     
 end sub
 
-sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer, flipHorizontal as integer = 0, rotateAngle as double = 0, crop as SDL_RECT ptr = 0, dest as SDL_RECT ptr = 0)
+sub VideoSprites.putToScreenEx(x as integer, y as integer, sprite_id as integer, flip_horizontal as integer = 0, rotation_angle as double = 0, crop as SDL_RECT ptr = 0, dest as SDL_RECT ptr = 0)
     
     dim src as SDL_RECT
     dim dst as SDL_RECT
     
-    src = this._sprites(spriteNum)
+    src = this._sprites(sprite_id)
     
     if crop = 0 then
         if dest = 0 then
@@ -319,13 +471,13 @@ sub VideoSprites.putToScreenEx(x as integer, y as integer, spriteNum as integer,
     end if
     
     dim center as SDL_POINT
-    if rotateAngle = 0 then
+    if rotation_angle = 0 then
         center.x = 0: center.y = 0
     else
-        center.x = this._centerX: center.y = this._centerY
+        center.x = this._center_x: center.y = this._center_y
     end if
     
-    SDL_RenderCopyEx( this._renderer, this._texture, @src, @dst, rotateAngle, @center, iif(flipHorizontal, SDL_FLIP_HORIZONTAL, 0))
+    SDL_RenderCopyEx( this._renderer, this._texture, @src, @dst, rotation_angle, @center, iif(flip_horizontal, SDL_FLIP_HORIZONTAL, 0))
     
 end sub
 
@@ -347,13 +499,13 @@ function VideoSprites.getCount() as integer
     
 end function
 
-sub VideoSprites.getMetrics(byval spriteNum as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
+sub VideoSprites.getMetrics(byval sprite_id as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
     
-    if (spriteNum >= 0) and (spriteNum < this._count) then
-        x = this._metrics(spriteNum).lft
-        y = this._metrics(spriteNum).top
-        w = this._metrics(spriteNum).rgt - x + 1
-        h = this._metrics(spriteNum).btm - y + 1
+    if (sprite_id >= 0) and (sprite_id < this._count) then
+        x = this._metrics(sprite_id).lft
+        y = this._metrics(sprite_id).top
+        w = this._metrics(sprite_id).rgt - x + 1
+        h = this._metrics(sprite_id).btm - y + 1
     end if
     
 end sub

@@ -6,10 +6,10 @@ function Video.getErrorMsg() as string
     
 end function
 
-function Video.init(cols as integer, rows as integer, fullscreen as integer, title as string) as integer
+function Video.init(window_title as string, screen_w as integer, screen_h as integer, fullscreen as integer) as integer
     
-    this._cols = cols
-    this._rows = rows
+    this._screen_w = screen_w
+    this._screen_h = screen_h
     this._fullscreen = fullscreen
     this._palette = 0
     this._error_msg = ""
@@ -20,14 +20,14 @@ function Video.init(cols as integer, rows as integer, fullscreen as integer, tit
     end if
     
     if fullscreen then
-        this._window = SDL_CreateWindow( title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP or SDL_WINDOW_INPUT_GRABBED)
+        this._window = SDL_CreateWindow( window_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP or SDL_WINDOW_INPUT_GRABBED)
     else
-        this._window = SDL_CreateWindow( title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, cols*3, rows*3, SDL_WINDOW_SHOWN or SDL_WINDOW_RESIZABLE)
+        this._window = SDL_CreateWindow( window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_w*3, screen_h*3, SDL_WINDOW_SHOWN or SDL_WINDOW_RESIZABLE)
     end if
 
     this._renderer = SDL_CreateRenderer( this._window, -1, SDL_RENDERER_PRESENTVSYNC )
 
-    SDL_RenderSetLogicalSize( this._renderer, cols, rows )
+    SDL_RenderSetLogicalSize( this._renderer, screen_w, screen_h )
     SDL_SetRenderDrawBlendMode( this._renderer, SDL_BLENDMODE_BLEND )
     
     if fullscreen then SDL_ShowCursor( 0 )
@@ -39,6 +39,13 @@ end function
 sub Video.shutdown()
     
     SDL_DestroyWindow(this._window)
+    
+end sub
+
+sub Video.getScreenSize(byref w as integer, byref h as integer)
+    
+    w = this._screen_w
+    h = this._screen_h
     
 end sub
 
@@ -68,18 +75,6 @@ function Video.getData() as SDL_Texture ptr
     
     return texture
     
-end function
-
-function Video.getCols() as integer
-    
-    return this._cols
-
-end function
-
-function Video.getRows() as integer
-    
-    return this._rows
-
 end function
 
 sub Video.loadBmp(filename as string)
@@ -166,56 +161,56 @@ sub Video.setAsTarget()
     
 end sub
 
-sub Video.fillScreen(col as integer, aph as integer = &hff)
+sub Video.fillScreen(colr as integer, a255 as integer = &hff)
     
-    this.fill(0, 0, this._cols, this._rows, col, aph)
+    this.fill(0, 0, this._screen_w, this._screen_h, colr, a255)
     
 end sub
 
-sub Video.fill(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
+sub Video.fill(x as integer, y as integer, w as integer, h as integer, colr as integer, a255 as integer = &hff)
     
     dim rect as SDL_Rect
     dim r as integer, g as integer, b as integer
 
     if this._palette <> 0 then
-        r = this._palette->red(col)
-        g = this._palette->grn(col)
-        b = this._palette->blu(col)
+        r = this._palette->red(colr)
+        g = this._palette->grn(colr)
+        b = this._palette->blu(colr)
     else
-        r = rgb_r(col)
-        g = rgb_g(col)
-        b = rgb_b(col)
+        r = rgb_r(colr)
+        g = rgb_g(colr)
+        b = rgb_b(colr)
     end if
     
     rect.x = x: rect.y = y
     rect.w = w: rect.h = h
     
     this.setAsTarget()
-    SDL_SetRenderDrawColor( this._renderer, r, g, b, aph )
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, a255 )
 	SDL_RenderFillRect( this._renderer, @rect )
 
 end sub
 
-sub Video.outline(x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &hff)
+sub Video.outline(x as integer, y as integer, w as integer, h as integer, colr as integer, a255 as integer = &hff)
     
     dim rect as SDL_Rect
     dim r as integer, g as integer, b as integer
 
     if this._palette <> 0 then
-        r = this._palette->red(col)
-        g = this._palette->grn(col)
-        b = this._palette->blu(col)
+        r = this._palette->red(colr)
+        g = this._palette->grn(colr)
+        b = this._palette->blu(colr)
     else
-        r = rgb_r(col)
-        g = rgb_g(col)
-        b = rgb_b(col)
+        r = rgb_r(colr)
+        g = rgb_g(colr)
+        b = rgb_b(colr)
     end if
     
     rect.x = x: rect.y = y
     rect.w = w: rect.h = h
     
     this.setAsTarget()
-    SDL_SetRenderDrawColor( this._renderer, r, g, b, aph )
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, a255 )
 	SDL_RenderDrawRect( this._renderer, @rect )
 
 end sub

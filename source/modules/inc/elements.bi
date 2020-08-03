@@ -56,10 +56,11 @@ declare sub Elements_Init( _
     scrnh as integer, _
     fontw as integer, _
     fonth as integer, _
-    cbPut as sub(x as integer, y as integer, charVal as integer), _
+    cbPut as sub(x as integer, y as integer, charId as integer), _
     cbFill as sub(x as integer, y as integer, w as integer, h as integer, fillColor as integer, a as double = 1.0), _
     cbSetFontColor as sub(fontColor as integer), _
-    cbSetAlphaMod as sub(a as double) _
+    cbSetAlphaMod as sub(a as double), _
+    cbFontMetrics as sub(charId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer) = 0 _
 )
 declare sub Elements_InitSprites( _
     spw as integer, _
@@ -93,9 +94,6 @@ declare function Element_GetParentH(e as ElementType ptr) as integer
 declare function Element_GetClipTop(e as ElementType ptr, first as integer = 1) as integer
 declare function Element_GetClipBtm(e as ElementType ptr, first as integer = 1) as integer
 
-declare sub Elements_SetSpritePutCallback(callback as sub(x as integer, y as integer, spriteId as integer, spriteSetId as integer, doFlip as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0))
-declare sub Elements_SetSpriteMetricsCallback(callback as sub(byval spriteId as integer, byval spriteSetId as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer))
-
 declare sub Elements_Clear()
 declare sub Elements_Add(e as ElementType ptr, parent as ElementType ptr = 0)
 declare sub Elements_Render()
@@ -115,6 +113,3 @@ enum ElementFlags
     SpriteCenterX   = &h20
     SpriteCenterY   = &h40
 end enum
-
-declare sub Elements_LoadFontMetrics(filename as string)
-

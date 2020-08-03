@@ -2747,8 +2747,7 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     LD2_InitSprites "", @sprites(1), 320, 200: sprites(1).loadBmp DATA_DIR+"launcher/classic.bmp"
     LD2_InitSprites "", @sprites(2), 320, 200: sprites(2).loadBmp DATA_DIR+"launcher/enhanced.bmp"
     
-    Elements_SetSpritePutCallback @elementsPutSprite
-    Elements_SetSpriteMetricsCallback @elementsSpriteMetrics
+    Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
     
     dim dialog as ElementType
     dim title as ElementType

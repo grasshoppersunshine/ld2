@@ -1,0 +1,260 @@
+GIMP Palette
+Name: PP256
+Columns: 16
+#
+  0   0   0	Untitled
+  0   0 168	Untitled
+  0 168   0	Untitled
+  0 168 168	Untitled
+168   0   0	Untitled
+168   0 168	Untitled
+168  84   0	Untitled
+168 168 168	Untitled
+ 84  84  84	Untitled
+ 84  84 252	Untitled
+ 84 252  84	Untitled
+ 84 252 252	Untitled
+252  84  84	Untitled
+252  84 252	Untitled
+252 252  84	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+ 20  20  20	Untitled
+ 32  32  32	Untitled
+ 44  44  44	Untitled
+ 56  56  56	Untitled
+ 68  68  68	Untitled
+ 80  80  80	Untitled
+ 96  96  96	Untitled
+112 112 112	Untitled
+128 128 128	Untitled
+144 144 144	Untitled
+160 160 160	Untitled
+180 180 180	Untitled
+200 200 200	Untitled
+224 224 224	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+ 32   0   0	Untitled
+ 64   0   0	Untitled
+ 96   0   0	Untitled
+124   0   0	Untitled
+156   0   0	Untitled
+188   0   0	Untitled
+220   0   0	Untitled
+252   0   0	Untitled
+252  36  36	Untitled
+252  72  72	Untitled
+252 108 108	Untitled
+252 144 144	Untitled
+252 180 180	Untitled
+252 216 216	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+  0  32   0	Untitled
+  0  64   0	Untitled
+  0  96   0	Untitled
+  0 128   0	Untitled
+  0 156   0	Untitled
+  0 188   0	Untitled
+  0 220   0	Untitled
+  0 252   0	Untitled
+ 36 252  36	Untitled
+ 72 252  72	Untitled
+108 252 108	Untitled
+144 252 144	Untitled
+180 252 180	Untitled
+216 252 216	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+  0   0  32	Untitled
+  0   0  64	Untitled
+  0   0  96	Untitled
+  0   0 128	Untitled
+  0   0 156	Untitled
+  0   0 188	Untitled
+  0   0 220	Untitled
+  0   0 252	Untitled
+ 36  36 252	Untitled
+ 72  72 252	Untitled
+108 108 252	Untitled
+144 144 252	Untitled
+180 180 252	Untitled
+216 216 252	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+ 32  32   0	Untitled
+ 64  64   0	Untitled
+ 96  96   0	Untitled
+128 128   0	Untitled
+156 156   0	Untitled
+188 188   0	Untitled
+220 220   0	Untitled
+252 252   0	Untitled
+252 252  36	Untitled
+252 252  72	Untitled
+252 252 108	Untitled
+252 252 144	Untitled
+252 252 180	Untitled
+252 252 216	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+ 32   0  32	Untitled
+ 64   0  64	Untitled
+ 96   0  96	Untitled
+128   0 128	Untitled
+156   0 156	Untitled
+188   0 188	Untitled
+220   0 220	Untitled
+252   0 252	Untitled
+252  36 252	Untitled
+252  72 252	Untitled
+252 108 252	Untitled
+252 144 252	Untitled
+252 180 252	Untitled
+252 216 252	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+  0  32  32	Untitled
+  0  64  64	Untitled
+  0  96  96	Untitled
+  0 128 128	Untitled
+  0 156 156	Untitled
+  0 188 188	Untitled
+  0 220 220	Untitled
+  0 252 252	Untitled
+ 36 252 252	Untitled
+ 72 252 252	Untitled
+108 252 252	Untitled
+144 252 252	Untitled
+180 252 252	Untitled
+216 252 252	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+ 32  16   0	Untitled
+ 64  32   0	Untitled
+ 96  48   0	Untitled
+128  64   0	Untitled
+156  76   0	Untitled
+188  92   0	Untitled
+220 108   0	Untitled
+252 124   0	Untitled
+252 144  36	Untitled
+252 160  72	Untitled
+252 180 108	Untitled
+252 196 144	Untitled
+252 216 180	Untitled
+252 232 216	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+ 32   0  16	Untitled
+ 64   0  32	Untitled
+ 96   0  48	Untitled
+128   0  64	Untitled
+156   0  76	Untitled
+188   0  92	Untitled
+220   0 108	Untitled
+252   0 124	Untitled
+252  36 144	Untitled
+252  72 160	Untitled
+252 108 180	Untitled
+252 144 196	Untitled
+252 180 216	Untitled
+252 216 232	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+ 16  32   0	Untitled
+ 32  64   0	Untitled
+ 48  96   0	Untitled
+ 64 128   0	Untitled
+ 76 156   0	Untitled
+ 92 188   0	Untitled
+108 220   0	Untitled
+124 252   0	Untitled
+144 252  36	Untitled
+160 252  72	Untitled
+180 252 108	Untitled
+196 252 144	Untitled
+216 252 180	Untitled
+232 252 216	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+  0  32  16	Untitled
+  0  64  32	Untitled
+  0  96  48	Untitled
+  0 128  64	Untitled
+  0 156  76	Untitled
+  0 188  92	Untitled
+  0 220 108	Untitled
+  0 252 124	Untitled
+ 36 252 144	Untitled
+ 72 252 160	Untitled
+108 252 180	Untitled
+144 252 196	Untitled
+180 252 216	Untitled
+216 252 232	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+ 16   0  32	Untitled
+ 32   0  64	Untitled
+ 48   0  96	Untitled
+ 64   0 128	Untitled
+ 76   0 156	Untitled
+ 92   0 188	Untitled
+108   0 220	Untitled
+124   0 252	Untitled
+144  36 252	Untitled
+160  72 252	Untitled
+180 108 252	Untitled
+196 144 252	Untitled
+216 180 252	Untitled
+232 216 252	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+  0  16  32	Untitled
+  0  32  64	Untitled
+  0  48  96	Untitled
+  0  64 128	Untitled
+  0  76 156	Untitled
+  0  92 188	Untitled
+  0 108 220	Untitled
+  0 124 252	Untitled
+ 36 144 252	Untitled
+ 72 160 252	Untitled
+108 180 252	Untitled
+144 196 252	Untitled
+180 216 252	Untitled
+216 232 252	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+ 32   8   8	Untitled
+ 64  16  16	Untitled
+ 96  24  24	Untitled
+128  32  32	Untitled
+156  36  36	Untitled
+188  44  44	Untitled
+220  52  52	Untitled
+252  60  60	Untitled
+252  88  88	Untitled
+252 116 116	Untitled
+252 144 144	Untitled
+252 168 168	Untitled
+252 196 196	Untitled
+252 224 224	Untitled
+252 252 252	Untitled
+  0   0   0	Untitled
+  0  16  16	Untitled
+  0  32  32	Untitled
+  0  48  48	Untitled
+  0  64  64	Untitled
+  0  80  80	Untitled
+  0  96  96	Untitled
+  0 112 112	Untitled
+  0 128 128	Untitled
+ 36 144 144	Untitled
+ 72 164 164	Untitled
+108 180 180	Untitled
+144 200 200	Untitled
+180 216 216	Untitled
+216 236 236	Untitled
+252 252 252	Untitled

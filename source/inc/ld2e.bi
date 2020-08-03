@@ -289,6 +289,7 @@ declare sub Shakes_Animate (resetClocks as integer = 0)
 declare function Shakes_GetScreenShake() as double
 
 declare function Sprites_GetSpriteSet(id as integer) as VideoSprites ptr
+declare sub Sprites_BsvToBmp (filename as string, spriteSetId as integer)
 declare sub Sprites_Load (filename as string, spriteSetId as integer)
 declare sub Sprites_put (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0, isFixed as integer = 0, w as integer = -1, h as integer = -1, angle as integer = 0)
 declare sub Sprites_putFixed (x as integer, y as integer, spriteId as integer, spriteSetId as integer, isFlipped as integer = 0)
