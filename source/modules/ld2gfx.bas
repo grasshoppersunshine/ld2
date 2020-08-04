@@ -33,6 +33,17 @@ sub LD2GFX_EnableDebugMode
     
 end sub
 
+sub LD2GFX_Release
+    
+    SpritesFont.release
+    VideoBuffers(0).release
+    VideoBuffers(1).release
+    VideoHandle.release
+    
+    
+    
+end sub
+
 function LD2_GetVideoInfo() as string
     
     dim versionCompiled as SDL_Version

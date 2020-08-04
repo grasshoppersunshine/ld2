@@ -5,22 +5,24 @@
 
 type Video
 private:
+    
+    _window as SDL_Window ptr
+    _renderer as SDL_Renderer ptr
+    _palette as Palette256 ptr
 
     _fullscreen as integer
     _screen_w as integer
     _screen_h as integer
     
-    _window as SDL_Window ptr
-    _renderer as SDL_Renderer ptr
-    _palette as Palette256 ptr
-    
     _error_msg as string
+    
+    declare sub _reset()
 
 public:
 
     declare function getErrorMsg() as string
     declare function init(window_title as string, screen_w as integer, screen_h as integer, fullscreen as integer) as integer
-    declare sub shutdown()
+    declare sub release()
     declare sub getScreenSize(byref w as integer, byref h as integer)
     declare sub getWindowSize(byref w as integer, byref h as integer)
     declare sub setPalette(p as Palette256 ptr)

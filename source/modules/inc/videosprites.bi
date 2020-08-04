@@ -28,8 +28,9 @@ private:
     _h as integer
     _center_x as integer
     _center_y as integer
-    _count as integer
     _transparent_index as integer
+    _count as integer
+    declare sub _reset
     declare sub _buildMetrics(crop as integer = 0)
     declare sub _erase(sprite_id as integer, quad as integer = 0)
     declare sub _textureToPixels(byval texture as SDL_Texture ptr, byref pixels as any ptr, byref size_in_bytes as uinteger, byref pitch as integer)

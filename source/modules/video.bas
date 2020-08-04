@@ -8,11 +8,11 @@ end function
 
 function Video.init(window_title as string, screen_w as integer, screen_h as integer, fullscreen as integer) as integer
     
+    this._reset
+    
     this._screen_w = screen_w
     this._screen_h = screen_h
     this._fullscreen = fullscreen
-    this._palette = 0
-    this._error_msg = ""
     
     if SDL_Init( SDL_INIT_VIDEO ) <> 0 then
         this._error_msg = *SDL_GetError()
@@ -36,9 +36,24 @@ function Video.init(window_title as string, screen_w as integer, screen_h as int
 
 end function
 
-sub Video.shutdown()
+sub Video._reset()
     
-    SDL_DestroyWindow(this._window)
+    this._window     = 0
+    this._renderer   = 0
+    this._palette    = 0
+    this._fullscreen = 0
+    this._screen_w   = 0
+    this._screen_h   = 0
+    this._error_msg  = ""
+    
+end sub
+
+sub Video.release()
+    
+    if this._window   <> 0 then SDL_DestroyWindow(this._window)
+    if this._renderer <> 0 then SDL_DestroyRenderer(this._renderer)
+    
+    this._reset
     
 end sub
 

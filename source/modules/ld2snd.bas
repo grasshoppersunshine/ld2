@@ -20,6 +20,16 @@ sub LD2SND_EnableDebugMode
     
 end sub
 
+SUB LD2SND_Release
+    
+    if DEBUGMODE then LogDebug __FUNCTION__
+
+    IF LD2soundEnabled THEN
+        SOUND_Release
+    END IF
+
+END SUB
+
 function LD2_GetSoundInfo() as string
     
     dim versionCompiled as SDL_Version
@@ -283,16 +293,6 @@ SUB LD2_PlaySound (id AS INTEGER)
 
     IF LD2soundEnabled THEN
         SOUND_PlaySound id
-    END IF
-
-END SUB
-
-SUB LD2_ReleaseSound
-    
-    if DEBUGMODE then LogDebug __FUNCTION__
-
-    IF LD2soundEnabled THEN
-        SOUND_Release
     END IF
 
 END SUB

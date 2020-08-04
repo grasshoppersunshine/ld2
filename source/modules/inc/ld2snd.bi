@@ -8,10 +8,10 @@ TYPE LD2musicData
 END TYPE
 
 declare sub LD2SND_EnableDebugMode
+DECLARE SUB LD2SND_Release
 declare function LD2_GetSoundInfo() as string
 declare function LD2_GetSoundErrorMsg() as string
 declare function LD2_InitSound (enabled as integer) as integer
-DECLARE SUB LD2_ReleaseSound ()
 DECLARE SUB LD2_AddSound (id as integer, filename as string, loops as integer=0, volume as double=1.0)
 declare sub LD2_FreeSound (id as integer)
 DECLARE SUB LD2_AddMusic (id AS INTEGER, filepath AS STRING, loopmusic AS INTEGER)

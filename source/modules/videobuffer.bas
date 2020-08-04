@@ -23,10 +23,28 @@ end function
 
 sub VideoBuffer.init(v as Video ptr)
     
+    this._reset
     this._renderer = v->getRenderer()
     v->getScreenSize this._w, this._h
     this._texture = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this._w, this._h)
     SDL_SetTextureBlendMode( this._texture, SDL_BLENDMODE_BLEND )
+    
+end sub
+
+sub VideoBuffer._reset()
+    
+    this._texture  = 0
+    this._renderer = 0
+    this._palette  = 0
+    this._w = 0
+    this._h = 0
+    
+end sub
+
+sub VideoBuffer.release()
+    
+    if this._texture then SDL_DestroyTexture(this._texture)
+    this._reset
     
 end sub
 

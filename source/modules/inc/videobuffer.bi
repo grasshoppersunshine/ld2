@@ -7,13 +7,17 @@ declare function SDL_CreateSurfaceFromTexture( renderer as SDL_RENDERER ptr, tex
 
 type VideoBuffer
 private:
-    _w as integer
-    _h as integer
     _texture as SDL_Texture ptr
     _renderer as SDL_Renderer ptr
     _palette as palette256 ptr
+    _w as integer
+    _h as integer
+    
+    declare sub _reset()
+    
 public:
     declare sub init(v as Video ptr)
+    declare sub release()
     declare sub setPalette(p as Palette256 ptr)
     declare sub loadBmp(filename as string)
     declare sub saveBmp(filename as string, xscale as double = 1.0, yscale as double = 1.0)

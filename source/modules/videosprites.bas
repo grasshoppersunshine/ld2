@@ -2,9 +2,21 @@
 
 sub VideoSprites.init(v as Video ptr)
     
+    this._reset
     this._renderer = v->getRenderer()
+    
+end sub
+
+sub VideoSprites._reset()
+    
+    redim this._metrics(0) as VideoSpritesMetrics
+    redim this._sprites(0) as SDL_Rect
+    
     this._texture  = 0
+    this._pixel_format = 0
     this._surface  = 0
+    this._pixels   = 0
+    this._renderer = 0
     this._palette  = 0
     this._canvas_w = 0
     this._canvas_h = 0
@@ -19,22 +31,12 @@ end sub
 
 sub VideoSprites.release()
     
-    if this._texture <> 0 then
-        SDL_DestroyTexture(this._texture)
-        this._texture = 0
-    end if
-    if this._surface <> 0 then
-        SDL_FreeSurface(this._surface)
-        this._surface = 0
-    end if
-    if this._pixels <> 0 then
-        deallocate(this._pixels)
-        this._pixels = 0
-    end if
-    if this._pixel_format <> 0 then
-        SDL_FreeFormat(this._pixel_format)
-        this._pixel_format = 0
-    end if
+    if this._texture      then SDL_DestroyTexture(this._texture)
+    if this._surface      then SDL_FreeSurface(this._surface)
+    if this._pixel_format then SDL_FreeFormat(this._pixel_format)
+    if this._pixels       then deallocate(this._pixels)
+    
+    this._reset
     
 end sub
 

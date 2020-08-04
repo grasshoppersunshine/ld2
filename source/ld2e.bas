@@ -7482,9 +7482,12 @@ end function
 
 sub Game_ShutDown
     
-    kill DATA_DIR+"save/session.ld2"
     LD2_StopMusic
-    LD2_ReleaseSound
+    
+    LD2GFX_Release
+    LD2SND_Release
+    
+    kill DATA_DIR+"save/session.ld2"
     FreeCommon
     
 end sub
