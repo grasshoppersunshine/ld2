@@ -40,7 +40,14 @@ sub LD2GFX_Release
     VideoBuffers(1).release
     VideoHandle.release
     
+    RGBpal.release
+    WhitePalette.release
     
+end sub
+
+sub Font_Release
+    
+    SpritesFont.release
     
 end sub
 
@@ -77,6 +84,9 @@ function LD2_InitVideo(window_title as string, scrn_w as integer, scrn_h as inte
     end if
     VideoBuffers(0).init( @VideoHandle )
     VideoBuffers(1).init( @VideoHandle )
+    
+    RGBPal.init(256)
+    WhitePalette.init(256)
     
     dim n as integer
     for n = 1 to 255
@@ -134,6 +144,8 @@ end sub
 sub LD2_CreateLightPalette(pal as Palette256 ptr)
     
     if DEBUGMODE then LogDebug __FUNCTION__, str(pal)
+    
+    pal->init(256)
     
     dim i as integer
     dim n as integer
@@ -511,7 +523,6 @@ sub Font_Load(filename as string, useWhitePalette as integer = 1)
     else
         LD2_InitSprites filename, @SpritesFont, 6, 5, SpriteFlags.Transparent
     end if
-    SpritesFont.saveBmp lcase(left(filename, len(filename)-4))+".bmp"
     
 end sub
 

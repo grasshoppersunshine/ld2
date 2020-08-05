@@ -39,6 +39,7 @@ declare sub LD2_UpdateScreen ()
 DECLARE SUB LD2_LoadBitmap (filename AS STRING, BufferNum AS INTEGER, Convert AS INTEGER)
 
 declare sub Font_Init(fontw as integer, fonth as integer)
+declare sub Font_Release
 declare sub Font_Load(filename as string, useWhitePalette as integer = 1)
 declare sub Font_Metrics(byval sprite_id as integer, byref x as integer, byref y as integer, byref w as integer, byref h as integer)
 declare sub Font_SetColor(fontColor as integer)

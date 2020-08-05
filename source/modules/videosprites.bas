@@ -1,5 +1,8 @@
 #include once "inc/videosprites.bi"
 
+const FORMAT256 = SDL_PIXELFORMAT_INDEX8
+const FORMATRGB = SDL_PIXELFORMAT_ARGB8888
+
 sub VideoSprites.init(v as Video ptr)
     
     this._reset
@@ -57,6 +60,9 @@ end sub
 sub VideoSprites.setPalette(p as Palette256 ptr)
     
     this._palette = p
+    'if this._pixel_format then
+    '    SDL_SetPixelFormatPalette(this._pixel_format, this._palette->getPalette())
+    'end if
     
 end sub
 
@@ -133,6 +139,9 @@ sub VideoSprites.loadBsv(filename as string, w as integer, h as integer, crop as
     
     this._texture = SDL_CreateTexture( this._renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this._canvas_w, this._canvas_h)
     this._pixel_format = SDL_AllocFormat( SDL_PIXELFORMAT_ARGB8888 )
+    'if this._palette then
+    '    SDL_SetPixelFormatPalette(this._pixel_format, this._palette->getPalette())
+    'end if
     
     this.setAsTarget
     SDL_SetRenderDrawBlendMode( this._renderer, SDL_BLENDMODE_NONE )
@@ -176,7 +185,7 @@ sub VideoSprites.loadBmp(filename as string, w as integer = 0, h as integer = 0,
     if imageSurface <> NULL then
         this._canvas_w = imageSurface->w
         this._canvas_h = imageSurface->h
-        SDL_SetColorKey( imageSurface, SDL_TRUE, SDL_MapRGB(imageSurface->format, 255, 0, 255) )
+        SDL_SetColorKey( imageSurface, SDL_TRUE, SDL_MapRGBA(imageSurface->format, 255, 0, 255, 255) )
         this._texture = SDL_CreateTextureFromSurface( this._renderer, imageSurface )
         SDL_FreeSurface(imageSurface)
     end if
@@ -299,7 +308,6 @@ sub VideoSprites._buildMetrics(crop as integer = 0)
     end if
     
     this._textureToSurface this._texture, this._surface
-    
     if this._surface = 0 then exit sub
     
     this.setAsTarget
@@ -310,7 +318,8 @@ sub VideoSprites._buildMetrics(crop as integer = 0)
         for y = 0 to this._h-1
             for x = 0 to this._w-1
                 c = this._getPixel(sprite->x+x, sprite->y+y)
-                if c <> 0 then 'this._palette->getColor(this._transparent_index) then
+                SDL_GetRGBA(c, this._surface->format, @r, @g, @b, @a)
+                if a > 0 then
                     if (lft = -1) or (x < lft) then lft = x
                     if (rgt = -1) or (x > rgt) then rgt = x
                     if top = -1 then top = y
@@ -328,7 +337,7 @@ sub VideoSprites._buildMetrics(crop as integer = 0)
                 for x = lft to rgt
                     c = this._getPixel(sprite->x+x, sprite->y+y)
                     SDL_GetRGBA(c, this._surface->format, @r, @g, @b, @a)
-                    SDL_SetRenderDrawColor( this._renderer, r, g, b, 255 )
+                    SDL_SetRenderDrawColor( this._renderer, r, g, b, a )
                     SDL_RenderDrawPoint( this._renderer, sprite->x+x-lft, sprite->y+y-top )
                 next x
             next y
@@ -341,7 +350,7 @@ sub VideoSprites._buildMetrics(crop as integer = 0)
         this._metrics(n).rgt = rgt
     next n
     
-    SDL_FreeSurface( this._surface )
+    SDL_FreeSurface( this._surface ): this._surface = 0
     
 end sub
 
@@ -359,7 +368,7 @@ sub VideoSprites.convertPalette(p as Palette256 ptr)
         SDL_GetRGBA(colr, this._pixel_format, @r, @g, @b, @a)
         colorIndex = this._palette->match(r, g, b)
         if colorIndex > -1 then
-            pixels[n] = p->getColor(colorIndex)
+            pixels[n] = p->getColor(colorIndex, this._pixel_format)
         end if
     next n
     

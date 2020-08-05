@@ -1144,6 +1144,7 @@ sub Game_LoadAssets
         SCREEN_H = 180
     end select
     
+    LD2GFX_Release
     if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL) <> 0 then
         print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
         end
@@ -1151,10 +1152,6 @@ sub Game_LoadAssets
         LD2_cls 1, 0
         LD2_cls 2, 0
     end if
-    
-    FontFile = DATA_DIR+"gfx/sprites/font.bmp"
-    Font_Init FONT_W, FONT_H
-    Font_Load FontFile
     
     Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod, @Font_Metrics
     Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
@@ -1247,6 +1244,7 @@ sub Game_LoadAssets
     'print "Loading sprites..."
     WaitSeconds 0.3333
     
+    Font_Release
     Font_Init FONT_W, FONT_H
     if CLASSICMODE then
         Font_Load FontFile, 0
@@ -7483,6 +7481,23 @@ end function
 sub Game_ShutDown
     
     LD2_StopMusic
+    
+    SpritesLarry.release
+    SpritesTile.release
+    SpritesOpaqueTile.release
+    SpritesLight.release
+    SpritesMobs.release
+    SpritesGuts.release
+    SpritesScene.release
+    SpritesObject.release
+    SpritesObjectCropped.release
+    
+    LayerMountains.release
+    LayerFoliage.release
+    LayerGrass.release
+    LayerClouds.release
+    
+    LightPalette.release
     
     LD2GFX_Release
     LD2SND_Release

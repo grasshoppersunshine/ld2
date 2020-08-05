@@ -942,11 +942,15 @@ sub BuildFontMetrics()
         if w = -1 then
             exit do
         end if
-        if n = 64 then '* "|"
+        select case n
+        case 0
+            w = int(FONT_W*0.5)
+            x = 0
+        case 64 '* "|" 
             w = FONT_W
             x = 0
-        end if
-        FontCharWidths(n) = w+x
+        end select
+        FontCharWidths(n) = w
         FontCharMargins(n) = x
         n += 1
     loop while n < ubound(FontCharWidths)
