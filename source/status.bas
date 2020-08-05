@@ -684,10 +684,8 @@ function CanMix (itemId as integer) as integer
     dim message as string
     
     select case itemId
-    case ItemIds.NOTHING
+    case ItemIds.NOTHING, ItemIds.ELEVATORMENU
         message = "Not Mixable."
-    case ItemIds.ELEVATORMENU
-        message = "The fuck is wrong with you?"
     case else
         return 1
     end select
@@ -1299,6 +1297,7 @@ function Look (item as InventoryType, skipInput as integer = 0) as integer
                 wobbleType = WobbleTypes.RevealNoSpin
         end select
         wobbleAction = WobbleActions.ResetAnimations
+        wobbleStatus = DoWobble(@imgSprite, wobbleType, wobbleAction)
     
     case DialogStates.ready
         
@@ -2102,9 +2101,9 @@ function StatusScreen(skipInput as integer = 0) as integer
                 if canMix(selected.id) then
                     mixMode = 1
                     mixItem = selected
-                    action = -1
                     LD2_PlaySound Sounds.uiSubmenu
                 end if
+                action = -1
             case 3  '- Drop
                 Drop selected
                 action = -1

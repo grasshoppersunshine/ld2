@@ -1596,6 +1596,8 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
             Items(i).canPickup = 0
             FloorMap(int(Items(i).x/SPRITE_W), int(Items(i).y/SPRITE_H)) = 1
         case ItemIds.DivisionLft, ItemIds.DivisionRgt
+            Items(i).canPickup = 0
+            Items(i).isVisible = 0
             if NumDivisions = 0 then
                 Divisions(0).x0 = 0: Divisions(0).x1 = MAPW*SPRITE_W
                 NumDivisions += 1
@@ -4135,7 +4137,7 @@ sub Mobs_Generate (forceNumMobs as integer = 0, forceMobType as integer = 0)
         next x
     next y
     
-    numMobs = int(numFloors / 20)
+    numMobs = int(numFloors / 15)
     
     if forceNumMobs > 0 then
         numMobs = forceNumMobs

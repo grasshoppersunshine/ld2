@@ -162,7 +162,7 @@ end type
     declare sub SaveMap (filename as string, showDetails as integer = 0)
     declare sub SaveMap045 (filename as string, showDetails as integer = 0)
     declare sub SaveMap101 (filename as string, showDetails as integer = 0)
-    declare sub LoadSprites (filename as string, spriteSetId as integer)
+    declare sub LoadSprites (filename as string, sprites as VideoSprites ptr, flags as integer = 0)
     declare sub DoMapPostProcessing ()
     declare sub postProcessTile(x as integer, y as integer)
     declare sub putText (text as string, x as integer, y  as integer, fontw as integer = FONT_W)
@@ -199,7 +199,7 @@ end type
     dim shared SpritesOpaqueTile as VideoSprites
     dim shared SpritesLight as VideoSprites
     dim shared SpritesOpaqueLight as VideoSprites
-    dim shared SpritesMob as VideoSprites
+    dim shared SpritesMobs as VideoSprites
     dim shared SpritesObject as VideoSprites
     dim shared SpritesOpaqueObject as VideoSprites
     dim shared SpritesScene as VideoSprites
@@ -477,7 +477,7 @@ end type
             case LayerIds.Larry
                 nextScreen = SpriteSelectScreen(@spritesLarry, 0, cursors(3))
             case LayerIds.Mobs
-                nextScreen = SpriteSelectScreen(@spritesMob, 0, cursors(4))
+                nextScreen = SpriteSelectScreen(@spritesMobs, 0, cursors(4))
             case LayerIds.Scene
                 nextScreen = SpriteSelectScreen(@spritesScene, 0, cursors(5))
             end select
@@ -867,17 +867,10 @@ end type
     FreeCommon
     end
 
-SUB Init
-
-  '- Initialize Larry The Dinosaur II Editor
-  '-----------------------------------------
-
-  'SCREEN 13
-
-  'LD2E_LoadBitmap "gfx\title.bmp", 0
-  'LD2E_LoadBitmap "gfx\back1.bmp", 2
+sub Init
     
-    dim i as integer
+    dim as string TilesFile, LightFile, MobsFile, _
+                  LarryFile, ItemsFile, SceneFile
     
     if dir(DATA_DIR+"editor", fbDirectory) <> DATA_DIR+"editor" then
         mkdir DATA_DIR+"editor"
@@ -891,32 +884,42 @@ SUB Init
         end
     end if
     
-    LD2_LoadPalette DATA_DIR+"gfx/gradient.pal"
-  
-    for i = 0 to 11
-        LightPalette.setRGBA(i, 0, 0, 0, iif(i*36 < 255, i*36, 255))
-    next i
+    LD2_LoadPalette DATA_DIR+"gfx/palettes/gradient.pal"
+    LD2_CreateLightPalette @LightPalette
     
     Font_Init FONT_W, FONT_H
-    Font_Load DATA_DIR+"gfx/font.put"
-    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod
-    Elements_LoadFontMetrics DATA_DIR+"gfx/font.put"
+    Font_Load DATA_DIR+"gfx/sprites/font.bmp"
+    
+    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod, @Font_Metrics
     
     if CLASSICMODE then
-        LoadSprites DATA_DIR+"2002/gfx/ld2tiles.put", idTILE
-        LoadSprites DATA_DIR+"2002/gfx/ld2light.put", idLIGHT
-        LoadSprites DATA_DIR+"2002/gfx/enemies.put", idMOBS
-        LoadSprites DATA_DIR+"2002/gfx/larry2.put", idLARRY
-        LoadSprites DATA_DIR+"2002/gfx/objects.put", idOBJECT
-        LoadSprites DATA_DIR+"2002/gfx/ld2scene.put", idSCENE
+        TilesFile = DATA_DIR+"2002/gfx/ld2tiles.put"
+        LightFile = DATA_DIR+"2002/gfx/ld2light.put"
+        MobsFile  = DATA_DIR+"2002/gfx/enemies.put"
+        LarryFile = DATA_DIR+"2002/gfx/larry2.put"
+        ItemsFile = DATA_DIR+"2002/gfx/objects.put"
+        SceneFile = DATA_DIR+"2002/gfx/ld2scene.put"
     else
-        LoadSprites DATA_DIR+"gfx/ld2tiles.put", idTILE
-        LoadSprites DATA_DIR+"gfx/ld2light.put", idLIGHT
-        LoadSprites DATA_DIR+"gfx/mobs.put", idMOBS
-        LoadSprites DATA_DIR+"gfx/larry2.put", idLARRY
-        LoadSprites DATA_DIR+"gfx/objects.put", idOBJECT
-        LoadSprites DATA_DIR+"gfx/ld2scene.put", idSCENE
+        TilesFile = DATA_DIR+"gfx/sprites/ld2tiles.bmp"
+        LightFile = DATA_DIR+"gfx/sprites/ld2light.bmp"
+        MobsFile  = DATA_DIR+"gfx/sprites/mobs.bmp"
+        LarryFile = DATA_DIR+"gfx/sprites/larry2.bmp"
+        ItemsFile = DATA_DIR+"gfx/sprites/objects.bmp"
+        SceneFile = DATA_DIR+"gfx/sprites/ld2scene.bmp"
     end if
+    
+    LoadSprites TilesFile, @SpritesTile  , SpriteFlags.Transparent
+    LoadSprites LightFile, @SpritesLight , SpriteFlags.Transparent
+    LoadSprites MobsFile , @SpritesMobs  , SpriteFlags.Transparent
+    LoadSprites LarryFile, @SpritesLarry , SpriteFlags.Transparent
+    LoadSprites ItemsFile, @SpritesObject, SpriteFlags.Transparent
+    LoadSprites SceneFile, @SpritesScene , SpriteFlags.Transparent
+    
+    LoadSprites TilesFile, @SpritesOpaqueTile
+    LoadSprites LightFile, @SpritesOpaqueLight
+    LoadSprites ItemsFile, @SpritesOpaqueObject
+    
+    SpritesLight.convertPalette(@LightPalette)
     
     LD2_AddSound EditSounds.quiet   , DATA_DIR+"sound/scenechar.wav"
     
@@ -951,12 +954,29 @@ SUB Init
     LD2_AddSound EditSounds.turnPage, DATA_DIR+"sound/editor/turnpage.wav"
     
     GenerateSky
+    
+end sub
 
-  'SLEEP: CLS
-  '
-  'LD2E_LoadPalette "gfx\gradient.pal"
-
-END SUB
+sub Shutdown
+    
+    SpritesLarry.release
+    SpritesTile.release
+    SpritesOpaqueTile.release
+    SpritesLight.release
+    SpritesOpaqueLight.release
+    SpritesMobs.release
+    SpritesObject.release
+    SpritesOpaqueObject.release
+    SpritesScene.release
+    
+    LightPalette.release
+    
+    LD2GFX_Release
+    LD2SND_Release
+    
+    FreeCommon
+    
+end sub
 
 'sub SaveMapNewFormat(filename as string)
 '    
@@ -1378,42 +1398,11 @@ sub postProcessTile(x as integer, y as integer)
 
 end sub
 
-sub LoadSprites (filename as string, spriteSetId as integer)
-  
-  SELECT CASE spriteSetId
-
-    CASE idTILE
-
-      LD2_InitSprites filename, @SpritesTile, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
-      LD2_InitSprites filename, @SpritesOpaqueTile, SPRITE_W, SPRITE_H
-
-    CASE idMOBS
-
-      LD2_InitSprites filename, @SpritesMob, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
-
-    CASE idLARRY
-
-      LD2_InitSprites filename, @SpritesLarry, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
+sub LoadSprites (filename as string, sprites as VideoSprites ptr, flags as integer = 0)
     
-    CASE idSCENE
-
-      LD2_InitSprites filename, @SpritesScene, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
-
-    CASE idLIGHT
+    LD2_InitSprites filename, sprites, SPRITE_W, SPRITE_H, flags
     
-      LD2_InitSprites filename, @SpritesLight, SPRITE_W, SPRITE_H
-      SpritesLight.setPalette(@LightPalette)
-      SpritesLight.load(filename)
-      LD2_InitSprites filename, @SpritesOpaqueLight, SPRITE_W, SPRITE_H
-   
-    CASE idOBJECT
-
-      LD2_InitSprites filename, @SpritesObject, SPRITE_W, SPRITE_H, SpriteFlags.Transparent
-      LD2_InitSprites filename, @SpritesOpaqueObject, SPRITE_W, SPRITE_H
- 
-  END SELECT
-
-END SUB
+end sub
 
 function getVersionTag(major as integer, minor as integer) as string
     

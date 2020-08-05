@@ -23,9 +23,6 @@
 ' === Ask Barney about floors
 
 ' jump and shoot to shatter glass windows???
-' press down to pick something up (graphic of larry bending down grabbing something)
-' fill not working
-' floor/wall checks (bitmap) not working
 ' marks floors that player has been too
 ' crawl under tight areas (engine room)
 ' every few rooms have restrooms in the back (or somewhere)
@@ -71,7 +68,7 @@
     declare sub LoadSounds ()
     declare sub Main ()
     declare sub NewGame ()
-    declare sub YouDied ()
+    declare sub GameOver ()
     declare function ContinueGame() as integer
     
     declare sub BeforeMobKill (mob as Mobile ptr)
@@ -1446,7 +1443,7 @@ SUB Main
                 Game_setFlag GameFlags.ExitGame
                 LD2_FadeOut 2
                 WaitSeconds 0.8
-                YouDied
+                GameOver
                 WaitSeconds 0.7
                 exit do
             end if
@@ -1668,6 +1665,8 @@ sub Rooms_DoBasement (player as PlayerType)
     static leftKeypad as integer
     dim atKeypad as integer
     
+    exit sub
+    
     if first then
         
         first = 0
@@ -1887,7 +1886,7 @@ sub SceneCheck (player as PlayerType)
                     moveToX = Guides.SceneWeapons1
                 else
                     Scene7
-                    LD2_AddToStatus(ItemIds.WalkieTalkie, 1)
+                    'LD2_AddToStatus(ItemIds.WalkieTalkie, 1)
                 end if
             end if
         case "SCENE-STEVE-GONE"
@@ -3074,6 +3073,7 @@ sub LD2_UseItem (byval id as integer, byref qty as integer = 0, byref exitMenu a
     case ItemIds.Hp
         Player_AddItem id, qty
         LD2_PlaySound Sounds.useMedikit
+        qty = 1 '- only discard one item
     case ItemIds.ExtraLife
         Player_AddItem ItemIds.Lives, qty
         LD2_PlaySound Sounds.useExtraLife
@@ -3298,7 +3298,7 @@ function SceneFadeOut(seconds as double) as integer
     
 end function
 
-sub YouDied ()
+sub GameOver ()
     
     dim title as ElementType
     dim subtitle as ElementType
