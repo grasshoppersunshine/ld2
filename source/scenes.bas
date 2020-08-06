@@ -339,7 +339,6 @@ function Scene1Go() as integer
     '- Steve bends down and gets a soda
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.GettingSoda
     for i = 0 to 1
-        'StevePose.btmMod = i
         RenderScene
         StevePose.nextFrame
         ContinueAfterSeconds 0.6667
@@ -347,8 +346,6 @@ function Scene1Go() as integer
         if SceneKeySkip() then return SkipScene()
     next i
     
-    'StevePose.btmMod = 2
-    'StevePose.topYmod = 0
     StevePose.lastFrame
     RenderScene
     
@@ -965,14 +962,14 @@ function Scene6Go() as integer
     RenderScene
     if ContinueAfterSeconds(1.0) then return 1
     
-    if DoScene("SCENE-5C") then return 1
+    if DoScene("SCENE-5C") then return 1 '- Here we are, the weapons locker!
     
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Walking
     BarneyPose.isFlipped = 1
 
     '- Barney runs to the left off the screen
     '----------------------------------------
-    PanPose @BarneyPose, -200, 0, 3.3, 10
+    PanPose @BarneyPose, -200, 0, 5, 10
     
     return 0
     

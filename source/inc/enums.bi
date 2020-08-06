@@ -427,6 +427,7 @@ enum MobFlags
     ShotFromTop   = &h10
     Adrenaline    = &h20
     Charge        = &h40
+    Spawn         = &h80
 end enum
 
 enum PlayerFlags
@@ -479,7 +480,6 @@ enum MobStates
     Shoot1
     Shooting
     Waiting
-    Spawn
 end enum
 '======================
 '= SPRITE SETS

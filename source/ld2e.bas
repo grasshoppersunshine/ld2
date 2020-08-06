@@ -3957,7 +3957,7 @@ function Mobs_Api(args as string) as string
     
 end function
 
-sub Mobs_Add (x as integer, y as integer, id as integer, nextState as integer = 0)
+sub Mobs_Add (x as integer, y as integer, id as integer, state as integer = 0)
     
     dim mob as Mobile
     
@@ -3969,13 +3969,10 @@ sub Mobs_Add (x as integer, y as integer, id as integer, nextState as integer = 
     mob.x     = x
     mob.y     = y
     mob.id    = id
-    mob.state = MobStates.Spawn
+    mob.state = state
+    mob.setFlag(MobFlags.Spawn)
     
-    Mobs_DoMob mob '* initialize via "spawn" state
-    
-    if nextState then
-        mob.setState nextState
-    end if
+    Mobs_DoMob mob '* run initial setup before rendering
     
     Mobs.add mob
     
@@ -4283,12 +4280,14 @@ sub Mobs_Animate_Rockmonster(mob as Mobile)
     dim canGoLeft as integer, canGoRight as integer
     
     if CLASSICMODE then
-        select case mob.state
-        case MobStates.Spawn
+        if mob.hasFlag(MobFlags.Spawn) then
+            mob.unsetFlag(MobFlags.Spawn)
             mob.setQty MobItems.Hp, 8
             mob.setQty MobItems.Weight, 1
             mob.frameCounter = 1
-            mob.setState MobStates.Go
+            mob.state = iif(mob.state=0,MobStates.Go,mob.state)
+        end if
+        select case mob.state
         case MobStates.Go
             mob.frameCounter += 0.1
             IF mob.frameCounter > 6 THEN mob.frameCounter = 1
@@ -4314,22 +4313,23 @@ sub Mobs_Animate_Rockmonster(mob as Mobile)
         exit sub
     end if
     
-    if mob.hasFlag(MobFlags.Hit) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
+        mob.setQty MobItems.Hp, MobHps.Rockmonster
+        mob.setQty MobItems.Weight, 1
+        mob.state = iif(mob.state=0,MobStates.Go,mob.state)
+    end if
+    
+    if mob.hasFlag(MobFlags.Hit) then
         mob.unsetFlag(MobFlags.Hit)
         mob.setState MobStates.Hurt
     end if
-    if mob.hasFlag(MobFlags.HitWall) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.HitWall) then
         mob.unsetFlag(MobFlags.HitWall)
         mob.setState MobStates.Pause
     end if
     
     select case mob.state
-    case MobStates.Spawn
-        
-        mob.setQty MobItems.Hp, MobHps.Rockmonster
-        mob.setQty MobItems.Weight, 1
-        mob.setState MobStates.Go
-        
     case MobStates.Hurt
         
         mob.setAnimation MobSprites.RockmonsterHurt
@@ -4428,30 +4428,27 @@ end sub
 
 sub Mobs_Animate_Blobmine(mob as Mobile)
     
-    dim f as double
     dim radius as integer
     dim x as integer
     dim y as integer
     dim n as integer
     
-    f = 1 'DELAYMOD
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
+        mob.setQty MobItems.Hp, MobHps.Blobmine
+        mob.state = iif(mob.state=0,MobStates.Go,mob.state)
+    end if
     
-    if mob.hasFlag(MobFlags.Hit) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.Hit) then
         mob.unsetFlag(MobFlags.Hit)
         mob.setState MobStates.Hurt
     end if
-    if mob.hasFlag(MobFlags.HitWall) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.HitWall) then
         mob.unsetFlag(MobFlags.HitWall)
         mob.setState MobStates.Pause
     end if
     
     select case mob.state
-    case MobStates.Spawn
-        
-        mob.setQty MobItems.Hp, MobHps.Blobmine
-        mob.setQty MobItems.Weight, 1
-        mob.setState MobStates.Go
-        
     case MobStates.Hurt
         
         mob.setState MobStates.Go
@@ -4473,14 +4470,14 @@ sub Mobs_Animate_Blobmine(mob as Mobile)
         
         select case int(mob.x-mob.getQty(MobItems.SpawnX))
         case is > 10
-            mob.vx = -0.3333*f
+            mob.vx = -0.3333
         case is < -10
-            mob.vx = 0.3333*f
+            mob.vx = 0.3333
         case else
             if int(2*rnd(1)) then
-                mob.vx = -0.3333*f
+                mob.vx = -0.3333
             else
-                mob.vx =  0.3333*f
+                mob.vx =  0.3333
             end if
         end select
         mob.setState MobStates.Going, rnd(1)*2+1
@@ -4518,16 +4515,20 @@ end sub
 sub Mobs_Animate_GruntMg(mob as Mobile)
     
     dim animationSpeed as double
-    dim f as double
     dim canGoLeft as integer, canGoRight as integer
     dim mapX as integer, mapY as integer
     dim x as integer
     dim y as integer
     dim i as integer
     
-    f = 1 'DELAYMOD
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
+        mob.setQty MobItems.Hp, MobHps.GruntMg+(MobHps.GruntMg*0.5*rnd(1))
+        mob.setAnimation MobSprites.GruntMg
+        mob.state = iif(mob.state=0,MobStates.Go,mob.state)
+    end if
     
-    if mob.hasFlag(MobFlags.Hit) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.Hit) then
         mob.unsetFlag(MobFlags.Hit)
         if mob.notFlag(MobFlags.Adrenaline) then
             mob.setState MobStates.Hurt
@@ -4537,19 +4538,12 @@ sub Mobs_Animate_GruntMg(mob as Mobile)
             end if
         end if
     end if
-    if mob.hasFlag(MobFlags.HitWall) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.HitWall) then
         mob.unsetFlag(MobFlags.HitWall)
         mob.setState MobStates.Pause
     end if
     
     select case mob.state
-    case MobStates.Spawn
-        
-        mob.setQty MobItems.Hp, MobHps.GruntMg+(MobHps.GruntMg*0.5*rnd(1))
-        mob.setQty MobItems.Weight, 1
-        mob.setAnimation MobSprites.GruntMg
-        mob.setState MobStates.Go
-        
     case MobStates.Hurt
         
         mob.setAnimation MobSprites.GruntMgHurt
@@ -4600,17 +4594,17 @@ sub Mobs_Animate_GruntMg(mob as Mobile)
             canGoLeft = 0
         end if
         if canGoLeft and canGoRight then
-            mob.vx = iif(roll(2)=1, f*0.5, f*-0.5)
+            mob.vx = iif(roll(2)=1, 0.5, -0.5)
         elseif canGoLeft then
-            mob.vx = f *-0.5
+            mob.vx = -0.5
             if mob.hasFlag(MobFlags.ShotFromLeft) then
-                mob.vx = f *-1.0
+                mob.vx = -1.0
                 animationSpeed = 1/12
             end if
         elseif canGoRight then
-            mob.vx = f * 0.5
+            mob.vx = 0.5
             if mob.hasFlag(MobFlags.ShotFromRight) then
-                mob.vx = f * 1.0
+                mob.vx = 1.0
                 animationSpeed = 1/12
             end if
         else
@@ -4712,16 +4706,20 @@ end sub
 sub Mobs_Animate_GruntHg(mob as Mobile)
     
     dim animationSpeed as double
-    dim f as double
     dim mapX as integer, mapY as integer
     dim canGoLeft as integer, canGoRight as integer
     dim x as integer
     dim y as integer
     dim i as integer
     
-    f = 1 'DELAYMOD
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
+        mob.setQty MobItems.Hp, MobHps.GruntHg+(MobHps.GruntHg*0.5*rnd(1))
+        mob.setAnimation MobSprites.GruntHg
+        mob.state = iif(mob.state=0,MobStates.Go,mob.state)
+    end if
     
-    if mob.hasFlag(MobFlags.Hit) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.Hit) then
         mob.unsetFlag(MobFlags.Hit)
         if mob.notFlag(MobFlags.Adrenaline) then
             mob.setState MobStates.Hurt
@@ -4731,19 +4729,12 @@ sub Mobs_Animate_GruntHg(mob as Mobile)
             end if
         end if
     end if
-    if mob.hasFlag(MobFlags.HitWall) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.HitWall) then
         mob.unsetFlag(MobFlags.HitWall)
         mob.setState MobStates.Pause
     end if
     
     select case mob.state
-    case MobStates.Spawn
-        
-        mob.setQty MobItems.Hp, MobHps.GruntHg+(MobHps.GruntHg*0.5*rnd(1))
-        mob.setQty MobItems.weight, 1
-        mob.setAnimation MobSprites.GruntHg
-        mob.setState MobStates.Go
-        
     case MobStates.Hurt
         
         mob.setAnimation MobSprites.GruntHgHurt
@@ -4794,17 +4785,17 @@ sub Mobs_Animate_GruntHg(mob as Mobile)
             canGoLeft = 0
         end if
         if canGoLeft and canGoRight then
-            mob.vx = iif(roll(2)=1, f*0.5, f*-0.5)
+            mob.vx = iif(roll(2)=1, 0.5, -0.5)
         elseif canGoLeft then
-            mob.vx = f *-0.5
+            mob.vx = -0.5
             if mob.hasFlag(MobFlags.ShotFromLeft) then
-                mob.vx = f *-1.0
+                mob.vx = -1.0
                 animationSpeed = 1/12
             end if
         elseif canGoRight then
-            mob.vx = f * 0.5
+            mob.vx = 0.5
             if mob.hasFlag(MobFlags.ShotFromRight) then
-                mob.vx = f * 1.0
+                mob.vx = 1.0
                 animationSpeed = 1/12
             end if
         else
@@ -4902,12 +4893,14 @@ end sub
 sub Mobs_Animate_Jellyblob(mob as Mobile)
     
     if CLASSICMODE then
-        select case mob.state
-        case MobStates.Spawn
+        if mob.hasFlag(MobFlags.Spawn) then
+            mob.unsetFlag(MobFlags.Spawn)
             mob.setQty MobItems.Hp, 14
             mob.setQty MobItems.Weight, 1
             mob.frameCounter = 11
-            mob.setState MobStates.Go
+            mob.setState iif(mob.state=0,MobStates.Go,mob.state)
+        end if
+        select case mob.state
         case MobStates.Go
 
             IF mob.hasFlag(MobFlags.Hit) THEN
@@ -4939,23 +4932,24 @@ sub Mobs_Animate_Jellyblob(mob as Mobile)
         exit sub
     end if
     
-    if mob.hasFlag(MobFlags.Hit) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
+        mob.setQty MobItems.Hp, MobHps.Jellyblob
+        mob.setQty MobItems.Weight, 0
+        'mob.y      = mob.getQty(MobItems.SpawnY)-7
+        mob.state = iif(mob.state=0,MobStates.Go,mob.state)
+    end if
+    
+    if mob.hasFlag(MobFlags.Hit) then
         mob.unsetFlag(MobFlags.Hit)
         mob.setState MobStates.Hurt
     end if
-    if mob.hasFlag(MobFlags.HitWall) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.HitWall) then
         mob.unsetFlag(MobFlags.HitWall)
         mob.setState MobStates.Pause
     end if
     
     select case mob.state
-    case MobStates.Spawn
-        
-        mob.setQty MobItems.Hp, MobHps.Jellyblob
-        mob.setQty MobItems.Weight, 0
-        'mob.y      = mob.getQty(MobItems.SpawnY)-7
-        mob.setState MobStates.Go
-        
     case MobStates.Hurt
         
         mob.setAnimation MobSprites.JellyblobHurt
@@ -5030,33 +5024,32 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
     static flashClock as double
     dim lft0 as double, rgt0 as double
     dim lft1 as double, rgt1 as double
-    dim f as double
-    f = 1 'DELAYMOD
     
-    walkSpeed   = f*1.6
-    chargeSpeed = f*3.5
+    walkSpeed   = 1.6
+    chargeSpeed = 3.5
     lft0 = mob.x: rgt0 = mob.x+15
     
     static rollHeight as double
     
-    if mob.hasFlag(MobFlags.Hit) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
+        mob.setQty MobItems.Hp, MobHps.BossRooftop
+        mob.setQty MobItems.Weight, 0
+        mob.state = iif(mob.state=0,MobStates.Go,mob.state)
+    end if
+    
+    if mob.hasFlag(MobFlags.Hit) then
         mob.unsetFlag(MobFlags.Hit)
         if (mob.state = MobStates.Charging) or (mob.state = MobStates.Going) then
             mob.setState MobStates.Hurt
         end if
     end if
-    if mob.hasFlag(MobFlags.HitWall) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.HitWall) then
         mob.unsetFlag(MobFlags.HitWall)
         mob.setState MobStates.Pause
     end if
     
     select case mob.state
-    case MobStates.Spawn
-        
-        mob.setQty MobItems.Hp, MobHps.BossRooftop
-        mob.setQty MobItems.Weight, 0
-        mob.state  = MobStates.Go
-        
     case MobStates.Go
         
         mob.setAnimation MobSprites.RoofBossWalk0, MobSprites.RoofBossWalk1, 0.2
@@ -5187,25 +5180,21 @@ end sub
 
 sub Mobs_Animate_BossPortal(mob as Mobile)
     
-    dim f as double
-    f = 1 'DELAYMOD
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.setQty MobItems.Hp, MobHps.BossPortal
+        mob.state = iif(mob.state=0,MobStates.Go,mob.state)
+    end if
     
-    if mob.hasFlag(MobFlags.Hit) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.Hit) then
         mob.unsetFlag(MobFlags.Hit)
         mob.setState MobStates.Hurt
     end if
-    if mob.hasFlag(MobFlags.HitWall) and (mob.state <> MobStates.Spawn) then
+    if mob.hasFlag(MobFlags.HitWall) then
         mob.unsetFlag(MobFlags.HitWall)
         mob.setState MobStates.Pause
     end if
     
     select case mob.state
-    case MobStates.Spawn
-        
-        mob.setQty MobItems.Hp, MobHps.BossPortal
-        mob.setQty MobItems.Weight, 1
-        mob.setState MobStates.Go
-        
     case MobStates.Go
         
         mob.setState MobStates.Going, 5/6
@@ -5224,10 +5213,10 @@ sub Mobs_Animate_BossPortal(mob as Mobile)
                     mob.vy = -1.2
                 end if
                 if mob.x < Player.x then
-                    mob.x += f*1.1
+                    mob.x += 1.1
                     mob._flip = 0
                 else
-                    mob.x -= f*1.1
+                    mob.x -= 1.1
                     mob._flip = 1
                 end if
             end if
@@ -5236,12 +5225,12 @@ sub Mobs_Animate_BossPortal(mob as Mobile)
                 if (abs(mob.x - Player.x + 7) < 4) and (mob.vy >= 0) then
                     mob.vy = int(2 * rnd(1)) + 2
                 end if
-                if mob._flip = 0 then mob.x = mob.x + 1.7*f
-                if mob._flip = 1 then mob.x = mob.x - 1.7*f
+                if mob._flip = 0 then mob.x = mob.x + 1.7
+                if mob._flip = 1 then mob.x = mob.x - 1.7
             end if
         end if
         if CheckMobFloorHit(mob) = 1 then
-            mob.y -= f*mob.vy
+            mob.y -= mob.vy
         end if
         mob.y -= 1
         
@@ -5251,7 +5240,7 @@ sub Mobs_Animate_BossPortal(mob as Mobile)
             end if
         end if
         
-        mob.frameCounter += f*20
+        mob.frameCounter += 20
         if mob.frameCounter >= 360 then mob.frameCounter = 0
         
     case MobStates.Pause
@@ -5301,13 +5290,14 @@ sub Mobs_Animate_TrapRoom(mob as Mobile)
     dim x as integer, y as integer
     dim i as integer
     
-    select case mob.state
-    case MobStates.Spawn
-        
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
         mob.setQty MobItems.Hp, 100
         mob.moveDelay = 1/60
-        mob.setState MobStates.Pause
+        mob.state = iif(mob.state=0,MobStates.Pause,mob.state)
+    end if
     
+    select case mob.state
     case MobStates.Pause
         
         if Player.x > (mob.x+8)*SPRITE_W and Player.x < (mob.x+12)*SPRITE_W then
@@ -5394,11 +5384,14 @@ end sub
 
 sub Mobs_Animate_Larry(mob as Mobile)
     
-    select case mob.state
-    case MobStates.Spawn
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
         mob.setQty MobItems.Hp, 100
         mob.setAnimation MobSprites.Larry
-        mob.setState MobStates.Waiting
+        mob.state = iif(mob.state=0,MobStates.Waiting,mob.state)
+    end if
+    
+    select case mob.state
     case MobStates.Waiting
         
     end select
@@ -5407,12 +5400,13 @@ end sub
 
 sub Mobs_Animate_Steve(mob as Mobile)
     
-    select case mob.state
-    case MobStates.Spawn
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
         mob.setQty MobItems.Hp, 100
-        if mob._nextState = 0 then
-            mob.setState MobStates.Waiting
-        end if
+        mob.state = iif(mob.state=0,MobStates.Waiting,mob.state)
+    end if
+    
+    select case mob.state
     case MobStates.Waiting
         mob.setAnimation MobSprites.Steve
     case MobStates.PassedOut
@@ -5424,12 +5418,13 @@ end sub
 
 sub Mobs_Animate_Barney(mob as Mobile)
     
-    select case mob.state
-    case MobStates.Spawn
-        
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
         mob.setQty MobItems.Hp, 100
-        mob.setState MobStates.Go
-        
+        mob.state = iif(mob.state=0,MobStates.Go,mob.state)
+    end if
+    
+    select case mob.state
     case MobStates.Go
         
         if roll(2)=1 then
@@ -5458,12 +5453,13 @@ end sub
 
 sub Mobs_Animate_Janitor(mob as Mobile)
     
-    select case mob.state
-    case MobStates.Spawn
-        
+    if mob.hasFlag(MobFlags.Spawn) then
+        mob.unsetFlag(MobFlags.Spawn)
         mob.setQty MobItems.Hp, 100
-        mob.setState MobStates.Go
-        
+        mob.state = iif(mob.state=0,MobStates.Go,mob.state)
+    end if
+    
+    select case mob.state
     case MobStates.Go
         
         if roll(2)=1 then
@@ -5492,7 +5488,7 @@ end sub
 
 sub Mobs_DoMob(mob as Mobile)
     
-    if mob.state = MobStates.Spawn then
+    if mob.hasFlag(MobFlags.Spawn) then
         mob.setQty MobItems.SpawnX, mob.x
         mob.setQty MobItems.SpawnY, mob.y
         mob.setQty MobItems.Weight, 1
@@ -7661,6 +7657,14 @@ sub Game_Save (filename as string)
     roomdata.header.numMobs    = Mobs.count()
     roomdata.header.scrollX    = cast(short, int(XShift))
     roomdata.header.phase      = cast(ubyte, Inventory(ItemIds.Phase))
+    for y = 0 to MAPH-1
+        for x = 0 to MAPW-1
+            roomdata.tiles(x, y) = cast(ubyte, TileMap(x, y))
+            roomdata.lightbg(x, y) = cast(ubyte, LightMapBG(x, y))
+            roomdata.lightfg(x, y) = cast(ubyte, LightMapFG(x, y))
+            roomdata.animations(x, y) = cast(ubyte, AniMap(x, y))
+        next x
+    next y
     for n = 0 to NumDoors-1
         select case Doors(n).accessLevel
         case GREENACCESS  : tile = TileIds.DOORGREEN
@@ -7671,22 +7675,14 @@ sub Game_Save (filename as string)
         end select
         x = Doors(n).mapX
         y = Doors(n).mapY
-        TileMap(x, y) = tile
+        roomdata.tiles(x, y) = cast(ubyte, tile)
     next n
     for n = 0 to NumElevators-1
         x = Elevators(n).mapX
         y = Elevators(n).mapY
-        TileMap(x, y) = TileIds.ElevatorDoorLeft
-        TileMap(x+1, y) = TileIds.ElevatorDoorRight
+        roomdata.tiles(x  , y) = cast(ubyte, TileIds.ElevatorDoorLeft)
+        roomdata.tiles(x+1, y) = cast(ubyte, TileIds.ElevatorDoorRight)
     next n
-    for y = 0 to MAPH-1
-        for x = 0 to MAPW-1
-            roomdata.tiles(x, y) = cast(ubyte, TileMap(x, y))
-            roomdata.lightbg(x, y) = cast(ubyte, LightMapBG(x, y))
-            roomdata.lightfg(x, y) = cast(ubyte, LightMapFG(x, y))
-            roomdata.animations(x, y) = cast(ubyte, AniMap(x, y))
-        next x
-    next y
     for n = 0 to MAXITEMS-1
         roomdata.items(n).x = cast(ubyte, int(Items(n).x/SPRITE_W))
         roomdata.items(n).y = cast(ubyte, int(Items(n).y/SPRITE_H))

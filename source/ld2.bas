@@ -838,7 +838,7 @@ sub LoadSounds
         '***************************************************************
         AddSound Sounds.doorClick , "esm/locked.wav"
         AddSound Sounds.footstep  , "larry-step.wav"
-        AddSound Sounds.jump      , "enhanced/jump.wav" '"larry-jump.wav"
+        AddSound Sounds.jump      , "larry-jump.wav"
         AddSound Sounds.land      , "larry-land.wav"
         AddSound Sounds.larryHurt , "larry-hurt.wav"
         AddSound Sounds.larryDie  , "larry-die.wav"
@@ -861,7 +861,7 @@ sub LoadSounds
         AddSound Sounds.useMedikit  , "use-medikit.wav"
         AddSound Sounds.useExtraLife, "use-extralife.wav"
         
-        AddSound Sounds.boom, "esm/boom.wav"
+        AddSound Sounds.boom, "esm/impact.wav"
         AddSound Sounds.quad, "quad.wav"
         AddSound Sounds.titleStart , "start.wav"
         AddSound Sounds.lightSwitch, "lightswitch.wav"
@@ -969,6 +969,8 @@ sub DoAction(actionId as integer, itemId as integer = 0, prime as integer = 0)
     case ActionIds.PickUpItem
         if MapItems_Pickup() then
             LD2_PlaySound Sounds.pickup
+        else
+            LD2_SetNotice "Inventory Full"
         end if
     case ActionIds.RunRight
         if alreadyRan = 0 then
