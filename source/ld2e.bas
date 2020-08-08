@@ -389,7 +389,7 @@
     
     dim shared SCREEN_W as integer
     dim shared SCREEN_H as integer
-    dim shared SCREEN_FULL as integer
+    dim shared FULLSCREEN as integer
     dim shared SCREEN_MODE as integer
     
     dim shared DOOROPENSPEED as double
@@ -431,13 +431,6 @@ function roll(limit as integer) as integer
     return int(limit*rnd(1))+1
     
 end function
-
-
-sub Player_Get (p as PlayerType)
-    
-    p = Player
-    
-end sub
 
 function LD2_AddToStatusIfExists (item as integer, qty as integer) as integer
     
@@ -1039,6 +1032,7 @@ sub Game_Init
     
     '*******************************************************************
     Game_setFlag GameFlags.NoBackground
+    Game_setFlag GameFlags.Fullscreen
     '*******************************************************************
     
     TESTMODE     = iif(Game_hasFlag(GameFlags.TestMode)    , 1, 0)
@@ -1076,32 +1070,34 @@ sub Game_Init
     end if
     
     '///////////////////////////////////////////////////////////////////
-    dim res_x as integer, res_y as integer
-    screeninfo res_x, res_y
-    SCREEN_W = 300
-    SCREEN_H = 300*(res_y/res_x)
-    
-    if DEBUGMODE then
-        LD2GFX_EnableDebugMode
+    if Game_notFlag(GameFlags.NoLauncher) then
+        dim res_x as integer, res_y as integer
+        screeninfo res_x, res_y
+        SCREEN_W = 300
+        SCREEN_H = 300*(res_y/res_x)
+        
+        if DEBUGMODE then
+            LD2GFX_EnableDebugMode
+        end if
+        if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, 0, 3.0) <> 0 then
+            print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
+            end
+        else
+            LD2_cls 1, 0
+            LD2_cls 2, 0
+        end if
+        
+        PaletteFile = DATA_DIR+"gfx/palettes/gradient.pal"
+        FontFile = DATA_DIR+"gfx/sprites/font.bmp"
+        
+        LD2_LoadPalette PaletteFile
+        
+        Font_Init FONT_W, FONT_H
+        Font_Load FontFile
+        
+        Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod, @Font_Metrics
+        Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
     end if
-    if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, 0) <> 0 then
-        print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
-        end
-    else
-        LD2_cls 1, 0
-        LD2_cls 2, 0
-    end if
-    
-    PaletteFile = DATA_DIR+"gfx/palettes/gradient.pal"
-    FontFile = DATA_DIR+"gfx/sprites/font.bmp"
-    
-    LD2_LoadPalette PaletteFile
-    
-    Font_Init FONT_W, FONT_H
-    Font_Load FontFile
-    
-    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod, @Font_Metrics
-    Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
     
     if DEBUGMODE then
         LogDebug __FUNCTION__+" SUCCESS"
@@ -1114,68 +1110,13 @@ sub Game_LoadAssets
     if DEBUGMODE then LogDebug __FUNCTION__
     
     dim systemOut as ElementType
+    dim zoom as double
     
     TESTMODE     = iif(Game_hasFlag(GameFlags.TestMode)    , 1, 0)
     DEBUGMODE    = iif(Game_hasFlag(GameFlags.DebugMode)   , 1, 0)
     CLASSICMODE  = iif(Game_hasFlag(GameFlags.ClassicMode) , 1, 0)
     ENHANCEDMODE = iif(Game_hasFlag(GameFlags.EnhancedMode), 1, 0)
     NOSOUND      = iif(Game_hasFlag(GameFlags.NoSound)     , 1, 0)
-    
-    if CLASSICMODE then
-        SCREEN_MODE = ScreenModes.Classic
-    end if
-    
-    SCREEN_FULL = 1
-    select case SCREEN_MODE
-    case ScreenModes.Classic, ScreenModes.Screen13
-        SCREEN_W = 320
-        SCREEN_H = 200
-    case ScreenModes.WideScreen
-        SCREEN_W = 352
-        SCREEN_H = 198
-    case ScreenModes.Zoom256
-        SCREEN_W = 256
-        SCREEN_H = 144
-    case ScreenModes.MaxZoom
-        SCREEN_W = 224
-        SCREEN_H = 126
-    case else '* wide zoom
-        SCREEN_W = 320
-        SCREEN_H = 180
-    end select
-    
-    LD2GFX_Release
-    if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, SCREEN_FULL) <> 0 then
-        print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
-        end
-    else
-        LD2_cls 1, 0
-        LD2_cls 2, 0
-    end if
-    
-    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod, @Font_Metrics
-    Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
-    
-    Element_Init @systemOut
-    systemOut.x = 0
-    systemOut.y = 0
-    systemOut.text_height = 1.8
-    
-    systemOut.text += "Larry the Dinosaur II v1.1.193\": Element_Render @systemOut: LD2_RefreshScreen
-    WaitSeconds 0.3333
-    
-    if ENHANCEDMODE then
-        systemOut.text += "STARTING CLASSIC (ENHANCED) MODE\": Element_Render @systemOut: LD2_RefreshScreen
-        WaitSeconds 0.3333
-    elseif CLASSICMODE then
-        systemOut.text += "STARTING CLASSIC (2002) MODE\": Element_Render @systemOut: LD2_RefreshScreen
-        WaitSeconds 0.3333
-    end if
-    
-    systemOut.text +=  "Initializing system...\\"
-    systemOut.text +=  GetCommonInfo()+"\\"
-    Element_Render @systemOut: LD2_RefreshScreen
-    WaitSeconds 0.3333
     
     if CLASSICMODE then
         LarryFile   = DATA_DIR+"2002/gfx/larry2.put"
@@ -1198,6 +1139,73 @@ sub Game_LoadAssets
         BossFile    = DATA_DIR+"gfx/sprites/boss1.bmp"
         FontFile    = DATA_DIR+"gfx/sprites/font.bmp"
     end if
+    
+    if CLASSICMODE then
+        SCREEN_MODE = ScreenModes.Classic
+    end if
+    
+    FULLSCREEN = Game_hasFlag(GameFlags.Fullscreen)
+    zoom = 1.0
+    
+    select case SCREEN_MODE
+    case ScreenModes.Classic, ScreenModes.Screen13
+        SCREEN_W = 320
+        SCREEN_H = 200
+    case ScreenModes.WideScreen
+        SCREEN_W = 352
+        SCREEN_H = 198
+    case ScreenModes.Zoom256
+        SCREEN_W = 256
+        SCREEN_H = 144
+    case ScreenModes.MaxZoom
+        SCREEN_W = 224
+        SCREEN_H = 126
+    case else '* wide zoom
+        if FULLSCREEN then
+            SCREEN_W = 320
+            SCREEN_H = 180
+        else
+            SCREEN_W = 320
+            SCREEN_H = 200
+            zoom = 3
+        end if
+    end select
+    
+    Font_Release
+    LD2GFX_Release
+    if LD2_InitVideo("Larry the Dinosaur 2", SCREEN_W, SCREEN_H, FULLSCREEN, zoom) <> 0 then
+        print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
+        end
+    else
+        LD2_cls 1, 0
+        LD2_cls 2, 0
+    end if
+    
+    Font_Init FONT_W, FONT_H
+    Font_Load FontFile
+    
+    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod, @Font_Metrics
+    
+    Element_Init @systemOut
+    systemOut.x = 0
+    systemOut.y = 0
+    systemOut.text_height = 1.8
+    
+    systemOut.text += "Larry the Dinosaur II v1.1.193\": Element_Render @systemOut: LD2_RefreshScreen
+    WaitSeconds 0.3333
+    
+    if ENHANCEDMODE then
+        systemOut.text += "STARTING CLASSIC (ENHANCED) MODE\": Element_Render @systemOut: LD2_RefreshScreen
+        WaitSeconds 0.3333
+    elseif CLASSICMODE then
+        systemOut.text += "STARTING CLASSIC (2002) MODE\": Element_Render @systemOut: LD2_RefreshScreen
+        WaitSeconds 0.3333
+    end if
+    
+    systemOut.text +=  "Initializing system...\\"
+    systemOut.text +=  GetCommonInfo()+"\\"
+    Element_Render @systemOut: LD2_RefreshScreen
+    WaitSeconds 0.3333
     
     '///////////////////////////////////////////////////////////////////
     ShowLightBG = 1
@@ -1244,20 +1252,39 @@ sub Game_LoadAssets
     'print "Loading sprites..."
     WaitSeconds 0.3333
     
-    Font_Release
-    Font_Init FONT_W, FONT_H
-    if CLASSICMODE then
-        Font_Load FontFile, 0
-    else
-        Font_Load FontFile
-    end if
+    Game_LoadTextures
     
-    Elements_Init SCREEN_W, SCREEN_H, FONT_W, FONT_H, @elementsPutFont, @elementsFill, @elementsSetFontColor, @elementsSetAlphaMod, @Font_Metrics
     Elements_InitSprites SPRITE_W, SPRITE_H, @elementsPutSprite, @elementsSpriteMetrics
     
     if CLASSICMODE then
         Elements_SetDefaultTextSpacing 1.0
         Elements_SetDefaultFlags ElementFlags.MonospaceText
+    end if
+    
+    '///////////////////////////////////////////////////////////////////
+    
+    Mobs.Init
+    
+    systemOut.text += "Starting game...\": Element_Render @systemOut: LD2_RefreshScreen
+    'print "Starting game..."
+    WaitSeconds 0.3333
+    LD2_cls
+    
+    '// add method for LD2_addmobtype, move these to LD2_bas
+    Mobs.AddType MobIds.Rockmonster
+    Mobs.AddType MobIds.GruntMg
+    Mobs.AddType MobIds.GruntHg
+    Mobs.AddType MobIds.BlobMine
+    Mobs.AddType MobIds.JellyBlob
+    
+end sub
+
+sub Game_LoadTextures
+    
+    if CLASSICMODE then
+        Font_Load FontFile, 0
+    else
+        Font_Load FontFile
     end if
     
     Sprites_Load LarryFile  , idLARRY  
@@ -1277,22 +1304,6 @@ sub Game_LoadAssets
         LD2_InitLayer DATA_DIR+"gfx/grass.bmp", @LayerGrass, SpriteFlags.Transparent
         LD2_InitLayer DATA_DIR+"gfx/clouds.bmp", @LayerClouds, SpriteFlags.Transparent
     end if
-    
-    '///////////////////////////////////////////////////////////////////
-    
-    Mobs.Init
-    
-    systemOut.text += "Starting game...\": Element_Render @systemOut: LD2_RefreshScreen
-    'print "Starting game..."
-    WaitSeconds 0.3333
-    LD2_cls
-    
-    '// add method for LD2_addmobtype, move these to LD2_bas
-    Mobs.AddType MobIds.Rockmonster
-    Mobs.AddType MobIds.GruntMg
-    Mobs.AddType MobIds.GruntHg
-    Mobs.AddType MobIds.BlobMine
-    Mobs.AddType MobIds.JellyBlob
     
 end sub
 
@@ -2767,8 +2778,8 @@ sub MapTiles_Draw
     animators(0) = 0
     animators(9) = 0
     
-    mapXstart = toMapX(XShift): xpStart = int(0 - (XShift-int(XShift/SPRITE_W)*SPRITE_W))
-    mapYstart = toMapY(YShift): ypStart = int(0 - (YShift-int(YShift/SPRITE_H)*SPRITE_H))
+    mapXstart = toMapX(int(XShift)): xpStart = mapXstart*SPRITE_W-int(XShift)
+    mapYstart = toMapY(int(YShift)): ypStart = mapYstart*SPRITE_H-int(YShift)
     
     dim tilesAcross as integer
     dim tilesDown as integer
@@ -2802,8 +2813,8 @@ sub MapLightBG_Draw
     dim xp as integer, yp as integer
     dim x as integer, y as integer
     
-    mapXstart = toMapX(XShift): xpStart = int(0 - (XShift-int(XShift/SPRITE_W)*SPRITE_W))
-    mapYstart = toMapY(YShift): ypStart = int(0 - (YShift-int(YShift/SPRITE_H)*SPRITE_H))
+    mapXstart = toMapX(int(XShift)): xpStart = mapXstart*SPRITE_W-int(XShift)
+    mapYstart = toMapY(int(YShift)): ypStart = mapYstart*SPRITE_H-int(YShift)
     
     dim tilesAcross as integer
     dim tilesDown as integer
@@ -2830,7 +2841,6 @@ end sub
 
 sub MapLightFG_Draw
     
-    dim playerIsLit as integer
     dim mapXstart as integer
     dim mapYstart as integer
     dim xpStart as integer
@@ -2840,15 +2850,14 @@ sub MapLightFG_Draw
     dim xp as integer, yp as integer
     dim x as integer, y as integer
     
-    mapXstart = toMapX(XShift): xpStart = int(0 - (XShift-int(XShift/SPRITE_W)*SPRITE_W))
-    mapYstart = toMapY(YShift): ypStart = int(0 - (YShift-int(YShift/SPRITE_H)*SPRITE_H))
+    mapXstart = toMapX(int(XShift)): xpStart = mapXstart*SPRITE_W-int(XShift)
+    mapYstart = toMapY(int(YShift)): ypStart = mapYstart*SPRITE_H-int(YShift)
     
     dim tilesAcross as integer
     dim tilesDown as integer
     tilesAcross = int((SCREEN_W / SPRITE_W)+.99)+1
     tilesDown   = int((SCREEN_H / SPRITE_H)+.99)+1
     
-    playerIsLit = Player.hasFlag(PlayerFlags.Shooting) and (Player.weapon <> ItemIds.Fist) and (Player.upper.interval < 0.2)
     yp = ypStart: mapY = mapYstart
     for y = 0 to tilesDown-1
         xp = xpStart
@@ -3519,7 +3528,7 @@ function MapItems_Pickup () as integer
             leftover = LD2_AddToStatus(Items(i).id, Items(i).qty)
             if leftover < Items(i).qty then
                 success = 1
-                Game_SetFlag GOTITEM
+                Player.setFlag PlayerFlags.GotItem
                 GotItemId = items(i).id
                 if leftover > 0 then
                     Items(i).qty = leftover
@@ -3530,15 +3539,17 @@ function MapItems_Pickup () as integer
                     next n
                 end if
                 exit for
+            else
+                Player.setFlag PlayerFlags.InventoryFull
             end if
         end if
     next i
     
     Player.setFlag(PlayerFlags.Crouching)
-    
     Player_InitUpper Player.upper.interval
 
     return success
+    
 end function
 
 function MapItems_GetCount() as integer
@@ -5803,6 +5814,12 @@ function Mobs_GetTypeName(typeId as integer) as string
     
 end function
 
+function Player_Clone () as PlayerType
+    
+    return player
+    
+end function
+
 sub Player_Animate()
     
     static falling as integer
@@ -5817,8 +5834,8 @@ sub Player_Animate()
         exit sub
     end if
     
-    if (Inventory(ItemIds.Hp) <= 0) and Game_notFlag(PLAYERDIED) then
-        Game_SetFlag PLAYERDIED
+    if (Inventory(ItemIds.Hp) <= 0) and player.notFlag(PlayerFlags.Died) then
+        player.setFlag(PlayerFlags.Died)
         LD2_PlaySound Sounds.splatter
         x = Player.x+7: y = Player.y+7
         radius = 16
@@ -5892,8 +5909,6 @@ sub Player_Animate()
             end if
     end select
     
-    Map_UpdateShift
-    
 end sub
 
 sub Player_Stop()
@@ -5916,11 +5931,11 @@ sub Player_Draw()
     if (SceneMode = LETTERBOX) or (Player.is_visible = 0) then
         exit sub
     end if
-    if Game_hasFlag(PLAYERDIED) then
+    if player.hasFlag(PlayerFlags.Died) then
         exit sub
     end if
     
-    px = int(Player.x - XShift): py = int(Player.y - YShift)
+    px = int(Player.x) - int(XShift): py = int(Player.y) - int(YShift)
     lan = Player.lower.transformed: uan = Player.upper.transformed
     offset = iif(Player._flip=0,Player.upper.offset,Player.upper.offset*-1)
     
@@ -6425,6 +6440,13 @@ function Player_GetItemQty(itemId as integer) as integer
     
 end function
 
+function Player_HasFlag(flag as integer) as integer
+    return Player.hasFlag(flag)
+end function
+sub Player_UnsetFlag(flag as integer)
+    Player.unsetFlag flag
+end sub
+
 function Player_HasItem(itemId as integer) as integer
     
     return (Inventory(itemId) > 0)
@@ -6522,6 +6544,18 @@ end function
 function Player_GetY() as double
     
     return Player.y
+    
+end function
+
+function Player_GetScreenX() as integer
+    
+    return int(Player.x - int(XShift))
+    
+end function
+
+function Player_GetScreenY() as integer
+    
+    return int(Player.y - int(YShift))
     
 end function
 

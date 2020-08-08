@@ -217,7 +217,7 @@ declare sub Mobs_Update (mob as Mobile)
 
 declare sub Stats_Draw ()
 
-declare sub Player_Get (p as PlayerType)
+declare function Player_Clone () as PlayerType
 declare sub Player_Animate ()
 declare sub Player_Draw()
 declare function Player_Jump (amount as double, is_repeat as integer = 0) as integer
@@ -229,6 +229,8 @@ declare function Player_GetAccessLevel() as integer
 declare function Player_GetItemQty(itemId as integer) as integer
 declare function Player_HasItem(itemId as integer) as integer
 declare function Player_NotItem(itemId as integer) as integer
+declare function Player_HasFlag(flag as integer) as integer
+declare sub Player_UnsetFlag(flag as integer)
 declare sub Player_AddItem(itemId as integer, qty as integer = 1)
 declare sub Player_SetItemQty(itemId as integer, qty as integer)
 declare sub Player_SetItemMaxQty(itemId as integer, qty as integer)
@@ -240,6 +242,8 @@ declare sub Player_SetXY (x as double, y as double)
 declare sub Player_Stop()
 declare function Player_GetX() as double
 declare function Player_GetY() as double
+declare function Player_GetScreenX() as integer
+declare function Player_GetScreenY() as integer
 declare function Player_GetFlip() as integer
 declare sub Player_Hide ()
 declare sub Player_Unhide ()
@@ -262,6 +266,7 @@ declare sub Player_InitLower (intervalStart as double=0.0)
 
 declare sub Game_Init ()
 declare sub Game_LoadAssets ()
+declare sub Game_LoadTextures ()
 declare function Game_HasFlag (flag as integer) as integer
 declare function Game_NotFlag (flag as integer) as integer
 declare sub Game_SetFlag (flag as integer)

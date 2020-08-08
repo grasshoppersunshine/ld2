@@ -36,4 +36,5 @@ declare function GetTextInput () as string
 declare function GetTextInputCursor() as integer
 declare sub SetTextInput (text as string)
 declare sub ClearTextInput ()
-
+declare function resetRenderTargets(clearFlag as integer = 0) as integer
+declare function resetRenderDevice(clearFlag as integer = 0) as integer

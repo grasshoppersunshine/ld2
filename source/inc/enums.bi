@@ -431,13 +431,17 @@ enum MobFlags
 end enum
 
 enum PlayerFlags
-    Blocked     = &h01
-    Falling     = &h02
-    Crouching   = &h04
-    Uncrouching = &h08
-    UpStairs    = &h10
-    Moved       = &h20
-    Shooting    = &h40
+    Blocked       = &h01
+    Falling       = &h02
+    Crouching     = &h04
+    Uncrouching   = &h08
+    UpStairs      = &h10
+    Moved         = &h20
+    Shooting      = &h40
+    GotItem       = &h80
+    InventoryFull = &h100
+    Died          = &h200
+    DiedRecently  = &h400
 end enum
 
 enum MobItems
@@ -518,7 +522,10 @@ enum Tracks
     Strings
     Breezeway
     Compromise
+    Contemplate
+    Library
     Lobby
+    Hummingbird
     '// scenes
     Portal
     Captured
@@ -560,6 +567,7 @@ enum Sounds
     pickup
     drop
     equip
+    inventoryFull
     '// weapons
     handgun
     machinegun
@@ -708,21 +716,19 @@ enum GameFlags
     FadeInMusic  = &h800
     FadeOutMusic = &h1000
     ChangeMusic  = &h2000
-    PlayerDied   = &h4000
-    RecentDeath  = &h8000
-    RevealText   = &h10000
-    RevealDone   = &h20000
-    ElevatorMenu = &h40000
-    StatusScreen = &h80000
-    GotItem      = &h100000
-    NoMobs       = &h200000
-    SkipOpening  = &h400000
-    TestMode     = &h800000
-    DebugMode    = &h1000000
-    ClassicMode  = &h2000000
-    EnhancedMode = &h4000000
-    NoLauncher   = &h8000000
-    NoBackground = &h10000000
+    RevealText   = &h4000
+    RevealDone   = &h8000
+    ElevatorMenu = &h10000
+    StatusScreen = &h20000
+    NoMobs       = &h40000
+    SkipOpening  = &h80000
+    TestMode     = &h100000
+    DebugMode    = &h200000
+    ClassicMode  = &h400000
+    EnhancedMode = &h800000
+    NoLauncher   = &h1000000
+    NoBackground = &h2000000
+    Fullscreen   = &h4000000
 end enum
 
 enum ScreenModes
@@ -783,6 +789,7 @@ enum OptionIds
     Enhanced
     ToggleTestMode
     ToggleBackground
+    ToggleFullscreen
     PlayGame
 end enum
 

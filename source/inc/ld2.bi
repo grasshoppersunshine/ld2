@@ -41,6 +41,7 @@ declare sub SceneRefreshMobs ()
 declare function GetRoomsFile() as string
 declare function RoomToFilename(roomId as integer) as string
 
+declare function PlayerHasFlag(flag as integer) as integer
 declare function GameHasFlag(flag as integer) as integer
 declare sub GameSetFlag(flag as integer)
 declare sub GameUnsetFlag(flag as integer)

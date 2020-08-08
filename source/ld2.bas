@@ -128,6 +128,8 @@
     
     dim shared SCREEN_W as integer
     dim shared SCREEN_H as integer
+    dim shared HALF_X as integer
+    dim shared HALF_Y as integer
     dim shared SCREENSHOT_W as integer
     dim shared SCREENSHOT_H as integer
     
@@ -812,6 +814,7 @@ sub LoadSounds
     else
         AddSound Sounds.pickup , "item-pickup.wav"
         AddSound Sounds.drop   , "item-drop.wav"
+        AddSound Sounds.inventoryFull, "item-full.wav"
         
         AddSound Sounds.doorup     , "door-up.wav"
         AddSound Sounds.doordown   , "door-down.wav"
@@ -890,13 +893,16 @@ sub LoadMusic ()
     AddMusic Tracks.Wandering , "creepy.ogg" , 1
     AddMusic Tracks.YouDied   , "youdied.ogg", 0
 
-    AddMusic Tracks.MusicBox  , "musicbox.ogg", 1
-    AddMusic Tracks.Scent     , "scent.ogg", 1
-    AddMusic Tracks.Motives   , "motives.ogg" , 1
-    AddMusic Tracks.Strings   , "strings.ogg" , 1
-    AddMusic Tracks.Compromise, "compromise.ogg" , 1
-    AddMusic Tracks.Lobby     , "lobby1.ogg" , 1
-    AddMusic Tracks.Breezeway , "breezeway.ogg" , 1
+    AddMusic Tracks.MusicBox   , "musicbox.ogg", 1
+    AddMusic Tracks.Scent      , "scent.ogg", 1
+    AddMusic Tracks.Motives    , "motives.ogg" , 1
+    AddMusic Tracks.Strings    , "strings.ogg" , 1
+    AddMusic Tracks.Compromise , "compromise.ogg" , 1
+    AddMusic Tracks.Contemplate, "contemplate.ogg" , 1
+    AddMusic Tracks.Library    , "library.ogg", 1
+    AddMusic Tracks.Lobby      , "lobby1.ogg" , 1
+    AddMusic Tracks.Breezeway  , "breezeway.ogg" , 1
+    AddMusic Tracks.Hummingbird, "humbird.ogg" , 1
     
     AddMusic Tracks.Portal, "portal.ogg"             , 1
     AddMusic Tracks.Captured , "../msplice/thetruth.wav", 1
@@ -969,8 +975,6 @@ sub DoAction(actionId as integer, itemId as integer = 0, prime as integer = 0)
     case ActionIds.PickUpItem
         if MapItems_Pickup() then
             LD2_PlaySound Sounds.pickup
-        else
-            LD2_SetNotice "Inventory Full"
         end if
     case ActionIds.RunRight
         if alreadyRan = 0 then
@@ -1003,7 +1007,7 @@ sub DoAction(actionId as integer, itemId as integer = 0, prime as integer = 0)
             success = Player_ShootRepeat()
         end if
         if success = 1 then
-            Player_Get player
+            player = Player_Clone()
             select case player.weapon
             case ItemIds.Fist
                 LD2_PlaySound Sounds.punch
@@ -1071,6 +1075,7 @@ end function
 SUB Main
   
     dim deadTimer as double
+    dim zoom as double = 1.0
     dim player as PlayerType
     dim newShot as integer
     dim newJump as integer
@@ -1121,6 +1126,8 @@ SUB Main
     
     SCREEN_W = Screen_GetWidth()
     SCREEN_H = Screen_GetHeight()
+    HALF_X = int(SCREEN_W*0.5)
+    HALF_Y = int(SCREEN_H*0.5)
     SCREENSHOT_W = SCREEN_W
     SCREENSHOT_H = SCREEN_H
     
@@ -1162,6 +1169,12 @@ SUB Main
     
     PullEvents
     PrimeActions
+    
+    if resetRenderTargets() then
+        Game_LoadTextures
+        GenerateSky
+        resetRenderTargets(1)
+    end if
  
     if (showConsole = 0) and (showStatusScreen = 0) and (showElevatorMenu = 0) then
         Player_Animate
@@ -1173,6 +1186,8 @@ SUB Main
         Shakes_Animate
         resetClocks = 0
     end if
+    Map_UpdateShift
+    LD2GFX_SetZoomCenter Player_GetScreenX()+7, Player_GetScreenY()+7, zoom
 	LD2_RenderFrame
     
     if showConsole then
@@ -1190,7 +1205,7 @@ SUB Main
         resetClocks = 1
     end if
     
-    Player_Get player
+    player = Player_Clone()
     
     PlayerCheck player
     SceneCheck player
@@ -1210,7 +1225,7 @@ SUB Main
     end if
     if showStatusScreen then
         if CLASSICMODE then
-            showStatusScreen = iif(StatusScreen_Classic(showConsole)=0,1,0) 'iif(StatusScreen(showConsole)=0,1,0)
+            showStatusScreen = iif(StatusScreen_Classic(showConsole)=0,1,0)
         else
             showStatusScreen = iif(StatusScreen(showConsole)=0,1,0)
         end if
@@ -1423,7 +1438,7 @@ SUB Main
         continue do
     end if
     
-    if Game_hasFlag(PLAYERDIED) then
+    if Player_HasFlag(PlayerFlags.Died) then
         if deadTimer = 0 then
             deadTimer = timer
             LD2_PlayMusic Tracks.Uhoh
@@ -1435,7 +1450,7 @@ SUB Main
         end if
         if (timer - deadTimer) > 7.0 then
             deadSound = 0
-            Game_unsetFlag(PLAYERDIED)
+            Player_UnsetFlag(PlayerFlags.Died)
             deadTimer = 0
             if STATUS_DialogYesNo("Load Game?") = OptionIds.Yes then
                 LD2_FadeOut 2
@@ -1450,6 +1465,7 @@ SUB Main
                 exit do
             end if
         end if
+        Player_SetFlag(PlayerFlags.DiedRecently): RecentDeathTime = timer
         continue do
     end if
     
@@ -1493,6 +1509,11 @@ SUB Main
             newReload = 0
         end if
     end if
+    
+    if keyboard(KEY_PLUS) then zoom -= 0.005: LD2GFX_SetZoom zoom
+    if keyboard(KEY_MINUS) then zoom += 0.005: LD2GFX_SetZoom zoom
+    
+    'LD2GFX_SetZoomCenter int((HALF_X+Player_GetScreenX())*0.5), int((HALF_Y+Player_GetScreenY())*0.5)
     
     if mouseRB() then
         newReload = 0
@@ -2577,12 +2598,16 @@ sub FlagsCheck (player as PlayerType)
     static musictimer as double
     static musicdelay as double
     
-    if Game_hasFlag(GOTITEM) then
-        Game_unsetFlag GOTITEM
+    if Player_HasFlag(PlayerFlags.GotItem) then
+        Player_UnsetFlag(PlayerFlags.GotItem)
         itemId = Player_GetGotItem()
         LD2_SetNotice "Found "+Inventory_GetShortName(itemId)
-        'else "Inventory Full"
 	end if
+    if Player_HasFlag(PlayerFlags.InventoryFull) then
+        Player_UnsetFlag(PlayerFlags.InventoryFull)
+        LD2_SetNotice "Inventory Full"
+        LD2_PlaySound Sounds.inventoryFull
+    end if
     if Game_hasFlag(GameFlags.ChangeMusic) or Game_hasFlag(GameFlags.FadeOutMusic) then
         if LD2_FadeOutMusic(3.0) = 0 then
             if Game_hasFlag(GameFlags.ChangeMusic) then
@@ -2647,7 +2672,7 @@ sub PlayerCheck (player as PlayerType)
     xshift = Map_GetXShift()
     
     if (timer - RecentDeathTime) > 60 then
-        Game_unsetFlag RECENTDEATH
+        Player_UnsetFlag(PlayerFlags.DiedRecently)
     end if
     
     if Player.y < -12 then
@@ -3312,8 +3337,6 @@ sub GameOver ()
     dim fontH as integer
     dim playedSound as integer
     
-    Game_setFlag RECENTDEATH: RecentDeathTime = timer
-    
     src.x = 0: src.y = 0
     src.w = SCREEN_W: src.h = SCREEN_H
     dst.x = 0: dst.y = 0
@@ -3510,6 +3533,13 @@ function RoomToFilename(roomId as integer) as string
     loop
     
     return ""
+    
+end function
+
+'* for title.bas
+function PlayerHasFlag(flag as integer) as integer
+    
+    return Player_HasFlag(flag)
     
 end function
 

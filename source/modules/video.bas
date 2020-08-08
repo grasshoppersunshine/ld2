@@ -6,7 +6,7 @@ function Video.getErrorMsg() as string
     
 end function
 
-function Video.init(window_title as string, screen_w as integer, screen_h as integer, fullscreen as integer) as integer
+function Video.init(window_title as string, screen_w as integer, screen_h as integer, fullscreen as integer, zoom as double=1.0) as integer
     
     this._reset
     
@@ -22,10 +22,10 @@ function Video.init(window_title as string, screen_w as integer, screen_h as int
     if fullscreen then
         this._window = SDL_CreateWindow( window_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP or SDL_WINDOW_INPUT_GRABBED)
     else
-        this._window = SDL_CreateWindow( window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_w*3, screen_h*3, SDL_WINDOW_SHOWN or SDL_WINDOW_RESIZABLE)
+        this._window = SDL_CreateWindow( window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, int(screen_w*zoom), int(screen_h*zoom), SDL_WINDOW_SHOWN or SDL_WINDOW_RESIZABLE)
     end if
 
-    this._renderer = SDL_CreateRenderer( this._window, -1, SDL_RENDERER_PRESENTVSYNC )
+    this._renderer = SDL_CreateRenderer( this._window, -1, SDL_RENDERER_PRESENTVSYNC or SDL_RENDERER_TARGETTEXTURE or SDL_RENDERER_ACCELERATED)
 
     SDL_RenderSetLogicalSize( this._renderer, screen_w, screen_h )
     SDL_SetRenderDrawBlendMode( this._renderer, SDL_BLENDMODE_BLEND )

@@ -17,6 +17,7 @@ dim shared RGBpal as Palette256
 dim shared WhitePalette as Palette256
 dim shared VideoErrorMessage as string
 dim shared SpritesFont as VideoSprites
+dim shared ScreenSrc as SDL_Rect
 
 dim shared SCREEN_W as integer
 dim shared SCREEN_H as integer
@@ -73,12 +74,12 @@ function LD2_GetVideoErrorMsg() as string
     
 end function
 
-function LD2_InitVideo(window_title as string, scrn_w as integer, scrn_h as integer, fullscreen as integer = 0) as integer
+function LD2_InitVideo(window_title as string, scrn_w as integer, scrn_h as integer, fullscreen as integer = 0, zoom as double = 1.0) as integer
     
-    if DEBUGMODE then LogDebug __FUNCTION__, window_title, str(scrn_w), str(scrn_h), str(fullscreen)
+    if DEBUGMODE then LogDebug __FUNCTION__, window_title, str(scrn_w), str(scrn_h), str(fullscreen), str(zoom)
     
     VideoErrorMessage = ""
-    if VideoHandle.init(window_title, scrn_w, scrn_h, fullscreen) <> 0 then
+    if VideoHandle.init(window_title, scrn_w, scrn_h, fullscreen, zoom) <> 0 then
         VideoErrorMessage = VideoHandle.getErrorMsg()
         return 1
     end if
@@ -172,6 +173,65 @@ sub LD2_SetTargetBuffer(bufferNum as integer)
     
 end sub
 
+sub LD2GFX_SetZoom(zoom as double)
+    
+    dim as integer w, h
+    
+    w = int(SCREEN_W*zoom)
+    h = int(SCREEN_H*zoom)
+    if (w and 1)=0 then w -= 1
+    if (h and 1)=0 then h -= 1
+    ScreenSrc.x = int((SCREEN_W-w)*0.5)
+    ScreenSrc.y = int((SCREEN_H-h)*0.5)
+    ScreenSrc.w = w
+    ScreenSrc.h = h
+    
+end sub
+
+sub LD2GFX_SetZoomCenter(x as integer, y as integer, zoom as double)
+    
+    dim as integer halfX, halfY
+    dim as integer maxX, maxY
+    
+    dim as integer w, h
+    'zoom = 0.7
+    if 1 then
+        w = int(SCREEN_W*zoom)
+        h = int(SCREEN_H*zoom)
+        if (w and 1)=0 then w -= 1
+        if (h and 1)=0 then h -= 1
+        ScreenSrc.x = int((x*2-w)*0.5)
+        ScreenSrc.y = int((y*2-h)*0.5)
+        ScreenSrc.w = w
+        ScreenSrc.h = h
+        
+        if ScreenSrc.x+ScreenSrc.w > SCREEN_W then ScreenSrc.x = SCREEN_W-ScreenSrc.w
+        if ScreenSrc.y+ScreenSrc.h > SCREEN_H then ScreenSrc.y = SCREEN_H-ScreenSrc.h
+        if ScreenSrc.x < 0 then ScreenSrc.x = 0
+        if ScreenSrc.y < 0 then ScreenSrc.y = 0
+    else
+        halfX = int(SCREEN_W*0.5)
+        halfY = int(SCREEN_H*0.5)
+        
+        maxX = SCREEN_W-ScreenSrc.w
+        maxY = SCREEN_H-ScreenSrc.h
+        
+        'x = halfX+int((x-halfX)*(1-zoom))
+        'y = halfY+int((y-halfY)*(1-zoom))
+        
+        x = x-int(ScreenSrc.w*0.5)
+        y = y-int(ScreenSrc.h*0.5)
+        
+        x = iif(x>0,x,0)
+        y = iif(y>0,y,0)
+        x = iif(x<maxX,x,maxX)
+        y = iif(y<maxY,y,maxY)
+        
+        ScreenSrc.x = x: ScreenSrc.y = y
+    end if
+    
+end sub
+
 sub LD2_cls (bufferNum as integer = 0, colr as integer = 0)
     
     if DEBUGMODE then LogDebug __FUNCTION__, str(bufferNum), str(colr)
@@ -187,7 +247,11 @@ end sub
 
 sub LD2_RefreshScreen ()
     
-    VideoBuffers(0).putToScreen()
+    if ScreenSrc.w <> 0 then
+        VideoBuffers(0).putToScreen(@ScreenSrc)
+    else
+        VideoBuffers(0).putToScreen()
+    end if
     VideoHandle.update()
     
 end sub

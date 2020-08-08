@@ -7,7 +7,9 @@ declare sub LD2GFX_EnableDebugMode
 declare sub LD2GFX_Release
 declare function LD2_GetVideoInfo() as string
 declare function LD2_GetVideoErrorMsg() as string
-declare function LD2_InitVideo(title as string, scrn_w as integer, scrn_h as integer, fullscreen as integer = 0) as integer
+declare function LD2_InitVideo(title as string, scrn_w as integer, scrn_h as integer, fullscreen as integer = 0, zoom as double = 1.0) as integer
+declare sub LD2GFX_SetZoom(zoom as double)
+declare sub LD2GFX_SetZoomCenter(x as integer, y as integer, zoom as double)
 declare sub LD2_GetWindowSize(byref w as integer, byref h as integer)
 declare sub LD2_LoadPalette(filename as string, alter as integer = 1)
 declare sub LD2_CreateLightPalette(pal as Palette256 ptr)

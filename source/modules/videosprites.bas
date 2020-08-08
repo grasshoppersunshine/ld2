@@ -113,6 +113,11 @@ sub VideoSprites.loadBsv(filename as string, w as integer, h as integer, crop as
     dim as ubyte r, g, b, a
     dim as ubyte c
     
+    if this._texture then
+        SDL_DestroyTexture(this._texture)
+        this._texture = 0
+    end if
+    
     w = iif(w > 0, w, this._w)
     h = iif(h > 0, h, this._h)
     
@@ -180,6 +185,11 @@ sub VideoSprites.loadBmp(filename as string, w as integer = 0, h as integer = 0,
     
     dim imageSurface as SDL_Surface ptr
     dim fmt as uinteger
+    
+    if this._texture then
+        SDL_DestroyTexture(this._texture)
+        this._texture = 0
+    end if
     
     imageSurface = SDL_LoadBMP(filename)
     if imageSurface <> NULL then

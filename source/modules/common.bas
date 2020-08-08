@@ -20,6 +20,8 @@ dim shared EventMouseMB as integer
 dim shared EventNewMouseLB as integer
 dim shared EventNewMouseRB as integer
 dim shared EventNewMouseMB as integer
+dim shared EventTargetReset as integer
+dim shared EventDeviceReset as integer
 dim shared CommonErrorMsg as string
 dim shared InputText as string
 dim shared InputTextCursor as integer
@@ -333,6 +335,10 @@ sub PullEvents()
                 text = left(text, cursor)+event.text.text+right(text, len(text)-cursor)
                 cursor += 1
             end if
+        case SDL_RENDER_TARGETS_RESET
+            EventTargetReset = 1
+        case SDL_RENDER_DEVICE_RESET
+            EventDeviceReset = 1
         end select
     wend
     
@@ -421,4 +427,13 @@ function mouseWheelUp() as integer
 end function
 function mouseWheelDown() as integer
     return (EventMouseWheelY > 0)
+end function
+
+function resetRenderTargets(clearFlag as integer = 0) as integer
+    if clearFlag then EventTargetReset = 0
+    return EventTargetReset
+end function
+function resetRenderDevice(clearFlag as integer = 0) as integer
+    if clearFlag then EventDeviceReset = 0
+    return EventDeviceReset
 end function

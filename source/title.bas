@@ -69,7 +69,7 @@ SUB TITLE_Opening
     
     DIM e AS ElementType
     
-    LD2_PlayMusic Tracks.Opening
+    'LD2_PlayMusic Tracks.Opening
     WaitSecondsUntilKey(2.0)
     
     LD2_cls
@@ -363,7 +363,7 @@ SUB TITLE_Intro
     LD2_FadeInWhileNoKey 1
     LD2_SetMusicVolume 0.0
     
-    if FadeInMusic(3.0, Tracks.Intro) then exit sub
+    if FadeInMusic(3.0, Tracks.Strings) then exit sub
 
     dim state as integer
     state = 0
@@ -870,7 +870,7 @@ SUB TITLE_Goodbye
     chances(7) =  4: goodbyes(7) = "CAN'T WIN THEM ALL"
     
     do
-        d7  = iif(GameHasFlag(RECENTDEATH),int(8*rnd(1)),int(7*rnd(1)))
+        d7  = iif(PlayerHasFlag(PlayerFlags.DiedRecently),int(8*rnd(1)),int(7*rnd(1)))
         d20 = int(80*rnd(1))
         if d20 < chances(d7) then
             n = d7

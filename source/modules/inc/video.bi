@@ -21,7 +21,7 @@ private:
 public:
 
     declare function getErrorMsg() as string
-    declare function init(window_title as string, screen_w as integer, screen_h as integer, fullscreen as integer) as integer
+    declare function init(window_title as string, screen_w as integer, screen_h as integer, fullscreen as integer, zoom as double=1.0) as integer
     declare sub release()
     declare sub getScreenSize(byref w as integer, byref h as integer)
     declare sub getWindowSize(byref w as integer, byref h as integer)

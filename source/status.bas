@@ -506,7 +506,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
         Elements_Add @mixObject , @dialog
     end if
 
-    Player_Get player
+    player = Player_Clone()
     
     static cards(5) as ElementType
     for n = GREENACCESS to Player_GetAccessLevel()
@@ -2751,12 +2751,12 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     dim dialog as ElementType
     dim title as ElementType
     dim labels(2) as ElementType
-    dim options(5) as ElementType
-    dim backgrounds(5) as integer
+    dim options(6) as ElementType
+    dim backgrounds(6) as integer
     dim description as ElementType
     dim thumbnail as ElementType
     
-    dim selections(5) as integer
+    dim selections(6) as integer
     dim selection as integer
     dim refresh as integer
     
@@ -2789,10 +2789,12 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     Element_Init @options(2), iif(Game_hasFlag(GameFlags.EnhancedMode),radioOn,radioOff) +"Enhanced"  , 31
     Element_Init @options(3), iif(Game_hasFlag(GameFlags.TestMode),checked,unchecked)+"Test Mode" , 31
     Element_Init @options(4), iif(Game_hasFlag(GameFlags.NoBackground)=0,checked,unchecked)+"Background" , 31
-    Element_Init @options(5), "Play Game", 31, ElementFlags.CenterText
+    Element_Init @options(5), iif(Game_hasFlag(GameFlags.Fullscreen),checked,unchecked)+"Fullscreen" , 31
+    Element_Init @options(6), "Play Game", 31, ElementFlags.CenterText
     Element_Init @description
     
     options(2).disabled = 1
+    options(4).disabled = 1
     
     dialog.background = STATUS_DIALOG_COLOR
     dialog.background_alpha = STATUS_DIALOG_ALPHA
@@ -2855,9 +2857,9 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     for n = 0 to ubound(options)
         options(n).w = maxw
     next n
-    options(3).y -= fontH*1.0
-    options(4).y -= fontH*1.0
-    backgrounds(5) = 54
+    options(3).y = fontH*2.5 + 2*int(fontH*3.5) + fontH*2.5
+    options(5).y = fontH*2.5 + 3*int(fontH*3.5) + fontH*2.5
+    backgrounds(6) = 54
     
     labels(0).x = fontW
     labels(0).y = fontH
@@ -2889,15 +2891,17 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     selections(2) = OptionIds.Enhanced
     selections(3) = OptionIds.ToggleTestMode
     selections(4) = OptionIds.ToggleBackground
-    selections(5) = OptionIds.PlayGame
+    selections(5) = OptionIds.ToggleFullscreen
+    selections(6) = OptionIds.PlayGame
     selection = 0
     
-    dim descs(4) as string
+    dim descs(5) as string
     descs(0) = "Remastered (2020)\\The new version of the game. The feature presentation."
     descs(1) = "Classic (2002)\\Intended to be as close to the original as possible."
     descs(2) = "Classic (Enhanced)\\The original game with some extra sounds and features."
     descs(3) = "Test Mode\\Skip title and intro sequences. Cheats enabled."
     descs(4) = "Dynamic Background\\Multi-layered background (mountains, clouds, etc.)."
+    descs(5) = "Fullscreen Mode"
     Elements_Add @description
     
     Element_Init @thumbnail
@@ -2909,16 +2913,14 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     thumbnail.y = dialog.h-thumbnail.h-fontH*1.5
     Elements_Add @thumbnail
     
-    options(5).parent = @dialog
-    options(5).background = backgrounds(4)
-    options(5).w = maxw
-    options(5).padding_x = fontW
-    options(5).padding_y = 11
-    options(5).x = fontW
-    options(5).y = thumbnail.y+thumbnail.h-options(4).padding_y*2-fontH+1
-    options(5).text_height = 1
-    
-    'description.y -= fontH*2.5
+    options(6).parent = @dialog
+    options(6).background = backgrounds(4)
+    options(6).w = maxw
+    options(6).padding_x = fontW
+    options(6).padding_y = 11
+    options(6).x = fontW
+    options(6).y = thumbnail.y+thumbnail.h-options(4).padding_y*2-fontH+1
+    options(6).text_height = 1
     
     title.x = description.x+description.padding_x
     
@@ -2946,6 +2948,7 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
             else
                 description.text = "Selected\\"
                 description.text += iif(CLASSICMODE,iif(ENHANCEDMODE,"Classic (Enhanced)","Classic (2002)"),"Remastered (2020)")
+                description.text += " | "+iif(Game_hasFlag(GameFlags.Fullscreen),"Fullscreen","Windowed")
                 description.text += "\Test Mode "+iif(TESTMODE,"On","Off")
                 SHARED_SPRITES = @sprites(CLASSICMODE)
             end if
@@ -3010,6 +3013,10 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
             case OptionIds.ToggleBackground
                 Game_toggleFlag(GameFlags.NoBackground)
                 options(selection).text = iif(Game_hasFlag(GameFlags.NoBackground)=0,checked,unchecked)+"Background" 
+                LD2_PlaySound Sounds.uiToggle
+            case OptionIds.ToggleFullscreen
+                Game_toggleFlag(GameFlags.Fullscreen)
+                options(selection).text = iif(Game_hasFlag(GameFlags.Fullscreen),checked,unchecked)+"Fullscreen" 
                 LD2_PlaySound Sounds.uiToggle
             case else
                 LD2_PlaySound Sounds.uiSelect
