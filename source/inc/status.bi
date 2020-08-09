@@ -64,7 +64,7 @@ declare function STATUS_Init() as integer
 declare sub STATUS_SetInventorySize(size as integer)
 declare sub STATUS_RefreshInventory()
 declare sub STATUS_SetBeforeUseItemCallback(callback as sub(byval id as integer))
-declare sub STATUS_SetUseItemCallback(callback as sub(byval id as integer, byref qty as integer, byref exitMenu as integer))
+declare sub STATUS_SetUseItemCallback(callback as sub(byval id as integer, byref qty as integer, byval slot as integer = -1, byref exitMenu as integer))
 declare sub STATUS_SetLookItemCallback(callback as sub(id as integer, byref description as string))
 declare function STATUS_DialogYesNo(message as string, playOpenSound as integer = 1) as integer
 declare sub STATUS_DialogOk(message as string, playOpenSound as integer = 1)

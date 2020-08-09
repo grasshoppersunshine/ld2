@@ -230,6 +230,7 @@ declare function Player_GetItemQty(itemId as integer) as integer
 declare function Player_HasItem(itemId as integer) as integer
 declare function Player_NotItem(itemId as integer) as integer
 declare function Player_HasFlag(flag as integer) as integer
+declare sub Player_SetFlag(flag as integer)
 declare sub Player_UnsetFlag(flag as integer)
 declare sub Player_AddItem(itemId as integer, qty as integer = 1)
 declare sub Player_SetItemQty(itemId as integer, qty as integer)
@@ -275,7 +276,7 @@ declare sub Game_ToggleFlag (flag as integer)
 declare sub Game_Save(filename as string)
 declare function Game_SaveCopy (srcfile as string, dstfile as string) as integer
 declare function Game_Load(filename as string, roomId as integer = -1) as integer
-declare sub Game_Reset()
+declare sub Game_ResetVars()
 declare sub Game_SetGravity (g as double)
 declare function Game_GetGravity () as double
 declare sub Game_SetBossBar (mobId as integer)

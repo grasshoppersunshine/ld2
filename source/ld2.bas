@@ -63,6 +63,8 @@
 '***********************************************************************
 '* PRIVATE METHODS
 '***********************************************************************
+'* make white card on room 16 easier to see
+'***********************************************************************
     declare sub Start ()
     declare sub LoadUiSounds ()
     declare sub LoadSounds ()
@@ -1054,16 +1056,20 @@ function GetFloorMusicId(roomId as integer) as integer
         input #file, track
         if floorNo = roomId then
             select case trim(lcase(track))
-            case "wandering" : return Tracks.Wandering
-            case "musicbox"  : return Tracks.MusicBox
-            case "motives"   : return Tracks.Motives
-            case "scent"     : return Tracks.Scent
-            case "portal"    : return Tracks.Portal
-            case "strings"   : return Tracks.Strings
-            case "compromise": return Tracks.Compromise
-            case "lobby"     : return Tracks.Lobby
-            case "breezeway" : return Tracks.Breezeway
-            case "ending"    : return Tracks.Ending
+            case "wandering"  : return Tracks.Wandering
+            case "musicbox"   : return Tracks.MusicBox
+            case "motives"    : return Tracks.Motives
+            case "scent"      : return Tracks.Scent
+            case "portal"     : return Tracks.Portal
+            case "strings"    : return Tracks.Strings
+            case "compromise" : return Tracks.Compromise
+            case "lobby"      : return Tracks.Lobby
+            case "breezeway"  : return Tracks.Breezeway
+            case "ending"     : return Tracks.Ending
+            case "hummingbird": return Tracks.Hummingbird
+            case "library"    : return Tracks.Library
+            case "contemplate": return Tracks.Contemplate
+            case ""           : return 0
             end select
         end if
     loop
@@ -1454,7 +1460,7 @@ SUB Main
             deadTimer = 0
             if STATUS_DialogYesNo("Load Game?") = OptionIds.Yes then
                 LD2_FadeOut 2
-                Game_Reset
+                Game_ResetVars
                 if ContinueGame() = 0 then exit do
             else
                 Game_setFlag GameFlags.ExitGame
@@ -2850,7 +2856,7 @@ sub Start
     end if
     
     do  
-        Game_Reset
+        Game_ResetVars
         
         if Game_notFlag(GameFlags.SkipOpening) then
             if firstLoop then
@@ -3080,7 +3086,7 @@ sub LD2_BeforeUseItem (byval id as integer)
     
 end sub
 
-sub LD2_UseItem (byval id as integer, byref qty as integer = 0, byref exitMenu as integer = 0)
+sub LD2_UseItem (byval id as integer, byref qty as integer = 0, byval slot as integer = -1, byref exitMenu as integer = 0)
     
     dim leftover as integer
     dim success as integer
@@ -3093,8 +3099,9 @@ sub LD2_UseItem (byval id as integer, byref qty as integer = 0, byref exitMenu a
             CustomActions(0).actionId = ActionIds.Equip
             CustomActions(0).itemId   = id
             DoAction ActionIds.Equip, id
+            Player_SetItemQty ItemIds.WeaponSlot, slot
         elseif qty > 0 then
-            qty -= LD2_AddToStatus(id, qty)
+            qty -= LD2_AddToStatusIfExists(id, qty)
             LD2_PlaySound Sounds.equip
         end if
     case ItemIds.Hp

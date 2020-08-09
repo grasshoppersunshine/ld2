@@ -438,11 +438,11 @@ function LD2_AddToStatusIfExists (item as integer, qty as integer) as integer
     
     for n = 0 to Inventory(ItemIds.InvSize)-1
         if InvSlots(n).itemId = item then
-            return LD2_AddToStatus(item, qty, n)
+            qty = LD2_AddToStatus(item, qty, n)
         end if
     next n
     
-    return 0
+    return qty
     
 end function
 
@@ -550,6 +550,10 @@ sub LD2_ClearInventorySlot (slot as integer)
     
     if MapItems_isCard(item) then
         Player_RefreshAccess
+    end if
+    
+    if slot = WeaponSlot then
+        Player_SetWeapon ItemIds.Fist
     end if
     
 end sub
@@ -1207,27 +1211,7 @@ sub Game_LoadAssets
     Element_Render @systemOut: LD2_RefreshScreen
     WaitSeconds 0.3333
     
-    '///////////////////////////////////////////////////////////////////
-    ShowLightBG = 1
-    ShowLightFG = 1
-    Gravity     = 0.06
-    XShift      = 0
-    '///////////////////////////////////////////////////////////////////
-    NumItems = 0
-    NumDoors = 0
-    NumElevators = 0
-    NumGuts = 0
-    NumSwaps = 0
-    NumSwitches = 0
-    NumTeleports = 0
-    NumFlashes = 0
-    NumSectors = 0
-    NumDivisions = 0
-    NumInvSlots = MAXINVSLOTS
-    '///////////////////////////////////////////////////////////////////
-    CanSaveMap = 0
-    MobsWereLoaded = 0
-    '///////////////////////////////////////////////////////////////////
+    Game_ResetVars
     
     if CLASSICMODE then
         DOOROPENSPEED  =  0.05
@@ -1639,7 +1623,7 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
     if CLASSICMODE then
         if skipMobs = 0 then
             select case Inventory(ItemIds.CurrentRoom)
-            case Rooms.Rooftop, Rooms.WeaponsLocker, Rooms.Basement, Rooms.VentControl, Rooms.Unknown, Rooms.PortalRoom, Rooms.Lobby
+            case Rooms.Rooftop, Rooms.WeaponsLocker, Rooms.Basement, Rooms.VentControl, Rooms.Unknown, Rooms.PortalRoom, Rooms.Lobby, Rooms.Vacancy
             case else
                 Mobs_Generate_Classic
             end select
@@ -1649,7 +1633,7 @@ sub Map_AfterLoad(skipMobs as integer = 0, skipSessionLoad as integer = 0)
         end if
         if (MobsWereLoaded = 0) and (skipMobs = 0) then
             select case Inventory(ItemIds.CurrentRoom)
-            case Rooms.Rooftop, Rooms.PortalRoom, Rooms.WeaponsLocker, Rooms.Lobby, Rooms.Basement, Rooms.VentControl, Rooms.Unknown
+            case Rooms.Rooftop, Rooms.PortalRoom, Rooms.WeaponsLocker, Rooms.Lobby, Rooms.Basement, Rooms.VentControl, Rooms.Unknown, Rooms.Vacancy
             case else
                 Mobs_Generate
             end select
@@ -6443,6 +6427,9 @@ end function
 function Player_HasFlag(flag as integer) as integer
     return Player.hasFlag(flag)
 end function
+sub Player_SetFlag(flag as integer)
+    Player.setFlag flag
+end sub
 sub Player_UnsetFlag(flag as integer)
     Player.unsetFlag flag
 end sub
@@ -6480,6 +6467,11 @@ sub Player_SetItemQty(itemId as integer, qty as integer)
     if (InventoryMax(itemId) > 0) and (Inventory(itemId) > InventoryMax(itemId)) then
         Inventory(itemId) = InventoryMax(itemId)
     end if
+    
+    select case itemId
+    case ItemIds.WeaponSlot
+        WeaponSlot = qty
+    end select
     
 end sub
 
@@ -6746,7 +6738,7 @@ sub Player_DoAction ()
                     exit sub
                 end select
             end if
-        case Rooms.LowerOffice3
+        case Rooms.BarneysOffice
             if mapY = 9 then
                 select case mapX
                 case 4
@@ -6830,13 +6822,18 @@ function Player_SetWeapon (itemId as integer) as integer
     
     Player.weapon = itemId
     
-    for i = 0 to Inventory(ItemIds.InvSize)-1
-        if InvSlots(i).itemId = itemId then
-            WeaponSlot = i
-            exit for
-        end if
-    next i
+    if itemId = ItemIds.Fist then
+        WeaponSlot = -1
+    else
+        for i = 0 to Inventory(ItemIds.InvSize)-1
+            if InvSlots(i).itemId = itemId then
+                WeaponSlot = i
+                exit for
+            end if
+        next i
+    end if
     
+    Inventory(ItemIds.WeaponSlot) = WeaponSlot
     Player_InitUpper
     Player_InitLower
     
@@ -7157,8 +7154,10 @@ function Player_Shoot(is_repeat as integer = 0) as integer
     if Player.hasFlag(PlayerFlags.Shooting) then return 0
     
     timeSinceLastShot = (timer - timestamp)
-    noammo  = (Player.weapon <> ItemIds.Fist) and (InvSlots(WeaponSlot).qty = 0)
-    yesammo = (Player.weapon <> ItemIds.Fist) and (InvSlots(WeaponSlot).qty > 0)
+    if Player.weapon <> ItemIds.Fist then
+        noammo  = (InvSlots(WeaponSlot).qty = 0)
+        yesammo = (InvSlots(WeaponSlot).qty > 0)
+    end if
     
     select case Player.weapon
     case ItemIds.Shotgun
@@ -7934,7 +7933,7 @@ function Game_Load (filename as string, roomId as integer = -1) as integer
     
 end function
 
-sub Game_Reset()
+sub Game_ResetVars()
     
     if DEBUGMODE then LogDebug __FUNCTION__
     
@@ -7958,6 +7957,7 @@ sub Game_Reset()
     NumSectors = 0
     NumDivisions = 0
     NumInvSlots = MAXINVSLOTS
+    WeaponSlot = -1
     '///////////////////////////////////////////////////////////////////
     CanSaveMap = 0
     MobsWereLoaded = 0

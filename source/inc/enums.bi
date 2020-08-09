@@ -163,6 +163,7 @@ enum ItemIds
     SteveData            = 121
     JanitorData          = 122
     InvSize              = 123
+    WeaponSlot           = 124
     '=======================================
     DivisionLft          = 48
     DivisionRgt          = 49
@@ -689,8 +690,8 @@ enum Rooms
     UpperStorage  = 13
     VentControl   = 12
     LowerOffice4  = 11
-    LowerOffice3  = 10
-    LowerOffice2  = 9
+    BarneysOffice = 10
+    Vacancy       = 9
     LowerOffice1  = 8
     WeaponsLocker = 7
     LowerStorage  = 6

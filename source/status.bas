@@ -14,12 +14,13 @@ declare sub BuildStatusWindow (heading AS STRING, elementWindow as ElementType p
 declare function Look (item AS InventoryType, skipInput as integer = 0) as integer
 declare function Look_Classic (item AS InventoryType, skipInput as integer = 0) as integer
 declare sub Mix (item0 AS InventoryType, item1 AS InventoryType)
+declare sub SwapItems (item0 as InventoryType, item1 as InventoryType)
 declare function CanMix (itemId as integer) as integer
 declare function ShowResponse (response as string = "", textColor as integer = -1, skipInput as integer = 0) as integer
 declare function UseItem (item AS InventoryType) as integer
 declare sub GetInventoryRowsCols(byref rows as integer, byref cols as integer)
 
-declare sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0, mixItemWith as InventoryType ptr = 0)
+declare sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0, mixItemWith as InventoryType ptr = 0, swapping as integer = 0)
 declare sub RenderClassicScreen (action as integer = -1, mixItem as InventoryType ptr = 0, mixItemWith as InventoryType ptr = 0)
 
 dim shared SCREEN_W as integer
@@ -30,7 +31,7 @@ dim shared SHARED_SPRITES as VideoSprites ptr
 dim shared SELECTED_INVENTORY_SLOT as integer
 
 dim shared BeforeUseItemCallback as sub(byval id as integer)
-dim shared UseItemCallback as sub(byval id as integer, byref qty as integer, byref exitMenu as integer)
+dim shared UseItemCallback as sub(byval id as integer, byref qty as integer, byval slot as integer = -1, byref exitMenu as integer)
 dim shared LookItemCallback as sub(id as integer, byref description as string)
 
 dim shared STATUS_WINDOW_HEIGHT_MIN as integer
@@ -70,10 +71,16 @@ const ACTION_SELECTED_BG = 70
 const ACTION_NOT_SELECTED_BG = -1
 
 const MIX_TEXT_COLOR = 216
-const MIX_SUBJECT_BG = 31 '88
+const MIX_SUBJECT_BG = 31
 const MIX_SUBJECT_FG = 22
-const MIX_OBJECT_BG = 184 '184
-const MIX_OBJECT_FG = 22
+const MIX_OBJECT_BG  = 184
+const MIX_OBJECT_FG  = 22
+
+const SWAP_TEXT_COLOR = 216
+const SWAP_SUBJECT_BG = 73
+const SWAP_SUBJECT_FG = 31
+const SWAP_OBJECT_BG  = 31 '153
+const SWAP_OBJECT_FG  = 22
 
 const PI = 3.141592
 
@@ -83,7 +90,7 @@ sub STATUS_SetBeforeUseItemCallback(callback as sub(byval id as integer))
     
 end sub
 
-sub STATUS_SetUseItemCallback(callback as sub(byval id as integer, byref qty as integer, byref exitMenu as integer))
+sub STATUS_SetUseItemCallback(callback as sub(byval id as integer, byref qty as integer, byval slot as integer = -1, byref exitMenu as integer))
     
     UseItemCallback = callback
     
@@ -313,7 +320,7 @@ sub RenderClassicScreen (action as integer = -1, mixItem as InventoryType ptr = 
     
 end sub
 
-sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0, mixItemWith as InventoryType ptr = 0)
+sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0, mixItemWith as InventoryType ptr = 0, swapping as integer = 0)
     
     static dialog as ElementType
     static labelBottomBorder as ElementType
@@ -342,11 +349,12 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     dim x as integer, y as integer
     dim n as integer
     dim i as integer
-    DIM actions(3) AS STRING
+    DIM actions(4) AS STRING
 	actions(0) = "USE"
 	actions(1) = "LOOK"
 	actions(2) = "MIX"
-	actions(3) = "DROP"
+    actions(3) = "SWAP"
+	actions(4) = "DROP"
     
     fontW = Elements_GetFontWidthWithSpacing()
     fontH = Elements_GetFontHeightWithSpacing()
@@ -440,7 +448,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     '*******************************************************************
     '* ACTIONS MENU
     '*******************************************************************
-    Element_Init @menuActions, "USE  LOOK  MIX  DROP", 31, ElementFlags.AlignTextRight
+    Element_Init @menuActions, "USE  LOOK  MIX  SWAP  DROP", 31, ElementFlags.AlignTextRight
     menuActions.parent = @dialog
     menuActions.y = menuActions.parent->h - fontH
     menuActions.x = menuActions.parent->w - Element_GetTextWidth(@menuActions)
@@ -464,7 +472,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     next i
     if (action <> -1) and (mixItem = 0) then
         Elements_Add @menuActions
-        for n = 0 to 3
+        for n = 0 to ubound(labelActions)
             Element_Init @labelActions(n), actions(n), 31
             labelActions(n).parent = @dialog
             labelActions(n).h = FONT_H
@@ -495,11 +503,11 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
         else
             objname = iif(mixItem->id <> item.id, trim(item.shortName)+" ", "")
             if (int(timer*3) and 1) then objname += "?"
-            Element_Init @labelMix, "MIX", MIX_TEXT_COLOR
+            Element_Init @labelMix, iif(swapping,"SWAP","MIX"), iif(swapping,SWAP_TEXT_COLOR,MIX_TEXT_COLOR)
         end if
-        Element_Init @labelWith, iif(mixItemWith = 0, "WITH", "/"), MIX_TEXT_COLOR
-        Element_Init @mixSubject, subname, MIX_SUBJECT_BG
-        Element_Init @mixObject, objname, MIX_OBJECT_BG
+        Element_Init @labelWith, iif(mixItemWith = 0, "WITH", "/"), iif(swapping,SWAP_TEXT_COLOR,MIX_TEXT_COLOR)
+        Element_Init @mixSubject, subname, iif(swapping,SWAP_SUBJECT_BG,MIX_SUBJECT_BG)
+        Element_Init @mixObject, objname, iif(swapping,SWAP_OBJECT_BG,MIX_OBJECT_BG)
         Elements_Add @labelMix  , @dialog
         Elements_Add @labelWith , @dialog
         Elements_Add @mixSubject, @dialog
@@ -652,8 +660,8 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
                 labelItemName.text = trim(item.shortName)
                 labelItems(i).background = ITEM_SELECTED_BG
                 if mixItem <> 0 then
-                    labelItems(i).background = MIX_OBJECT_BG
-                    labelItems(i).text_color = MIX_OBJECT_FG
+                    labelItems(i).background = iif(swapping,SWAP_OBJECT_BG,MIX_OBJECT_BG)
+                    labelItems(i).text_color = iif(swapping,SWAP_OBJECT_FG,MIX_OBJECT_FG)
                 end if
             else
                 labelItems(i).background = ITEM_NOT_SELECTED_BG
@@ -662,8 +670,8 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
             
             if (mixItem <> 0) then
                 if (item.id = mixItem->id) then
-                    labelItems(i).background = MIX_SUBJECT_BG
-                    labelItems(i).text_color = MIX_SUBJECT_FG
+                    labelItems(i).background = iif(swapping,SWAP_SUBJECT_BG,MIX_SUBJECT_BG)
+                    labelItems(i).text_color = iif(swapping,SWAP_SUBJECT_FG,MIX_SUBJECT_FG)
                     labelItems(i).background_alpha = 1.0
                 end if
             end if
@@ -672,7 +680,7 @@ sub RenderStatusScreen (action as integer = -1, mixItem as InventoryType ptr = 0
     next y
     
     if action >= 0 then
-        for i = 0 to 3
+        for i = 0 to ubound(labelActions)
             labelActions(i).background = iif(i = action, ACTION_SELECTED_BG, ACTION_NOT_SELECTED_BG)
         next i
     end if
@@ -1882,8 +1890,10 @@ function StatusScreen(skipInput as integer = 0) as integer
     static lookItem as InventoryType
     static mixItem as InventoryType
     static mixMode as integer = 0
+    static swapMode as integer = 0
 	static action as integer
     static prevWindowHeight as integer = -1
+    static prevSlot as integer
     static state as integer = DialogStates.closed
     static row as integer
     static col as integer
@@ -1976,7 +1986,7 @@ function StatusScreen(skipInput as integer = 0) as integer
         end if
     end if
     
-    RenderStatusScreen action, iif(mixMode, @mixItem, 0)
+    RenderStatusScreen action, iif(mixMode, @mixItem, 0), 0, swapMode
     Elements_Render
     
     if ShowResponse("", -1, skipInput) then
@@ -1991,11 +2001,16 @@ function StatusScreen(skipInput as integer = 0) as integer
     Inventory_GetItemBySlot(selected, SELECTED_INVENTORY_SLOT)
     
     IF keypress(KEY_TAB) or keypress(KEY_ESCAPE) or keypress(KEY_E) or mouseRB() or mouseMB() THEN
-        IF action > -1 THEN
+        IF (action > -1) or (mixMode or swapMode) THEN
             while mouseRB(): PullEvents: wend
             while mouseMB(): PullEvents: wend
             LD2_PlaySound Sounds.uiCancel
             action = -1
+            if mixMode or swapMode then
+                Inventory_GetItemBySlot(selected, prevSlot): SELECTED_INVENTORY_SLOT = prevSlot
+                row = int(prevSlot/numCols): col = prevSlot-row*numCols
+                mixMode = 0: swapMode = 0
+            end if
         ELSE
             state = DialogStates.closing
         END IF
@@ -2065,8 +2080,8 @@ function StatusScreen(skipInput as integer = 0) as integer
     IF keypress(KEY_RIGHT) or (action >= 0 and mouseWheelUp()) THEN
         if action >= 0 then
             action = action + 1
-            IF action > 3 THEN
-                action = 3
+            IF action > 4 THEN
+                action = 4
                 LD2_PlaySound Sounds.uiInvalid
             ELSE
                 LD2_PlaySound Sounds.uiArrows
@@ -2083,9 +2098,18 @@ function StatusScreen(skipInput as integer = 0) as integer
     END IF
     if keypress(KEY_ENTER) or keypress(KEY_SPACE) or mouseLB() then
         while mouseLB(): PullEvents: wend
-        if mixMode then
+        if (mixMode = 1) and (swapMode = 0) then
+            SELECTED_INVENTORY_SLOT = prevSlot
+            row = int(prevSlot/numCols): col = prevSlot-row*numCols
             Mix mixItem, selected
             mixMode = 0
+            action = -1
+        elseif (mixMode = 1) and (swapMode = 1) then
+            SELECTED_INVENTORY_SLOT = prevSlot
+            row = int(prevSlot/numCols): col = prevSlot-row*numCols
+            SwapItems mixItem, selected
+            mixMode = 0
+            swapMode = 0
             action = -1
         elseif action > -1 then
             select case action
@@ -2101,10 +2125,17 @@ function StatusScreen(skipInput as integer = 0) as integer
                 if canMix(selected.id) then
                     mixMode = 1
                     mixItem = selected
+                    prevSlot = selected.slot
                     LD2_PlaySound Sounds.uiSubmenu
                 end if
                 action = -1
-            case 3  '- Drop
+            case 3  '- SWAP
+                mixMode = 1: swapMode = 1
+                mixItem = selected
+                prevSlot = selected.slot
+                LD2_PlaySound Sounds.uiSubmenu
+                action = -1
+            case 4  '- Drop
                 Drop selected
                 action = -1
             end select
@@ -2146,7 +2177,7 @@ function UseItem (item AS InventoryType) as integer
         qty  = Inventory_GetUseQty()
         discard = Inventory_GetUseItemDiscard()
         if (UseItemCallback <> 0) then
-            UseItemCallback(id, qty, exitMenu)
+            UseItemCallback(id, qty, item.slot, exitMenu)
         else
             LD2_AddToStatus id, qty
         end if
@@ -2179,7 +2210,7 @@ SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
     IF resultId <> -1 THEN
         LD2_ClearInventorySlot item0.slot
         LD2_ClearInventorySlot item1.slot
-        LD2_AddToStatus(resultId, 1)
+        LD2_AddToStatus(resultId, 1, item0.slot)
         STATUS_RefreshInventory
         LD2_PlaySound Sounds.uiMix
         textColor = STATUS_COLOR_SUCCESS
@@ -2191,6 +2222,17 @@ SUB Mix (item0 AS InventoryType, item1 AS InventoryType)
     ShowResponse msg, textColor
     
 END SUB
+
+sub SwapItems (item0 as InventoryType, item1 as InventoryType)
+    
+    LD2_ClearInventorySlot item0.slot
+    LD2_ClearInventorySlot item1.slot
+    LD2_AddToStatus(item0.id, item0.qty, item1.slot)
+    LD2_AddToStatus(item1.id, item1.qty, item0.slot)
+    STATUS_RefreshInventory
+    LD2_PlaySound Sounds.uiMix
+    
+end sub
 
 function ShowResponse (response as string = "", textColor as integer = -1, skipInput as integer = 0) as integer
     
