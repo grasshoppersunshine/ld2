@@ -17,6 +17,7 @@ private:
     _error_msg as string
     
     declare sub _reset()
+    declare function _getRenderTarget() as SDL_Texture ptr
 
 public:
 
@@ -30,12 +31,12 @@ public:
     declare function getData() as SDL_Texture ptr
     declare sub clearScreen(col as integer)
     declare sub loadBmp(filename as string)
-    declare sub saveBmp(filename as string)
+    declare sub saveBmp(filename as string, xscale as double = 1.0, yscale as double = 1.0)
     declare sub putPixel(x as integer, y as integer, colr as integer)
     declare sub fillScreen(colr as integer, a255 as integer = &hff)
     declare sub fill(x as integer, y as integer, w as integer, h as integer, col as integer, a255 as integer = &hff)
     declare sub outline(x as integer, y as integer, w as integer, h as integer, col as integer, a255 as integer = &hff)
-    declare sub setAsTarget()
+    declare function setAsTarget(renderTarget as SDL_Texture ptr = 0) as SDL_Texture ptr
     declare sub update()
     
 end type

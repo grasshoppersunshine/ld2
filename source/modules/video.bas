@@ -96,24 +96,42 @@ sub Video.loadBmp(filename as string)
 
     dim imageSurface as SDL_Surface ptr
     dim imageTexture as SDL_Texture ptr
+    dim target as SDL_Texture ptr
+    
+    target = this.setAsTarget()
     
     imageSurface = SDL_LoadBMP(filename)
     if imageSurface <> NULL then
         imageTexture = SDL_CreateTextureFromSurface( this._renderer, imageSurface )
-        SDL_SetRenderTarget( this._renderer, NULL )
         SDL_RenderCopy( this._renderer, imageTexture, NULL, NULL )
         SDL_FreeSurface(imageSurface)
         SDL_DestroyTexture(imageTexture)
     end if
+    
+    this.setAsTarget(target)
 
 end sub
 
-sub Video.saveBmp(filename as string)
+sub Video.saveBmp(filename as string, xscale as double = 1.0, yscale as double = 1.0)
     
-    dim surface as SDL_Surface ptr
+    dim src as SDL_Surface ptr
+    dim dst as SDL_Surface ptr
+    dim pixformat as SDL_PixelFormat ptr
+    dim w as integer
+    dim h as integer
     
-    surface = SDL_GetWindowSurface(this._window)
-    SDL_SaveBMP(surface, filename)
+    w = int(this._screen_w * xscale)
+    h = int(this._screen_h * yscale)
+    
+    src = SDL_GetWindowSurface(this._window)
+    pixformat = src->format
+    
+    dst = SDL_CreateRGBSurface(0, w, h, pixformat->bitsPerPixel, pixformat->rmask, pixformat->gmask, pixformat->bmask, pixformat->amask)
+    
+    SDL_BlitScaled(src, 0, dst, 0)
+    
+    SDL_SaveBMP(dst, filename)
+    SDL_FreeSurface(dst)
     
 end sub
 
@@ -136,18 +154,10 @@ sub Video.clearScreen(col as integer)
         b = rgb_b(col)
     end if
     
-    this.setAsTarget()
     SDL_SetRenderDrawColor( this._renderer, r, g, b, SDL_ALPHA_OPAQUE )
 	SDL_RenderFillRect( this._renderer, NULL )
     
 end sub
-
-'sub Video.copy(buffer as VideoBuffer ptr)
-'    
-'    buffer->setAsTarget()
-'    SDL_RenderCopy( this._renderer, this._data, NULL, NULL )
-'    
-'end sub
 
 sub Video.putPixel(x as integer, y as integer, col as integer)
     
@@ -164,17 +174,30 @@ sub Video.putPixel(x as integer, y as integer, col as integer)
         a = 255
     end if
     
-    'SDL_SetRenderTarget( this._renderer, this._data )
-    'SDL_SetRenderDrawColor( this._renderer, r, g, b, a )
-    'SDL_RenderDrawPoint( this._renderer, x, y )
+    SDL_SetRenderDrawColor( this._renderer, r, g, b, a )
+    SDL_RenderDrawPoint( this._renderer, x, y )
     
 end sub
 
-sub Video.setAsTarget()
+function Video._getRenderTarget() as SDL_Texture ptr
     
-    SDL_SetRenderTarget( this._renderer, NULL )
+    return SDL_GetRenderTarget(this._renderer)
     
-end sub
+end function
+
+function Video.setAsTarget(renderTarget as SDL_Texture ptr = 0) as SDL_Texture ptr
+    
+    dim prevTarget as SDL_Texture ptr
+    prevTarget = this._getRenderTarget()
+    
+    if SDL_SetRenderTarget( this._renderer, renderTarget ) <> 0 then
+        print *SDL_GetError()
+        end
+    end if
+    
+    return prevTarget
+    
+end function
 
 sub Video.fillScreen(colr as integer, a255 as integer = &hff)
     
@@ -200,7 +223,6 @@ sub Video.fill(x as integer, y as integer, w as integer, h as integer, colr as i
     rect.x = x: rect.y = y
     rect.w = w: rect.h = h
     
-    this.setAsTarget()
     SDL_SetRenderDrawColor( this._renderer, r, g, b, a255 )
 	SDL_RenderFillRect( this._renderer, @rect )
 
@@ -224,7 +246,6 @@ sub Video.outline(x as integer, y as integer, w as integer, h as integer, colr a
     rect.x = x: rect.y = y
     rect.w = w: rect.h = h
     
-    this.setAsTarget()
     SDL_SetRenderDrawColor( this._renderer, r, g, b, a255 )
 	SDL_RenderDrawRect( this._renderer, @rect )
 

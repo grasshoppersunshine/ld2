@@ -134,6 +134,7 @@
     dim shared HALF_Y as integer
     dim shared SCREENSHOT_W as integer
     dim shared SCREENSHOT_H as integer
+    dim shared ZOOM as double = 1.0
     
     Start
     END
@@ -888,8 +889,8 @@ sub LoadMusic ()
     AddMusic Tracks.Chase     , "march.ogg"  , 1
     AddMusic Tracks.Elevator  , "goingup.ogg", 0
     AddMusic Tracks.Ending    , "ending.ogg" , 1
-    AddMusic Tracks.Intro     , "../orig/intro.ogg" , 0
-    AddMusic Tracks.Opening   , "../orig/creepy.ogg", 1
+    AddMusic Tracks.Intro     , "../esm/loop.ogg" , 0
+    AddMusic Tracks.Opening   , "../esm/oneshot-impact.ogg", 0
     AddMusic Tracks.Title     , "title.ogg"  , 1
     AddMusic Tracks.Uhoh      , "uhoh.ogg"   , 0
     AddMusic Tracks.Wandering , "creepy.ogg" , 1
@@ -1081,7 +1082,6 @@ end function
 SUB Main
   
     dim deadTimer as double
-    dim zoom as double = 1.0
     dim player as PlayerType
     dim newShot as integer
     dim newJump as integer
@@ -1152,9 +1152,10 @@ SUB Main
     dim snapCount as integer
     
     if CLASSICMODE then
-        LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp", 2, 0 '- add function to load bsv file?
+        LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp" '- add function to load bsv file?
+        LD2_CopyToBuffer 2
     else
-        LD2_GenerateSky 
+        GenerateSky 
     end if
     
     SceneCheck player '* check for first scene
@@ -1181,9 +1182,10 @@ SUB Main
         GenerateSky
         resetRenderTargets(1)
     end if
- 
+    
     if (showConsole = 0) and (showStatusScreen = 0) and (showElevatorMenu = 0) then
         Player_Animate
+        Map_UpdateShift
         Mobs_Animate resetClocks
         Guts_Animate
         Doors_Animate
@@ -1192,16 +1194,19 @@ SUB Main
         Shakes_Animate
         resetClocks = 0
     end if
-    Map_UpdateShift
     LD2GFX_SetZoomCenter Player_GetScreenX()+7, Player_GetScreenY()+7, zoom
+    LD2_CopyFromBuffer 2
 	LD2_RenderFrame
+    'LD2_CopyToBufferWithZoom 0
+    '
+    'LD2_SetTargetBuffer 0
     
     if showConsole then
         consoleDialog.text =  "/"+GetTextInput()
         Element_Render @consoleDialog
         if (int((timer-consoleStart)*2) and 1) then
             e.text = left(consoleDialog.text, GetTextInputCursor()+1)
-            Font_putTextCol consoleDialog.x+consoleDialog.padding_x+Element_GetTextWidth(@e)+1, consoleDialog.y+consoleDialog.padding_y, "_", 15, 1
+            Font_putTextCol consoleDialog.x+consoleDialog.padding_x+Element_GetTextWidth(@e)+1, consoleDialog.y+consoleDialog.padding_y, "_", 15
         end if
     end if
     
@@ -1303,7 +1308,8 @@ SUB Main
         end if
     end if
     GameNotice_Draw
-	LD2_RefreshScreen
+    LD2_RefreshScreen
+    'LD2_UpdateScreen
     
     if showConsole then
         if keypress(KEY_ESCAPE) or keypress(KEY_SLASH) then
@@ -1649,6 +1655,7 @@ sub RenderScene (flags as integer = 0)
         if HasFlag(RenderSceneFlags.WithoutElevator) then
             frameFlags = frameFlags or RenderFrameFlags.WithoutElevator
         end if
+        LD2_CopyFromBuffer 2
         LD2_RenderFrame frameFlags
         if NotFlag(RenderSceneFlags.OnlyBackground) then
             shift = Map_GetXShift()
@@ -2584,6 +2591,31 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
                     response = "!Not a valid light command\ \Must be one of (on/off/toggle/status)"
             end select
         end if
+    case "zoom"
+        optlist = "status|set [new-value]|reset"
+        select case args(0)
+        case "list"
+            response = "Valid zoom options are\ \"+optlist
+        case "status"
+            response = "Zoom is set at " + str(ZOOM)
+        case "reset"
+            ZOOM = 1.0
+            response = "Reset zoom to 1.0"
+        case "set"
+            arg = args(1)
+            if len(arg) then
+                if (arg = "0") or (val(arg) <> 0) then
+                    ZOOM = val(arg)
+                    response = "Changed zoom to "+str(val(arg))
+                else
+                    response = "!Invalid zoom value"
+                end if
+            else
+                response = "!Missing zoom value"
+            end if
+        case else
+            response = !"!Invalid option\\ \\Use \"list\" to see options"
+        end select
     case "elevator"
         Game_setFlag GameFlags.ElevatorMenu
     case else
@@ -2812,6 +2844,7 @@ sub Start
     end if
     
     Game_LoadAssets
+    LD2_cls: LD2_RefreshScreen
     
     if STATUS_Init() then
         STATUS_DialogOk "Error intializing inventory!"
@@ -2949,7 +2982,7 @@ sub NewGame
         'Player_SetItemQty ItemIds.SceneRoofTopGotCard, 1
         'LD2_PlayMusic mscWANDERING
         if CLASSICMODE = 0 then
-            LD2_AddToStatus(ItemIds.WalkieTalkie, 1)
+            'LD2_AddToStatus(ItemIds.WalkieTalkie, 1)
         end if
         if Boot_HasCommandArg("noelevator") = 0 then
             'LD2_AddToStatus(ItemIds.ElevatorMenu, 1)
@@ -3035,7 +3068,7 @@ function ContinueGame () as integer
     e.y = 60
     e.background_alpha = 0.0
     
-    LD2_cls 1, 0
+    LD2_cls
     Element_Render @e
     LD2_FadeIn 3
     
@@ -3046,6 +3079,7 @@ function ContinueGame () as integer
     else
         LD2_FadeOut 3
         WaitSeconds 0.25
+        LD2_CopyFromBuffer 2
         LD2_RenderFrame
         LD2_FadeIn 2
     end if
@@ -3351,7 +3385,7 @@ sub GameOver ()
     fontH = Elements_GetFontHeightWithSpacing()
     spacing = 1.9
     
-    LD2_cls 1, 0
+    LD2_cls
 	
     Element_Init @title, "Game Over", 31
     title.y = SCREEN_H*0.3
@@ -3394,7 +3428,7 @@ sub GameOver ()
             end if
             src.x = int(x): src.y = int(y)
             src.w = int(w): src.h = int(h)
-            LD2_CopyBuffer 1, 0, @src, @dst
+            LD2_CopyToBuffer 0, @src, @dst
             LD2_UpdateScreen
             delay = timer
         end if
@@ -3467,7 +3501,7 @@ sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
     eRoomName.is_centered_x = 1
     eRoomName.text_spacing = 1.9
     eRoomName.text_color = 31
-    LD2_cls 1, 0
+    LD2_cls
     Element_Render @eMessage
     LD2_FadeIn 2
     for i = currentRoomId to toRoomId step elevatorStep
@@ -3477,7 +3511,7 @@ sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
         labelFloor.text = trim(str(i))
         labelFloor.text_spacing = 1.9
         labelFloor.text_color = 31
-        LD2_cls 1, 0
+        LD2_cls
         Element_Render @eMessage
         Element_Render @labelFloor
         if i = toRoomId then Element_Render @eRoomName
@@ -3508,6 +3542,8 @@ sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
         WaitSeconds 2.0 - seconds
     end if
     LD2_FadeOut 2
+    Map_UpdateShift 1
+    LD2_CopyFromBuffer 2
     LD2_RenderFrame
     WaitSeconds 0.5
     LD2_FadeIn 2
@@ -3574,6 +3610,7 @@ end sub
 sub GenerateSky()
     
     LD2_GenerateSky
+    LD2_CopyToBuffer 2
     
 end sub
 

@@ -188,6 +188,8 @@ declare sub Map_SetFloor(x as integer, y as integer, isBlocked as integer)
 declare sub Map_UpdateShift (skipEase as integer = 0)
 declare sub Map_UpdateShiftY (skipEase as integer = 0)
 
+declare function toFixedX(x as double) as integer
+declare function toFixedY(y as double) as integer
 declare function toMapX(screenX as double) as integer
 declare function toMapY(screenY as double) as integer
 declare function toScreenX(mapX as double) as integer

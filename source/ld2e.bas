@@ -1087,8 +1087,8 @@ sub Game_Init
             print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
             end
         else
-            LD2_cls 1, 0
-            LD2_cls 2, 0
+            LD2_cls
+            LD2_CopyToBuffer 2
         end if
         
         PaletteFile = DATA_DIR+"gfx/palettes/gradient.pal"
@@ -1181,8 +1181,8 @@ sub Game_LoadAssets
         print "VIDEO ERROR! "+LD2_GetVideoErrorMsg()
         end
     else
-        LD2_cls 1, 0
-        LD2_cls 2, 0
+        LD2_cls
+        LD2_CopyToBuffer 2
     end if
     
     Font_Init FONT_W, FONT_H
@@ -1252,7 +1252,6 @@ sub Game_LoadAssets
     systemOut.text += "Starting game...\": Element_Render @systemOut: LD2_RefreshScreen
     'print "Starting game..."
     WaitSeconds 0.3333
-    LD2_cls
     
     '// add method for LD2_addmobtype, move these to LD2_bas
     Mobs.AddType MobIds.Rockmonster
@@ -1293,7 +1292,7 @@ end sub
 
 SUB LD2_GenerateSky()
     
-  LD2_cls 2, 66
+  LD2_cls 66
   
   DIM x as integer
   DIM y as integer
@@ -1305,9 +1304,9 @@ SUB LD2_GenerateSky()
       y = SCREEN_H*RND(1)
         r = int(4*RND(1))
         if r = 0 then
-            LD2_pset x, y, 67, 2
+            LD2_pset x, y, 67
         else
-            LD2_pset x, y, 66, 2
+            LD2_pset x, y, 66
         end if
     next i
   FOR i = 0 TO 1499
@@ -1329,13 +1328,13 @@ SUB LD2_GenerateSky()
       'END IF
     'LOOP
     r = int(2*RND(1))
-    LD2_pset x, y, 67+r, 2
+    LD2_pset x, y, 67+r
   NEXT i
     FOR i = 0 TO 999
         x = SCREEN_W*RND(1)
       y = SCREEN_H*RND(1)
         r = int(2*RND(1))
-    LD2_pset x, y, 68+r, 2
+    LD2_pset x, y, 68+r
     next i
   FOR i = 0 TO 499
     'DO
@@ -1363,7 +1362,7 @@ SUB LD2_GenerateSky()
         'r = r + 16
       END IF
     END IF
-    LD2_pset x, y, 72+r, 2
+    LD2_pset x, y, 72+r
   NEXT i
 
 END SUB
@@ -1401,6 +1400,18 @@ sub LD2_RenderBackground(height as double)
     LayerGrass.putToScreen x-320, y
     
 end sub
+
+function toFixedX(x as double) as integer
+    
+    return int(x) - int(XShift)
+    
+end function
+
+function toFixedY(y as double) as integer
+    
+    return int(y) - int(YShift)
+    
+end function
 
 function toMapX(screenX as double) as integer
     
@@ -2055,8 +2066,6 @@ sub Sprites_put (x as integer, y as integer, spriteId as integer, spriteSetId as
     dest.w = iif(w > -1, w, SPRITE_W)
     dest.h = iif(h > -1, h, SPRITE_H)
     
-    LD2_SetTargetBuffer 1
-    
     if spriteSetId = idOBJCRP then
         dim sp_x as integer, sp_y as integer
         dim sp_w as integer, sp_h as integer
@@ -2245,18 +2254,18 @@ sub Guts_Draw()
             SpritesGuts.putToScreenEx x, y, Guts(n).sprite, Guts(n).facingLeft, int(Guts(n).angle)
         case GutsIds.Flash
             sz = 60
-            LD2_fill x-sz, y-sz, sz*2, sz*2, Guts(n).colour, 1
+            LD2_fill x-sz, y-sz, sz*2, sz*2, Guts(n).colour
         case GutsIds.Blood
             sz = 4-abs(int(Guts(n).count/8))
-            LD2_fillm x-sz, y-sz, sz*2, sz*2, Guts(n).colour, 1, 128
+            LD2_fillm x-sz, y-sz, sz*2, sz*2, Guts(n).colour, 128
         case GutsIds.Sparks, GutsIds.Smoke
             sz = (20-Guts(n).colour)
-            LD2_fill x-sz, y-sz, sz*2, sz*2, Guts(n).colour+11, 1
+            LD2_fill x-sz, y-sz, sz*2, sz*2, Guts(n).colour+11
         case GutsIds.Plasma
             sz = 5
-            LD2_fillm x-sz, y-sz, sz*2, sz*2, Guts(n).colour, 1, 191
+            LD2_fillm x-sz, y-sz, sz*2, sz*2, Guts(n).colour, 191
             sz = 3
-            LD2_fillm x-sz, y-sz, sz*2, sz*2, 31, 1, 223
+            LD2_fillm x-sz, y-sz, sz*2, sz*2, 31, 223
         end select
     next n
     
@@ -2278,7 +2287,7 @@ sub LD2_PopText (message as string)
         textPop.background_alpha = 0
     end if
 
-    LD2_cls 1, 0
+    LD2_cls
    
     textPop.text = message
     Element_Render @textPop
@@ -2461,8 +2470,8 @@ sub Doors_Draw()
         d *= 4
         offset = int(d * d)
         if offset > 16 then offset = 16
-        x = int(Doors(n).x - XShift)
-        y = int(Doors(n).y - YShift)
+        x = toFixedX(Doors(n).x)
+        y = toFixedY(Doors(n).y)
         crop.y = offset: crop.h = SPRITE_H-offset
         if doorIsMoving then
             SpritesTile.putToScreenEx x, y, activated(Doors(n).accessLevel), 0, 0, @crop
@@ -2622,22 +2631,23 @@ end sub
 
 sub Elevators_Draw ()
     
-    dim offset as integer
+    dim offset as double
     dim d as double
-    dim x as integer
-    dim y as integer
+    dim x as double
+    dim y as double
     dim n as integer
     
     for n = 0 to NumElevators-1
         d = Elevators(n).percentOpen
-        offset = int(sin(d*.5*PI) * 16)
-        if offset > 16 then offset = 16
-        x = int(Elevators(n).x - XShift)
-        y = int(Elevators(n).y - YShift)
-        SpritesTile.putToScreen x-offset, y-11, TileIds.ElevatorDoorLeftTop
-        SpritesTile.putToScreen x-offset, y+ 5, TileIds.ElevatorDoorLeft
-        SpritesTile.putToScreen x+SPRITE_W+offset, y-11, TileIds.ElevatorDoorRightTop
-        SpritesTile.putToScreen x+SPRITE_W+offset, y+ 5, TileIds.ElevatorDoorRight
+        offset = (sin(d*.5*PI) * SPRITE_W)
+        if offset > 16 then offset = SPRITE_W
+        x = Elevators(n).x
+        y = toFixedY(Elevators(n).y)
+        SpritesTile.putToScreen toFixedX(x-offset), y-11, TileIds.ElevatorDoorLeftTop
+        SpritesTile.putToScreen toFixedX(x-offset), y+ 5, TileIds.ElevatorDoorLeft
+        x += 16.0
+        SpritesTile.putToScreen toFixedX(x+offset), y-11, TileIds.ElevatorDoorRightTop
+        SpritesTile.putToScreen toFixedX(x+offset), y+ 5, TileIds.ElevatorDoorRight
     next n
     
 end sub
@@ -2719,7 +2729,7 @@ sub Flashes_Draw ()
     
     for n = 0 to NumFlashes-1
         flash = @Flashes(n)
-        LD2_fillm toScreenX(flash->x-1.5), toScreenY(flash->y-1.5), toPixelsX(3), toPixelsY(3), 15, 1, &h3f
+        LD2_fillm toScreenX(flash->x-1.5), toScreenY(flash->y-1.5), toPixelsX(3), toPixelsY(3), 15, &h3f
     next n
     
 end sub
@@ -2762,8 +2772,8 @@ sub MapTiles_Draw
     animators(0) = 0
     animators(9) = 0
     
-    mapXstart = toMapX(int(XShift)): xpStart = mapXstart*SPRITE_W-int(XShift)
-    mapYstart = toMapY(int(YShift)): ypStart = mapYstart*SPRITE_H-int(YShift)
+    mapXstart = toMapX(int(XShift)): xpStart = toFixedX(mapXstart*SPRITE_W)
+    mapYstart = toMapY(int(YShift)): ypStart = toFixedY(mapYstart*SPRITE_H)
     
     dim tilesAcross as integer
     dim tilesDown as integer
@@ -2867,8 +2877,8 @@ sub SceneCaption_Draw
     barSize = int(SPRITE_H*1.5)
     
     if (SceneMode = LETTERBOX) or (SceneMode = LETTERBOXSHOWPLAYER) then
-        LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0, 1
-        LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0, 1
+        LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0
+        LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0
     end if
  
     static textCaption as ElementType
@@ -2971,11 +2981,9 @@ sub LD2_RenderFrame (flags as integer = 0)
     dim renderElevator as integer
     dim pushShift as double
     
-    LD2_CopyBuffer 2, 1
     if Game_notFlag(GameFlags.NoBackground) then
         LD2_RenderBackground (Inventory(ItemIds.CurrentRoom)+1)/24
     end if
-    LD2_SetTargetBuffer 1
     
     pushShift = XShift
     
@@ -3472,11 +3480,11 @@ sub MapItems_Draw ()
         if Items(n).isVisible then
             select case Items(n).id
             case ItemIds.SpinningFan
-                SpritesObject.putToScreenEx(int(Items(n).x - XShift), int(Items(n).y - YShift), Items(n).id, 0, int(fastClock))
+                SpritesObject.putToScreenEx(toFixedX(Items(n).x), toFixedY(Items(n).y), Items(n).id, 0, int(fastClock))
             case ItemIds.SpinningGear
-                SpritesObject.putToScreenEx(int(Items(n).x - XShift), int(Items(n).y - YShift), Items(n).id, 0, int(slowClock))
+                SpritesObject.putToScreenEx(toFixedX(Items(n).x), toFixedY(Items(n).y), Items(n).id, 0, int(slowClock))
             case else
-                SpritesObject.putToScreen(int(Items(n).x - XShift), (Items(n).y - YShift), Items(n).id)
+                SpritesObject.putToScreen(toFixedX(Items(n).x), toFixedY(Items(n).y), Items(n).id)
             end select
         end if
     next n
@@ -5764,7 +5772,7 @@ sub Mobs_DrawBossBar
             Sprites_putFixed SCREEN_W-SPRITE_W*3 - 5, SCREEN_H-SPRITE_H*1.25, 76, idSCENE, 0
             Sprites_putFixed SCREEN_W-SPRITE_W*3 + 11, SCREEN_H-SPRITE_H*1.25, 77, idSCENE, 0
         end select
-        Font_putText SCREEN_W-SPRITE_W*2, SCREEN_H-SPRITE_H, str(mob.getQty(MobItems.Hp)), 1
+        Font_putText SCREEN_W-SPRITE_W*2, SCREEN_H-SPRITE_H, str(mob.getQty(MobItems.Hp))
     end if
     
 end sub
@@ -5919,7 +5927,7 @@ sub Player_Draw()
         exit sub
     end if
     
-    px = int(Player.x) - int(XShift): py = int(Player.y) - int(YShift)
+    px = toFixedX(Player.x): py = toFixedY(Player.y)
     lan = Player.lower.transformed: uan = Player.upper.transformed
     offset = iif(Player._flip=0,Player.upper.offset,Player.upper.offset*-1)
     
@@ -7493,12 +7501,12 @@ sub Stats_Draw ()
         SpritesLarry.putToScreen(pad, pad+12, 80)
     end select
     
-    Font_putTextCol pad+16, pad+3, " "+str(Inventory(ItemIds.Hp)), 15, 1
+    Font_putTextCol pad+16, pad+3, " "+str(Inventory(ItemIds.Hp)), 15
     
     if Player.weapon = ItemIds.Fist then
-        Font_putTextCol pad+16, pad+12+3, " INF", 15, 1
+        Font_putTextCol pad+16, pad+12+3, " INF", 15
     else
-        Font_putTextCol pad+16, pad+12+3, " "+str(InvSlots(WeaponSlot).qty), 15, 1
+        Font_putTextCol pad+16, pad+12+3, " "+str(InvSlots(WeaponSlot).qty), 15
     end if
     
 end sub
@@ -8054,14 +8062,14 @@ function decodeRLE(newval as ubyte, first as integer = 0, last as integer = 0) a
 end function
 
 private sub elementsPutFont(x as integer, y as integer, charVal as integer)
-    Font_put x, y, charVal, 1
+    Font_put x, y, charVal
 end sub
 
 private sub elementsFill(x as integer, y as integer, w as integer, h as integer, fillColor as integer, fillAlpha as double = 1.0)
     if fillAlpha = 1.0 then
-        LD2_fill x, y, w, h, fillColor, 1
+        LD2_fill x, y, w, h, fillColor
     else
-        LD2_fillm x, y, w, h, fillColor, 1, int(fillAlpha * 255)
+        LD2_fillm x, y, w, h, fillColor, int(fillAlpha * 255)
     end if
 end sub
 

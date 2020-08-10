@@ -53,13 +53,13 @@ END SUB
 sub TITLE_Opening_Classic
     
     LD2_cls
-    LD2_LoadBitmap DATA_DIR+"2002/gfx/warning.bmp", 1, -1
+    LD2_LoadBitmap DATA_DIR+"2002/gfx/warning.bmp"
     WaitSeconds 1.0
     LD2_RefreshScreen
     WaitForKeyup: WaitForkeydown
     LD2_cls
     WaitSeconds CLASSIC_LOADBMP_DELAY
-    LD2_LoadBitmap DATA_DIR+"2002/gfx/logo.bmp", 1, -1
+    LD2_LoadBitmap DATA_DIR+"2002/gfx/logo.bmp"
     LD2_RefreshScreen
     WaitForKeyup: WaitForkeydown
     
@@ -74,7 +74,7 @@ SUB TITLE_Opening
     
     LD2_cls
     
-    LD2_LoadBitmap DATA_DIR+"gfx/warning.bmp", 1, -1
+    LD2_LoadBitmap DATA_DIR+"gfx/warning.bmp"
     LD2_FadeIn 2
     IF WaitSecondsUntilKey(4.0) THEN
         LD2_FadeOut 3
@@ -82,16 +82,13 @@ SUB TITLE_Opening
         LD2_FadeOut 2
     END IF
     
-    'LD2_PlayMusic mscTITLE
+    'LD2_PlayMusic Tracks.Opening
     LD2_cls
-    LD2_cls 1
 
     IF WaitSecondsUntilKey(1.0) THEN
       LD2_FadeOut 5, 15
       EXIT SUB
     END IF
-    
-    LD2_CLS 1, 0
     
     Element_Init(@e)
     e.y = 60
@@ -114,8 +111,8 @@ END SUB
 
 sub TITLE_Menu_Classic
     
-    LD2_cls 0, 66
-    LD2_LoadBitmap DATA_DIR+"2002/gfx/title.bmp", 1, -1
+    LD2_cls 66
+    LD2_LoadBitmap DATA_DIR+"2002/gfx/title.bmp"
     WaitSeconds CLASSIC_LOADBMP_DELAY
     LD2_RefreshScreen
     
@@ -127,8 +124,8 @@ sub TITLE_Menu_Classic
         end if
         if keyboard(KEY_2) or keyboard(KEY_KP_2) then
             TITLE_ShowCredits_Classic
-            LD2_cls 0, 66
-            LD2_LoadBitmap DATA_DIR+"2002/gfx/title.bmp", 1, -1
+            LD2_cls 66
+            LD2_LoadBitmap DATA_DIR+"2002/gfx/title.bmp"
             WaitSeconds CLASSIC_LOADBMP_DELAY
             LD2_RefreshScreen
         end if
@@ -159,8 +156,10 @@ sub TITLE_Menu
     dim soundClock as double
     dim playedSound as integer
     
-    LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 2, -1
-    LD2_CopyBuffer 2, 1
+    LD2_PlayMusic Tracks.Opening
+    
+    LD2_LoadBitmap DATA_DIR+"gfx/title.bmp"
+    LD2_CopyToBuffer 2
     LD2_FadeIn 3, 15
     
     Element_Init @menu, "", 31
@@ -211,7 +210,7 @@ sub TITLE_Menu
                 menuItems(n)->text_color = 8
             end if
         next n
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Elements_Render
         LD2_RefreshScreen
         PullEvents
@@ -251,8 +250,8 @@ sub TITLE_Menu
                 LD2_FadeOut 3
                 TITLE_TheEnd 1
                 LD2_cls
-                LD2_LoadBitmap DATA_DIR+"gfx/title.bmp", 2, -1
-                LD2_CopyBuffer 2, 1
+                LD2_LoadBitmap DATA_DIR+"gfx/title.bmp"
+                LD2_CopyToBuffer 2
                 LD2_FadeIn 3
                 LD2_PlaySound Sounds.radioStatic
                 playedSound = 0
@@ -286,7 +285,7 @@ sub TITLE_Intro_Classic
     SCREENSHOT_W = SCREEN_W
     SCREENSHOT_H = SCREEN_H
   
-    LD2_cls: LD2_cls 1, 0
+    LD2_cls
     LD2_StopMusic
     WaitSeconds 0.6667
     LD2_PlayMusic Tracks.IntroClassic
@@ -314,7 +313,7 @@ sub TITLE_Intro_Classic
  
       Element_Render @e
       a = (8-y)*54-1
-      LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
+      LD2_fillm 0, 47, SCREEN_W, 32, 0, iif(a > 255, 255, a)
       LD2_RefreshScreen
       IF WaitSecondsUntilKey(0.27) THEN EXIT DO
 
@@ -328,7 +327,7 @@ sub TITLE_Intro_Classic
       
       Element_Render @e
       a = (y+1)*54-1
-      LD2_fillm 0, 47, SCREEN_W, 32, 0, 1, iif(a > 255, 255, a)
+      LD2_fillm 0, 47, SCREEN_W, 32, 0, iif(a > 255, 255, a)
       LD2_RefreshScreen
       IF WaitSecondsUntilKey(0.27) THEN EXIT DO
      
@@ -355,15 +354,15 @@ SUB TITLE_Intro
     SCREENSHOT_W = SCREEN_W
     SCREENSHOT_H = SCREEN_H
 
-    LD2_cls 0, 0
+    LD2_cls: LD2_RefreshScreen
     ContinueAfterSeconds(2.0, 0)
-
-    LD2_LoadBitmap DATA_DIR+"gfx/back.bmp", 2, 0
-    LD2_CopyBuffer 2, 1
+    
+    LD2_LoadBitmap DATA_DIR+"gfx/back.bmp"
+    LD2_CopyToBuffer 2
     LD2_FadeInWhileNoKey 1
     LD2_SetMusicVolume 0.0
     
-    if FadeInMusic(3.0, Tracks.Strings) then exit sub
+    if FadeInMusic(3.0, Tracks.Intro) then exit sub
 
     dim state as integer
     state = 0
@@ -387,7 +386,7 @@ SUB TITLE_Intro
             if a > 1.0 then a = 1.0
             if a < 0.0 then a = 0.0
             e.text_alpha = a
-            LD2_CopyBuffer 2, 1
+            LD2_CopyFromBuffer 2
             Element_Render @e
             
             LD2_RefreshScreen
@@ -408,31 +407,26 @@ SUB TITLE_Intro
             if (state = 0) and instr(lcase(text), "all thanks") then
                 Element_Render @e
                 a = (y+1)*54-1
-                LD2_fillm 0, 0, SCREEN_W, SCREEN_H, 0, 1, iif(a > 255, 255, a)
+                LD2_fillm 0, 0, SCREEN_W, SCREEN_H, 0, iif(a > 255, 255, a)
                 Element_Render @e
                 if y = 7 then
-                    state = 1
                     y = 0
-                    LD2_cls 2, 0
+                    LD2_FadeOut 3
+                    LD2_cls
+                    LD2_CopyToBuffer 2
+                    exit for
                 end if
             else
                 a = (1/255)*(255-((y+1)*54-1))
                 if a > 1.0 then a = 1.0
                 if a < 0.0 then a = 0.0
                 e.text_alpha = iif(a > 1.0, 1.0, a)
-                LD2_CopyBuffer 2, 1
+                LD2_CopyFromBuffer 2
                 Element_Render @e
             end if
             
             LD2_RefreshScreen
-            if state = 1 then
-                LD2_FadeOut 3
-                'LD2_FadeOutStep 0, 0, (255-((y+1)*54-1))
-                'if ContinueAfterSeconds(0.27, 0) then exit do
-                exit for
-            else
-                if ContinueAfterSeconds(0.27, 0) then exit do
-            end if
+            if ContinueAfterSeconds(0.27, 0) then exit do
             
         next y
         if state = 1 then state = 2
@@ -451,7 +445,7 @@ SUB TITLE_Intro
     
     fontH = Elements_GetFontHeightWithSpacing()
     
-    LD2_cls 1, 0
+    LD2_cls
 	
     Element_Init @title, "One Year Later", 31
     title.y = 60
@@ -488,7 +482,6 @@ sub TITLE_ShowCredits_Classic
     
     WaitSeconds CLASSIC_SCREEN_DELAY
     LD2_cls
-    LD2_cls 1, 0
     
     Element_Init @e, "Larry The Dinosaur II - October, 2002 - Delta Code", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = 4
@@ -529,7 +522,6 @@ sub TITLE_ShowCredits
     SCREENSHOT_H = SCREEN_H
 
     LD2_cls
-    LD2_CLS 1, 0
 
     Element_Init @e, "Larry The Dinosaur II - October, 2002 - Delta Code", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = Elements_GetFontHeightWithSpacing()
@@ -569,7 +561,7 @@ sub TITLE_ShowCreditsNew
     
     fontH = Elements_GetFontHeightWithSpacing()
     
-    LD2_CLS 1, 0
+    LD2_cls
     Element_Init @e, "Larry The Dinosaur II\Copyright (C) 2002, 2020 Delta Code\All Rights Reserved\Created By Joe King", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = fontH
     e.text_spacing = 1.25
@@ -610,7 +602,7 @@ SUB TITLE_Ad
   textColor = 57
   backColor = 48
   '//Dinosaurs were well at war and lowly in spirits.
-  LD2_CLS 0, backColor
+  LD2_cls backColor
   LD2_FadeOut 1, backColor
   
   Message(1) = "This Fall"
@@ -628,18 +620,18 @@ SUB TITLE_Ad
   IF WaitSecondsUntilKey(5.5) = 0 THEN
       FOR i = 1 TO 11
 
-        LD2_cls 1, backColor
+        LD2_cls backColor
         
         IF (i < 6) OR (i > 7) THEN
-          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor
         END IF
         IF i = 6 THEN
-          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor
         END IF
         IF i = 7 THEN
-          Font_putTextCol ((SCREEN_W - LEN(Message(i-1)) * FONT_W) / 2), 60, Message(i-1), textColor, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i-1)) * FONT_W) / 2), 60, Message(i-1), textColor
           FOR n = 32 TO 40
-            Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 76, Message(i), n, 1
+            Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 76, Message(i), n
             LD2_RefreshScreen
             WaitSeconds 0.10
           NEXT n
@@ -662,7 +654,7 @@ SUB TITLE_Ad
   END IF
   
   LD2_FadeOutMusic
-  LD2_CLS 0, backColor
+  LD2_cls backColor
   
 END SUB
 
@@ -685,7 +677,7 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
     
     barSize = 0 'int(SPRITE_H*1.5)
     
-    LD2_CLS 0, 0
+    LD2_cls
     
     while LD2_FadeOutMusic(0.5): PullEvents: wend
     LD2_StopMusic
@@ -695,11 +687,10 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
         LD2_FadeOut 2
     end if
     
-    GenerateSky
+    GenerateSky: LD2_CopyToBuffer 2
     
-    LD2_CopyBuffer 2, 1
-    LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0, 1
-    LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0, 1
+    LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0
+    LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0
     LD2_FadeInWhileNoKey 1
     WaitSecondsUntilKey(1.5)
     LD2_SetMusicVolume 1.0
@@ -710,9 +701,6 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
         LD2_FadeOut 2
         exit sub
     end if
-
-    dim state as integer
-    state = 0
 
     Element_Init @e, "", 31, ElementFlags.CenterX or ElementFlags.CenterText
     e.y = 60
@@ -732,11 +720,7 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
     
     LINE INPUT #File, text
     
-    if state = 0 then
-        LD2_CopyBuffer 2, 1
-        'LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
-    end if
-    if state = 1 then LD2_CLS 1, 0
+    LD2_CopyFromBuffer 2
     
     e.text = ltrim(rtrim(text))
     
@@ -747,9 +731,9 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
         if a > 1.0 then a = 1.0
         if a < 0.0 then a = 0.0
         e.text_alpha = a
-        LD2_CopyBuffer 2, 1
-        LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0, 1
-        LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0, 1
+        LD2_CopyFromBuffer 2
+        LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0
+        LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0
         'LD2_fillm 0, 35, SCREEN_W, 56, 0, 1
         Element_Render @e
         
@@ -778,39 +762,16 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
         if SceneKeySkip() then exit do
     wend
     
-    'if instr(lcase(text), "larry the dinosaur ii") then
-    '    while LD2_FadeOutMusic(3.0)
-    '        PullEvents
-    '        if keyboard(KEY_ENTER) then
-    '            while LD2_FadeOutMusic(30.0): PullEvents: wend
-    '            LD2_FadeOut 2
-    '            exit sub
-    '        end if
-    '    wend
-    'end if
-    
     FOR y = 0 TO 7
         
-        if (state = 0) and instr(lcase(text), "all thanks") then
-            Element_Render @e
-            a = (y+1)*54-1
-            LD2_fillm 0, 0, SCREEN_W, SCREEN_H, 0, 1, iif(a > 255, 255, a)
-            Element_Render @e
-            if y = 7 then
-                state = 1
-                y = 0
-                LD2_cls 2, 0
-            end if
-        else
-            a = (1/255)*(255-((y+1)*54-1))
-            if a > 1.0 then a = 1.0
-            if a < 0.0 then a = 0.0
-            e.text_alpha = iif(a > 1.0, 1.0, a)
-            LD2_CopyBuffer 2, 1
-            LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0, 1
-            LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0, 1
-            Element_Render @e
-        end if
+        a = (1/255)*(255-((y+1)*54-1))
+        if a > 1.0 then a = 1.0
+        if a < 0.0 then a = 0.0
+        e.text_alpha = iif(a > 1.0, 1.0, a)
+        LD2_CopyFromBuffer 2
+        LD2_fill 0, 0, SCREEN_W, int(barSize*1.125), 0
+        LD2_fill 0, SCREEN_H-barSize, SCREEN_W, barSize, 0
+        Element_Render @e
         
         if keypress(KEY_F2) then
             filename = ""
@@ -818,15 +779,10 @@ sub TITLE_TheEnd (skipEpilogue as integer = 0)
             LD2_PlaySound Sounds.tick
         end if
         LD2_RefreshScreen
-        if state = 1 then
-            LD2_FadeOut 3
-            exit for
-        else
-            IF ContinueAfterSeconds(0.27, 0) THEN EXIT DO
-        end if
+        
+        IF ContinueAfterSeconds(0.27, 0) THEN EXIT DO
         
     NEXT y
-    if state = 1 then state = 2
     
   LOOP
     
@@ -881,7 +837,7 @@ SUB TITLE_Goodbye
     LD2_cls
     WaitSecondsUntilKey(0.1)
     
-    LD2_CLS 1, 0
+    LD2_cls
     
     Element_Init @e
     e.y = 60
@@ -923,7 +879,7 @@ SUB TITLE_AdTwo
   textColor = 40
   backColor = 32
   
-  LD2_CLS 0, backColor
+  LD2_cls backColor
   LD2_FadeOut 1, backColor
   
   Message(1) = "Horrible things will happen"
@@ -937,7 +893,7 @@ SUB TITLE_AdTwo
       
       a = 0
       FOR x = 70 TO 120 STEP 1
-        LD2_cls 1, backColor
+        LD2_cls backColor
         'LD2_Put INT(x), 90, (7+(INT(a) AND 1)), idScene, 0
         LD2_RefreshScreen
         WaitSeconds 0.10
@@ -951,7 +907,7 @@ SUB TITLE_AdTwo
       
       a = 0
       FOR x = 120 TO 170 STEP 1
-        LD2_cls 1, backColor
+        LD2_cls backColor
         'LD2_Put INT(x), 90, (9+(INT(a) AND 1)), idScene, 0
         LD2_RefreshScreen
         WaitSeconds 0.10
@@ -993,18 +949,18 @@ SUB TITLE_AdTwo
       
       FOR i = 1 TO 5
 
-        LD2_cls 1, backColor
+        LD2_cls backColor
         
         IF (i < 2) OR (i > 3) THEN
-          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), textColor
         END IF
         IF i = 2 THEN
-          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), 57, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 60, Message(i), 57
         END IF
         IF i = 3 THEN
-          Font_putTextCol ((SCREEN_W - LEN(Message(i-1)) * FONT_W) / 2), 60, Message(i-1), 57, 1
+          Font_putTextCol ((SCREEN_W - LEN(Message(i-1)) * FONT_W) / 2), 60, Message(i-1), 57
           FOR n = 32 TO 40
-            Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 76, Message(i), n, 1
+            Font_putTextCol ((SCREEN_W - LEN(Message(i)) * FONT_W) / 2), 76, Message(i), n
             LD2_RefreshScreen
             WaitSeconds 0.10
           NEXT n
@@ -1027,7 +983,7 @@ SUB TITLE_AdTwo
   END IF
   
   LD2_FadeOutMusic
-  LD2_CLS 0, backColor
+  LD2_cls backColor
     
 END SUB
 

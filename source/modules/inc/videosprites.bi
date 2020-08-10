@@ -37,13 +37,14 @@ private:
     declare sub _textureToSurface(byval texture as SDL_Texture ptr, byref surface as SDL_Surface ptr)
     declare function _getPixel(x as integer, y as integer) as uinteger
     declare sub _putPixel(x as integer, y as integer, colr as integer)
+    declare function _getRenderTarget() as SDL_Texture ptr
 public:
     declare sub init(v as Video ptr)
     declare sub release()
     declare sub setCenter(x as integer, y as integer)
     declare sub resetCenter()
     declare sub setPalette(p as Palette256 ptr)
-    declare sub setAsTarget()
+    declare function setAsTarget(renderTarget as SDL_Texture ptr = 0) as SDL_Texture ptr
     declare sub loadBsv(filename as string, w as integer, h as integer, crop as integer = 0)
     declare sub loadBmp(filename as string, w as integer = 0, h as integer = 0, crop as integer = 0)
     declare sub saveBmp(filename as string, xscale as double = 1.0, yscale as double = 1.0)

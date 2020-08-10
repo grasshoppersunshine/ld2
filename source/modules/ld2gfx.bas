@@ -18,6 +18,7 @@ dim shared WhitePalette as Palette256
 dim shared VideoErrorMessage as string
 dim shared SpritesFont as VideoSprites
 dim shared ScreenSrc as SDL_Rect
+dim shared Target as integer
 
 dim shared SCREEN_W as integer
 dim shared SCREEN_H as integer
@@ -98,6 +99,8 @@ function LD2_InitVideo(window_title as string, scrn_w as integer, scrn_h as inte
     SCREEN_W = scrn_w
     SCREEN_H = scrn_h
     
+    LD2_SetTargetBuffer 1
+    
     return 0
     
 end function
@@ -161,9 +164,12 @@ sub LD2_CreateLightPalette(pal as Palette256 ptr)
     
 end sub
 
-sub LD2_SetTargetBuffer(bufferNum as integer)
+function LD2_SetTargetBuffer(bufferNum as integer) as integer
     
     if DEBUGMODE = 3 then LogDebug __FUNCTION__, str(bufferNum)
+    
+    dim prev as integer
+    prev = Target
     
     if bufferNum = 0 then
         VideoHandle.setAsTarget()
@@ -171,7 +177,11 @@ sub LD2_SetTargetBuffer(bufferNum as integer)
         VideoBuffers(bufferNum-1).setAsTarget()
     end if
     
-end sub
+    Target = bufferNum
+    
+    return prev
+    
+end function
 
 sub LD2GFX_SetZoom(zoom as double)
     
@@ -232,26 +242,22 @@ sub LD2GFX_SetZoomCenter(x as integer, y as integer, zoom as double)
     
 end sub
 
-sub LD2_cls (bufferNum as integer = 0, colr as integer = 0)
+sub LD2_cls (colr as integer = 0)
     
-    if DEBUGMODE then LogDebug __FUNCTION__, str(bufferNum), str(colr)
+    if DEBUGMODE then LogDebug __FUNCTION__, str(colr)
     
-    if bufferNum = 0 then
+    if Target = 0 then
         VideoHandle.clearScreen(colr)
         VideoHandle.update()
     else
-        VideoBuffers(bufferNum-1).fillScreen(colr)
+        VideoBuffers(Target-1).fillScreen(colr)
     end if
     
 end sub
 
 sub LD2_RefreshScreen ()
     
-    if ScreenSrc.w <> 0 then
-        VideoBuffers(0).putToScreen(@ScreenSrc)
-    else
-        VideoBuffers(0).putToScreen()
-    end if
+    LD2_CopyToBuffer 0
     VideoHandle.update()
     
 end sub
@@ -262,14 +268,14 @@ sub LD2_UpdateScreen ()
     
 end sub
 
-sub LD2_LoadBitmap (filename as string, bufferNum as integer, convert as integer)
+sub LD2_LoadBitmap (filename as string)
     
-    if DEBUGMODE then LogDebug __FUNCTION__, filename, str(bufferNum), str(convert)
+    if DEBUGMODE then LogDebug __FUNCTION__, filename
     
-    if bufferNum = 0 then
+    if Target = 0 then
         VideoHandle.loadBmp(filename)
     else
-        VideoBuffers(bufferNum-1).loadBmp(filename)
+        VideoBuffers(Target-1).loadBmp(filename)
     end if
     
 end sub
@@ -330,47 +336,47 @@ sub LD2_InitLayer(filename as string, sprites as VideoSprites ptr, flags as inte
     
 end sub
 
-SUB LD2_outline (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
+SUB LD2_outline (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER)
     
-    if bufferNum = 0 then
+    if Target = 0 then
         VideoHandle.outline x, y, w, h, col
     else
-        VideoBuffers(bufferNum-1).outline x, y, w, h, col
+        VideoBuffers(Target-1).outline x, y, w, h, col
     end if
     
 END SUB
 
-SUB LD2_fill (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
+SUB LD2_fill (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER)
     
-    if bufferNum = 0 then
+    if Target = 0 then
         VideoHandle.fill x, y, w, h, col
     else
-        VideoBuffers(bufferNum-1).fill x, y, w, h, col
+        VideoBuffers(Target-1).fill x, y, w, h, col
     end if
     
 END SUB
 
-SUB LD2_fillm (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, bufferNum AS INTEGER, aph as integer = &h7f)
+SUB LD2_fillm (x AS INTEGER, y AS INTEGER, w AS INTEGER, h AS INTEGER, col AS INTEGER, aph as integer = &h7f)
     
-    if bufferNum = 0 then
+    if Target = 0 then
         VideoHandle.fill x, y, w, h, col, aph
     else
-        VideoBuffers(bufferNum-1).fill x, y, w, h, col, aph
+        VideoBuffers(Target-1).fill x, y, w, h, col, aph
     end if
     
 END SUB
 
-sub LD2_box (x as integer, y as integer, w as integer, h as integer, col as integer, bufferNum as integer)
+sub LD2_box (x as integer, y as integer, w as integer, h as integer, col as integer)
     
     dim buffer as VideoBuffer ptr
     
-    if bufferNum = 0 then
+    if Target = 0 then
         VideoHandle.fill x    , y    , w, 1, col
         VideoHandle.fill x    , y+h-1, w, 1, col
         VideoHandle.fill x    , y    , 1, h, col
         VideoHandle.fill x+w-1, y    , 1, h, col
     else
-        buffer = @VideoBuffers(bufferNum-1)
+        buffer = @VideoBuffers(Target-1)
         buffer->fill x    , y    , w, 1, col
         buffer->fill x    , y+h-1, w, 1, col
         buffer->fill x    , y    , 1, h, col
@@ -379,17 +385,17 @@ sub LD2_box (x as integer, y as integer, w as integer, h as integer, col as inte
     
 end sub
 
-sub LD2_boxm (x as integer, y as integer, w as integer, h as integer, col as integer, bufferNum as integer, aph as integer = &h7f)
+sub LD2_boxm (x as integer, y as integer, w as integer, h as integer, col as integer, aph as integer = &h7f)
     
     dim buffer as VideoBuffer ptr
     
-    if bufferNum = 0 then
+    if Target = 0 then
         VideoHandle.fill x    , y    , w, 1, col, aph
         VideoHandle.fill x    , y+h-1, w, 1, col, aph
         VideoHandle.fill x    , y    , 1, h, col, aph
         VideoHandle.fill x+w-1, y    , 1, h, col, aph
     else
-        buffer = @VideoBuffers(bufferNum-1)
+        buffer = @VideoBuffers(Target-1)
         buffer->fill x    , y    , w, 1, col, aph
         buffer->fill x    , y+h-1, w, 1, col, aph
         buffer->fill x    , y    , 1, h, col, aph
@@ -398,29 +404,49 @@ sub LD2_boxm (x as integer, y as integer, w as integer, h as integer, col as int
     
 end sub
 
-sub LD2_CopyBuffer (buffer1 as integer, buffer2 as integer, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = null)
+sub LD2_CopyFromBuffer (bufferNum as integer, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = null)
     
     dim texture as SDL_Texture ptr
     
-    if buffer1 = 0 then
-        VideoBuffers(buffer2-1).setAsTarget()
+    if bufferNum = 0 then
         texture = VideoHandle.getData()
         SDL_RenderCopy( VideoHandle.getRenderer(), texture, src, dst )
         SDL_DestroyTexture( texture )
-    elseif buffer2 = 0 then
-        VideoBuffers(buffer1-1).putToScreen(src, dst)
     else
-        VideoBuffers(buffer1-1).copy(@VideoBuffers(buffer2-1), src, dst)
+        VideoBuffers(bufferNum-1).putToScreen(src, dst)
     end if
     
 end sub
 
-SUB LD2_pset (x AS INTEGER, y AS INTEGER, col AS INTEGER, bufferNum AS INTEGER)
+sub LD2_CopyToBuffer (toBuffer as integer, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = null)
     
-    if bufferNum = 0 then
+    dim texture as SDL_Texture ptr
+    dim fromBuffer as integer
+    
+    fromBuffer = LD2_SetTargetBuffer(toBuffer)
+    if fromBuffer = 0 then
+        texture = VideoHandle.getData()
+        SDL_RenderCopy( VideoHandle.getRenderer(), texture, src, dst )
+        SDL_DestroyTexture( texture )
+    else
+        VideoBuffers(fromBuffer-1).putToScreen(src, dst)
+    end if
+    LD2_SetTargetBuffer(fromBuffer)
+    
+end sub
+
+sub LD2_CopyToBufferWithZoom (bufferNum as integer, dst as SDL_RECT ptr = null)
+    
+    LD2_CopyToBuffer bufferNum, @ScreenSrc, dst
+    
+end sub
+
+SUB LD2_pset (x AS INTEGER, y AS INTEGER, col AS INTEGER)
+    
+    if Target = 0 then
         VideoHandle.putPixel(x, y, col)
     else
-        VideoBuffers(bufferNum-1).putPixel(x, y, col)
+        VideoBuffers(Target-1).putPixel(x, y, col)
     end if
     
 END SUB
@@ -429,7 +455,10 @@ SUB LD2_FadeOut (speed AS INTEGER, col as integer = 0)
     
     if DEBUGMODE then LogDebug __FUNCTION__, str(speed), str(col)
     
+    dim t as integer
     dim a as integer
+    
+    t = LD2_SetTargetBuffer(0)
     
     speed *= 4
     
@@ -443,13 +472,18 @@ SUB LD2_FadeOut (speed AS INTEGER, col as integer = 0)
     VideoHandle.fillScreen(col)
     VideoHandle.update()
     
+    LD2_SetTargetBuffer(t)
+    
 END SUB
 
 SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)
     
     if DEBUGMODE then LogDebug __FUNCTION__, str(speed), str(col)
     
+    dim t as integer
     dim a as integer
+    
+    t = LD2_SetTargetBuffer(0)
     
     speed *= 4
     
@@ -463,13 +497,18 @@ SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)
     VideoBuffers(0).putToScreen()
     VideoHandle.update()
     
+    LD2_SetTargetBuffer(t)
+    
 END SUB
 
 SUB LD2_FadeInWhileNoKey (speed AS INTEGER, col as integer = 0)
     
     if DEBUGMODE then LogDebug __FUNCTION__, str(speed), str(col)
     
+    dim t as integer
     dim a as integer
+    
+    t = LD2_SetTargetBuffer(0)
     
     speed *= 4
     
@@ -486,6 +525,8 @@ SUB LD2_FadeInWhileNoKey (speed AS INTEGER, col as integer = 0)
     VideoBuffers(0).putToScreen()
     VideoHandle.update()
     
+    LD2_SetTargetBuffer(t)
+    
 END SUB
 
 function LD2_FadeInStep (delay as double, col as integer = 0) as integer
@@ -493,6 +534,9 @@ function LD2_FadeInStep (delay as double, col as integer = 0) as integer
     static timestamp as double
     static a as double = 0
     dim t as double
+    dim trgt as integer
+    
+    trgt = LD2_SetTargetBuffer(0)
     
     if a = 0 then
         a = 255
@@ -510,6 +554,8 @@ function LD2_FadeInStep (delay as double, col as integer = 0) as integer
     VideoHandle.fillScreen(col, a)
     VideoHandle.update()
     
+    LD2_SetTargetBuffer(trgt)
+    
     return (a > 0)
     
 end function
@@ -519,6 +565,9 @@ function LD2_FadeOutStep (delay as double, col as integer = 0, a255 as integer =
     static timestamp as double
     static a as double = 255
     dim t as double
+    dim trgt as integer
+    
+    trgt = LD2_SetTargetBuffer(0)
     
     if a255 > -1 then
         a = a255
@@ -540,6 +589,8 @@ function LD2_FadeOutStep (delay as double, col as integer = 0, a255 as integer =
     VideoBuffers(0).putToScreen()
     VideoHandle.fillScreen(col, a)
     VideoHandle.update()
+    
+    LD2_SetTargetBuffer(trgt)
     
     return (a < 255)
     
@@ -602,16 +653,13 @@ sub Font_SetAlpha(a as double)
     SpritesFont.setAlphaMod(int(a * 255))
 end sub
 
-sub Font_put(x as integer, y as integer, sprite as integer, bufferNum as integer)
-    LD2_SetTargetBuffer bufferNum
+sub Font_put(x as integer, y as integer, sprite as integer)
     SpritesFont.putToScreen(x, y, sprite)
 end sub
 
-sub Font_putText (x as integer, y as integer, text as string, bufferNum as integer)
+sub Font_putText (x as integer, y as integer, text as string)
     
     dim n as integer
-    
-    LD2_SetTargetBuffer bufferNum
     
     text = ucase(text)
     
@@ -623,11 +671,9 @@ sub Font_putText (x as integer, y as integer, text as string, bufferNum as integ
     
 end sub
 
-sub Font_putTextCol (x as integer, y as integer, text as string, col as integer, bufferNum as integer)
+sub Font_putTextCol (x as integer, y as integer, text as string, col as integer)
     
     dim n as integer
-    
-    LD2_SetTargetBuffer bufferNum
     
     text = ucase(text)
     
@@ -675,7 +721,7 @@ sub Screenshot_Take(byref filename as string = "", xscale as double = 1.0, yscal
     
     file = freefile
     open filename for binary as file: close file
-    VideoBuffers(0).saveBMP DATA_DIR+"screenshots/"+filename, xscale, yscale
+    VideoHandle.saveBMP DATA_DIR+"screenshots/"+filename, xscale, yscale
     
 end sub
 

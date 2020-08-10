@@ -6,7 +6,7 @@
 00, ""        , "-------------------", ""
 18, "18th.ld2", "Briefing Room      ", "breezeway"
 17, "17th.ld2", "Administrative II  ", "scent"
-16, "16th.ld2", "Administrative I   ", "compromise"
+16, "16th.ld2", "Administrative I   ", "hummingbird"
 15, "15th.ld2", "Data Entry         ", "scent"
 00, ""        , "-------------------", ""
 14, "14th.ld2", "Larry's Office     ", "wandering"

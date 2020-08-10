@@ -66,14 +66,26 @@ sub VideoSprites.setPalette(p as Palette256 ptr)
     
 end sub
 
-sub VideoSprites.setAsTarget()
+function VideoSprites._getRenderTarget() as SDL_Texture ptr
     
-    if SDL_SetRenderTarget( this._renderer, this._texture ) <> 0 then
+    return SDL_GetRenderTarget(this._renderer)
+    
+end function
+
+function VideoSprites.setAsTarget(renderTarget as SDL_Texture ptr = 0) as SDL_Texture ptr
+    
+    dim prevTarget as SDL_Texture ptr
+    prevTarget = this._getRenderTarget()
+    
+    if renderTarget = 0 then renderTarget = this._texture
+    if SDL_SetRenderTarget( this._renderer, renderTarget ) <> 0 then
         print *SDL_GetError()
         end
     end if
     
-end sub
+    return prevTarget
+    
+end function
 
 type DimensionsType
     _w as ushort
@@ -148,7 +160,6 @@ sub VideoSprites.loadBsv(filename as string, w as integer, h as integer, crop as
     '    SDL_SetPixelFormatPalette(this._pixel_format, this._palette->getPalette())
     'end if
     
-    this.setAsTarget
     SDL_SetRenderDrawBlendMode( this._renderer, SDL_BLENDMODE_NONE )
     
     open filename for binary as #1
@@ -217,8 +228,11 @@ sub VideoSprites.saveBmp(filename as string, xscale as double = 1.0, yscale as d
     
     dim surface as SDL_Surface ptr
     dim texture as SDL_Texture ptr
+    dim target as SDL_Texture ptr
     dim w as integer
     dim h as integer
+    
+    target = this._getRenderTarget()
     
     w = int(this._canvas_w * xscale)
     h = int(this._canvas_h * yscale)
@@ -236,6 +250,8 @@ sub VideoSprites.saveBmp(filename as string, xscale as double = 1.0, yscale as d
         SDL_FreeSurface(surface)
         SDL_DestroyTexture(texture)
     end if
+    
+    this.setAsTarget( target )
     
 end sub
 
@@ -294,13 +310,15 @@ end sub
 
 sub VideoSprites._buildMetrics(crop as integer = 0)
     
-    dim as SDL_Texture ptr texture
+    dim as SDL_Texture ptr texture, target
     dim as SDL_Rect ptr sprite
     dim as uinteger fmt, c
     dim as integer top, lft, rgt, btm
     dim as integer w, h, bpp, accss
     dim as integer x, y, n
     dim as ubyte r, g, b, a
+    
+    target = this._getRenderTarget()
     
     this._center_x = int(this._w*0.5)-1
     this._center_y = int(this._h*0.5)-1
@@ -362,6 +380,8 @@ sub VideoSprites._buildMetrics(crop as integer = 0)
     
     SDL_FreeSurface( this._surface ): this._surface = 0
     
+    this.setAsTarget(target)
+    
 end sub
 
 sub VideoSprites.convertPalette(p as Palette256 ptr)
@@ -392,6 +412,7 @@ end sub
 
 sub VideoSprites._textureToPixels(byval texture as SDL_Texture ptr, byref pixels as any ptr, byref size_in_bytes as uinteger, byref pitch as integer)
     
+    dim as SDL_Texture ptr target
     dim as uinteger fmt
     dim as integer bpp, w, h
     
@@ -402,16 +423,18 @@ sub VideoSprites._textureToPixels(byval texture as SDL_Texture ptr, byref pixels
     size_in_bytes = w*h*bpp
     pixels = allocate(size_in_bytes): if pixels = 0 then exit sub
     
-    this.setAsTarget
+    target = this.setAsTarget( texture )
     if SDL_RenderReadPixels( this._renderer, 0, fmt, pixels, pitch) <> 0 then
         print *SDL_GetError()
         end
     end if
+    this.setAsTarget( target )
     
 end sub
 
 sub VideoSprites._textureToSurface(byval texture as SDL_Texture ptr, byref surface as SDL_Surface ptr)
-
+    
+    dim as SDL_Texture ptr target
     dim as integer w, h, bpp, accss
 	dim as uinteger fmt, rmask, gmask, bmask, amask
 	
@@ -424,13 +447,16 @@ sub VideoSprites._textureToSurface(byval texture as SDL_Texture ptr, byref surfa
     
     surface = SDL_CreateRGBSurface(0, w, h, bpp, rmask, gmask, bmask, amask)
     
-    this.setAsTarget
+    target = this.setAsTarget( texture )
+    
     SDL_LockSurface( surface )
     if SDL_RenderReadPixels( this._renderer, NULL, surface->format->format, surface->pixels, surface->pitch) <> 0 then
         print *SDL_GetError()
         end
     end if
 	SDL_UnlockSurface( surface )
+    
+    this.setAsTarget( target )
     
 end sub
 

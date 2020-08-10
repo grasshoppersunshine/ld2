@@ -1,11 +1,14 @@
 #include once "inc/videobuffer.bi"
 
 function SDL_CreateSurfaceFromTexture( renderer as SDL_RENDERER ptr, texture as SDL_Texture ptr ) as SDL_Surface ptr
-
+    
+    dim as SDL_Texture ptr renderTarget
 	dim as SDL_Surface ptr surface
 	dim as integer w, h, bpp
 	dim as uinteger fmt, rmask, gmask, bmask, amask
 	
+    renderTarget = SDL_GetRenderTarget(renderer)
+    
 	SDL_QueryTexture( texture, @fmt, NULL, @w, @h )
 	SDL_PixelFormatEnumToMasks( SDL_PIXELFORMAT_ARGB8888, @bpp, @rmask, @gmask, @bmask, @amask )
 	
@@ -15,7 +18,8 @@ function SDL_CreateSurfaceFromTexture( renderer as SDL_RENDERER ptr, texture as 
     SDL_LockSurface( surface )
 	SDL_RenderReadPixels( renderer, NULL, 0, surface->pixels, surface->pitch)
 	SDL_UnlockSurface( surface )
-	SDL_SetRenderTarget( renderer, NULL )
+	
+    SDL_SetRenderTarget( renderer, renderTarget )
 	
 	return surface
 
@@ -54,22 +58,29 @@ sub VideoBuffer.setPalette(p as Palette256 ptr)
     
 end sub
 
-sub VideoBuffer.setAsTarget()
+function VideoBuffer._getRenderTarget() as SDL_Texture ptr
     
-    SDL_SetRenderTarget( this._renderer, this._texture )
+    return SDL_GetRenderTarget(this._renderer)
     
-end sub
+end function
+
+function VideoBuffer.setAsTarget(renderTarget as SDL_Texture ptr = 0) as SDL_Texture ptr
+    
+    dim prevTarget as SDL_Texture ptr
+    prevTarget = this._getRenderTarget()
+    
+    if renderTarget = 0 then renderTarget = this._texture
+    if SDL_SetRenderTarget( this._renderer, renderTarget ) <> 0 then
+        print *SDL_GetError()
+        end
+    end if
+    
+    return prevTarget
+    
+end function
 
 sub VideoBuffer.putToScreen(src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)
     
-    SDL_SetRenderTarget( this._renderer, NULL )
-    SDL_RenderCopy( this._renderer, this._texture, src, dst )
-    
-end sub
-
-sub VideoBuffer.copy(buffer as VideoBuffer ptr, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)
-    
-    buffer->setAsTarget()
     SDL_RenderCopy( this._renderer, this._texture, src, dst )
     
 end sub
@@ -89,7 +100,6 @@ sub VideoBuffer.putPixel(x as integer, y as integer, colr as integer)
         a = 255
     end if
     
-    SDL_SetRenderTarget( this._renderer, this._texture )
     SDL_SetRenderDrawColor( this._renderer, r, g, b, a )
     SDL_RenderDrawPoint( this._renderer, x, y )
     
@@ -99,15 +109,19 @@ sub VideoBuffer.loadBmp(filename as string)
     
     dim imageSurface as SDL_Surface ptr
     dim imageTexture as SDL_Texture ptr
+    dim target as SDL_Texture ptr
+    
+    target = this.setAsTarget()
     
     imageSurface = SDL_LoadBMP(filename)
     if imageSurface <> NULL then
         imageTexture = SDL_CreateTextureFromSurface( this._renderer, imageSurface )
-        SDL_SetRenderTarget( this._renderer, this._texture )
         SDL_RenderCopy( this._renderer, imageTexture, NULL, NULL )
         SDL_FreeSurface(imageSurface)
         SDL_DestroyTexture(imageTexture)
     end if
+    
+    this.setAsTarget(target)
     
 end sub
 
@@ -115,9 +129,11 @@ sub VideoBuffer.saveBmp(filename as string, xscale as double = 1.0, yscale as do
     
     dim surface as SDL_Surface ptr
     dim texture as SDL_Texture ptr
+    dim target as SDL_Texture ptr
     dim w as integer
     dim h as integer
     
+    target = this._getRenderTarget()
     w = int(this._w * xscale)
     h = int(this._h * yscale)
     if (w = this._w) and (h = this._h) then
@@ -134,6 +150,8 @@ sub VideoBuffer.saveBmp(filename as string, xscale as double = 1.0, yscale as do
         SDL_FreeSurface(surface)
         SDL_DestroyTexture(texture)
     end if
+    
+    this.setAsTarget(target)
     
 end sub
 
@@ -161,7 +179,6 @@ sub VideoBuffer.fill(x as integer, y as integer, w as integer, h as integer, col
     rect.x = x: rect.y = y
     rect.w = w: rect.h = h
     
-    this.setAsTarget()
     SDL_SetRenderDrawColor( this._renderer, r, g, b, a255 )
 	SDL_RenderFillRect( this._renderer, @rect )
 
@@ -185,7 +202,6 @@ sub VideoBuffer.outline(x as integer, y as integer, w as integer, h as integer, 
     rect.x = x: rect.y = y
     rect.w = w: rect.h = h
     
-    this.setAsTarget()
     SDL_SetRenderDrawColor( this._renderer, r, g, b, a255 )
 	SDL_RenderDrawRect( this._renderer, @rect )
 

@@ -14,6 +14,7 @@ private:
     _h as integer
     
     declare sub _reset()
+    declare function _getRenderTarget() as SDL_Texture ptr
     
 public:
     declare sub init(v as Video ptr)
@@ -26,6 +27,5 @@ public:
     declare sub fillScreen(colr as integer, a255 as integer = &hff)
     declare sub fill(x as integer, y as integer, w as integer, h as integer, colr as integer, a255 as integer = &hff)
     declare sub outline(x as integer, y as integer, w as integer, h as integer, colr as integer, a255 as integer = &hff)
-    declare sub copy(buffer as VideoBuffer ptr, src as SDL_RECT ptr = NULL, dst as SDL_RECT ptr = NULL)
-    declare sub setAsTarget()
+    declare function setAsTarget(renderTarget as SDL_Texture ptr = 0) as SDL_Texture ptr
 end type

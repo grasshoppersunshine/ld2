@@ -1066,7 +1066,7 @@ function SceneCapturedGo() as integer
     dim StevePose as PoseType
     dim BarneyPose as PoseType
     
-    LD2_cls 1, 0
+    LD2_cls
     LD2_RefreshScreen
     
     Map_Load "20th.ld2"

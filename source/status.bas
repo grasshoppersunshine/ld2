@@ -2349,7 +2349,7 @@ function STATUS_DialogYesNo(message as string, playOpenSound as integer = 1) as 
     end if
 	
 	LD2_SaveBuffer 2
-	LD2_CopyBuffer 1, 2
+	LD2_CopyToBuffer 2
 	
     Easing_doEaseInOut(-1)
 	do
@@ -2359,7 +2359,7 @@ function STATUS_DialogYesNo(message as string, playOpenSound as integer = 1) as 
         dialog.y = halfY - pixels * modh
         dialog.w = pixels * modw * 2
         dialog.h = pixels * modh * 2
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Element_Render @dialog
         LD2_RefreshScreen
         PullEvents
@@ -2407,7 +2407,7 @@ function STATUS_DialogYesNo(message as string, playOpenSound as integer = 1) as 
             optionYes.text_color = 7
             optionNo.background = 70: optionNo.text_color = 31
         end select
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Elements_Render
 		LD2_RefreshScreen
         PullEvents
@@ -2448,7 +2448,7 @@ function STATUS_DialogYesNo(message as string, playOpenSound as integer = 1) as 
             dialog.y = halfY - pixels * modh
             dialog.w = pixels * modw * 2
             dialog.h = pixels * modh * 2
-            LD2_CopyBuffer 2, 1
+            LD2_CopyFromBuffer 2
             Element_Render @dialog
             LD2_RefreshScreen
             PullEvents
@@ -2456,7 +2456,7 @@ function STATUS_DialogYesNo(message as string, playOpenSound as integer = 1) as 
         loop while e < 1
     end if
     
-    LD2_CopyBuffer 2, 1
+    LD2_CopyFromBuffer 2
     LD2_RefreshScreen
     LD2_RestoreBuffer 2
     
@@ -2509,7 +2509,7 @@ sub STATUS_DialogOk(message as string, playOpenSound as integer = 1)
     end if
 	
 	LD2_SaveBuffer 2
-	LD2_CopyBuffer 1, 2
+	LD2_CopyToBuffer 2
 	
     Easing_doEaseInOut(-1)
 	do
@@ -2519,7 +2519,7 @@ sub STATUS_DialogOk(message as string, playOpenSound as integer = 1)
         dialog.y = halfY - pixels * modh
         dialog.w = pixels * modw * 2
         dialog.h = pixels * modh * 2
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Element_Render @dialog
         LD2_RefreshScreen
         PullEvents
@@ -2542,7 +2542,7 @@ sub STATUS_DialogOk(message as string, playOpenSound as integer = 1)
     Elements_Add @optionOk, @dialog
     
     do
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Elements_Render
 		LD2_RefreshScreen
         PullEvents
@@ -2571,14 +2571,14 @@ sub STATUS_DialogOk(message as string, playOpenSound as integer = 1)
         dialog.y = halfY - pixels * modh
         dialog.w = pixels * modw * 2
         dialog.h = pixels * modh * 2
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Element_Render @dialog
         LD2_RefreshScreen
         PullEvents
         e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
 	loop while e > 0
     
-    LD2_CopyBuffer 2, 1
+    LD2_CopyFromBuffer 2
     LD2_RefreshScreen
     LD2_RestoreBuffer 2
     
@@ -2634,7 +2634,7 @@ function STATUS_DialogExitGame(message as string, playOpenSound as integer = 1) 
     end if
 	
 	LD2_SaveBuffer 2
-	LD2_CopyBuffer 1, 2
+	LD2_CopyToBuffer 2
 	
     Easing_doEaseInOut(-1)
 	do
@@ -2644,7 +2644,7 @@ function STATUS_DialogExitGame(message as string, playOpenSound as integer = 1) 
         dialog.y = halfY - pixels * modh
         dialog.w = pixels * modw * 2
         dialog.h = pixels * modh * 2
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Element_Render @dialog
         LD2_RefreshScreen
         PullEvents
@@ -2693,7 +2693,7 @@ function STATUS_DialogExitGame(message as string, playOpenSound as integer = 1) 
                 options(n).text_color = OPTION_INACTIVE_COLOR
             end if
         next n
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Elements_Render
 		LD2_RefreshScreen
         PullEvents
@@ -2734,7 +2734,7 @@ function STATUS_DialogExitGame(message as string, playOpenSound as integer = 1) 
             dialog.y = halfY - pixels * modh
             dialog.w = pixels * modw * 2
             dialog.h = pixels * modh * 2
-            LD2_CopyBuffer 2, 1
+            LD2_CopyFromBuffer 2
             Element_Render @dialog
             LD2_RefreshScreen
             PullEvents
@@ -2742,7 +2742,7 @@ function STATUS_DialogExitGame(message as string, playOpenSound as integer = 1) 
         loop while pixels > 1
     end if
     
-    LD2_CopyBuffer 2, 1
+    LD2_CopyFromBuffer 2
     LD2_RefreshScreen
     LD2_RestoreBuffer 2
     
@@ -2861,7 +2861,7 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
     end if
 	
 	LD2_SaveBuffer 2
-	LD2_CopyBuffer 1, 2
+	LD2_CopyToBuffer 2
 	
     Easing_doEaseInOut(-1)
 	do
@@ -2871,7 +2871,7 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
         dialog.y = halfY - pixels * modh
         dialog.w = pixels * modw * 2
         dialog.h = pixels * modh * 2
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Element_Render @dialog
         LD2_RefreshScreen
         PullEvents
@@ -2996,7 +2996,7 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
             end if
             if selection > -1 then LD2_PlaySound Sounds.uiArrows
         end if
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Elements_Render
 		LD2_RefreshScreen
         PullEvents
@@ -3098,7 +3098,7 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
             dialog.y = halfY - pixels * modh
             dialog.w = pixels * modw * 2
             dialog.h = pixels * modh * 2
-            LD2_CopyBuffer 2, 1
+            LD2_CopyFromBuffer 2
             Element_Render @dialog
             LD2_RefreshScreen
             PullEvents
@@ -3109,7 +3109,7 @@ function STATUS_DialogLaunch(message as string, playOpenSound as integer = 1) as
         if TESTMODE then Game_setFlag GameFlags.TestMode
     end if
     
-    LD2_CopyBuffer 2, 1
+    LD2_CopyFromBuffer 2
     LD2_RefreshScreen
     LD2_RestoreBuffer 2
     
