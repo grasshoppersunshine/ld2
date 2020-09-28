@@ -52,12 +52,12 @@ END SUB
 
 sub TITLE_Opening_Classic
     
-    LD2_cls
+    LD2_cls: LD2_RefreshScreen
     LD2_LoadBitmap DATA_DIR+"2002/gfx/warning.bmp"
     WaitSeconds 1.0
     LD2_RefreshScreen
     WaitForKeyup: WaitForkeydown
-    LD2_cls
+    LD2_cls: LD2_RefreshScreen
     WaitSeconds CLASSIC_LOADBMP_DELAY
     LD2_LoadBitmap DATA_DIR+"2002/gfx/logo.bmp"
     LD2_RefreshScreen
@@ -111,12 +111,17 @@ END SUB
 
 sub TITLE_Menu_Classic
     
+    static playedMusic as integer = 0
+    
     LD2_cls 66
     LD2_LoadBitmap DATA_DIR+"2002/gfx/title.bmp"
     WaitSeconds CLASSIC_LOADBMP_DELAY
     LD2_RefreshScreen
     
-    LD2_PlayMusic Tracks.ThemeClassic
+    if playedMusic = 0 then
+        LD2_PlayMusic Tracks.ThemeClassic
+        playedMusic = 1
+    end if
     do
         PullEvents
         if keyboard(KEY_1) or keyboard(KEY_KP_1) then
@@ -284,12 +289,16 @@ sub TITLE_Intro_Classic
     SCREEN_H = Screen_GetHeight()
     SCREENSHOT_W = SCREEN_W
     SCREENSHOT_H = SCREEN_H
-  
-    LD2_cls
+    
+    LD2_SetTargetBuffer 1
+    
+    LD2_cls: LD2_RefreshScreen
     LD2_StopMusic
     WaitSeconds 0.6667
-    LD2_PlayMusic Tracks.IntroClassic
-    WaitSeconds 3.0 '- change to fade-in music, 0 to 50 and increments of 5 every 0.3 seconds
+    'LD2_PlayMusic Tracks.IntroClassic
+    LD2_SetMusicVolume 0.0
+    if FadeInMusic(3, Tracks.IntroClassic) then exit sub
+    'WaitSeconds 3.0 '- change to fade-in music, 0 to 50 and increments of 5 every 0.3 seconds
     
   LD2_RefreshScreen
   
@@ -303,31 +312,41 @@ sub TITLE_Intro_Classic
     
     LINE INPUT #File, text
     
-    if lcase(left(text, 21)) = "larry the dinosaur ii" then
-        LD2_FadeOutMusic
-    end if
+    'if lcase(left(text, 21)) = "larry the dinosaur ii" then
+    '    LD2_FadeOutMusic
+    'end if
     
     e.text = ltrim(rtrim(text))
+dim d as double
     
     FOR y = 0 TO 7
- 
+LD2_cls
+      d = (8-y)*54-1
+      e.text_alpha = 1-iif(d>255,255,d)/255
       Element_Render @e
-      a = (8-y)*54-1
-      LD2_fillm 0, 47, SCREEN_W, 32, 0, iif(a > 255, 255, a)
+      
+      'LD2_fillm 0, 47, SCREEN_W, 32, 0, iif(a > 255, 255, a)
       LD2_RefreshScreen
       IF WaitSecondsUntilKey(0.27) THEN EXIT DO
 
     NEXT y
-    
+    LD2_cls
+    e.text_alpha = 1.0
     Element_Render @e
     LD2_RefreshScreen
     IF WaitSecondsUntilKey(3.3333) THEN EXIT DO
+    
+    if instr(lcase(text), "larry the dinosaur ii") then
+        if FadeOutMusic(3.0) then exit sub
+    end if
 
-    FOR y = 0 TO 7
+    FOR y = 0 to 7
       
-      Element_Render @e
-      a = (y+1)*54-1
-      LD2_fillm 0, 47, SCREEN_W, 32, 0, iif(a > 255, 255, a)
+      LD2_cls
+      d = (y+1)*54-1
+e.text_alpha = 1-iif(d>255,255,d)/255
+Element_Render @e
+      'LD2_fillm 0, 47, SCREEN_W, 32, 0, iif(a > 255, 255, a)
       LD2_RefreshScreen
       IF WaitSecondsUntilKey(0.27) THEN EXIT DO
      
@@ -359,10 +378,10 @@ SUB TITLE_Intro
     
     LD2_LoadBitmap DATA_DIR+"gfx/back.bmp"
     LD2_CopyToBuffer 2
-    LD2_FadeInWhileNoKey 1
+    LD2_FadeInWhileNoKey 1.0
     LD2_SetMusicVolume 0.0
     
-    if FadeInMusic(3.0, Tracks.Intro) then exit sub
+    if FadeInMusic(3, Tracks.Intro) then exit sub
 
     dim state as integer
     state = 0
@@ -396,7 +415,7 @@ SUB TITLE_Intro
         
         Element_Render @e
         LD2_RefreshScreen
-        if ContinueAfterSeconds(3.3333, 0) then exit do
+        if ContinueAfterSeconds(3.6667, 0) then exit do
         
         if instr(lcase(text), "larry the dinosaur ii") then
             if FadeOutMusic(3.0) then exit sub

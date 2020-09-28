@@ -164,6 +164,12 @@ sub LD2_CreateLightPalette(pal as Palette256 ptr)
     
 end sub
 
+function LD2_SetActiveBuffer(index as integer) as integer
+    
+    return LD2_SetTargetBuffer(index)
+    
+end function
+
 function LD2_SetTargetBuffer(bufferNum as integer) as integer
     
     if DEBUGMODE = 3 then LogDebug __FUNCTION__, str(bufferNum)
@@ -189,8 +195,8 @@ sub LD2GFX_SetZoom(zoom as double)
     
     w = int(SCREEN_W*zoom)
     h = int(SCREEN_H*zoom)
-    if (w and 1)=0 then w -= 1
-    if (h and 1)=0 then h -= 1
+    if (w and 1)=1 then w -= 1
+    if (h and 1)=1 then h -= 1
     ScreenSrc.x = int((SCREEN_W-w)*0.5)
     ScreenSrc.y = int((SCREEN_H-h)*0.5)
     ScreenSrc.w = w
@@ -208,8 +214,8 @@ sub LD2GFX_SetZoomCenter(x as integer, y as integer, zoom as double)
     if 1 then
         w = int(SCREEN_W*zoom)
         h = int(SCREEN_H*zoom)
-        if (w and 1)=0 then w -= 1
-        if (h and 1)=0 then h -= 1
+        if (w and 1)=1 then w -= 1
+        if (h and 1)=1 then h -= 1
         ScreenSrc.x = int((x*2-w)*0.5)
         ScreenSrc.y = int((y*2-h)*0.5)
         ScreenSrc.w = w

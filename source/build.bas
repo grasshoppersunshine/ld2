@@ -283,7 +283,7 @@ args.add "scenes.bas", "-lib -p lib/ -x lib/libscenes.a", "lib/libscenes.a"
 modulesUpdated = doArgs(args, pathToFbc, ucase("[2/3] game modules"), dependenciesUpdated)
 
 args.init
-args.add "ld2.bas", "-w all -p lib/ -exx", "ld2.exe"
+args.add "ld2.bas", "-w all -p lib/ -exx icon.rc", "ld2.exe"
 doArgs args, pathToFbc, ucase("[3/3] main program"), (dependenciesUpdated or modulesUpdated)
 
 print

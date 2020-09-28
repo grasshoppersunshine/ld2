@@ -324,7 +324,9 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     wend
 
     dim timestamp as double
+    dim waittime as double
     timestamp = timer
+    waittime = timer
 	do
         PullEvents
         RenderScene RenderSceneFlags.NotPutToScreen
@@ -346,6 +348,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
             LD2_RefreshScreen
             timestamp = timer
         end if
+        if (timer - waittime) > 12 then exit do
 		if SceneKeySkip() then escapeFlag = 1: exit do
 	loop until SceneKeyTextJump()
     
@@ -889,7 +892,7 @@ sub LoadMusic ()
     AddMusic Tracks.Chase     , "march.ogg"  , 1
     AddMusic Tracks.Elevator  , "goingup.ogg", 0
     AddMusic Tracks.Ending    , "ending.ogg" , 1
-    AddMusic Tracks.Intro     , "../esm/loop.ogg" , 0
+    AddMusic Tracks.Intro     , "intro2.ogg" , 1
     AddMusic Tracks.Opening   , "../esm/oneshot-impact.ogg", 0
     AddMusic Tracks.Title     , "title.ogg"  , 1
     AddMusic Tracks.Uhoh      , "uhoh.ogg"   , 0
@@ -1165,7 +1168,6 @@ SUB Main
         Game_unsetFlag MAPISLOADED
         SceneRefreshMobs
         Player_Unhide
-        Player_SetFlip 1
         newMusicId = GetFloorMusicId(Player_GetCurrentRoom())
         if newMusicId <> musicId then
             LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
@@ -1194,12 +1196,20 @@ SUB Main
         Shakes_Animate
         resetClocks = 0
     end if
+    
+    player = Player_Clone()
+    
+    PlayerCheck player
+    SceneCheck player
+    BossCheck player
+    ItemsCheck player
+    
     LD2GFX_SetZoomCenter Player_GetScreenX()+7, Player_GetScreenY()+7, zoom
     LD2_CopyFromBuffer 2
 	LD2_RenderFrame
-    'LD2_CopyToBufferWithZoom 0
-    '
-    'LD2_SetTargetBuffer 0
+    
+    LD2_CopyToBufferWithZoom 0
+    LD2_SetTargetBuffer 0
     
     if showConsole then
         consoleDialog.text =  "/"+GetTextInput()
@@ -1215,13 +1225,6 @@ SUB Main
         SceneCallback = 0
         resetClocks = 1
     end if
-    
-    player = Player_Clone()
-    
-    PlayerCheck player
-    SceneCheck player
-    BossCheck player
-    ItemsCheck player
     
     select case Player_GetCurrentRoom()
         case Rooms.Rooftop
@@ -1308,8 +1311,9 @@ SUB Main
         end if
     end if
     GameNotice_Draw
-    LD2_RefreshScreen
-    'LD2_UpdateScreen
+    'LD2_RefreshScreen
+    LD2_UpdateScreen
+    LD2_SetTargetBuffer 1
     
     if showConsole then
         if keypress(KEY_ESCAPE) or keypress(KEY_SLASH) then
@@ -1687,8 +1691,9 @@ sub RenderScene (flags as integer = 0)
         Elevators_Animate
         Flashes_Animate
         Shakes_Animate
-        Map_UpdateShift
+        'Map_UpdateShift
     end if
+    Map_UpdateShift
     
 end sub
 
@@ -2405,7 +2410,7 @@ function ConsoleCheck (comstring as string, player as PlayerType) as string
             case "10", "rooftop", "yellowcard": SceneGotYellowCard
             case "11", "weapons2": SceneWeapons2
             case "12", "weapons3": SceneWeapons3
-            case "13", "catpured", "barneyplan", "truth", "steve3": SceneCaptured
+            case "13", "captured", "barneyplan", "truth", "steve3": SceneCaptured
             case "14", "escape", "ventescape", "vent", "ventcrawl", "steve4": SceneVentEscape
             case "15", "lobby", "notleavingsteve", "steve5": SceneLobby
             case "16", "portal", "steve6": ScenePortal
@@ -3041,8 +3046,10 @@ sub NewGame
                 LD2_AddToStatus(ItemIds.MysteryMeat, 1)
             case "janitornote", "note"
                 LD2_AddToStatus(ItemIds.JanitorNote, 1)
-            case "flashlight"
+            case "flashlightnobat"
                 LD2_AddToStatus(ItemIds.FlashLightNoBat, 1)
+            case "flashlight"
+                LD2_AddToStatus(ItemIds.FlashLight, 1)
             case "batteries"
                 LD2_AddToStatus(ItemIds.Batteries, 1)
             case "medikit50", "med50"
@@ -3113,6 +3120,9 @@ sub LD2_BeforeUseItem (byval id as integer)
     case ItemIds.Chemical410
         tag = Sectors_GetTagFromXY(int(Player_GetX()), int(Player_GetY()))
         callbackValue = iif(ucase(tag) = "USE-410", 1, 0)
+    case ItemIds.Flashlight
+        tag = Sectors_GetTagFromXY(int(Player_GetX()), int(Player_GetY()))
+        callbackValue = iif(ucase(tag) = "USE-FLASHLIGHT", 1, 0)
     end select
     
     Inventory_AddHidden(ItemIds.CallbackValue, callbackValue)
@@ -3153,6 +3163,9 @@ sub LD2_UseItem (byval id as integer, byref qty as integer = 0, byval slot as in
         exitMenu = 1
     case ItemIds.WalkieTalkie
         SceneCallback = @SceneHT01
+        exitMenu = 1
+    case ItemIds.Flashlight
+        SceneCallback = @SceneCaptured
         exitMenu = 1
     end select
     
@@ -3486,9 +3499,8 @@ sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
     elevatorText = iif(elevatorStep > 0, "Going Up", "Going Down")
     seconds = 0
     
+    LD2_SetTargetBuffer 1
     LD2_FadeOut 3
-    Map_Load str(toRoomId)+"th.ld2"
-    Map_UpdateShift 1
     Player_Hide
     LD2_PlayMusic Tracks.Elevator
     Element_Init @eMessage, elevatorText, 31
@@ -3508,7 +3520,7 @@ sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
         Element_Init(@labelFloor)
         labelFloor.y = 60 + fontH * 2.5
         labelFloor.is_centered_x = 1
-        labelFloor.text = trim(str(i))
+        labelFloor.text = iif(i>0,trim(str(i)),"B1")
         labelFloor.text_spacing = 1.9
         labelFloor.text_color = 31
         LD2_cls
@@ -3542,6 +3554,8 @@ sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
         WaitSeconds 2.0 - seconds
     end if
     LD2_FadeOut 2
+    Map_Load RoomToFilename(toRoomId)
+    Player_SetFlip 1
     Map_UpdateShift 1
     LD2_CopyFromBuffer 2
     LD2_RenderFrame

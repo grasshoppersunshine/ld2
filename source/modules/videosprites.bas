@@ -116,6 +116,7 @@ sub VideoSprites.loadBsv(filename as string, w as integer, h as integer, crop as
         g as ubyte
     end type
     
+    dim target as SDL_Texture ptr
     dim header as HeaderType
     dim dimensions as DimensionsType
     dim filesize as integer
@@ -160,7 +161,10 @@ sub VideoSprites.loadBsv(filename as string, w as integer, h as integer, crop as
     '    SDL_SetPixelFormatPalette(this._pixel_format, this._palette->getPalette())
     'end if
     
+    target = this._getRenderTarget()
+    
     SDL_SetRenderDrawBlendMode( this._renderer, SDL_BLENDMODE_NONE )
+    SDL_SetRenderTarget( this._renderer, this._texture )
     
     open filename for binary as #1
         get #1, , header
@@ -189,6 +193,7 @@ sub VideoSprites.loadBsv(filename as string, w as integer, h as integer, crop as
     
     this.dice
     this._buildMetrics crop
+    this.setAsTarget( target )
     
 end sub
 

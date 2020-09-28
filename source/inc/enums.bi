@@ -814,6 +814,7 @@ end enum
 enum Guides
     Activate410      =  780
     Floor            =  144
+    SceneCaptured    =  320
     SceneElevator    = 1500
     SceneJanitor     = 1160
     SceneJanitorDies = 240
@@ -823,6 +824,7 @@ enum Guides
     ScenePortal      =  300
     SceneTheEnd      = 1600
     SceneVentEscape  = 1240
+    SceneVentEscape2 = 1420
     SceneWeapons1    =  400
     SceneWeapons2    =  420
     SceneWeapons3    =   80

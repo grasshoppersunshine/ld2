@@ -46,7 +46,7 @@ QUADDAMAGE       , HAS , QUADDAMAGE     ,   1, keep   , "Used automatically when
 WHITECARD1       , HAS , WHITECARD1     ,   1, keep   , "Unable to use. Card is broken."
 WHITECARD2       , HAS , WHITECARD2     ,   1, keep   , "Unable to use. Card is broken."
 FLASHLIGHTNOBAT  , HAS , FLASHLIGHTNOBAT,   1, keep   , "Unable to use. Missing batteries."
-FLASHLIGHT       , HAS , FLASHLIGHT     ,   1, keep   , "Area already lit. Larry declines to waste battery power."
+FLASHLIGHT       , EQ  , CALLBACK       ,   0, keep   , "Area already lit. Larry declines to waste battery power."
 FLASHLIGHT       , USE , FLASHLIGHT     ,   1, keep   , "Activated flashlight."
 BATTERIES        , HAS , BATTERIES      ,   1, keep   , "Not usable by itself."
 

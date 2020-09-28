@@ -174,6 +174,8 @@ sub BeforeScene()
         Map_Load RoomToFilename(SCENE_ROOM_ID)
     end if
     
+    LD2_SetTargetBuffer 1
+    
     if ((PLAYER_START_X <> -1) and (int(Player_GetX()) <> PLAYER_START_X)) _
     or ((PLAYER_START_Y <> -1) and (int(Player_GetY()) <> PLAYER_START_Y)) then
         if PLAYER_START_X <> -1 then Player_SetXY PLAYER_START_X, Player_GetY()
@@ -184,8 +186,8 @@ sub BeforeScene()
         LD2_StopMusic
         Map_UpdateShift 1
         LD2_SetSceneMode LETTERBOX
-        RenderScene RenderSceneFlags.NotPutToScreen
-        LD2_FadeIn 2
+        'RenderScene RenderSceneFlags.NotPutToScreen
+        'LD2_FadeIn 2
     else
         LD2_SetSceneMode LETTERBOX
         Map_UpdateShift 1
@@ -1037,25 +1039,19 @@ end function
 
 sub SceneCaptured()
     
-    if SceneCapturedGo() then
-        LD2_FadeOut 2
-        SceneCapturedEndConditions
-        RenderScene RenderSceneFlags.NotPutToScreen
-        LD2_FadeIn 2
-    else
-        SceneCapturedEndConditions
-    end if
+    LD2_SetTargetBuffer 1
+    LD2_PlaySound Sounds.lookMetal
+    DoScene("SCENE-FLASHLIGHT-1A")
+    LD2_cls
+    SceneInit @SceneCapturedGo, @SceneCapturedEndConditions, Rooms.Unknown, Guides.SceneCaptured, Guides.Floor, 0
+    SceneGo
     
 end sub
 
 sub SceneCapturedEndConditions()
     
-    ClearPoses
-    LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneCaptured, 1
-    
-    'LD2_put 400, 144, 12, idSCENE, 1
-    'LD2_put 400, 144, 14, idSCENE, 1
+    Player_SetItemQty ItemIds.SteveData, encodeMobData(Rooms.Unknown, 400, Guides.Floor, MobStates.Waiting, 1)
     
 end sub
 
@@ -1066,15 +1062,7 @@ function SceneCapturedGo() as integer
     dim StevePose as PoseType
     dim BarneyPose as PoseType
     
-    LD2_cls
-    LD2_RefreshScreen
-    
-    Map_Load "20th.ld2"
-    Mobs_Clear
-    LD2_SetSceneMode LETTERBOX
-    
-    Map_SetXShift 250 '300
-    Player_SetXY 320, 144
+    'Map_SetXShift 250 '300
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
     LarryPose.x = Player_GetX(): LarryPose.y =  Player_GetY()
@@ -1084,7 +1072,6 @@ function SceneCapturedGo() as integer
     StevePose.x = 400: StevePose.y =  144
     StevePose.isFlipped = 1
     
-    ClearPoses
     AddPose @LarryPose
     AddPose @StevePose
     
@@ -1094,30 +1081,42 @@ function SceneCapturedGo() as integer
     LD2_SetMusicVolume 0
     SceneFadeInMusic 3.0, Tracks.Breezeway
 
-    if DoScene("SCENE-FLASHLIGHT-1A") then return 1
+    if DoScene("SCENE-FLASHLIGHT-1B") then return 1
     
     SceneFadeOutMusic
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Radio
-    if DoScene("SCENE-FLASHLIGHT-1B") then return 1
+    
+    if SceneFadeOutMusic(1.0) then return 1
+    LD2_PlaySound Sounds.radioBeep
+    if ContinueAfterSeconds(0.5) then return 1
+    LD2_PlaySound Sounds.radioStatic
+    if ContinueAfterSeconds(1.0) then return 1
+    
+    if DoScene("SCENE-FLASHLIGHT-1C") then return 1
     
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
     BarneyPose.setHidden 1
     AddPose @BarneyPose
     SceneFadeInMusic 3.0, Tracks.Captured
-    if DoScene("SCENE-FLASHLIGHT-1C") then return 1
+    if DoScene("SCENE-FLASHLIGHT-1D") then return 1
     
     SceneFadeOutMusic
+    LD2_PlaySound Sounds.radioStatic
+    if SceneFadeInMusic(1.0) then return 1
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
     SceneFadeInMusic 3.0, Tracks.Breezeway
     RemovePose @BarneyPose
-    if DoScene("SCENE-FLASHLIGHT-1D") then return 1
+    if DoScene("SCENE-FLASHLIGHT-1E") then return 1
     
     return 0
     
 end function
 
 sub SceneVentEscape()
+    
+    SceneInit @SceneVentEscapeGo, @SceneVentEscapeEndConditions, Rooms.Unknown, Guides.SceneVentEscape, Guides.Floor, 0
+    SceneGo
     
     if SceneVentEscapeGo() then
         LD2_FadeOut 2
@@ -1138,7 +1137,7 @@ sub SceneVentEscapeEndConditions()
     Player_SetItemQty ItemIds.Phase, 3
     
     Map_SetXShift 1400
-    Player_SetXY 1420, 144
+    Player_SetXY int(Guides.SceneVentEscape), int(Guides.Floor)
     Player_SetFlip 0
     MapItems_Add Player_GetX, Player_GetY, ItemIds.WhiteCard2
     'LD2_Drop WhiteCard2
@@ -1156,19 +1155,18 @@ function SceneVentEscapeGo() as integer
     LD2_SetSceneMode LETTERBOX
     
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Talking
-    LarryPose.x = Player_getX(): LarryPose.y =  144
+    LarryPose.x = Player_GetX(): LarryPose.y = Guides.Floor
     LarryPose.isFlipped = 0
     
-    ClearPoses
     AddPose @LarryPose
     
     if DoScene("SCENE-FLASHLIGHT-2A") then return 1
     
     Map_SetXShift 1400
-    LarryPose.x = 1420: LarryPose.y =  144
+    LarryPose.x = Guides.SceneVentEscape2: LarryPose.y = Guides.Floor
     
     GetCharacterPose StevePose, CharacterIds.Steve, PoseIds.Talking
-    StevePose.x = 1450: StevePose.y =  144
+    StevePose.x = LarryPose.x+30: StevePose.y = Guides.Floor
     StevePose.isFlipped = 1
     AddPose @StevePose
     
@@ -1429,26 +1427,15 @@ end function
 
 sub SceneGotYellowCard
     
-    if SceneGotYellowCardGo() then
-        LD2_FadeOut 2
-        SceneGotYellowCardEndConditions
-        RenderScene RenderSceneFlags.NotPutToScreen
-        LD2_FadeIn 2
-    else
-        SceneGotYellowCardEndConditions
-    end if
+    SceneInit @SceneGotYellowCardGo, @SceneGotYellowCardEndConditions
+    SceneGo
     
 end sub
 
 sub SceneGotYellowCardEndConditions
     
-    ClearPoses
-    LD2_SetSceneMode MODEOFF
     Player_SetItemQty ItemIds.SceneGotYellowCard, 1
-    
     Player_SetAccessLevel YELLOWACCESS
-    Player_SetFlip 0
-    
     Player_SetItemQty ItemIds.BarneyData, encodeMobData(7, 388, 144, MobStates.Go, 0)
     
 end sub
@@ -1458,8 +1445,6 @@ function SceneGotYellowCardGo() as integer
     dim LarryPose as PoseType
     dim BarneyPose as PoseType
     
-    LD2_SetSceneMode LETTERBOX
-    
     GetCharacterPose LarryPose, CharacterIds.Larry, PoseIds.Radio
     GetCharacterPose BarneyPose, CharacterIds.Barney, PoseIds.Radio
     
@@ -1467,16 +1452,20 @@ function SceneGotYellowCardGo() as integer
     LarryPose.isFlipped = 0
     BarneyPose.setHidden 1
     
-    ClearPoses
     AddPose @LarryPose
     AddPose @BarneyPose
     
-    RenderScene
-    WaitSeconds 1.0
+    if SceneFadeOutMusic(1.0) then return 1
+    LD2_PlaySound Sounds.radioBeep
+    if ContinueAfterSeconds(0.5) then return 1
+    LD2_PlaySound Sounds.radioStatic
     
-    if DoScene("SCENE-ROOFTOP-GOT-CARD") then return 1
+    if ContinueAfterSeconds(1.0) then return SkipScene()
     
-    WaitSeconds 1.0
+    if DoScene("SCENE-ROOFTOP-GOT-CARD") then return SkipScene()
+    
+    LD2_PlaySound Sounds.radioStatic
+    if SceneFadeInMusic(1.0) then return SkipScene()
     
     return 0
 

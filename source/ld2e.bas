@@ -3221,7 +3221,7 @@ sub Map_UpdateShiftY (skipEase as integer = 0)
     focusDist = int(0.03125 * SCREEN_H)
     focus = -(equiDist+focusDist)
     
-    if (e = 0) or (skipEase = 1) then
+    if (e = 0) or skipEase then
         anchor = midline
         d = (-(MAPH*SPRITE_H)+Player.y*3)/(MAPH*SPRITE_H)
         if d < 0 then d = 0
@@ -3236,11 +3236,11 @@ sub Map_UpdateShiftY (skipEase as integer = 0)
         'end if
     end if
     if skipEase then
-        focus = Player.y
+        e = 1
     end if
     
     timediff = (timer-clock)
-    if timediff > 0.01 then
+    if (timediff > 0.01) or skipEase then
         timediff *= (timediff/0.01)
         e += timediff*easeSpeed
         if e > 1 then e = 1
@@ -3258,9 +3258,6 @@ sub Map_UpdateShiftY (skipEase as integer = 0)
     end if
     
     YShift = (midline-36)+focus
-    if skipEase then
-        YShift = (midline-36)+target
-    end if
     
     dim YShiftMax as integer
     
@@ -3303,16 +3300,13 @@ sub Map_UpdateShift (skipEase as integer = 0)
         halfW = int(SCREEN_W*0.5)
         range = 8'int(0.0625 * SCREEN_W)
         
-        if (direction <> Player._flip) or (skipEase = 1) then
+        if (direction <> Player._flip) then
             direction = Player._flip
             e = 0
             clock = timer
         end if
-        if skipEase then
-            focus = Player.x
-        end if
         
-        if e = 0 then
+        if (e = 0) or skipEase then
             anchor = focus
             target = Player.x+2.5+iif(Player._flip=0,range,-range)
         else
@@ -3324,8 +3318,12 @@ sub Map_UpdateShift (skipEase as integer = 0)
             end if
         end if
         
+        if skipEase then
+            e = 1
+        end if
+        
         timediff = (timer-clock)
-        if timediff > 0.01 then
+        if (timediff > 0.01) or skipEase then
             timediff *= (timediff/0.01)
             e += timediff*easeSpeed
             if e > 1 then e = 1
@@ -3480,7 +3478,7 @@ sub MapItems_Draw ()
         if Items(n).isVisible then
             select case Items(n).id
             case ItemIds.SpinningFan
-                SpritesObject.putToScreenEx(toFixedX(Items(n).x), toFixedY(Items(n).y), Items(n).id, 0, int(fastClock))
+                SpritesObject.putToScreenEx(toFixedX(Items(n).x), toFixedY(Items(n).y), Items(n).id, 0, int(fastClock/10)*10)
             case ItemIds.SpinningGear
                 SpritesObject.putToScreenEx(toFixedX(Items(n).x), toFixedY(Items(n).y), Items(n).id, 0, int(slowClock))
             case else
@@ -5132,7 +5130,7 @@ sub Mobs_Animate_BossRooftop(mob as Mobile)
             mob._stateExpireTime = 0.55
             mob.vx = 0
             mob.setAnimation MobSprites.RoofBossRoll
-            rollHeight = iif(roll(3)<2,7,17)
+            rollHeight = iif(roll(3)<3,7,17)
         end if
         if mob.stateExpired() then
             mob.y = mob.getQty(MobItems.SpawnY)-rollHeight
@@ -5928,6 +5926,7 @@ sub Player_Draw()
     end if
     
     px = toFixedX(Player.x): py = toFixedY(Player.y)
+    px = int(Player.x - XShift)
     lan = Player.lower.transformed: uan = Player.upper.transformed
     offset = iif(Player._flip=0,Player.upper.offset,Player.upper.offset*-1)
     

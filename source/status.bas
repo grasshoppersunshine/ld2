@@ -995,6 +995,7 @@ function EStatusScreen (byval currentRoomId as integer, byref selectedRoomId as 
         dim floorStr as string
         for i = 0 to numLabels-1
             floorStr = iif(len(floors(i).filename), ltrim(str(floors(i).floorNo)), "")
+            if floorStr = "0" then floorStr = "B1"
             Element_Init @menuNumbers(i), floorStr, 31, ElementFlags.MonospaceText or ElementFlags.AlignTextRight
             menuNumbers(i).parent = @listFloors
             menuNumbers(i).w = fontW * 2
