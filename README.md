@@ -31,12 +31,14 @@ Quick Reload............R/RMB
 View/Open...............Tab
 Browse Items............Arrow Keys
 View Actions............Enter
-ALT.....................Change Window Size
+Change Window Size......Left Alt
+Exit....................Tab/Esc
 ```
 ## 4. Actions Menu
 ```
 Change Action...........Left/Right
 Select Action...........Enter/Spc
+Go Back.................Tab/Esc
 ```
 ## 5. Actions Summary
 ```
@@ -60,7 +62,7 @@ Hold Up at open elevator doors
 ```
 Choose Floor............Up/Down/Mouse Wheel
 Select Floor............Enter/Spc
-Exit Menu...............Esc
+Exit Menu...............Tab/Esc
 ```
 ## 8. Save Game
 ```
