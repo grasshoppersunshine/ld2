@@ -48,6 +48,7 @@
     #include once "modules/inc/inventory.bi"
     #include once "modules/inc/poses.bi"
     #include once "modules/inc/elements.bi"
+    #include once "modules/inc/easing.bi"
     #include once "inc/ld2e.bi"
     #include once "inc/title.bi"
     #include once "inc/ld2.bi"
@@ -58,8 +59,11 @@
     #include once "SDL2/SDL.bi"
     #include once "file.bi"
     #include once "dir.bi"
-
-
+    
+    const ZOOM_EASE_SPEED = 1.0
+    const ZOOM_MIN = 1.0
+    const ZOOM_MAX = 0.15
+    
 '***********************************************************************
 '* PRIVATE METHODS
 '***********************************************************************
@@ -291,7 +295,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
         if chatBox then
             Sprites_putFixed chatBoxLft, chatBoxTop, chatBox+frame, idScene, renderPose.getFlip()
         end if
-        LD2_RefreshScreen
+        LD2GFX_ApplyZoom: LD2_UpdateScreen
         
         LD2_WriteText left(caption, n)
         LD2_PlaySound Sounds.dialog
@@ -320,7 +324,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     while SceneKeyTextJump()
         PullEvents: RenderScene RenderSceneFlags.NotPutToScreen
         if chatBox then Sprites_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
-        LD2_RefreshScreen
+        LD2GFX_ApplyZoom: LD2_UpdateScreen
     wend
 
     dim timestamp as double
@@ -333,7 +337,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
         if chatBox then
             Sprites_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
         end if
-        LD2_RefreshScreen
+        LD2GFX_ApplyZoom: LD2_UpdateScreen
         if (timer - timestamp) >= 0.15 then
             if right(caption, 1) <> "_" then
                 caption += "_"
@@ -345,7 +349,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
             if chatBox then
                 Sprites_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
             end if
-            LD2_RefreshScreen
+            LD2GFX_ApplyZoom: LD2_UpdateScreen
             timestamp = timer
         end if
         if (timer - waittime) > 12 then exit do
@@ -355,7 +359,7 @@ function CharacterSpeak (characterId as integer, caption as string, talkingPoseI
     while SceneKeyTextJump()
         PullEvents: RenderScene RenderSceneFlags.NotPutToScreen
         if chatBox then Sprites_putFixed chatBoxLft, chatBoxTop, chatBox, idScene, renderPose.getFlip()
-        LD2_RefreshScreen
+        LD2GFX_ApplyZoom: LD2_UpdateScreen
     wend
     
     return escapeFlag
@@ -888,7 +892,7 @@ end sub
 sub LoadMusic ()
     
     
-    AddMusic Tracks.Boss      , "../orig/boss.ogg", 1
+    AddMusic Tracks.Boss      , "boss6.ogg", 1
     AddMusic Tracks.Chase     , "march.ogg"  , 1
     AddMusic Tracks.Elevator  , "goingup.ogg", 0
     AddMusic Tracks.Ending    , "ending.ogg" , 1
@@ -1082,134 +1086,30 @@ function GetFloorMusicId(roomId as integer) as integer
     
 end function
 
-SUB Main
-  
-    dim deadTimer as double
-    dim player as PlayerType
-    dim newShot as integer
-    dim newJump as integer
-    dim newReload as integer
-    dim atKeypad as integer
-    dim hasAccess as integer
-    dim showStatusScreen as integer
-    dim showConsole as integer
-    dim inputText as string
-    dim response as string
-    dim consoleLog(99) as string
-    dim numLogs as integer
-    dim logPointer as integer
-    dim resetClocks as integer
-    dim selection as integer
-    dim paused as integer
-    dim musicId as integer
-    dim newMusicId as integer
-    dim i as integer
-    dim n as integer
+'// Return (1 = still open, -1 = just closed, 0 = neither)
+function DoConsole(player as PlayerType) as integer
     
-    dim showElevatorMenu as integer
-    dim toRoomId as integer
-    dim toRoomName as string
+    static as ElementType consoleDialog, e
+    static as string consoleLog(99)
+    static as integer showConsole, numLogs, logPointer
+    dim as string inputText, response
+    dim as double consoleStart
     
-    dim deadSound as integer
+    if showConsole = -1 then showConsole = 0
     
-    CustomActions(1).actionId = ActionIds.Equip
-    CustomActions(1).itemId   = ItemIds.Fist
-    
-    newShot = 1
-    newJump = 1
-    newReload = 1
-    
-    if Game_HasFlag(LOADGAME) then
-        Game_unsetFlag(LOADGAME)
-        if ContinueGame() = 0 then
-            exit sub
-        end if
-    else
-        NewGame
+    if Game_hasFlag(GameFlags.ShowConsole) then
+        Game_unsetFlag GameFlags.ShowConsole
+        showConsole = 1
+        Element_Init @consoleDialog, "", 31
+        consoleDialog.y = SCREEN_H-FONT_H*4
+        consoleDialog.background = 0
+        consoleDialog.background_alpha = 160
+        consoleDialog.padding_x = 3
+        consoleDialog.padding_y = 3
+        consoleDialog.w = SCREEN_W-6
+        consoleDialog.h = SCREEN_H-consoleDialog.y-6
+        Element_Init @e, "", 31
     end if
-    
-    dim nomouseRB as integer
-    dim consoleStart as double
-    dim consoleDialog as ElementType
-    dim e as ElementType
-    
-    SCREEN_W = Screen_GetWidth()
-    SCREEN_H = Screen_GetHeight()
-    HALF_X = int(SCREEN_W*0.5)
-    HALF_Y = int(SCREEN_H*0.5)
-    SCREENSHOT_W = SCREEN_W
-    SCREENSHOT_H = SCREEN_H
-    
-    Element_Init @consoleDialog, "", 31
-    consoleDialog.y = SCREEN_H-FONT_H*4
-    consoleDialog.background = 0
-    consoleDialog.background_alpha = 160
-    consoleDialog.padding_x = 3
-    consoleDialog.padding_y = 3
-    consoleDialog.w = SCREEN_W-6
-    consoleDialog.h = SCREEN_H-consoleDialog.y-6
-    Element_Init @e, "", 31
-    
-    dim filename as string
-    dim snapTimer as double
-    dim snapCount as integer
-    
-    if CLASSICMODE then
-        LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp" '- add function to load bsv file?
-        LD2_CopyToBuffer 2
-    else
-        GenerateSky 
-    end if
-    
-    SceneCheck player '* check for first scene
-    DO
-    
-    if Game_hasFlag(MAPISLOADED) then
-        Game_unsetFlag MAPISLOADED
-        SceneRefreshMobs
-        Player_Unhide
-        newMusicId = GetFloorMusicId(Player_GetCurrentRoom())
-        if newMusicId <> musicId then
-            LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
-        end if
-        musicId = newMusicId
-        Map_UpdateShift 1
-	end if
-    
-    PullEvents
-    PrimeActions
-    
-    if resetRenderTargets() then
-        Game_LoadTextures
-        GenerateSky
-        resetRenderTargets(1)
-    end if
-    
-    if (showConsole = 0) and (showStatusScreen = 0) and (showElevatorMenu = 0) then
-        Player_Animate
-        Map_UpdateShift
-        Mobs_Animate resetClocks
-        Guts_Animate
-        Doors_Animate
-        Elevators_Animate
-        Flashes_Animate
-        Shakes_Animate
-        resetClocks = 0
-    end if
-    
-    player = Player_Clone()
-    
-    PlayerCheck player
-    SceneCheck player
-    BossCheck player
-    ItemsCheck player
-    
-    LD2GFX_SetZoomCenter Player_GetScreenX()+7, Player_GetScreenY()+7, zoom
-    LD2_CopyFromBuffer 2
-	LD2_RenderFrame
-    
-    LD2_CopyToBufferWithZoom 0
-    LD2_SetTargetBuffer 0
     
     if showConsole then
         consoleDialog.text =  "/"+GetTextInput()
@@ -1220,105 +1120,10 @@ SUB Main
         end if
     end if
     
-    if (showStatusScreen = 0) and (SceneCallback <> 0) then
-        SceneCallback()
-        SceneCallback = 0
-        resetClocks = 1
-    end if
-    
-    select case Player_GetCurrentRoom()
-        case Rooms.Rooftop
-            Rooms_DoRooftop player
-        case Rooms.Basement
-            Rooms_DoBasement player
-    end select
-    
-    if Game_hasFlag(GameFlags.StatusScreen) then
-        Game_unsetFlag GameFlags.StatusScreen
-        showStatusScreen = iif(showStatusScreen=0,1,0)
-    end if
-    if showStatusScreen then
-        if CLASSICMODE then
-            showStatusScreen = iif(StatusScreen_Classic(showConsole)=0,1,0)
-        else
-            showStatusScreen = iif(StatusScreen(showConsole)=0,1,0)
-        end if
-        if showStatusScreen = 0 then
-            resetClocks = 1
-        end if
-    end if
-    
-    if Game_hasFlag(GameFlags.ElevatorMenu) then
-        Game_unsetFlag GameFlags.ElevatorMenu
-        showElevatorMenu = iif(showElevatorMenu=0,1,0)
-    end if
-    if showElevatorMenu then
-        if CLASSICMODE then
-            showElevatorMenu = iif(EStatusScreen_Classic(Player_GetCurrentRoom, toRoomId, toRoomName)=0,1,0)
-        else
-            showElevatorMenu = iif(EStatusScreen(Player_GetCurrentRoom, toRoomId, toRoomName)=0,1,0)
-        end if
-        if showElevatorMenu = 0 then
-            resetClocks = 1
-            if (toRoomId <> Player_GetCurrentRoom()) then
-                musicId = 0
-                if CLASSICMODE then
-                    Map_Load RoomToFilename(toRoomId)
-                else
-                    LoadMapWithElevatorIntermission toRoomId, toRoomName
-                end if
-            else
-                Player_Unhide
-            end if
-        end if
-    end if
-    
-    
-    if keypress(KEY_F2) then
-        filename = ""
-        Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
-        LD2_SetNotice "Saved "+filename
-        LD2_PlaySound Sounds.tick
-    end if
-    if keypress(KEY_F4) then
-        snapTimer = timer
-        snapCount = -3
-        LD2_PlaySound Sounds.uiSubmenu
-        LD2_SetNotice "Starting in 3"
-    end if
-    if snapTimer > 0 then
-        if timer - snapTimer > 1.0 then
-            if snapCount < 0 then
-                snapCount += 1
-                if snapCount < 0 then
-                    LD2_SetNotice "Starting in "+str(abs(snapCount))
-                else
-                    LD2_SetNotice ""
-                end if
-                snapTimer = timer
-            else
-                filename = ""
-                Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
-                LD2_SetNotice "Saved "+filename
-                LD2_PlaySound Sounds.tick
-                snapCount += 1
-                if snapCount = 10 then
-                    snapTimer = 0
-                else
-                    snapTimer = timer
-                end if
-            end if
-        end if
-    end if
-    GameNotice_Draw
-    'LD2_RefreshScreen
-    LD2_UpdateScreen
-    LD2_SetTargetBuffer 1
-    
     if showConsole then
         if keypress(KEY_ESCAPE) or keypress(KEY_SLASH) then
             StopTextInput
-            showConsole = 0
+            showConsole = -1
             LD2_PlaySound Sounds.uiCancel
         end if
         if keypress(KEY_UP) then
@@ -1347,7 +1152,7 @@ SUB Main
         if keypress(KEY_ENTER) then
             inputText = GetTextInput()
             StopTextInput
-            showConsole = 0
+            showConsole = -1
             response = ConsoleCheck( inputText, player )
             if len(inputText) then
                 if numLogs = 0 then
@@ -1374,13 +1179,8 @@ SUB Main
                 LD2_SetNotice response
             end if
         end if
-        if showConsole = 0 then
-            resetClocks = 1
-        end if
-        continue do
-    end if
-    if keypress(KEY_SLASH) then
-        if showConsole = 0 then
+    else
+        if keypress(KEY_SLASH) then
             StartTextInput
             showConsole = 1
             logPointer = -1
@@ -1388,14 +1188,262 @@ SUB Main
             LD2_PlaySound Sounds.uiSubmenu
         end if
     end if
-    if keypress(KEY_E) or keypress(KEY_TAB) or mouseMB() then
-        showStatusScreen = 1
+    
+    return showConsole
+    
+end function
+
+'// Return (1 = still open, -1 = just closed, 0 = neither)
+function DoStatusScreen() as integer
+    
+    dim as integer showStatusScreen
+    
+    if showStatusScreen = -1 then showStatusScreen = 0
+    
+    if Game_hasFlag(GameFlags.StatusScreen) then
+        Game_unsetFlag GameFlags.StatusScreen
+        showStatusScreen = iif(showStatusScreen=0,1,0)
     end if
+    
     if showStatusScreen then
-        continue do
+        if CLASSICMODE then
+            showStatusScreen = iif(StatusScreen_Classic(showConsole)=0,1,0)
+        else
+            showStatusScreen = iif(StatusScreen(showConsole)=0,1,0)
+        end if
+        if showStatusScreen = 0 then
+            showStatusScreen = -1
+        end if
+    end if
+    
+    return showStatusScreen
+    
+end function
+
+'// Return (1 = still open, -1 = just closed, 0 = neither)
+function DoElevatorMenu() as integer
+    
+    dim as string toRoomName
+    dim as integer showElevatorMenu, toRoomId
+    
+    if showElevatorMenu = -1 then showElevatorMenu = 0
+    
+    if Game_hasFlag(GameFlags.ElevatorMenu) then
+        Game_unsetFlag GameFlags.ElevatorMenu
+        showElevatorMenu = iif(showElevatorMenu=0,1,0)
     end if
     if showElevatorMenu then
+        if CLASSICMODE then
+            showElevatorMenu = iif(EStatusScreen_Classic(Player_GetCurrentRoom, toRoomId, toRoomName)=0,1,0)
+        else
+            showElevatorMenu = iif(EStatusScreen(Player_GetCurrentRoom, toRoomId, toRoomName)=0,1,0)
+        end if
+        if showElevatorMenu = 0 then
+            showElevatorMenu = -1
+            if (toRoomId <> Player_GetCurrentRoom()) then
+                'musicId = 0
+                if CLASSICMODE then
+                    Map_Load RoomToFilename(toRoomId)
+                else
+                    LoadMapWithElevatorIntermission toRoomId, toRoomName
+                end if
+            else
+                Player_Unhide
+            end if
+        end if
+    end if
+    
+    return showElevatorMenu
+    
+end function
+
+sub DoScreenshotCapture()
+    
+    static as double snapTimer
+    static as integer snapCount
+    dim as string screenshotFile
+    
+    if keypress(KEY_F2) then
+        screenshotFile = ""
+        Screenshot_Take screenshotFile, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+        LD2_SetNotice "Saved "+screenshotFile
+        LD2_PlaySound Sounds.tick
+    end if
+    if keypress(KEY_F4) then
+        snapTimer = timer
+        snapCount = -3
+        LD2_PlaySound Sounds.uiSubmenu
+        LD2_SetNotice "Starting in 3"
+    end if
+    if snapTimer > 0 then
+        if timer - snapTimer > 1.0 then
+            if snapCount < 0 then
+                snapCount += 1
+                if snapCount < 0 then
+                    LD2_SetNotice "Starting in "+str(abs(snapCount))
+                else
+                    LD2_SetNotice ""
+                end if
+                snapTimer = timer
+            else
+                screenshotFile = ""
+                Screenshot_Take screenshotFile, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+                LD2_SetNotice "Saved "+screenshotFile
+                LD2_PlaySound Sounds.tick
+                snapCount += 1
+                if snapCount = 10 then
+                    snapTimer = 0
+                else
+                    snapTimer = timer
+                end if
+            end if
+        end if
+    end if
+    
+end sub
+
+sub Main
+    
+    static zoom_interval as double = 0
+    static zoom_e as double = 0
+    static zoom_in as integer = 0
+    static zoom_out as integer = 0
+  
+    dim deadTimer as double
+    dim player as PlayerType
+    dim newShot as integer
+    dim newJump as integer
+    dim newReload as integer
+    dim atKeypad as integer
+    dim hasAccess as integer
+    
+    dim resetClocks as integer
+    dim selection as integer
+    dim paused as integer
+    dim musicId as integer
+    dim newMusicId as integer
+    dim i as integer
+    dim n as integer
+    
+    
+    
+    dim deadSound as integer
+    
+    CustomActions(1).actionId = ActionIds.Equip
+    CustomActions(1).itemId   = ItemIds.Fist
+    
+    newShot = 1
+    newJump = 1
+    newReload = 1
+    
+    if Game_HasFlag(LOADGAME) then
+        Game_unsetFlag(LOADGAME)
+        if ContinueGame() = 0 then
+            exit sub
+        end if
+    else
+        NewGame
+    end if
+    
+    dim nomouseRB as integer
+    dim timeIsPaused as integer
+    
+    SCREEN_W = Screen_GetWidth()
+    SCREEN_H = Screen_GetHeight()
+    HALF_X = int(SCREEN_W*0.5)
+    HALF_Y = int(SCREEN_H*0.5)
+    SCREENSHOT_W = SCREEN_W
+    SCREENSHOT_H = SCREEN_H
+    
+    if CLASSICMODE then
+        LD2_LoadBitmap DATA_DIR+"gfx/orig/back.bmp" '- add function to load bsv file?
+        LD2_CopyToBuffer 2
+    else
+        GenerateSky 
+    end if
+    
+    SceneCheck player '* check for first scene
+    do
+    
+    if Game_hasFlag(MAPISLOADED) then
+        Game_unsetFlag MAPISLOADED
+        SceneRefreshMobs
+        Player_Unhide
+        newMusicId = GetFloorMusicId(Player_GetCurrentRoom())
+        if newMusicId <> musicId then
+            LD2_PlayMusic GetFloorMusicId(Player_GetCurrentRoom())
+        end if
+        musicId = newMusicId
+        Map_UpdateShift 1
+	end if
+    
+    PullEvents
+    PrimeActions
+    
+    if resetRenderTargets() then
+        Game_LoadTextures
+        GenerateSky
+        resetRenderTargets(1)
+    end if
+    
+    timeIsPaused = ( Game_hasFlag( GameFlags.StatusScreen ) or Game_hasFlag( GameFlags.ElevatorMenu ) or Game_hasFlag( GameFlags.ShowConsole ) )
+    
+    if (timeIsPaused = 0) then
+        Player_Animate
+        Map_UpdateShift
+        Mobs_Animate resetClocks
+        Guts_Animate
+        Doors_Animate
+        Elevators_Animate
+        Flashes_Animate
+        Shakes_Animate
+        resetClocks = 0
+    end if
+    
+    player = Player_Clone()
+    
+    PlayerCheck player
+    SceneCheck player
+    BossCheck player
+    ItemsCheck player
+    
+    select case Player_GetCurrentRoom()
+        case Rooms.Rooftop
+            Rooms_DoRooftop player
+        case Rooms.Basement
+            Rooms_DoBasement player
+    end select
+    
+    if (timeIsPaused = 0) and (SceneCallback <> 0) then
+        SceneCallback()
+        SceneCallback = 0
+        resetClocks = 1
+    end if
+    
+    LD2GFX_SetZoomCenter Player_GetScreenX()+7, Player_GetScreenY()+7, zoom
+    LD2_CopyFromBuffer 2
+	LD2_RenderFrame
+    LD2GFX_ApplyZoom
+    LD2_SetTargetBuffer 0
+    
+    '// shouldn't have zoom applied to
+    if DoElevatorMenu()  = -1 then resetClocks = 1
+    if DoStatusScreen()  = -1 then resetClocks = 1
+    if DoConsole(player) = -1 then resetClocks = 1
+    
+    DoScreenshotCapture
+    GameNotice_Draw
+    '// (end) shouldn't have zoom applied to
+    
+    LD2_UpdateScreen
+    LD2_SetTargetBuffer 1
+
+    if timeIsPaused then
         continue do
+    end if
+    
+    if keypress(KEY_E) or keypress(KEY_TAB) or mouseMB() then
+        Game_setFlag( GameFlags.StatusScreen )
     end if
     
     if keypress(KEY_ESCAPE) or paused then
@@ -1412,7 +1460,7 @@ SUB Main
             case OptionIds.HowToPlay
                 STATUS_SetLookItem ItemIds.Instructions
                 STATUS_SetTempWindowSize StatusSizes.Max
-                showStatusScreen = 1
+                Game_setFlag( GameFlags.StatusScreen )
                 paused = 1
                 exit do
             case OptionIds.ExitGame
@@ -1526,8 +1574,34 @@ SUB Main
         end if
     end if
     
-    if keyboard(KEY_PLUS) then zoom -= 0.005: LD2GFX_SetZoom zoom
-    if keyboard(KEY_MINUS) then zoom += 0.005: LD2GFX_SetZoom zoom
+    'if keyboard(KEY_PLUS) then zoom -= 0.005: LD2GFX_SetZoom zoom
+    'if keyboard(KEY_MINUS) then zoom += 0.005: LD2GFX_SetZoom zoom
+    if zoom_e = -1 then
+        if keyboard(KEY_PLUS) then
+            zoom_in = 1
+            zoom_e = Easing_doEaseIn(-1)
+        elseif keyboard(KEY_MINUS) then
+            zoom_out = 1
+            zoom_e = Easing_doEaseIn(-1)
+        end if
+    end if
+    if zoom_e > -1 then
+        zoom_e = Easing_doEaseIn(zoom_interval, ZOOM_EASE_SPEED)
+        if zoom_out then
+            zoom = abs(zoom_e * (ZOOM_MIN-ZOOM_MAX) + ZOOM_MAX)
+            LD2GFX_SetZoom zoom
+        end if
+        if zoom_in then
+            zoom = abs((1-zoom_e) * (ZOOM_MIN-ZOOM_MAX) + ZOOM_MAX)
+            LD2GFX_SetZoom zoom
+        end if
+        if zoom_interval = 1 then
+            zoom_interval = 0
+            zoom_e = -1
+            zoom_in = 0
+            zoom_out = 0
+        end if
+    end if
     
     'LD2GFX_SetZoomCenter int((HALF_X+Player_GetScreenX())*0.5), int((HALF_Y+Player_GetScreenY())*0.5)
     
@@ -3557,6 +3631,9 @@ sub LoadMapWithElevatorIntermission(toRoomId as integer, toRoomName as string)
     Map_Load RoomToFilename(toRoomId)
     Player_SetFlip 1
     Map_UpdateShift 1
+    zoom = ZOOM_MAX
+    LD2GFX_SetZoom zoom
+    LD2GFX_SetZoomCenter Player_GetScreenX()+7, Player_GetScreenY()+7, zoom
     LD2_CopyFromBuffer 2
     LD2_RenderFrame
     WaitSeconds 0.5

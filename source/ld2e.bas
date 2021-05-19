@@ -991,6 +991,11 @@ sub Game_Init
     
     if DEBUGMODE then LogDebug __FUNCTION__
     
+    '*******************************************************************
+    Game_setFlag GameFlags.NoBackground
+    Game_setFlag GameFlags.Fullscreen
+    '*******************************************************************
+    
     dim arg as string
     dim i as integer
     
@@ -1030,14 +1035,11 @@ sub Game_Init
             SCREEN_MODE = ScreenModes.Zoom256
         case "maxzoom", "max"
             SCREEN_MODE = ScreenModes.MaxZoom
+        case "window"
+            Game_unsetFlag GameFlags.Fullscreen
         end select
         i += 1
     loop
-    
-    '*******************************************************************
-    Game_setFlag GameFlags.NoBackground
-    Game_setFlag GameFlags.Fullscreen
-    '*******************************************************************
     
     TESTMODE     = iif(Game_hasFlag(GameFlags.TestMode)    , 1, 0)
     DEBUGMODE    = iif(Game_hasFlag(GameFlags.DebugMode)   , 1, 0)
@@ -1170,7 +1172,7 @@ sub Game_LoadAssets
             SCREEN_H = 180
         else
             SCREEN_W = 320
-            SCREEN_H = 200
+            SCREEN_H = 180
             zoom = 3
         end if
     end select

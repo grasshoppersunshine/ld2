@@ -730,6 +730,7 @@ enum GameFlags
     NoLauncher   = &h1000000
     NoBackground = &h2000000
     Fullscreen   = &h4000000
+    ShowConsole  = &h8000000
 end enum
 
 enum ScreenModes

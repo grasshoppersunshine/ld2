@@ -248,6 +248,12 @@ sub LD2GFX_SetZoomCenter(x as integer, y as integer, zoom as double)
     
 end sub
 
+sub LD2GFX_ApplyZoom ()
+    
+    LD2_CopyToBufferWithZoom 0
+    
+end sub
+
 sub LD2_cls (colr as integer = 0)
     
     if DEBUGMODE then LogDebug __FUNCTION__, str(colr)
@@ -431,9 +437,9 @@ sub LD2_CopyToBuffer (toBuffer as integer, src as SDL_RECT ptr = NULL, dst as SD
     
     fromBuffer = LD2_SetTargetBuffer(toBuffer)
     if fromBuffer = 0 then
-        texture = VideoHandle.getData()
-        SDL_RenderCopy( VideoHandle.getRenderer(), texture, src, dst )
-        SDL_DestroyTexture( texture )
+        'texture = VideoHandle.getData()
+        'SDL_RenderCopy( VideoHandle.getRenderer(), texture, src, dst )
+        'SDL_DestroyTexture( texture )
     else
         VideoBuffers(fromBuffer-1).putToScreen(src, dst)
     end if
@@ -496,6 +502,7 @@ SUB LD2_FadeIn (speed AS INTEGER, col as integer = 0)
     for a = 255 to 0 step -speed
         VideoBuffers(0).putToScreen()
         VideoHandle.fillScreen(col, a)
+        'LD2_CopyToBufferWithZoom 0
         VideoHandle.update()
         PullEvents
     next a
@@ -727,7 +734,7 @@ sub Screenshot_Take(byref filename as string = "", xscale as double = 1.0, yscal
     
     file = freefile
     open filename for binary as file: close file
-    VideoHandle.saveBMP DATA_DIR+"screenshots/"+filename, xscale, yscale
+    VideoBuffers(0).saveBMP DATA_DIR+"screenshots/"+filename, xscale, yscale
     
 end sub
 

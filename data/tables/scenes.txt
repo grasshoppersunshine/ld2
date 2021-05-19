@@ -7,58 +7,112 @@ SCENE-1A
     [ MUSIC WANDERING ]
     
     LARRY
-    Well, Steve, that was one good game of chess.
+    Well Steve, that was one good game of chess.
 
     STEVE
+    ...
+    Pft!
     Only because you won.
+    ...
     Wouldn't think so if I won.
 
     LARRY
     Are you jealous, Steve?
 
     STEVE
-    Uh... No...
-    In fact... I think you are the jealous one.
+    Uh...
+    No...
+    In fact... I think you're the jealous one.
 
     LARRY
-    Ok, but... I didn't lose.
-    ... so...
-
-    STEVE
-    That's just your perspective...
-    ... it's all relative.
-
-    LARRY
-    ...
-    You admitted that I won.
+    ... Me?
     
     STEVE
-    We both won.
+    Oh, yes.
+    ... You.
+    You are seriously jelly right now.
+    
+    LARRY
+    ...
+    But I won the game.
+    
+    STEVE
+    That's where you fail to see the big picture.
+    You see, Larry, we both won.
     But you both lost and won.
+    
+    LARRY
+    ...
+    What?
+    
+    STEVE
     Trust me... it's a quantum physics thing.
     
     LARRY
-    ...
-    Yeah... that's not how quantum physics works.
+    That's not how quantum physics works, Steve.
     
     STEVE
-    ...
-    Well... I should get going.
+    Well, let me put it this way...
+    We both know what happens when you lose, and it ain't pretty.
     
     LARRY
-    Uh huh...
+    You think so?
     
     STEVE
-    Smell ya later.
-
+    I know so.
+    ...
+    What do we have here? Is this your new gaming table, Larry?
+    
     LARRY
-    Yep...
+    Steve, what are you doing?
+    
+    STEVE
+    It looks new, slightly used...
+    ... but overall, it's a good, solid table.
+    ...
+    Would be a shame, if it got tossed across the room, in a fit of rage. Don't you think?
+    
+    LARRY
+    *Sigh*
+    Steve...
+    Go home before you hurt yourself.
+    
+    STEVE
+    Hmph!
+    Fair enough.
+    Maybe not the worst idea.
+    
+    LARRY
+    Maybe the best idea.
+    
+    STEVE
+    Maybe... the most moderate idea.
+    
+    LARRY_FACE_PALM
+    Whatever. Agreed.
+    The matter is settled.
+    Have a safe trip home... and all that.
+    
+    STEVE
+    You're terrible at goodbyes.
+    But deep down inside... I know you care.
+    
+    LARRY_FACE_PALM
+    *Moans* You're killing me.
+    
+    STEVE
+    That's the spirit!
+    Have a good night, old friend.
     Smell ya later.
+    
+    LARRY_FACE_PALM
+    Yes...
+    Smell ya later...
+    ... and all that.
     
     STEVE [ WAIT 0.20, FACE RIGHT, WAIT 0.20 ]
 
 END
-
 
 SCENE-1A-B
     
@@ -69,76 +123,58 @@ SCENE-1A-B
     [ MUSIC WANDERING ]
     
     LARRY
-    Steve...
+    Steve!
     
     STEVE
-    Yeah, Larry?
+    Yes, Larry?
     
     LARRY
     Before you go...
-    Thanks, again, for meeting me at my office here.
+    Thanks again for meeting me here at the office.
     I've been so busy lately, it's been hard to find time for friends and family.
     Heh...
     ... being delegated to paperwork after saving the world seems...
     ... about as crazy as anything else these days.
     
     STEVE
-    I hear ya', Larry!
-    Happy to catch-up on current events and play a game of anxiety-inducing chess.
+    I'm extremely touched that you made time for me.
+    It was good to catch-up on current events and play a game of anxiety-inducing chess, heh.
+    Good times!
     
     LARRY
-    Heh... don't pass out on me now.
+    Yes.
+    Good times.
     
     STEVE
-    Thanks, saur!
     Well... I should get going.
-    Smell ya later.
-
+    Say, this vending machine, does it work?
+    
     LARRY
-    Yep...
-    Smell ya later.
+    Yes, it works.
+    
+    STEVE
+    Excellent! A drink would be most satisfying for the trip home.
+    Yes Sir!
+    So refreshing... so tempting...
+    
+    LARRY
+    ...
+    
+    STEVE
+    Well... I should really be going now.
+    
+    LARRY
+    Then why haven't you?
+    
+    STEVE
+    ... well...
+    
+    LARRY
+    Wait! Don't answer that!
+    Here's a coin, you mooch! Get outta here.
     
     STEVE [ WAIT 0.20, FACE RIGHT, WAIT 0.20 ]
 
-END
-
-SCENE-1B
-    
-    LARRY
-    Steve...
-    
-    STEVE [ WAIT 0.25, FACE LEFT, WAIT 0.50 ]
-    Yeah, Larry?
-    
-    LARRY
-    Before you go...
-    Thanks, again, for meeting me at my office here.
-    I've been so busy lately, it's been hard to find time for friends and family.
-    Heh...
-    ... being delegated to paperwork after saving the world seems...
-    ... about as crazy as anything else these days.
-    
-    STEVE
-    I hear ya', saur!
-    Happy to catch-up on current events and play a game of anxiety-inducing chess.
-    
-    STEVE
-    I am thirsty, though.
-    ... You got a quarter?
-
-    LARRY
-    No, but... if you kick it, you get one for free.
-
-    STEVE
-    Ha! Kick it in the "D"!
-    
-    LARRY
-    Ha! ha!
-    Seriously though... don't hurt yourself.
-    
-    STEVE
-    Don't you worry... I'll be just fine.
-    
 END
 
 SCENE-1C
@@ -213,22 +249,16 @@ SCENE-3A
     
     JANITOR
     ...
-    Well... I was only being sarcastic about the mop.
-    I am a doctor.
+    Oh! I was only being sarcastic about the mop.
+    I am a doctor!
     
     LARRY
     ...
     Seriously?
     
     JANITOR
-    Heh... well...
-    ... No.
-    
-    LARRY
-    Oh...
-    
-    JANITOR
-    I used to be a doctor... well, nurse... Long story.
+    Heh, well... not so much, come to think of it.
+    I used to be a doctor. Now I'm mopping floors... long story.
     
     LARRY
     Good enough!
@@ -271,15 +301,15 @@ SCENE-3D
     
     JANITOR
     ...
-    I'm afraid not.
+    Nuh-uh.
     
 END
 
 SCENE-5A
     
     LARRY
-    Come on!
-    Hurry up and open elevator!
+    Come on! Damn slow hunk of junk---piece of shit elevator!
+    Hurry it on up already! Gah!
 
 END
 
@@ -292,7 +322,7 @@ SCENE-5B
     Barney!
     
     BARNEY
-    Why hello there.
+    Why, hello there.
     
     LARRY
     Thanks saur!
@@ -318,9 +348,9 @@ SCENE-5B
     BARNEY
     Oh yeah.
     The building's swarmed with aliens.
-    I'll explain more later, but we need to move fast!
-    Let's take the elevator to the weapons locker.
-    Come on!
+    I can explain more later, but right now we need to move fast!
+    Get in the elevator!
+    Let's go!
 
 END
 
@@ -343,65 +373,113 @@ END
 SCENE-5C
     
     BARNEY
-    Here we are!
-    The weapons locker.
-    Now, follow me.
+    Here we are, the weapons locker!
+    You need guns and you need ammo, lots of ammo!
+    We can't afford any hesitation!
+    Follow me!
 
 END
 
 SCENE-7A
     
     BARNEY
-    OK, Larry, now listen up!
-    This floor is where all the weapons are stored.
+    OK! Now, Larry, listen up!
+    All the guns are kept on this floor.
     You've fought these creatures before...
-    ... so I think you know what you need.
+    ... so you know what you need.
     
     LARRY
-    I do.
-    I'll need everything I can take.
+    I do... I need everything I can take.
     
     BARNEY
-    Good!
-    Now here's the situation...
-    All forms of communication with the outside world have been sabotaged.
-    The land line is disconnected. Phones are dead.
-    And the satelitte systems are jammed.
-    So we can't call for help.
+    Good! Now here's the situation...
+    All methods of contact with the outside world have been sabotaged.
+    The landline is disconnected. Phones are dead. Radio and Satellite systems are jammed!
+    Wireless networks: compromised. We can't call for help.
     
     LARRY
     Damn!
     
-    BARNEY
-    I can't get outside, because the doors to the lobby are locked.
-    The security system's been hacked, and my access card is now denied to that floor.
+    BARNEY!
+    Also, this facility is sequestered in a remote part of the country, isolated from the population.
+    All things considered, pretty much, we're on our own.
     
     LARRY
-    So we're trapped inside this building?
+    Mother of God! We're trapped inside this building?
     
     BARNEY
-    Unfortunately.
+    Afraid so.
     
     LARRY
+    It can't possibly be that difficult to find an exit, can't it?
+    
+    BARNEY
+    Hard to say.
+    I tried the lobby and rooftop exits, and I can't get outside. The fucking doors are locked!
+    I'm not granted access, even with my security clearance. Could be a malfunction, or worse.
+    
+    LARRY
+    Worse?
+    
+    BARNEY
+    If it's not a malfunction, then the only other thing I can reason is...
+    ... that the security system's been compromised, and someone raised...
+    ... the door security levels to block us in.
     ...
-    Damn!
-    
-    BARNEY
-    Meanwhile, we won't survive for very long with what's in this room.
-    We have limited firepower.
-    We are low on ammunition. This room doesn't have much of that.
-    The room behind me has much more.
-    But... it requires a yellow access card to get inside.
+    Since neither of us have the clearance to do jack shit, we're just stuck here.
     
     LARRY
+    *Sigh*
     ...
+    Hmm, this could be good news, actually!
     
     BARNEY
-    ...
-    We need to split up and find a yellow access card.
+    How do you mean?
     
     LARRY
-    Got it!
+    Well, if it's a malfunction, then there's no chance of us breaking through any doors...
+    ... because the security system is busted, plain-and-simple.
+    
+    BARNEY
+    Right.
+    
+    LARRY
+    But, if it's *not* a malfunction, then the doors are still serviceable---it's only the security level...
+    of the door that's changed. We just need security cards with higher clearance.
+    
+    BARNEY
+    We will need the highest clearance, code-red, to escape through the lobby.
+    I'd imagine a red card being very difficult to find. Rarely, have I seen anyone flash a red card.
+    But... yellow cards are more common around the building---we'd have a better chance...
+    ... of finding one of those, even more change if we split up.
+    
+    LARRY
+    Yes, but that won't get us out of the building.
+    
+    BARNEY
+    Correct, *but* it would give us a leg up on the situation.
+    We can't do much being confined to only a few rooms. A yellow card would suddenly...
+    ... grant us access to many more rooms, and we'd have more mobility...
+    ... and more areas to search that could be hiding red card.
+    
+    LARRY
+    Mm-hmm...
+    So, if I understand you correctly, this is the plan...
+    We split up and focus on finding the yellow card first.
+    Once that is accomplished, then we set our sights on finding the red card.
+    That's the plan?
+    
+    BARNEY
+    You got it!
+    I can't promise anything. It's a shot in the dark, but it may very well be the best chance we have.
+    
+    BARNEY
+    Also, we won't survive long on the ammunition in this room. It's not as stocked as I had hoped.
+    A yellow card will get us into the munitions room behind me.
+    Even more reason to get a hold of a yellow card first. It'll buy us some more time.
+    
+    LARRY
+    OK. I'm game!
     
     BARNEY
     Oh, and here's something else.

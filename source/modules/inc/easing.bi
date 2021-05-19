@@ -9,6 +9,11 @@ enum EaseTypes
     CubicInAndReverse
     Linear
     Shake
+    SquareIn
+    SquareOut
+    SquareInOut
+    SquareOutIn
+    SquareInAndReverse
     Wobble
 end enum
 

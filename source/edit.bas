@@ -342,6 +342,32 @@ end type
 
   DO
     
+    if Animation = 0 then
+        LD2_SetTargetBuffer 1
+        FOR y = 0 TO 12
+            FOR x = 0 TO 19
+                putX = x * SPRITE_W: putY = y * SPRITE_H
+                mapX = x + XScroll: mapY = y
+                if layers(LayerIds.Tile).isVisible    then SpritesTile.putToScreen putX, putY, EditMap(mapX, mapY)
+                if layers(LayerIds.LightBG).isVisible then SpritesLight.putToScreen putX, putY, LightMapBG(mapX, mapY)
+                if layers(LayerIds.LightFG).isVisible then SpritesLight.putToScreen putX, putY, LightMapFG(mapX, mapY)
+            NEXT x
+        NEXT y
+    end if
+
+    if Animation = 1 then
+        LD2_SetTargetBuffer 1
+        FOR y = 0 TO 12
+            FOR x = 0 TO 19
+                putX = x * SPRITE_W: putY = y * SPRITE_H
+                mapX = x + XScroll: mapY = y
+                if layers(LayerIds.Tile).isVisible    then SpritesTile.putToScreen putX, putY, EditMap(mapX, mapY) + (Ani mod (AniMap(mapX, mapY) + 1))
+                if layers(LayerIds.LightBG).isVisible then SpritesLight.putToScreen putX, putY, LightMapBG(mapX, mapY)
+                if layers(LayerIds.LightFG).isVisible then SpritesLight.putToScreen putX, putY, LightMapFG(mapX, mapY)
+            NEXT x
+        NEXT y
+    end if
+    
     if keypress(KEY_ESCAPE) then
         if DialogYesNo("Exit Editor?") = OptionIds.Yes then
             SaveMap DATA_DIR+"editor/exitsave.ld2"
@@ -377,7 +403,7 @@ end type
         y0 = selectStart.y: y1 = cursor.y
         if x0 > x1 then swap x0, x1
         if y0 > y1 then swap y0, y1
-        LD2_fillm x0*SPRITE_W, y0*SPRITE_H, (x1-x0+1)*SPRITE_W, (y1-y0+1)*SPRITE_H, 40, 1, 100
+        LD2_fillm x0*SPRITE_W, y0*SPRITE_H, (x1-x0+1)*SPRITE_W, (y1-y0+1)*SPRITE_H, 40, 100
         selectBox.x = x0+XScroll: selectBox.y = y0
         selectBox.w = (x1-x0)
         selectBox.h = (y1-y0)
@@ -399,14 +425,21 @@ end type
             remainder = len(tag)*FONT_W-(w-2)
             ox = x-int(remainder*0.5+0.5)
             ow = int(remainder*0.5+0.5)
-            LD2_fillm ox, y, ow, h, 70, 1, 100
-            LD2_fillm x+w, y, ow, h, 70, 1, 100
+            LD2_fillm ox, y, ow, h, 70, 100
+            LD2_fillm x+w, y, ow, h, 70, 100
         end if
-        LD2_boxm x, y, w, h, 77, 1, 200
-        LD2_fillm x+1, y+1, w-2, h-2, 70, 1, 100
+        LD2_boxm x, y, w, h, 77, 200
+        LD2_fillm x+1, y+1, w-2, h-2, 70, 100
         putText tag, x+int((w-len(tag)*FONT_W)*0.5), y+int(((h-FONT_H)*0.5))
     next n
 
+    if keypress(KEY_F2) then
+        filename = ""
+        Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
+        noticeMessage = "Saved "+filename
+        LD2_PlaySound EditSounds.turnPage
+    end if
+    
     x = FONT_W*0.5
     LD2_SetTargetBuffer 1
     for n = 1 to 4
@@ -420,16 +453,31 @@ end type
         x += (len(layerString)+1)*FONT_W
     next n
     
-    LD2_outline cursor.x*SPRITE_W, cursor.y*SPRITE_H, 16, 16, 15, 1
+    LD2_outline cursor.x*SPRITE_W, cursor.y*SPRITE_H, 16, 16, 15
     putText mapFilename, SCREEN_W-len(mapFilename)*FONT_W-1, FONT_W*0.5
     putText "XY "+str((Cursor.x)+XScroll)+" "+str(Cursor.y), FONT_W*0.5, FONT_H*34.5
     putText "Animations "+iif(Animation, "ON", "OFF"), FONT_W*0.5, FONT_H*38.5
     
-    if keypress(KEY_F2) then
-        filename = ""
-        Screenshot_Take filename, SCREENSHOT_W/SCREEN_W, SCREENSHOT_H/SCREEN_H
-        noticeMessage = "Saved "+filename
-        LD2_PlaySound EditSounds.turnPage
+    IF CurrentTile < 0 THEN CurrentTile = SpritesTile.getCount()-1
+    IF CurrentTile > SpritesTile.getCount()-1 THEN CurrentTile = SpritesTile.getCount()-1
+    IF CurrentTileL < 0 THEN CurrentTileL = SpritesLight.getCount()-1
+    IF CurrentTileL > SpritesLight.getCount()-1 THEN CurrentTileL = SpritesLight.getCount()-1
+    IF CurrentTileO < 0 THEN CurrentTileO = SpritesObject.getCount()-1
+    IF CurrentTileO > SpritesObject.getCount()-1 THEN CurrentTileO = SpritesObject.getCount()-1
+    IF XScroll < 0 THEN XScroll = 0
+    IF XScroll > 181 THEN XScroll = 181
+   
+    x = SCREEN_W-FONT_W*0.5-SPRITE_W
+    y = SCREEN_H-FONT_H*0.5-SPRITE_H
+    SpritesOpaqueTile.putToScreen x, y, CurrentTile: x -= SPRITE_W*1.25
+    spritesOpaqueLight.putToScreen x, y, CurrentTileL: x -= SPRITE_W*1.25
+    SpritesOpaqueObject.putToScreen x, y, CurrentTileO: x -= SPRITE_W*1.25
+
+    if layers(LayerIds.Item).isVisible then
+        for i = 0 to MapProps.numItems-1
+            putX = (Items(i).x - XScroll) * SPRITE_W: putY = Items(i).y * SPRITE_H
+            spritesObject.putToScreen putX, putY, Items(i).item
+        next i
     end if
     
     if keypress(KEY_H) then showHelp
@@ -449,7 +497,7 @@ end type
     
     LD2_RefreshScreen
     
-    LD2_CopyBuffer 2, 1
+    LD2_CopyFromBuffer 2
     
     PullEvents
     
@@ -803,54 +851,6 @@ end type
         end if
     end if
 
-    IF CurrentTile < 0 THEN CurrentTile = SpritesTile.getCount()-1
-    IF CurrentTile > SpritesTile.getCount()-1 THEN CurrentTile = SpritesTile.getCount()-1
-    IF CurrentTileL < 0 THEN CurrentTileL = SpritesLight.getCount()-1
-    IF CurrentTileL > SpritesLight.getCount()-1 THEN CurrentTileL = SpritesLight.getCount()-1
-    IF CurrentTileO < 0 THEN CurrentTileO = SpritesObject.getCount()-1
-    IF CurrentTileO > SpritesObject.getCount()-1 THEN CurrentTileO = SpritesObject.getCount()-1
-    IF XScroll < 0 THEN XScroll = 0
-    IF XScroll > 181 THEN XScroll = 181
-   
-    if Animation = 0 then
-        LD2_SetTargetBuffer 1
-        FOR y = 0 TO 12
-            FOR x = 0 TO 19
-                putX = x * SPRITE_W: putY = y * SPRITE_H
-                mapX = x + XScroll: mapY = y
-                if layers(LayerIds.Tile).isVisible    then SpritesTile.putToScreen putX, putY, EditMap(mapX, mapY)
-                if layers(LayerIds.LightBG).isVisible then SpritesLight.putToScreen putX, putY, LightMapBG(mapX, mapY)
-                if layers(LayerIds.LightFG).isVisible then SpritesLight.putToScreen putX, putY, LightMapFG(mapX, mapY)
-            NEXT x
-        NEXT y
-    end if
-
-    if Animation = 1 then
-        LD2_SetTargetBuffer 1
-        FOR y = 0 TO 12
-            FOR x = 0 TO 19
-                putX = x * SPRITE_W: putY = y * SPRITE_H
-                mapX = x + XScroll: mapY = y
-                if layers(LayerIds.Tile).isVisible    then SpritesTile.putToScreen putX, putY, EditMap(mapX, mapY) + (Ani mod (AniMap(mapX, mapY) + 1))
-                if layers(LayerIds.LightBG).isVisible then SpritesLight.putToScreen putX, putY, LightMapBG(mapX, mapY)
-                if layers(LayerIds.LightFG).isVisible then SpritesLight.putToScreen putX, putY, LightMapFG(mapX, mapY)
-            NEXT x
-        NEXT y
-    end if
-
-    x = SCREEN_W-FONT_W*0.5-SPRITE_W
-    y = SCREEN_H-FONT_H*0.5-SPRITE_H
-    SpritesOpaqueTile.putToScreen x, y, CurrentTile: x -= SPRITE_W*1.25
-    spritesOpaqueLight.putToScreen x, y, CurrentTileL: x -= SPRITE_W*1.25
-    SpritesOpaqueObject.putToScreen x, y, CurrentTileO: x -= SPRITE_W*1.25
-
-    if layers(LayerIds.Item).isVisible then
-        for i = 0 to MapProps.numItems-1
-            putX = (Items(i).x - XScroll) * SPRITE_W: putY = Items(i).y * SPRITE_H
-            spritesObject.putToScreen putX, putY, Items(i).item
-        next i
-    end if
-
     Ani = Ani + .2
     IF Ani > 9 THEN Ani = 1
     
@@ -1142,7 +1142,7 @@ sub LoadMap101 (filename as string)
     
     MapProps = props
     
-    LD2_cls 1, 0
+    LD2_cls
     putText MapProps.versionTag, 2, FONT_H*1
     putText MapName, 2, FONT_H*3
     putText MapAuthor, 2, FONT_H*5
@@ -1295,7 +1295,7 @@ sub LoadMap045 (filename as string)
     '- Display the map data
     '- and wait for keypress
     '-----------------------
-    LD2_cls 1, 0
+    LD2_cls
     putText versionTag, 2, FONT_H*1
     putText levelName, 2, FONT_H*3
     putText author, 2, FONT_H*5
@@ -1651,7 +1651,7 @@ sub SaveMap101 (filename as string, showDetails as integer = 0)
             shortFilename = right(filename, len(filename)-i)
         end if
         
-        LD2_cls 1, 0
+        LD2_cls
         putText "Saved "+shortFilename, 2, FONT_H*1
         
         putText "Press ENTER to continue", 0, FONT_H*36
@@ -1850,7 +1850,7 @@ SUB SaveMap045 (filename as string, showDetails as integer = 0)
     close #1
     
     if showDetails then
-        LD2_cls 1, 0
+        LD2_cls
         putText "Saved "+nm, 2, FONT_H*1
         'putText ft, 2, FONT_H*3
         'putText cr, 2, FONT_H*5
@@ -1899,7 +1899,7 @@ sub putText (text as string, x as integer, y  as integer, fontw as integer = FON
             end if
         end if
         if mid(text, n, 1) <> " " then
-            Font_putText x, y, mid(text, n, 1), 1
+            Font_putText x, y, mid(text, n, 1)
         end if
         x += fontw
     next n
@@ -1978,9 +1978,9 @@ function inputText(text as string, currentVal as string = "") as string
 		wend
 		
 		'LD2_Fill 2, 2, SCREEN_W, FONT_H, 0, 1
-        LD2_CopyBuffer 2, 1
-        LD2_outline 0, 0, SCREEN_W, FONT_H*5, 15, 1
-        LD2_fillm 1, 1, 318, FONT_H*5-2, 17, 1, SCREEN_H
+        LD2_CopyFromBuffer 2
+        LD2_outline 0, 0, SCREEN_W, FONT_H*5, 15
+        LD2_fillm 1, 1, 318, FONT_H*5-2, 17, SCREEN_H '// TODO - why is SCREEN_H there?
 		putText( text+strval, 4, 4 )
 		putText( space(cursor_x)+"_"+space(len(text+strval)-cursor_x), 4, 4)
 		LD2_RefreshScreen
@@ -2064,8 +2064,8 @@ sub ShowHelp ()
     padY = SPRITE_H*1.5-1
     w = SCREEN_W-padX*2
     h = SCREEN_H-padY*2.2
-    LD2_outline padX, padY, w, h, DIALOG_BORDER_COLOR, 1
-    LD2_fillm padX+1, padY+1, w-2, h-2, DIALOG_BACKGROUND, 1, int(DIALOG_ALPHA * 255)
+    LD2_outline padX, padY, w, h, DIALOG_BORDER_COLOR
+    LD2_fillm padX+1, padY+1, w-2, h-2, DIALOG_BACKGROUND, int(DIALOG_ALPHA * 255)
 
     dim top as integer
     dim lft as integer
@@ -2103,7 +2103,11 @@ end sub
 
 SUB GenerateSky()
     
-  LD2_cls 2, 66
+    dim bufferId as integer
+    
+    bufferId = LD2_SetTargetBuffer(2)
+    
+    LD2_cls 66
   
   DIM x as integer
   DIM y as integer
@@ -2115,9 +2119,9 @@ SUB GenerateSky()
       y = SCREEN_H*RND(1)
         r = int(4*RND(1))
         if r = 0 then
-            LD2_pset x, y, 67, 2
+            LD2_pset x, y, 67
         else
-            LD2_pset x, y, 66, 2
+            LD2_pset x, y, 66
         end if
     next i
   FOR i = 0 TO 1499
@@ -2139,13 +2143,13 @@ SUB GenerateSky()
       'END IF
     'LOOP
     r = int(2*RND(1))
-    LD2_pset x, y, 67+r, 2
+    LD2_pset x, y, 67+r
   NEXT i
     FOR i = 0 TO 999
         x = SCREEN_W*RND(1)
       y = SCREEN_H*RND(1)
         r = int(2*RND(1))
-    LD2_pset x, y, 68+r, 2
+    LD2_pset x, y, 68+r
     next i
   FOR i = 0 TO 499
     'DO
@@ -2173,8 +2177,10 @@ SUB GenerateSky()
         'r = r + 16
       END IF
     END IF
-    LD2_pset x, y, 72+r, 2
+    LD2_pset x, y, 72+r
   NEXT i
+    
+    LD2_SetTargetBuffer(bufferId)
 
 END SUB
 
@@ -2198,8 +2204,8 @@ sub Notice(message as string)
     lft = padding+FONT_W
     lineHeight = FONT_H*2
     
-    LD2_outline padding, padding, w, h, 15, 1
-    LD2_fillm padding+1, padding+1, w-2, h-2, 17, 1, SCREEN_H
+    LD2_outline padding, padding, w, h, 15
+    LD2_fillm padding+1, padding+1, w-2, h-2, 17, SCREEN_H '// TODO - why is SCREEN_H there?
     do
         i = instr(message, "$")
         if i then
@@ -2269,7 +2275,7 @@ function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integ
         
         mw = mouseWheelY()
         
-        LD2_cls 1, bgcolor
+        LD2_cls bgcolor
         hovered = -1
         column = 0
         lft = 0: top = 0
@@ -2279,11 +2285,11 @@ function SpriteSelectScreen(sprites as VideoSprites ptr, byref selected as integ
                 sprites->putToScreen(x*SPRITE_W+padX, y*SPRITE_H+padY, n)
             end if
             if n = selected then
-                LD2_outline x*SPRITE_W+padX, y*SPRITE_H+padY, SPRITE_W, SPRITE_H, 15, 1
+                LD2_outline x*SPRITE_W+padX, y*SPRITE_H+padY, SPRITE_W, SPRITE_H, 15
             end if
             if x = cursor.x and y = cursor.y then
                 hovered = n
-                LD2_outline x*SPRITE_W+padX, y*SPRITE_H+padY, SPRITE_W, SPRITE_H, 15, 1
+                LD2_outline x*SPRITE_W+padX, y*SPRITE_H+padY, SPRITE_W, SPRITE_H, 15
             end if
             x += 1
             if ((n+1) mod numCols) = 0 then
@@ -2752,7 +2758,7 @@ function DialogYesNo(message as string) as integer
     LD2_PlaySound EditSounds.menu
     
     LD2_SaveBuffer 2
-	LD2_CopyBuffer 1, 2
+	LD2_CopyToBuffer 2
 	
     pixels = 50
     dialog.x = halfX - pixels * modw
@@ -2790,7 +2796,7 @@ function DialogYesNo(message as string) as integer
             optionYes.text_color = DIALOG_OPTION_COLOR
             optionNo.background = DIALOG_SELECTED_BACKGROUND: optionNo.text_color = DIALOG_SELECTED_COLOR
         end select
-        LD2_CopyBuffer 2, 1
+        LD2_CopyFromBuffer 2
         Elements_Render
 		LD2_RefreshScreen
         PullEvents
@@ -2823,7 +2829,7 @@ function DialogYesNo(message as string) as integer
     
     Elements_Clear
     
-    LD2_CopyBuffer 2, 1
+    LD2_CopyFromBuffer 2
     LD2_RefreshScreen
     LD2_RestoreBuffer 2
     
@@ -2832,14 +2838,14 @@ function DialogYesNo(message as string) as integer
 end function
 
 sub elementsPutFont(x as integer, y as integer, charVal as integer)
-    Font_put x, y, charVal, 1
+    Font_put x, y, charVal
 end sub
 
 sub elementsFill(x as integer, y as integer, w as integer, h as integer, fillColor as integer, fillAlpha as double = 1.0)
     if fillAlpha = 1.0 then
-        LD2_fill x, y, w, h, fillColor, 1
+        LD2_fill x, y, w, h, fillColor
     else
-        LD2_fillm x, y, w, h, fillColor, 1, int(fillAlpha * 255)
+        LD2_fillm x, y, w, h, fillColor, int(fillAlpha * 255)
     end if
 end sub
 

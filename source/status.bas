@@ -2567,7 +2567,7 @@ sub STATUS_DialogOk(message as string, playOpenSound as integer = 1)
     
     e = Easing_doEaseInOut(-1)
 	do
-        pixels = int(e * size)
+        pixels = int((1-e) * size)
         dialog.x = halfX - pixels * modw
         dialog.y = halfY - pixels * modh
         dialog.w = pixels * modw * 2
@@ -2577,7 +2577,7 @@ sub STATUS_DialogOk(message as string, playOpenSound as integer = 1)
         LD2_RefreshScreen
         PullEvents
         e = Easing_doEaseInOut(0, STATUS_EASE_SPEED)
-	loop while e > 0
+	loop while e < 1
     
     LD2_CopyFromBuffer 2
     LD2_RefreshScreen

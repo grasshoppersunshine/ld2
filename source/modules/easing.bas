@@ -10,10 +10,34 @@ function Easing_getOutput(easeType as integer, e as double) as double
     case EaseTypes.Linear
         
         return e
+    
+    case EaseTypes.SquareIn
+        
+        return e * e
+        
+    case EaseTypes.SquareOut
+        
+        return (1-e) * (1-e)
+        
+    case EaseTypes.SquareInOut
+        
+        d = iif(e <= 0.5, e*2, (1-e)*2)
+        return iif(e <= 0.5, d*d*0.5, 1.0-d*d*0.5)
+        
+    case EaseTypes.SquareOutIn
+        
+        d = 1.0 - iif(e <= 0.5, e*2, (1-e)*2)
+        d = iif(e <= 0.5, 0.5-d*0.5, 0.5+d*0.5)
+        return d * d
+        
+    case EaseTypes.SquareInAndReverse
+        
+        d = iif(e <= 0.5, e*2, (1-e)*2)
+        return d*d*0.5
         
     case EaseTypes.CubicIn
         
-        return e * e * e
+        return 1-((1-e) * (1-e) * (1-e))
         
     case EaseTypes.CubicOut
         
